@@ -9,6 +9,15 @@ SHELL       := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
 .DEFAULT_GOAL := help
 
+# ---- tailscale binary auto-detection --------------------------------------
+# Prefer `tailscale` on PATH (Linux and macOS CLI-install). Fall back to the
+# macOS .app bundle location. Empty if neither exists — the
+# `_require-tailscale` guard target fails with a helpful message when a
+# target actually needs it.
+TAILSCALE_APP_MACOS := /Applications/Tailscale.app/Contents/MacOS/Tailscale
+TAILSCALE_ON_PATH   := $(shell command -v tailscale 2>/dev/null)
+TAILSCALE ?= $(or $(TAILSCALE_ON_PATH),$(wildcard $(TAILSCALE_APP_MACOS)))
+
 # ---- meta -----------------------------------------------------------------
 
 .PHONY: help
@@ -41,14 +50,23 @@ run: build-web build-bridge ## Build then run the bridge locally on 127.0.0.1:51
 run-exposed: build-web build-bridge ## Bind 0.0.0.0 for LAN / dev-through-Tailscale (exposes on EVERY interface including untrusted Wi-Fi — prefer run-tailscale on a laptop).
 	node apps/bridge/dist/main.js --bind 0.0.0.0 --i-know-what-im-doing
 
+.PHONY: _require-tailscale
+_require-tailscale: ## (internal) fail with a clear message if tailscale isn't installed.
+	@test -n "$(TAILSCALE)" || { \
+	  echo "error: tailscale binary not found." >&2; \
+	  echo "  Checked: PATH (\`tailscale\`) and $(TAILSCALE_APP_MACOS)." >&2; \
+	  echo "  Install from https://tailscale.com/download or ensure the CLI is on PATH." >&2; \
+	  exit 1; \
+	}
+
 .PHONY: run-tailscale
-run-tailscale: build-web build-bridge ## Bind ONLY to the Tailscale interface IP (safer than 0.0.0.0 on a laptop; needs `tailscale` on PATH).
-	node apps/bridge/dist/main.js --bind "$$(tailscale ip -4 | head -n1)" --i-know-what-im-doing
+run-tailscale: _require-tailscale build-web build-bridge ## Bind ONLY to the Tailscale interface IP (safer than 0.0.0.0 on a laptop).
+	node apps/bridge/dist/main.js --bind "$$($(TAILSCALE) ip -4 | head -n1)" --i-know-what-im-doing
 
 .PHONY: run-tailscale-serve
-run-tailscale-serve: build-web build-bridge ## Bridge stays loopback; `tailscale serve` fronts it with HTTPS via Tailscale certs (recommended for laptop-through-Tailscale). Ctrl+C to stop; run `tailscale serve --https 5173 off` to remove afterward.
-	@echo "Starting bridge on loopback (5173) + Tailscale Serve fronting on https://$$(tailscale status --self=true --json | jq -r '.Self.DNSName' | sed 's/\.$$//')" ; \
-	 tailscale serve --https 5173 --set-path=/ http://127.0.0.1:5173 & \
+run-tailscale-serve: _require-tailscale build-web build-bridge ## Bridge stays loopback; `tailscale serve` fronts it with HTTPS via Tailscale certs. Ctrl+C to stop; `make tailoff` to remove.
+	@echo "Starting bridge on loopback (5173) + Tailscale Serve fronting on https://$$($(TAILSCALE) status --self=true --json | jq -r '.Self.DNSName' | sed 's/\.$$//')" ; \
+	 $(TAILSCALE) serve --https 5173 --set-path=/ http://127.0.0.1:5173 & \
 	 node apps/bridge/dist/main.js
 
 ## Dev (watch mode, hot reload)
@@ -142,6 +160,15 @@ clean: ## Remove build outputs (keeps node_modules).
 nuke: clean ## Also remove node_modules and Playwright browser cache.
 	rm -rf node_modules apps/*/node_modules packages/*/node_modules
 
+## Tailscale
 .PHONY: tailconnect
-tailconnect: ## Just connect tailscale
-	tailscale serve --https 5173 http://127.0.0.1:5173
+tailconnect: _require-tailscale ## Just front the bridge with `tailscale serve` (assumes bridge already running on :5173).
+	$(TAILSCALE) serve --https 5173 http://127.0.0.1:5173
+
+.PHONY: tailoff
+tailoff: _require-tailscale ## Remove the Tailscale Serve mapping on :5173.
+	$(TAILSCALE) serve --https 5173 off
+
+.PHONY: tailwhich
+tailwhich: ## Print which tailscale binary the Makefile resolved (empty = not found).
+	@echo "TAILSCALE=$(TAILSCALE)"
