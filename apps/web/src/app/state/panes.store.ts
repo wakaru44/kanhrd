@@ -616,30 +616,26 @@ export class PanesStore {
   }
 
   // --- tier-3 lifecycle actions ------------------------------------------
-  // Thin `WsClient.request` wrappers, but every create/close action applies
-  // its own result to the local maps directly rather than waiting on the
-  // matching `*.created`/`*.closed` broadcast event. The bridge/herdr does
-  // broadcast that event back to every subscribed client including the
-  // caller (CONTRACT-TIER3.md section 4), and `applyLifecycleEvent` above
-  // still applies it the same way a remote change would be applied — that
-  // path stays load-bearing for changes originating from OTHER clients, and
-  // for cascade purges (section 5.6) this class can't predict from a single
-  // id (e.g. closing a tab that was its workspace's last one). But the UI
-  // flows this store drives (header "+", rail rename/close, card
-  // split/close) all read their own subsequent state off these signals
-  // within the same interaction, and waiting on a second independent
-  // broadcast round-trip for that is both an unnecessary race (E2E caught
-  // it: the rail's create-then-rename flow could open on an item not yet in
-  // `tabsSignal`) and needless latency (a `tab.close`'s own response
-  // confirms the close — there's nothing left to learn from the event for
-  // the resource that requested it). Only `renameTab`/`renameWorkspace`
-  // don't do this: nothing here has an immediate same-interaction
-  // dependency on the label already being updated, and the event handler
-  // above also refreshes every pane's denormalized `tab.name`/
-  // `workspace.name` when it lands. Every reducer these call
-  // (`applyTabCreated`, `removeByKey`, `purgeWhere`, ...) is a plain
-  // idempotent map operation, so the event arriving afterwards and
-  // reapplying the same id is a harmless no-op either way. Callers must
+  // Thin `WsClient.request` wrappers, but every one of them applies its own
+  // result to the local maps directly rather than waiting on the matching
+  // `*.created`/`*.closed`/`*.renamed` broadcast event. The bridge/herdr is
+  // SUPPOSED to broadcast that event back to every subscribed client
+  // including the caller (CONTRACT-TIER3.md section 4), and
+  // `applyLifecycleEvent` above still applies it the same way a remote
+  // change would be applied — that path stays load-bearing for changes
+  // originating from OTHER clients, and for cascade purges (section 5.6)
+  // this class can't predict from a single id (e.g. closing a tab that was
+  // its workspace's last one). But relying on it for the ACTING client's own
+  // change turned out not just to be an unnecessary race, but to hit a real
+  // gap verified live against a real bridge (round-4 diagnosis, this file's
+  // git history): `tab.renamed` never broadcasts at all for a tab created
+  // earlier in the same session, only for tabs that existed at
+  // subscribe-time — silently leaving the rail's create-then-rename flow
+  // permanently un-renamed client-side with no error. Every reducer these
+  // call (`applyTabCreated`, `applyTabRenamed`, `removeByKey`, `purgeWhere`,
+  // `updatePanes`, ...) is a plain idempotent map operation, so the event
+  // landing afterwards (when it does arrive) and reapplying the same id is a
+  // harmless no-op either way. Callers must
   // gate on `capabilitiesSignal` themselves before calling any of these.
 
   async splitPane(host: string, params: BridgeMethodParams["pane.split"]) {
@@ -665,8 +661,25 @@ export class PanesStore {
     return result;
   }
 
-  renameTab(host: string, tabId: string, label: string) {
-    return this.ws.request(host, "tab.rename", { tab_id: tabId, label });
+  async renameTab(host: string, tabId: string, label: string) {
+    const result = await this.ws.request(host, "tab.rename", { tab_id: tabId, label });
+    // Optimistic, like every other tier-3 action above — verified live
+    // against a real bridge (round-4 diagnosis) that the paired
+    // `tab.renamed` broadcast event never arrives for a tab created earlier
+    // in the SAME session (it fires fine for tabs that existed at
+    // subscribe-time), so waiting on it left the rename permanently
+    // unapplied client-side for the create-then-rename UX flow.
+    if (result) {
+      this.tabsSignal.update((tabs) => applyTabRenamed(tabs, { id: tabId, host, name: label }));
+      this.panesSignal.update((panes) =>
+        updatePanes(
+          panes,
+          (p) => p.host === host && p.tab.id === tabId,
+          (p) => ({ ...p, tab: { ...p.tab, name: label } }),
+        ),
+      );
+    }
+    return result;
   }
 
   async closeTab(host: string, tabId: string) {
@@ -688,8 +701,21 @@ export class PanesStore {
     return result;
   }
 
-  renameWorkspace(host: string, workspaceId: string, label: string) {
-    return this.ws.request(host, "workspace.rename", { workspace_id: workspaceId, label });
+  async renameWorkspace(host: string, workspaceId: string, label: string) {
+    const result = await this.ws.request(host, "workspace.rename", { workspace_id: workspaceId, label });
+    if (result) {
+      this.workspacesSignal.update((workspaces) =>
+        applyWorkspaceRenamed(workspaces, { id: workspaceId, host, name: label }),
+      );
+      this.panesSignal.update((panes) =>
+        updatePanes(
+          panes,
+          (p) => p.host === host && p.workspace.id === workspaceId,
+          (p) => ({ ...p, workspace: { ...p.workspace, name: label } }),
+        ),
+      );
+    }
+    return result;
   }
 
   async closeWorkspace(host: string, workspaceId: string, closeGroup = false) {

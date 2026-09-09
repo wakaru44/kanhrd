@@ -749,4 +749,72 @@ describe("PanesStore close actions are optimistic (don't wait on the broadcast e
 
     expect(store.panesSignal().has(paneKey("laptop", "p1"))).toBe(false);
   });
+
+  // Round-4 regression: live-bridge diagnosis (trace evidence in the round-4
+  // report) showed `tab.rename`'s own WS response resolves with the correct
+  // new name, but the paired `tab.renamed` broadcast event never arrives for
+  // a tab created earlier in the SAME session — only for tabs that already
+  // existed when the client subscribed. Waiting on that event (the design
+  // prior to this fix) left the rail's create-then-rename flow permanently
+  // stuck showing the pre-rename label. `renameTab`/`renameWorkspace` must
+  // apply their own response directly, exactly like every other tier-3
+  // action here.
+  it("renameTab updates tabsSignal AND the denormalized pane.tab.name as soon as the request resolves — no tab.renamed event fired", async () => {
+    const { store, httpMock } = setUp();
+    const seededPane = pane({
+      id: "p1",
+      host: "laptop",
+      workspace: { id: "w1", name: "w" },
+      tab: { id: "t1", name: "4" },
+    });
+    ws.request.and.callFake((_host: string, method: string) => {
+      if (method === "pane.list") return Promise.resolve({ panes: [seededPane] });
+      if (method === "events.subscribe") return Promise.resolve({ subscription_id: "s1" });
+      if (method === "tab.rename") {
+        return Promise.resolve({ tab: { id: "t1", host: "laptop", workspace: { id: "w1" }, name: "renamed" } });
+      }
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+    await settle();
+    for (const req of httpMock.match("/api/hosts")) {
+      if (!req.cancelled) req.flush({ hosts: [{ name: "laptop", connected: true }] });
+    }
+    await settle();
+    expect(store.tabsSignal().get(paneKey("laptop", "t1"))?.name).toBe("4");
+
+    await store.renameTab("laptop", "t1", "renamed");
+
+    // No event was ever emitted on ws.events$ — the update came from the
+    // tab.rename response alone.
+    expect(store.tabsSignal().get(paneKey("laptop", "t1"))?.name).toBe("renamed");
+    expect(store.panesSignal().get(paneKey("laptop", "p1"))?.tab.name).toBe("renamed");
+  });
+
+  it("renameWorkspace updates workspacesSignal AND the denormalized pane.workspace.name as soon as the request resolves — no workspace.renamed event fired", async () => {
+    const { store, httpMock } = setUp();
+    const seededPane = pane({
+      id: "p1",
+      host: "laptop",
+      workspace: { id: "w1", name: "old" },
+      tab: { id: "t1", name: "t" },
+    });
+    ws.request.and.callFake((_host: string, method: string) => {
+      if (method === "pane.list") return Promise.resolve({ panes: [seededPane] });
+      if (method === "events.subscribe") return Promise.resolve({ subscription_id: "s1" });
+      if (method === "workspace.rename") {
+        return Promise.resolve({ workspace: { id: "w1", host: "laptop", name: "renamed-ws" } });
+      }
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+    await settle();
+    for (const req of httpMock.match("/api/hosts")) {
+      if (!req.cancelled) req.flush({ hosts: [{ name: "laptop", connected: true }] });
+    }
+    await settle();
+
+    await store.renameWorkspace("laptop", "w1", "renamed-ws");
+
+    expect(store.workspacesSignal().get(paneKey("laptop", "w1"))?.name).toBe("renamed-ws");
+    expect(store.panesSignal().get(paneKey("laptop", "p1"))?.workspace.name).toBe("renamed-ws");
+  });
 });

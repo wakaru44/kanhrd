@@ -68,7 +68,23 @@ describe("Board + Rail integration: New tab flow (full component tree)", () => {
 
   it("clicking + -> New tab grows tabsSignal/panesSignal by 1 AND renders a new .tab-row in the rail and a new .card on the board", async () => {
     ws.request.and.callFake((_host: string, method: string) => {
-      if (method === "pane.list") return Promise.resolve({ panes: [] });
+      if (method === "pane.list") {
+        // A real herdr host always has at least one pre-existing pane/tab/
+        // workspace by the time the SPA loads (never a totally empty host)
+        // — seed one so `workspacesSignal`/`tabsSignal` already have "w6"
+        // before "New tab" is clicked, matching the real E2E environment.
+        return Promise.resolve({
+          panes: [
+            {
+              id: "p-existing",
+              host: "local",
+              workspace: { id: "w6", name: "kanhrd" },
+              tab: { id: "t-existing", name: "1" },
+              agent_status: "idle",
+            },
+          ],
+        });
+      }
       if (method === "events.subscribe") return Promise.resolve({ subscription_id: "s1" });
       if (method === "bridge.capabilities") {
         return Promise.resolve({

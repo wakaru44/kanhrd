@@ -39,4 +39,9 @@ EXPOSE 5173
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -sSf http://127.0.0.1:5173/api/hosts || exit 1
 
+# In a container, the bridge must listen on 0.0.0.0 so the published port is
+# reachable from the host; container-side loopback is invisible to the port
+# mapping. The safety flag is warranted here because host-side `-p
+# 127.0.0.1:5173:5173` enforces the loopback-only bind at the Docker layer.
 ENTRYPOINT ["node", "/app/apps/bridge/dist/main.js"]
+CMD ["--bind", "0.0.0.0", "--i-know-what-im-doing"]
