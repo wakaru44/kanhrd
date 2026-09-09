@@ -1,0 +1,327 @@
+name: ci
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+env:
+  # ponytail: no packageManager field / .nvmrc in the repo yet to read from.
+  # Pin here; bump alongside a future `packageManager` field in package.json.
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10'
+
+jobs:
+  lint-and-typecheck:
+    name: lint & typecheck
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: typecheck (schema, bridge, web)
+        run: pnpm typecheck
+
+      - name: lint
+        run: |
+          # No package currently declares a "lint" script (checked
+          # apps/bridge, apps/web, packages/schema). If the L-PRECOMMIT
+          # lane lands a shared linter config with per-package "lint"
+          # scripts, this step picks them up automatically; until then it
+          # skips with a clear, visible reason instead of failing the job.
+          if pnpm -r exec -- node -e 'const p=require("./package.json"); if(!p.scripts || !p.scripts.lint) process.exit(1)' >/dev/null 2>&1; then
+            pnpm -r --if-present lint
+          else
+            echo "::warning::lint skipped — no package.json declares a \"lint\" script yet (expected from L-PRECOMMIT)"
+          fi
+
+  unit-tests:
+    name: unit tests (bridge + web)
+    needs: lint-and-typecheck
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: install headless chrome (for karma-chrome-launcher)
+        run: |
+          sudo install -m 0755 -d /etc/apt/keyrings
+          wget -q -O /etc/apt/keyrings/google-chrome.asc https://dl.google.com/linux/linux_signing_key.pub
+          echo "deb [signed-by=/etc/apt/keyrings/google-chrome.asc] http://dl.google.com/linux/chrome/deb/ stable main" \
+            | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
+      - name: bridge unit tests
+        run: pnpm --filter @kanhrd/bridge test
+
+      - name: web unit tests
+        run: pnpm --filter @kanhrd/web test
+        env:
+          CHROME_BIN: /usr/bin/google-chrome-stable
+
+      # ponytail: neither vitest.config.ts nor the karma test builder is
+      # currently configured with a JUnit reporter, so there is no XML to
+      # publish yet. Once @kanhrd/bridge adds `vitest-junit-reporter` (or
+      # similar) to vitest.config.ts, and @kanhrd/web's angular.json test
+      # builder gets `karma-junit-reporter` wired in — both apps/** changes,
+      # out of scope here — point this step at the emitted files. Left as a
+      # no-op-if-absent step so it activates automatically once that lands.
+      - name: publish JUnit results (if present)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results
+          path: |
+            apps/bridge/junit.xml
+            apps/web/junit.xml
+          if-no-files-found: ignore
+
+  build:
+    name: build (schema, web, bridge)
+    needs: lint-and-typecheck
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: build schema
+        run: pnpm --filter @kanhrd/schema build
+
+      - name: build web
+        run: pnpm --filter @kanhrd/web build
+
+      - name: build bridge
+        run: pnpm --filter @kanhrd/bridge build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist/web/browser/
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bridge-dist
+          path: apps/bridge/dist/
+          retention-days: 7
+
+  integration-tests:
+    name: bridge integration tests
+    needs: build
+    runs-on: self-hosted
+    # Generic self-hosted runners don't have herdr installed/running. The
+    # suite itself skips gracefully per-file via
+    # apps/bridge/integration/fixtures/require-herdr.ts, so this job stays
+    # green ("0 skipped, not 0 failed") rather than red on generic hardware.
+    #
+    # If/when a runner with a live herdr server + socket is labeled (e.g.
+    # `kanhrd-herdr-available`), pin this job to it instead so it actually
+    # exercises the suite:
+    #   runs-on: [self-hosted, kanhrd-herdr-available]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bridge-dist
+          path: apps/bridge/dist/
+
+      - name: check herdr availability
+        id: herdr
+        run: |
+          if [ -S "$HOME/.config/herdr/herdr.sock" ] && command -v herdr >/dev/null 2>&1; then
+            echo "::notice::herdr socket found — integration suite should run for real"
+          else
+            echo "::warning::herdr not reachable on this runner ($HOME/.config/herdr/herdr.sock missing, or herdr CLI not on PATH) — every integration test file will skip itself. This is expected on generic runners; see job description."
+          fi
+
+      - name: bridge integration tests
+        run: pnpm test:int
+
+  e2e-tests:
+    name: playwright e2e
+    needs: build
+    runs-on: self-hosted
+    # Same story as integration-tests: needs herdr + the built SPA. See the
+    # comment there re: an optional `kanhrd-herdr-available` runner label.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: install playwright browsers
+        run: pnpm --filter @kanhrd/web exec playwright install --with-deps chromium
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist/web/browser/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bridge-dist
+          path: apps/bridge/dist/
+
+      - name: check herdr availability
+        run: |
+          if [ -S "$HOME/.config/herdr/herdr.sock" ] && command -v herdr >/dev/null 2>&1; then
+            echo "::notice::herdr socket found — e2e suite should run for real"
+          else
+            echo "::warning::herdr not reachable on this runner — apps/web/e2e/fixtures/herdr.ts causes every spec to test.skip() itself. This is expected on generic runners; see job description."
+          fi
+
+      - name: playwright e2e tests
+        run: pnpm test:e2e
+
+      - name: upload playwright test-results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: apps/web/test-results/
+          if-no-files-found: ignore
+
+  docker-build:
+    name: docker build
+    needs: build
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: check for Dockerfile
+        id: dockerfile
+        run: |
+          if [ -f Dockerfile ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::docker-build skipped — no root Dockerfile yet (expected from the L-DOCKER lane)"
+          fi
+
+      - name: docker build
+        if: steps.dockerfile.outputs.exists == 'true'
+        run: docker build -t "kanhrd/bridge:${{ github.sha }}" .
+
+      # No local/CI registry is configured yet. This proves the image
+      # builds; add a `docker push` step here once a registry target
+      # (address + credentials) is decided.
+      - name: registry push (not configured)
+        if: steps.dockerfile.outputs.exists == 'true'
+        run: echo "::notice::no registry configured — built image kanhrd/bridge:${{ github.sha }} stays local to this runner"
+
+  coverage:
+    name: coverage
+    needs: unit-tests
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: install headless chrome (for karma-chrome-launcher)
+        run: |
+          sudo install -m 0755 -d /etc/apt/keyrings
+          wget -q -O /etc/apt/keyrings/google-chrome.asc https://dl.google.com/linux/linux_signing_key.pub
+          echo "deb [signed-by=/etc/apt/keyrings/google-chrome.asc] http://dl.google.com/linux/chrome/deb/ stable main" \
+            | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
+      - name: web coverage (karma-coverage, already an installed devDependency)
+        run: pnpm --filter @kanhrd/web exec ng test --watch=false --browsers=ChromeHeadless --code-coverage
+        env:
+          CHROME_BIN: /usr/bin/google-chrome-stable
+
+      # ponytail: @kanhrd/bridge has no coverage provider installed
+      # (`@vitest/coverage-v8` / `@vitest/coverage-istanbul` are absent from
+      # apps/bridge/package.json), so `vitest run --coverage` would just
+      # fail asking to install one. That's an apps/** change, out of scope
+      # here — see the report for the proposed follow-up lane. Skip
+      # visibly instead of red-lighting the job on a missing devDependency.
+      - name: bridge coverage
+        run: |
+          if node -e 'const p=require("./apps/bridge/package.json"); const d={...p.dependencies,...p.devDependencies}; process.exit((d["@vitest/coverage-v8"]||d["@vitest/coverage-istanbul"])?0:1)'; then
+            pnpm --filter @kanhrd/bridge exec vitest run --config vitest.config.ts --coverage
+          else
+            echo "::warning::bridge coverage skipped — no @vitest/coverage-v8 (or -istanbul) devDependency in apps/bridge/package.json yet"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: |
+            apps/web/coverage/
+            apps/bridge/coverage/
+          if-no-files-found: warn
+          retention-days: 14

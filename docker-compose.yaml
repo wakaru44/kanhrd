@@ -1,0 +1,34 @@
+services:
+  bridge:
+    build: .
+    image: kanhrd-bridge
+    ports:
+      # Loopback-only, per ADR-0003. Change to 0.0.0.0:5173:5173 only if you
+      # understand the exposure and pass --i-know-what-im-doing to the bridge.
+      - '127.0.0.1:5173:5173'
+    volumes:
+      # Local host, default install: mount the herdr socket dir read-only so
+      # the container can reach the same socket a local `herdr` server owns.
+      # The bridge's built-in default host entry already points at
+      # ~/.config/herdr/herdr.sock, which resolves to this same path inside
+      # the container (the image's non-root user is `kanhrd`, home
+      # /home/kanhrd) — no extra config or env var needed for this case.
+      - ~/.config/herdr:/home/kanhrd/.config/herdr:ro
+    restart: unless-stopped
+
+  # Multi-host / remote setup (ADR-0001): reach a non-local herdr through an
+  # SSH tunnel that lands a socket on this machine, then mount that socket
+  # plus a kanhrd.config.yaml (bridge has no env-based socket override; the
+  # config file's `hosts:` list is the supported way to add hosts) that adds
+  # it as an extra host entry. Bring up the tunnel yourself first, e.g.:
+  #   ssh -N -L /run/user/1000/herdr-cloud.sock:~/.config/herdr/herdr.sock cloud-host
+  # bridge-cloud:
+  #   build: .
+  #   image: kanhrd-bridge
+  #   command: ["--config", "/home/kanhrd/kanhrd.config.yaml"]
+  #   ports:
+  #     - "127.0.0.1:5174:5173"
+  #   volumes:
+  #     - ./kanhrd.config.yaml:/home/kanhrd/kanhrd.config.yaml:ro
+  #     - /run/user/1000/herdr-cloud.sock:/home/kanhrd/.config/herdr/herdr-cloud.sock:ro
+  #   restart: unless-stopped

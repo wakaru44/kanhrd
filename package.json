@@ -5,6 +5,10 @@
   "scripts": {
     "dev": "echo \"kanhrd dev: not implemented yet\"",
     "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "test:e2e": "pnpm --filter @kanhrd/web test:e2e",
+    "test:int": "pnpm --filter @kanhrd/bridge test:int",
+    "lint": "pre-commit run --all-files",
+    "format": "prettier --write ."
   }
 }
