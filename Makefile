@@ -38,8 +38,18 @@ run: build-web build-bridge ## Build then run the bridge locally on 127.0.0.1:51
 	node apps/bridge/dist/main.js
 
 .PHONY: run-exposed
-run-exposed: build-web build-bridge ## Same as `run` but binds 0.0.0.0 so Tailscale / LAN / other hosts can reach it. Requires the safety flag.
+run-exposed: build-web build-bridge ## Bind 0.0.0.0 for LAN / dev-through-Tailscale (exposes on EVERY interface including untrusted Wi-Fi — prefer run-tailscale on a laptop).
 	node apps/bridge/dist/main.js --bind 0.0.0.0 --i-know-what-im-doing
+
+.PHONY: run-tailscale
+run-tailscale: build-web build-bridge ## Bind ONLY to the Tailscale interface IP (safer than 0.0.0.0 on a laptop; needs `tailscale` on PATH).
+	node apps/bridge/dist/main.js --bind "$$(tailscale ip -4 | head -n1)" --i-know-what-im-doing
+
+.PHONY: run-tailscale-serve
+run-tailscale-serve: build-web build-bridge ## Bridge stays loopback; `tailscale serve` fronts it with HTTPS via Tailscale certs (recommended for laptop-through-Tailscale). Ctrl+C to stop; run `tailscale serve --https 5173 off` to remove afterward.
+	@echo "Starting bridge on loopback (5173) + Tailscale Serve fronting on https://$$(tailscale status --self=true --json | jq -r '.Self.DNSName' | sed 's/\.$$//')" ; \
+	 tailscale serve --https 5173 --set-path=/ http://127.0.0.1:5173 & \
+	 node apps/bridge/dist/main.js
 
 ## Dev (watch mode, hot reload)
 .PHONY: dev-web
