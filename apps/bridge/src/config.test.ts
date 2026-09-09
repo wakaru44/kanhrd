@@ -25,7 +25,7 @@ describe("loadConfig", () => {
 
     expect(config.bind).toBe("127.0.0.1");
     expect(config.port).toBe(5173);
-    expect(config.spaDir).toBe("../web/dist");
+    expect(config.spaDir).toBe("../../web/dist/web/browser");
     expect(config.hosts).toEqual([
       { name: "local", socket: expandHome("~/.config/herdr/herdr.sock") },
     ]);

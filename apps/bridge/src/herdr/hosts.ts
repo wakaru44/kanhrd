@@ -1,5 +1,14 @@
 import { EventEmitter } from "node:events";
-import type { EventKind, HerdrPaneInfo, HostSummary, Pane, WsEvent } from "@kanhrd/schema";
+import type {
+  EventKind,
+  HerdrPaneInfo,
+  HerdrPaneReadResult,
+  HostSummary,
+  Pane,
+  ReadFormat,
+  ReadSource,
+  WsEvent,
+} from "@kanhrd/schema";
 import type { HostConfig } from "../config.js";
 import {
   HerdrClient,
@@ -9,6 +18,7 @@ import {
 } from "./client.js";
 import { WorkspaceTabNameCache } from "./names.js";
 import { projectPane } from "./project.js";
+import { PaneWriteQueue } from "./write-queue.js";
 
 const MIN_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30_000;
@@ -41,6 +51,7 @@ export class HostRuntime extends EventEmitter {
   readonly name: string;
   private readonly names = new WorkspaceTabNameCache();
   private readonly client: HerdrClient;
+  private readonly writeQueue = new PaneWriteQueue();
   private readonly paneIds = new Set<string>();
   private subscription: HerdrSubscription | null = null;
   /** Guards against a superseded subscribe (resubscribe in flight) acting on stale disconnect/settle events. */
@@ -85,6 +96,59 @@ export class HostRuntime extends EventEmitter {
     if (!this.connected) throw new HostUnavailableError(this.name);
     const result = await this.client.request<{ panes: HerdrPaneInfo[] }>("pane.list");
     return result.panes.map((pane) => projectPane(this.name, pane, this.names));
+  }
+
+  /** Tier-2: one-shot content fetch, proxied straight to herdr's `pane.read`. */
+  async paneRead(params: {
+    pane_id: string;
+    source?: ReadSource;
+    format?: ReadFormat;
+    lines?: number;
+    strip_ansi?: boolean;
+  }): Promise<{ content: string; revision: number; truncated: boolean; format: ReadFormat; source: ReadSource }> {
+    if (!this.connected) throw new HostUnavailableError(this.name);
+    const source = params.source ?? "recent";
+    const format = params.format ?? "ansi";
+    const requestParams: Record<string, unknown> = { pane_id: params.pane_id, source, format };
+    if (params.lines !== undefined) requestParams.lines = params.lines;
+    if (params.strip_ansi !== undefined) requestParams.strip_ansi = params.strip_ansi;
+    // herdr's `Method::PaneRead` response nests the actual `PaneReadResult` fields under a
+    // `read` key (`{"type":"pane_read","read":{...}}`), unlike `pane.list`'s flat
+    // `{"type":"pane_list","panes":[...]}` shape — confirmed against a live herdr socket.
+    // herdr.ts's `HerdrPaneReadResult` doc cites a flat `ResponseResult::PaneRead`; the
+    // wire reality is a struct variant with a `read` field, so unwrap it here.
+    const result = await this.client.request<{ read: HerdrPaneReadResult }>("pane.read", requestParams);
+    const read = result.read;
+    return {
+      content: read.text,
+      revision: read.revision,
+      truncated: read.truncated,
+      format: read.format,
+      source: read.source,
+    };
+  }
+
+  /**
+   * Tier-2: proxied to herdr's `pane.send_keys`, serialized through
+   * `writeQueue` — herdr dispatches each socket connection on its own
+   * thread, so concurrent writes to the same pane can land out of order.
+   */
+  async paneSendKeys(params: { pane_id: string; keys: string[] }): Promise<void> {
+    if (!this.connected) throw new HostUnavailableError(this.name);
+    await this.writeQueue.enqueue(this.name, params.pane_id, () =>
+      this.client.request("pane.send_keys", { pane_id: params.pane_id, keys: params.keys }),
+    );
+  }
+
+  /**
+   * Tier-2: proxied to herdr's `pane.send_text`, serialized through
+   * `writeQueue` — see `paneSendKeys` doc for why.
+   */
+  async paneSendText(params: { pane_id: string; text: string }): Promise<void> {
+    if (!this.connected) throw new HostUnavailableError(this.name);
+    await this.writeQueue.enqueue(this.name, params.pane_id, () =>
+      this.client.request("pane.send_text", { pane_id: params.pane_id, text: params.text }),
+    );
   }
 
   /**

@@ -1,20 +1,63 @@
-import type { BridgeMethod, EventKind, Pane, WsRequest, WsResponse } from "@kanhrd/schema";
+import type {
+  BridgeCapabilities,
+  BridgeMethod,
+  BridgeMethodParams,
+  EventKind,
+  Pane,
+  ReadFormat,
+  ReadSource,
+  WsRequest,
+  WsResponse,
+} from "@kanhrd/schema";
 import { HostUnavailableError } from "../herdr/hosts.js";
 
-/** Just enough of `HostRuntime` for dispatch to route `pane.list`. */
+/** Just enough of `HostRuntime` for dispatch to route tier-1 + tier-2 methods. */
 export interface DispatchHost {
   listPanes(): Promise<Pane[]>;
+  paneRead(params: {
+    pane_id: string;
+    source?: ReadSource;
+    format?: ReadFormat;
+    lines?: number;
+    strip_ansi?: boolean;
+  }): Promise<{ content: string; revision: number; truncated: boolean; format: ReadFormat; source: ReadSource }>;
+  paneSendKeys(params: { pane_id: string; keys: string[] }): Promise<void>;
+  paneSendText(params: { pane_id: string; text: string }): Promise<void>;
 }
 
 export interface DispatchHostSource {
   get(host: string): DispatchHost | undefined;
 }
 
+/**
+ * `outputPollIntervalMs` reported in `BridgeCapabilities` — see
+ * `ws/server.ts` for where the matching `OutputPoller` is constructed with
+ * this same value. Kept as one constant so the two can't drift.
+ */
+export const OUTPUT_POLL_INTERVAL_MS = 150;
+
+const CAPABILITIES: BridgeCapabilities = {
+  tier: 2,
+  terminal: true,
+  paneResize: false,
+  paneGraphics: false,
+  outputPollIntervalMs: OUTPUT_POLL_INTERVAL_MS,
+};
+
 export interface DispatchContext {
   hosts: DispatchHostSource;
   /** Mints a subscription id and records the (host, kinds) subscription. */
   onSubscribe: (host: string, kinds: EventKind[]) => string;
+  /** Starts (or attaches to) a shared output poll loop and registers this connection as a subscriber. */
+  subscribeOutput: (host: string, params: BridgeMethodParams["pane.subscribe_output"]) => string;
+  /** Deregisters a `pane.subscribe_output` subscription; stops the poll loop if it was the last one. */
+  unsubscribeOutput: (subscriptionId: string) => void;
 }
+
+const NOT_SUPPORTED = {
+  code: "not_supported",
+  message: "herdr has no public PTY-resize API in this version",
+} as const;
 
 /**
  * Routes one `WsRequest` to the matching herdr call and returns the
@@ -24,6 +67,11 @@ export interface DispatchContext {
  */
 export async function dispatch(request: WsRequest, ctx: DispatchContext): Promise<WsResponse> {
   const { id, host, method } = request;
+
+  // Bridge-owned, no herdr host involved — answer even if `host` isn't configured.
+  if ((method as BridgeMethod) === "bridge.capabilities") {
+    return { id, host, ok: true, data: CAPABILITIES };
+  }
 
   const runtime = ctx.hosts.get(host);
   if (!runtime) {
@@ -41,6 +89,56 @@ export async function dispatch(request: WsRequest, ctx: DispatchContext): Promis
         const subscriptionId = ctx.onSubscribe(host, kinds);
         return { id, host, ok: true, data: { subscription_id: subscriptionId } };
       }
+      case "pane.read": {
+        const params = request.params as BridgeMethodParams["pane.read"] | undefined;
+        if (!params?.pane_id) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id" } };
+        }
+        const data = await runtime.paneRead(params);
+        return { id, host, ok: true, data };
+      }
+      case "pane.subscribe_output": {
+        const params = request.params as BridgeMethodParams["pane.subscribe_output"] | undefined;
+        if (!params?.pane_id) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id" } };
+        }
+        const subscriptionId = ctx.subscribeOutput(host, params);
+        return { id, host, ok: true, data: { subscription_id: subscriptionId } };
+      }
+      case "pane.unsubscribe_output": {
+        const params = request.params as BridgeMethodParams["pane.unsubscribe_output"] | undefined;
+        if (params?.subscription_id) ctx.unsubscribeOutput(params.subscription_id);
+        return { id, host, ok: true, data: {} };
+      }
+      case "pane.send_keys": {
+        const params = request.params as BridgeMethodParams["pane.send_keys"] | undefined;
+        if (!params?.pane_id || !params.keys) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id or keys" } };
+        }
+        await runtime.paneSendKeys(params);
+        return { id, host, ok: true, data: {} };
+      }
+      case "pane.send_text": {
+        const params = request.params as BridgeMethodParams["pane.send_text"] | undefined;
+        if (!params?.pane_id || params.text === undefined) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id or text" } };
+        }
+        await runtime.paneSendText(params);
+        return { id, host, ok: true, data: {} };
+      }
+      case "pane.resize":
+        return { id, host, ok: false, error: NOT_SUPPORTED };
+      case "pane.graphics.info":
+      case "pane.graphics.stream":
+        // Optional tier-2 capabilities this bridge build doesn't implement — see
+        // CONTRACT-TIER2.md section 5. Dispatch entries kept so a future
+        // implementation slots in cleanly without a client-facing shape change.
+        return {
+          id,
+          host,
+          ok: false,
+          error: { code: "not_supported", message: "pane graphics streaming is not implemented in this bridge" },
+        };
       default:
         return {
           id,
