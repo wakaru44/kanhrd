@@ -1,0 +1,78 @@
+apps/web/src/app/state/keyboard.service.spec.ts
+  s_0c2ef12b51a130::t_8fd986995b2175 184-187,189-190,192-193,195-200
+  s_0c2ef12b51a130::t_eb073726d2aa86 1
+  s_0c2ef12b51a130::t_fc2271fa1e2343 139
+  s_0c2ef12b51a130::t_2637cf4a6ef23c 2-49,57-138,140-183,188,191,194,201-266
+  s_0c2ef12b51a130::t_20adf9e98ea5d3 50-56
+apps/web/src/app/settings/settings.scss
+  s_0c2ef12b51a130::t_820f212f5dd32b 194-221
+apps/web/src/app/shared/keyboard-help-overlay.ts
+  s_0c2ef12b51a130::t_34d570ebe973b4 1-57
+apps/web/src/app/board/board.ts
+  s_0c2ef12b51a130::t_c9f488995297ca 1
+  s_0c2ef12b51a130::t_6e937b23b5f370 62,65,69,82,98
+apps/web/src/app/app.ts
+  s_0c2ef12b51a130::t_00a89a99f77269 1,5-6,10,17,26-30
+  s_0c2ef12b51a130::t_5033b0bdd039b4 31
+apps/web/src/app/state/keyboard.service.ts
+  s_0c2ef12b51a130::t_d73e5b53561bf6 351-360
+  s_0c2ef12b51a130::t_637db098fc53a8 1-350,361-476
+apps/web/src/app/settings/settings.html
+  s_0c2ef12b51a130::t_6d09199fc41b8a 100-127
+  s_0c2ef12b51a130::t_acf140051ec46a 99
+apps/web/e2e/README.md
+  s_0c2ef12b51a130::t_74056dac980089 88-113
+apps/web/src/app/rail/rail.ts
+  s_0c2ef12b51a130::t_02e94f9bd0bca0 227-228
+  s_0c2ef12b51a130::t_15533d7bd34d64 132-148
+apps/web/src/app/state/layout.service.ts
+  s_0c2ef12b51a130::t_742393b012094c 13-14,20-23,27-34
+apps/web/src/app/app.html
+  s_0c2ef12b51a130::t_f1ab476df8b0d3 23-24
+apps/web/src/app/settings/settings.ts
+  s_0c2ef12b51a130::t_1f8cdbea4a28eb 6
+  s_0c2ef12b51a130::t_4fc9ed7f5ea722 53-68
+  s_0c2ef12b51a130::t_cb3c7d35cb2f1d 27
+apps/web/src/app/shared/keyboard-help-overlay.scss
+  s_0c2ef12b51a130::t_26b4328114a852 1-102
+apps/web/e2e/keyboard.spec.ts
+  s_0c2ef12b51a130::t_bfaa441401c066 4
+  s_0c2ef12b51a130::t_519a3a94875a52 112
+  s_0c2ef12b51a130::t_8002540bbdcde4 103,106
+  s_0c2ef12b51a130::t_8e876698ffecbd 1-3,5-102,104-105,107-108,115-124
+  s_0c2ef12b51a130::t_5d9b64e7554946 109-111,113-114
+apps/web/src/app/app.spec.ts
+  s_0c2ef12b51a130::t_0dbca13a9a16c4 1,6-7,10-21,31-32
+apps/web/e2e/settings.spec.ts
+  s_0c2ef12b51a130::t_9669000165e853 7
+  s_0c2ef12b51a130::t_65cfd16ad57738 31
+apps/web/src/app/shared/keyboard-help-overlay.html
+  s_0c2ef12b51a130::t_0c41738ef6687f 1-33
+apps/web/src/app/board/board.spec.ts
+  s_0c2ef12b51a130::t_c2610c122076b1 272-349
+  s_0c2ef12b51a130::t_7afbbed16689d2 160-271,350
+apps/web/src/app/state/panes.store.ts
+  s_0c2ef12b51a130::t_2f652d2db79cea 786-811
+  s_0c2ef12b51a130::t_1e500ea2af5948 466-474
+apps/web/src/app/shared/keyboard-help-overlay.spec.ts
+  s_0c2ef12b51a130::t_c08790ebd4cfe8 55-56
+  s_0c2ef12b51a130::t_d66bb14a9e3513 1-54,57-82
+Makefile
+  s_0c2ef12b51a130::t_6fb9ae3c8fed1a 144-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "f234ec25dac67c030d5fd084b09e760d46c1b7a6",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
