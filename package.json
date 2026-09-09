@@ -1,0 +1,10 @@
+{
+  "name": "kanhrd",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"kanhrd dev: not implemented yet\"",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck"
+  }
+}
