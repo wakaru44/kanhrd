@@ -1,0 +1,47 @@
+apps/bridge/src/ws/dispatch.ts
+  s_0c2ef12b51a130::t_ffc44d03d50b04 1-11,14,17-25,32-46,51-54,57-61,71-75,92-129,131-135
+  s_0c2ef12b51a130::t_15521bf2810c09 130,136-141
+apps/bridge/src/output/poller.ts
+  s_0c2ef12b51a130::t_bc02fbd7aad73c 1-10,12-39,41-82,84-133,146-168
+  s_0c2ef12b51a130::t_996ec1e69bff79 40
+  s_0c2ef12b51a130::t_8f1507426bff43 134-145
+  s_0c2ef12b51a130::t_38cab39f5dbac0 11
+  s_0c2ef12b51a130::t_b56fc222407c8b 83
+apps/bridge/src/ws/dispatch.test.ts
+  s_0c2ef12b51a130::t_8c2f3deea2c26b 3,14-24,26,30-39,43,57,70,87,94,97,102-257
+apps/bridge/src/herdr/hosts.ts
+  s_0c2ef12b51a130::t_93ceb7a537a1ef 21
+  s_0c2ef12b51a130::t_0eaaa93480fa39 2-11
+  s_0c2ef12b51a130::t_ef4d1552cdce3e 101-114,122,128-130,136-137,141-142,147-148,152
+  s_0c2ef12b51a130::t_6e3eef29741d93 131-135,138-140,143-146,149-151
+  s_0c2ef12b51a130::t_56531d383cb28d 115-121,123-127
+  s_0c2ef12b51a130::t_ab535b04613b54 54
+  s_0c2ef12b51a130::t_39b139e251ba0c 153
+apps/bridge/src/config.test.ts
+  s_0c2ef12b51a130::t_717c84d65ad1e6 28
+apps/bridge/src/ws/server.ts
+  s_0c2ef12b51a130::t_d8a9bc08dda64d 6-7,18-21,26-27,29,69-71,83
+apps/bridge/src/output/poller.test.ts
+  s_0c2ef12b51a130::t_aa952473c2f166 1-151,170-193
+  s_0c2ef12b51a130::t_3050ef271d4c7c 152-169
+apps/bridge/src/herdr/write-queue.ts
+  s_0c2ef12b51a130::t_e77dbb3a51fb21 1-28
+apps/bridge/src/herdr/write-queue.test.ts
+  s_0c2ef12b51a130::t_547c7e72d80fa6 1-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "6043a0a0447a4161e64ee66d225ae8ffc05c131b",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
