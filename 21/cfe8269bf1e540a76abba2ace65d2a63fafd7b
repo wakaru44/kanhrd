@@ -1,0 +1,43 @@
+.claude/commands/opsx/apply.md
+  s_0c2ef12b51a130::t_eb2397525c901a 1-181
+.claude/commands/opsx/archive.md
+  s_0c2ef12b51a130::t_b6ea984a144ab4 1-223
+.claude/commands/opsx/explore.md
+  s_0c2ef12b51a130::t_5a07c0160eb804 1-181
+.claude/commands/opsx/propose.md
+  s_0c2ef12b51a130::t_a0fcb0d5ce4af6 1-119
+.claude/commands/opsx/sync.md
+  s_0c2ef12b51a130::t_c76f571a0d5f73 1-219
+.claude/commands/opsx/update.md
+  s_0c2ef12b51a130::t_b907dc0e9e78a4 1-86
+.claude/skills/openspec-apply-change/SKILL.md
+  s_0c2ef12b51a130::t_e3ffffd110c648 1-185
+.claude/skills/openspec-archive-change/SKILL.md
+  s_0c2ef12b51a130::t_f5c56af49e2c31 1-180
+.claude/skills/openspec-explore/SKILL.md
+  s_0c2ef12b51a130::t_ff258abf90e6a5 1-296
+.claude/skills/openspec-propose/SKILL.md
+  s_0c2ef12b51a130::t_a4412651621ac5 1-123
+.claude/skills/openspec-sync-specs/SKILL.md
+  s_0c2ef12b51a130::t_b1d3ee546808f6 1-223
+.claude/skills/openspec-update-change/SKILL.md
+  s_0c2ef12b51a130::t_ba695c256b0f14 1-90
+openspec/config.yaml
+  s_0c2ef12b51a130::t_9b6eea4f1c8879 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "21cfe8269bf1e540a76abba2ace65d2a63fafd7b",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
