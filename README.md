@@ -2,7 +2,7 @@
 
 kanban + herdr — a web UI for [herdr](https://github.com/herdrdev/herdr) that puts every agent conversation on a single kanban board, across all your machines.
 
-> **Status: alpha, tier 1 in progress.** The bridge and web app are still landing. The sections below describe the target shape of the project; treat "getting started" as aspirational until tier 1 ships.
+> **Status: alpha, tier 2 shipped.** Kanban board and live terminal detail both work; tier 3 (pane lifecycle) is still landing. Treat "getting started" as aspirational for anything beyond board + terminal until tier 3 ships.
 
 ## What it is
 
@@ -35,11 +35,35 @@ Two web UIs for herdr already exist — [`herdr-web`](https://github.com/eyalev/
 
 ## Ship tiers
 
-1. **Tier 1 — Kanban** (current): unified board across hosts, `pane.list` + `events.subscribe`, host chips and filters, card = agent name / workspace / tab / status / host.
-2. **Tier 2 — Terminal detail** (next): click a card to open a live xterm.js terminal for that pane, with graphics overlay support.
-3. **Tier 3 — Pane lifecycle** (later): create/split/close panes and tabs/workspaces directly from the board.
+1. **Tier 1 — Kanban** ✅ shipped: unified board across hosts, `pane.list` + `events.subscribe`, host chips and filters, card = agent name / workspace / tab / status / host.
+2. **Tier 2 — Terminal detail** ✅ shipped: click a card to open a live xterm.js terminal for that pane.
+3. **Tier 3 — Pane lifecycle** (current): create/split/close panes and tabs/workspaces directly from the board.
 
 See `docs/CONTEXT.md` for the full domain glossary behind these tiers.
+
+### What's in tier 2
+
+- A terminal view for the clicked card, rendered with xterm.js.
+- Live output via bridge-side polling of `pane.read` (herdr has no public
+  push event for pane content — see `docs/adr/0004-full-snapshot-terminal-output-via-polling.md`).
+- Input: printable text goes through `pane.send_text`, control keys (Ctrl+C,
+  arrows, etc.) go through `pane.send_keys`.
+- Capability probing (`bridge.capabilities`) so a tier-1 bridge or a
+  tier-2 bridge with optional features missing still degrades gracefully
+  instead of breaking the connection.
+
+### What tier 2 does NOT do
+
+- **No PTY resize.** herdr has no public API to set a pane's terminal
+  dimensions from an external client, so `pane.resize` is always rejected.
+  xterm.js resizes freely in the browser; herdr keeps its own dimensions.
+- **No agent-drawn graphics capture.** herdr's `pane.graphics.*` API is a
+  write path for pushing overlay images onto a pane (used by plugins), not a
+  read path for capturing an agent's own kitty-graphics/sixel output. There
+  is currently no public way to view what an agent draws in its own pane.
+
+See `docs/CONTEXT.md`'s Capabilities section for how clients detect and
+degrade around both gaps.
 
 ## Getting started
 

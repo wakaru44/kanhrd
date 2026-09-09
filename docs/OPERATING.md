@@ -26,6 +26,13 @@ By default the bridge points at `~/.config/herdr/herdr.sock` (or
 URL in a browser on the same machine. Safe by default — nothing to
 configure, nothing reachable off-box.
 
+Opening a card's terminal detail view costs one `pane.read` call against
+herdr per open terminal per `outputPollIntervalMs` (default 150ms) — the
+bridge polls rather than receiving a push event (see
+`docs/adr/0004-full-snapshot-terminal-output-via-polling.md`). No config
+change is needed for the demo; if you want a cheaper cadence, set
+`outputPollIntervalMs` in `kanhrd.config.yaml` to a higher value.
+
 ## 2. Cloud hub with oauth2-proxy
 
 Run the bridge on an always-on cloud VM so the board stays reachable when

@@ -7,3 +7,4 @@ Load-bearing decisions for kanhrd. Each ADR captures one decision with the alter
 | [0001](0001-hub-bridge-ssh-tunnels.md) | Hub bridge + SSH-forwarded sockets | Accepted |
 | [0002](0002-greenfield-vs-forking-existing-web-uis.md) | Greenfield sidecar, not forking existing web UIs | Accepted |
 | [0003](0003-delegated-auth-with-loopback-default.md) | Delegated auth with 127.0.0.1 default | Accepted |
+| [0004](0004-full-snapshot-terminal-output-via-polling.md) | Full-snapshot terminal output via bridge-side polling | Accepted |
