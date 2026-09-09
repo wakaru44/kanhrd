@@ -1,0 +1,5 @@
+# markdownlint rules for kanhrd.
+# MD013 (line-length) is off: technical docs (long URLs, tables, code
+# fences) routinely exceed a fixed column limit. Everything else is default.
+default: true
+MD013: false

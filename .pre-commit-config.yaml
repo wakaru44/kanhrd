@@ -1,0 +1,75 @@
+# pre-commit configuration for kanhrd.
+#
+# Scope note: apps/**, packages/**, openspec/**, docs/adr/**, docs/CONTEXT.md,
+# docs/OPERATING.md, root README.md and tmp/foreman/** are owned by other
+# in-flight work and are excluded from every hook below so this config cannot
+# produce file conflicts with it. See docs/CONTRIBUTING.md for how to widen
+# that scope later (e.g. once apps/web gets its own `lint` script).
+exclude: >
+  (?x)^(
+    apps/|
+    packages/|
+    openspec/|
+    docs/adr/|
+    docs/CONTEXT\.md|
+    docs/OPERATING\.md|
+    README\.md|
+    tmp/foreman/|
+    pnpm-lock\.yaml|
+    \.claude/|
+    docs/history/
+  )
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args:
+          - -d
+          - '{extends: default, rules: {line-length: {max: 120}, document-start: disable}}'
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        types_or: [javascript, ts, jsx, tsx, css, scss, markdown, yaml, json]
+
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.42.0
+    hooks:
+      - id: markdownlint
+        args: [--config, .markdownlint.yaml]
+
+  - repo: https://github.com/tcort/markdown-link-check
+    rev: v3.13.6
+    hooks:
+      - id: markdown-link-check
+        args: [--quiet]
+        stages: [pre-push]
+
+  # apps/web has no ESLint config or `lint` script yet (Angular's own
+  # `angular.json` only defines build/serve/extract-i18n/test targets, see
+  # docs/CONTRIBUTING.md). This hook is a placeholder that becomes a real
+  # check the day that script exists; `--if-present` makes it a no-op until
+  # then instead of failing every commit.
+  - repo: local
+    hooks:
+      - id: web-lint
+        name: web lint (apps/web, if configured)
+        entry: pnpm --filter @kanhrd/web run --if-present lint
+        language: system
+        files: ^apps/web/.*\.[jt]sx?$
+        exclude: ''
+        pass_filenames: false

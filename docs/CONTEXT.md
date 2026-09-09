@@ -46,6 +46,40 @@ PTY resize doesn't propagate back to herdr — there is no public API to set
 a pane's terminal dimensions from an external client. xterm.js resizes
 freely client-side; herdr keeps its own dimensions regardless.
 
+### Lifecycle (tier 3)
+Create/rename/close, on three resources: pane, tab, workspace. Pane has no
+rename (split/close only); tab and workspace get all three verbs. `pane.move`
+reparents a pane between tabs/workspaces and is a distinct operation from
+`tab.move`/`workspace.move` (plain reorder-by-index) — the naming looks
+parallel but the operations aren't. See `tmp/foreman/CONTRACT-TIER3.md` §3
+for the full method table.
+
+**Cascading closes are event-lossy by design.** Closing a pane can implicitly
+close its tab and, in turn, its workspace (last pane in tab, last tab in
+workspace); closing a tab can implicitly close its workspace. herdr only
+emits the `*.closed` event for the resource actually named in the call, not
+one per implicitly-destroyed child — no `tab.closed` when a pane close
+cascades into it, no `pane.closed` for panes inside a tab that a `tab.close`
+cascades away. The client cannot wait for a full set of child events; it
+must treat whichever `*.closed` event arrives as authoritative and locally
+purge everything it had cached under that resource. See
+`tmp/foreman/CONTRACT-TIER3.md` §5.6 for the exact source citations.
+
+**Destructive-op confirmation is UI-only.** herdr's wire API does not
+require or enforce a confirmation step before `pane.close`/`tab.close`/
+`workspace.close`, and it does not stop a client from closing the very last
+open workspace (verified against `close_selected_workspace()`, leaving
+`active = None`). Both guardrails — "are you sure?" and "don't let the
+board go to zero workspaces" — are the client's job, not herdr's.
+
+**Linked-worktree workspaces (`close_group`).** herdr groups workspaces
+that share a linked git worktree. Closing one member of a group with two or
+more workspaces is rejected unless the call passes `close_group: true`,
+which then closes every workspace in the group, not just the target one.
+This needs its own, separate confirmation ("this will close N linked
+workspaces") — it's herdr's own group-consistency gate, not a stand-in for
+the generic destructive-op confirmation above.
+
 ### Capabilities
 On connect, the client calls `bridge.capabilities` to probe what the bridge
 supports. A tier-1 bridge doesn't implement the method and returns an
@@ -57,6 +91,16 @@ are the shipping defaults, since neither has a public herdr API to back it
 (see the Terminal renderer entry below). Clients must check individual
 capability flags, not gate behavior on tier number alone — this is a soft
 degradation contract, not a hard version gate.
+
+### Capabilities (extended)
+Tier 3 adds five more independently-checked flags, same soft-degradation
+pattern as `paneResize`/`paneGraphics` above: `paneCreate` (`pane.split`),
+`paneClose` (`pane.close`), `paneMove` (`pane.move`), `tabCrud` (all of
+`tab.create`/`tab.rename`/`tab.close`/`tab.move`), and `workspaceCrud` (all
+of `workspace.create`/`workspace.rename`/`workspace.close`). A bridge can
+report partial tier-3 support (e.g. pane split/close shipped, tab and
+workspace CRUD not yet) and the client disables exactly the corresponding
+buttons/menu items rather than the whole tier.
 
 ### Multi-host scope
 User runs herdr on N machines (currently 3). One UI session manages all of them.
@@ -86,7 +130,7 @@ Full herdr client, built in three tiers:
 
 - **Tier 1 — Kanban** (must): `pane.list` across hosts, `events.subscribe` for status changes, unified board, host chips + filters, card content = agent name, workspace/tab, last-output snippet, status, host.
 - **Tier 2 — Terminal detail** (must, shipped): click card → xterm.js pane; `pane.read` backfill + live output stream via bridge-side polling; `pane.send_keys` / `pane.send_text`. `pane.resize` and kitty-graphics overlay via `pane.graphics.stream` are optional, capability-probed features — herdr has no public API backing either today. See "Terminal detail (tier 2)" and "Capabilities" above.
-- **Tier 3 — Lifecycle** (must): create/split/close pane; create/rename/delete tab, workspace; move pane between tabs.
+- **Tier 3 — Lifecycle** (must, shipped): create/split/close pane; create/rename/close tab, workspace; move pane between tabs/workspaces. See "Lifecycle (tier 3)" and "Capabilities (extended)" above.
 
 Deferred (Tier 4, post-v1): `layout.*`, integrations, plugins, notification center, agent-view custom filters, popup surfaces, command palette.
 

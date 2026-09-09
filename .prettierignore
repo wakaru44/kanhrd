@@ -1,0 +1,23 @@
+# Owned by other in-flight work / has its own tooling — see
+# .pre-commit-config.yaml and docs/CONTRIBUTING.md.
+apps/
+packages/
+openspec/
+docs/adr/
+docs/CONTEXT.md
+docs/OPERATING.md
+README.md
+tmp/foreman/
+
+# Claude Code skill/command definitions: prompt structure, not prose docs.
+.claude/
+
+# Frozen historical artifacts — captured verbatim, do not reformat.
+docs/history/
+
+# Generated / vendored.
+node_modules/
+pnpm-lock.yaml
+dist/
+build/
+coverage/

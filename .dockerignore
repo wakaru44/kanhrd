@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+**/dist
+**/test-results
+**/test-out
+.git
+.github
+tmp
+docs
+openspec
+*.md
+.local
+.DS_Store
+apps/web/e2e

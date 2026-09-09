@@ -33,6 +33,13 @@ bridge polls rather than receiving a push event (see
 change is needed for the demo; if you want a cheaper cadence, set
 `outputPollIntervalMs` in `kanhrd.config.yaml` to a higher value.
 
+Lifecycle ops (`pane.close`, `tab.close`, `workspace.close`) run against
+your real local herdr and do destroy real state — a closed pane loses its
+scrollback, and closing a linked-worktree workspace detaches that worktree.
+This is true even on a laptop-only, single-user setup with no proxy in
+front. A test worktree/workspace is safer to experiment with than a pane
+that's actually running an agent you care about.
+
 ## 2. Cloud hub with oauth2-proxy
 
 Run the bridge on an always-on cloud VM so the board stays reachable when
@@ -87,6 +94,18 @@ Both the bridge and oauth2-proxy stay bound to loopback on the VM; only
 nginx is internet-facing. A Tailscale Funnel or Cloudflare Access setup
 follows the same shape — proxy owns identity, bridge stays loopback-only
 and reads the trusted header the proxy sets.
+
+Tier-3 lifecycle verbs (`pane.close`, `tab.close`, `workspace.close`, and
+their create/rename counterparts) are high-blast-radius on a hub reachable
+from outside the VM — a mis-scoped or bypassed proxy means anyone who
+reaches the bridge can destroy panes and worktree workspaces, not just view
+them. Make sure whatever proxy you put in front actually requires an
+authenticated user (oauth2-proxy's `--email-domain`/allowlist, Cloudflare
+Access policy, etc.) rather than leaning on network placement (e.g.
+"Tailscale is in front of it") as a stand-in for identity — see
+`docs/adr/0003-delegated-auth-with-loopback-default.md` for why the bridge
+delegates auth instead of owning it, and why that makes the proxy's policy
+the actual gate.
 
 ## 3. Mixed: cloud hub + reverse-tunnelled laptop
 

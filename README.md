@@ -2,7 +2,7 @@
 
 kanban + herdr — a web UI for [herdr](https://github.com/herdrdev/herdr) that puts every agent conversation on a single kanban board, across all your machines.
 
-> **Status: alpha, tier 2 shipped.** Kanban board and live terminal detail both work; tier 3 (pane lifecycle) is still landing. Treat "getting started" as aspirational for anything beyond board + terminal until tier 3 ships.
+> **Status: alpha, tier 3 shipped.** Kanban board, live terminal detail, and pane/tab/workspace lifecycle all work; tier 4 (layouts, plugins, integrations) is next.
 
 ## What it is
 
@@ -37,7 +37,8 @@ Two web UIs for herdr already exist — [`herdr-web`](https://github.com/eyalev/
 
 1. **Tier 1 — Kanban** ✅ shipped: unified board across hosts, `pane.list` + `events.subscribe`, host chips and filters, card = agent name / workspace / tab / status / host.
 2. **Tier 2 — Terminal detail** ✅ shipped: click a card to open a live xterm.js terminal for that pane.
-3. **Tier 3 — Pane lifecycle** (current): create/split/close panes and tabs/workspaces directly from the board.
+3. **Tier 3 — Lifecycle** ✅ shipped, current tier: create/split/close panes and create/rename/close tabs and workspaces, directly from the board.
+4. **Tier 4 — Layouts, plugins, integrations** (next): `layout.*`, plugin/integration surfaces, notification center, command palette.
 
 See `docs/CONTEXT.md` for the full domain glossary behind these tiers.
 
@@ -64,6 +65,31 @@ See `docs/CONTEXT.md` for the full domain glossary behind these tiers.
 
 See `docs/CONTEXT.md`'s Capabilities section for how clients detect and
 degrade around both gaps.
+
+### What's in tier 3
+
+- Create, split, and close panes.
+- Create, rename, and close tabs.
+- Create, rename, and close workspaces.
+- A live tree of workspaces and tabs alongside the board, kept in sync via
+  herdr's own lifecycle events (no bridge-side polling needed — see
+  `docs/CONTEXT.md`'s Lifecycle section).
+- Capability probing per verb (`paneCreate`, `paneClose`, `paneMove`,
+  `tabCrud`, `workspaceCrud`) so a bridge can honestly report partial
+  support instead of an all-or-nothing tier flag.
+
+### What tier 3 does NOT do
+
+- **No workspace reordering.** herdr has `workspace.move`/`workspace.move_block`,
+  but tier 3 doesn't wire it up — reordering reads as a board-layout
+  concern, deferred alongside tier 4.
+- **No layouts.** `layout.*` (export/apply/set-split-ratio) is tier 4.
+- **No plugins, integrations, notifications, or command palette.** All
+  tier 4.
+- Closing a pane, tab, or workspace can cascade to closing its parents —
+  and linked-worktree workspaces (`close_group`) can close several
+  workspaces at once from a single confirmation. See
+  `tmp/foreman/CONTRACT-TIER3.md` §5 for the exact wire-level semantics.
 
 ## Getting started
 
