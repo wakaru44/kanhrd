@@ -1,0 +1,25 @@
+packages/schema/src/wire.ts
+  s_0c2ef12b51a130::t_6391ac2bfa8d32 1-103
+packages/schema/src/index.ts
+  s_0c2ef12b51a130::t_6a864e05230f6a 1-2
+packages/schema/src/herdr.ts
+  s_0c2ef12b51a130::t_e4c81507bdec8e 1-24,27,29-38,40-135
+  s_0c2ef12b51a130::t_7a5797ffbb709d 25-26,28,39
+  s_0c2ef12b51a130::t_a923388ac55eef 136-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "b9bb3898f88c57acafca247bef705e202e366852",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
