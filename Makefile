@@ -32,17 +32,22 @@ install: ## Install workspace dependencies (pnpm --frozen-lockfile).
 hooks: ## Install the pre-commit git hooks locally.
 	pre-commit install
 
-## Dev
-.PHONY: dev
-dev: build-web build-bridge ## Build everything and run the bridge locally (127.0.0.1:5173).
+## Run (built once, no watch)
+.PHONY: run
+run: build-web build-bridge ## Build then run the bridge locally on 127.0.0.1:5173 (safe default).
 	node apps/bridge/dist/main.js
 
+.PHONY: run-exposed
+run-exposed: build-web build-bridge ## Same as `run` but binds 0.0.0.0 so Tailscale / LAN / other hosts can reach it. Requires the safety flag.
+	node apps/bridge/dist/main.js --bind 0.0.0.0 --i-know-what-im-doing
+
+## Dev (watch mode, hot reload)
 .PHONY: dev-web
-dev-web: ## Angular dev server for the SPA (proxies /api and /ws to :5173).
+dev-web: ## Angular dev server for the SPA with HMR (proxies /api and /ws to :5173 — pair with `dev-bridge`).
 	pnpm --filter @kanhrd/web start
 
 .PHONY: dev-bridge
-dev-bridge: ## Bridge in watch mode (tsx watch).
+dev-bridge: ## Bridge in watch mode (tsx watch — restarts on source change).
 	pnpm --filter @kanhrd/bridge dev
 
 ## Build
