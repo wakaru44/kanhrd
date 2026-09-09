@@ -2,6 +2,7 @@ import type {
   BridgeCapabilities,
   BridgeMethod,
   BridgeMethodParams,
+  BridgeMethodResult,
   EventKind,
   Pane,
   ReadFormat,
@@ -9,9 +10,10 @@ import type {
   WsRequest,
   WsResponse,
 } from "@kanhrd/schema";
+import { HerdrRequestError } from "../herdr/client.js";
 import { HostUnavailableError } from "../herdr/hosts.js";
 
-/** Just enough of `HostRuntime` for dispatch to route tier-1 + tier-2 methods. */
+/** Just enough of `HostRuntime` for dispatch to route tier-1 + tier-2 + tier-3 methods. */
 export interface DispatchHost {
   listPanes(): Promise<Pane[]>;
   paneRead(params: {
@@ -23,6 +25,18 @@ export interface DispatchHost {
   }): Promise<{ content: string; revision: number; truncated: boolean; format: ReadFormat; source: ReadSource }>;
   paneSendKeys(params: { pane_id: string; keys: string[] }): Promise<void>;
   paneSendText(params: { pane_id: string; text: string }): Promise<void>;
+
+  // --- Tier-3 (pane/tab/workspace lifecycle) ------------------------------
+  paneSplit(params: BridgeMethodParams["pane.split"]): Promise<BridgeMethodResult["pane.split"]>;
+  paneClose(params: { pane_id: string }): Promise<void>;
+  paneMove(params: BridgeMethodParams["pane.move"]): Promise<BridgeMethodResult["pane.move"]>;
+  tabCreate(params: BridgeMethodParams["tab.create"]): Promise<BridgeMethodResult["tab.create"]>;
+  tabRename(params: BridgeMethodParams["tab.rename"]): Promise<BridgeMethodResult["tab.rename"]>;
+  tabClose(params: { tab_id: string }): Promise<void>;
+  tabMove(params: BridgeMethodParams["tab.move"]): Promise<BridgeMethodResult["tab.move"]>;
+  workspaceCreate(params: BridgeMethodParams["workspace.create"]): Promise<BridgeMethodResult["workspace.create"]>;
+  workspaceRename(params: BridgeMethodParams["workspace.rename"]): Promise<BridgeMethodResult["workspace.rename"]>;
+  workspaceClose(params: { workspace_id: string; close_group?: boolean }): Promise<void>;
 }
 
 export interface DispatchHostSource {
@@ -37,11 +51,19 @@ export interface DispatchHostSource {
 export const OUTPUT_POLL_INTERVAL_MS = 150;
 
 const CAPABILITIES: BridgeCapabilities = {
-  tier: 2,
+  tier: 3,
   terminal: true,
   paneResize: false,
   paneGraphics: false,
   outputPollIntervalMs: OUTPUT_POLL_INTERVAL_MS,
+  // Tier-3 (lane LC3) — all ten methods are implemented, so every flag is
+  // `true`. See CONTRACT-TIER3.md section 6: these are checked
+  // independently by the SPA, not as an all-or-nothing tier gate.
+  paneCreate: true,
+  paneClose: true,
+  paneMove: true,
+  tabCrud: true,
+  workspaceCrud: true,
 };
 
 export interface DispatchContext {
@@ -139,6 +161,83 @@ export async function dispatch(request: WsRequest, ctx: DispatchContext): Promis
           ok: false,
           error: { code: "not_supported", message: "pane graphics streaming is not implemented in this bridge" },
         };
+
+      // --- Tier-3 (pane/tab/workspace lifecycle) --------------------------
+
+      case "pane.split": {
+        const params = request.params as BridgeMethodParams["pane.split"] | undefined;
+        if (!params?.direction) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing direction" } };
+        }
+        const data = await runtime.paneSplit(params);
+        return { id, host, ok: true, data };
+      }
+      case "pane.close": {
+        const params = request.params as BridgeMethodParams["pane.close"] | undefined;
+        if (!params?.pane_id) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id" } };
+        }
+        await runtime.paneClose(params);
+        return { id, host, ok: true, data: {} };
+      }
+      case "pane.move": {
+        const params = request.params as BridgeMethodParams["pane.move"] | undefined;
+        if (!params?.pane_id || !params.destination) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id or destination" } };
+        }
+        const data = await runtime.paneMove(params);
+        return { id, host, ok: true, data };
+      }
+      case "tab.create": {
+        const params = (request.params as BridgeMethodParams["tab.create"] | undefined) ?? {};
+        const data = await runtime.tabCreate(params);
+        return { id, host, ok: true, data };
+      }
+      case "tab.rename": {
+        const params = request.params as BridgeMethodParams["tab.rename"] | undefined;
+        if (!params?.tab_id || params.label === undefined) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing tab_id or label" } };
+        }
+        const data = await runtime.tabRename(params);
+        return { id, host, ok: true, data };
+      }
+      case "tab.close": {
+        const params = request.params as BridgeMethodParams["tab.close"] | undefined;
+        if (!params?.tab_id) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing tab_id" } };
+        }
+        await runtime.tabClose(params);
+        return { id, host, ok: true, data: {} };
+      }
+      case "tab.move": {
+        const params = request.params as BridgeMethodParams["tab.move"] | undefined;
+        if (!params?.tab_id || params.insert_index === undefined) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing tab_id or insert_index" } };
+        }
+        const data = await runtime.tabMove(params);
+        return { id, host, ok: true, data };
+      }
+      case "workspace.create": {
+        const params = (request.params as BridgeMethodParams["workspace.create"] | undefined) ?? {};
+        const data = await runtime.workspaceCreate(params);
+        return { id, host, ok: true, data };
+      }
+      case "workspace.rename": {
+        const params = request.params as BridgeMethodParams["workspace.rename"] | undefined;
+        if (!params?.workspace_id || params.label === undefined) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing workspace_id or label" } };
+        }
+        const data = await runtime.workspaceRename(params);
+        return { id, host, ok: true, data };
+      }
+      case "workspace.close": {
+        const params = request.params as BridgeMethodParams["workspace.close"] | undefined;
+        if (!params?.workspace_id) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing workspace_id" } };
+        }
+        await runtime.workspaceClose(params);
+        return { id, host, ok: true, data: {} };
+      }
       default:
         return {
           id,
@@ -149,6 +248,12 @@ export async function dispatch(request: WsRequest, ctx: DispatchContext): Promis
     }
   } catch (err) {
     if (err instanceof HostUnavailableError) {
+      return { id, host, ok: false, error: { code: err.code, message: err.message } };
+    }
+    // Tier-3: herdr's own error code (e.g. `workspace_group_close_required` —
+    // CONTRACT-TIER3.md section 5.4) is preserved end to end instead of being
+    // flattened to `internal_error`, so the browser can distinguish it.
+    if (err instanceof HerdrRequestError) {
       return { id, host, ok: false, error: { code: err.code, message: err.message } };
     }
     return {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import type { EventKind, Pane, WsRequest } from "@kanhrd/schema";
+import type { EventKind, Pane, TabSummary, WorkspaceSummary, WsRequest } from "@kanhrd/schema";
 import { dispatch, type DispatchContext, type DispatchHost, type DispatchHostSource } from "./dispatch.js";
+import { HerdrRequestError } from "../herdr/client.js";
 import { HostUnavailableError } from "../herdr/hosts.js";
 
 const SAMPLE_PANE: Pane = {
@@ -11,6 +12,9 @@ const SAMPLE_PANE: Pane = {
   agent_status: "idle",
 };
 
+const SAMPLE_TAB: TabSummary = { id: "tab-1", host: "local", workspace: { id: "ws-1" }, name: "Main" };
+const SAMPLE_WORKSPACE: WorkspaceSummary = { id: "ws-1", host: "local", name: "Inbox" };
+
 function noopHost(overrides: Partial<DispatchHost> = {}): DispatchHost {
   return {
     listPanes: () => Promise.resolve([]),
@@ -18,6 +22,22 @@ function noopHost(overrides: Partial<DispatchHost> = {}): DispatchHost {
       Promise.resolve({ content: "", revision: 0, truncated: false, format: "ansi", source: "recent" }),
     paneSendKeys: () => Promise.resolve(),
     paneSendText: () => Promise.resolve(),
+    paneSplit: () => Promise.resolve({ pane: SAMPLE_PANE }),
+    paneClose: () => Promise.resolve(),
+    paneMove: () =>
+      Promise.resolve({
+        changed: true,
+        pane: SAMPLE_PANE,
+        previous_workspace_id: "ws-1",
+        previous_tab_id: "tab-0",
+      }),
+    tabCreate: () => Promise.resolve({ tab: SAMPLE_TAB, pane: SAMPLE_PANE }),
+    tabRename: () => Promise.resolve({ tab: SAMPLE_TAB }),
+    tabClose: () => Promise.resolve(),
+    tabMove: () => Promise.resolve({ tabs: [SAMPLE_TAB] }),
+    workspaceCreate: () => Promise.resolve({ workspace: SAMPLE_WORKSPACE, tab: SAMPLE_TAB, pane: SAMPLE_PANE }),
+    workspaceRename: () => Promise.resolve({ workspace: SAMPLE_WORKSPACE }),
+    workspaceClose: () => Promise.resolve(),
     ...overrides,
   };
 }
@@ -109,11 +129,16 @@ describe("dispatch", () => {
       host: "ghost",
       ok: true,
       data: {
-        tier: 2,
+        tier: 3,
         terminal: true,
         paneResize: false,
         paneGraphics: false,
         outputPollIntervalMs: 150,
+        paneCreate: true,
+        paneClose: true,
+        paneMove: true,
+        tabCrud: true,
+        workspaceCrud: true,
       },
     });
   });
@@ -254,5 +279,235 @@ describe("dispatch", () => {
     expect(streamResponse.ok).toBe(false);
     if (!infoResponse.ok) expect(infoResponse.error.code).toBe("not_supported");
     if (!streamResponse.ok) expect(streamResponse.error.code).toBe("not_supported");
+  });
+
+  // --- Tier-3 (pane/tab/workspace lifecycle) ------------------------------
+
+  it("proxies pane.split to the host and returns the projected pane", async () => {
+    const paneSplit = vi.fn(() => Promise.resolve({ pane: SAMPLE_PANE }));
+    const host = noopHost({ paneSplit });
+    const request: WsRequest = {
+      id: "16",
+      host: "local",
+      method: "pane.split",
+      params: { direction: "right", target_pane_id: "pane-1" },
+    };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+
+    expect(paneSplit).toHaveBeenCalledWith({ direction: "right", target_pane_id: "pane-1" });
+    expect(response).toEqual({ id: "16", host: "local", ok: true, data: { pane: SAMPLE_PANE } });
+  });
+
+  it("rejects pane.split without a direction", async () => {
+    const request: WsRequest = { id: "17", host: "local", method: "pane.split", params: {} as never };
+    const response = await dispatch(request, baseCtx());
+
+    expect(response.ok).toBe(false);
+    if (!response.ok) expect(response.error.code).toBe("invalid_params");
+  });
+
+  it("proxies pane.close to the host", async () => {
+    const paneClose = vi.fn(() => Promise.resolve());
+    const host = noopHost({ paneClose });
+    const request: WsRequest = { id: "18", host: "local", method: "pane.close", params: { pane_id: "pane-1" } };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+
+    expect(paneClose).toHaveBeenCalledWith({ pane_id: "pane-1" });
+    expect(response).toEqual({ id: "18", host: "local", ok: true, data: {} });
+  });
+
+  it("proxies pane.move to the host and returns the cascading-side-effect fields", async () => {
+    const paneMove = vi.fn(() =>
+      Promise.resolve({
+        changed: true,
+        pane: SAMPLE_PANE,
+        previous_workspace_id: "ws-1",
+        previous_tab_id: "tab-0",
+        created_tab: SAMPLE_TAB,
+      }),
+    );
+    const host = noopHost({ paneMove });
+    const request: WsRequest = {
+      id: "19",
+      host: "local",
+      method: "pane.move",
+      params: { pane_id: "pane-1", destination: { type: "new_tab" } },
+    };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+
+    expect(paneMove).toHaveBeenCalledWith({ pane_id: "pane-1", destination: { type: "new_tab" } });
+    expect(response).toEqual({
+      id: "19",
+      host: "local",
+      ok: true,
+      data: {
+        changed: true,
+        pane: SAMPLE_PANE,
+        previous_workspace_id: "ws-1",
+        previous_tab_id: "tab-0",
+        created_tab: SAMPLE_TAB,
+      },
+    });
+  });
+
+  it("rejects pane.move without a destination", async () => {
+    const request: WsRequest = {
+      id: "20",
+      host: "local",
+      method: "pane.move",
+      params: { pane_id: "pane-1" } as never,
+    };
+    const response = await dispatch(request, baseCtx());
+
+    expect(response.ok).toBe(false);
+    if (!response.ok) expect(response.error.code).toBe("invalid_params");
+  });
+
+  it("proxies tab.create to the host, defaulting missing params to {}", async () => {
+    const tabCreate = vi.fn(() => Promise.resolve({ tab: SAMPLE_TAB, pane: SAMPLE_PANE }));
+    const host = noopHost({ tabCreate });
+    const request: WsRequest = { id: "21", host: "local", method: "tab.create" };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+
+    expect(tabCreate).toHaveBeenCalledWith({});
+    expect(response).toEqual({ id: "21", host: "local", ok: true, data: { tab: SAMPLE_TAB, pane: SAMPLE_PANE } });
+  });
+
+  it("proxies tab.rename to the host", async () => {
+    const tabRename = vi.fn(() => Promise.resolve({ tab: SAMPLE_TAB }));
+    const host = noopHost({ tabRename });
+    const request: WsRequest = {
+      id: "22",
+      host: "local",
+      method: "tab.rename",
+      params: { tab_id: "tab-1", label: "Renamed" },
+    };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+
+    expect(tabRename).toHaveBeenCalledWith({ tab_id: "tab-1", label: "Renamed" });
+    expect(response).toEqual({ id: "22", host: "local", ok: true, data: { tab: SAMPLE_TAB } });
+  });
+
+  it("rejects tab.rename without a label", async () => {
+    const request: WsRequest = {
+      id: "23",
+      host: "local",
+      method: "tab.rename",
+      params: { tab_id: "tab-1" } as never,
+    };
+    const response = await dispatch(request, baseCtx());
+
+    expect(response.ok).toBe(false);
+    if (!response.ok) expect(response.error.code).toBe("invalid_params");
+  });
+
+  it("proxies tab.close to the host", async () => {
+    const tabClose = vi.fn(() => Promise.resolve());
+    const host = noopHost({ tabClose });
+    const request: WsRequest = { id: "24", host: "local", method: "tab.close", params: { tab_id: "tab-1" } };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+
+    expect(tabClose).toHaveBeenCalledWith({ tab_id: "tab-1" });
+    expect(response).toEqual({ id: "24", host: "local", ok: true, data: {} });
+  });
+
+  it("proxies tab.move to the host and returns the whole reordered list", async () => {
+    const tabMove = vi.fn(() => Promise.resolve({ tabs: [SAMPLE_TAB] }));
+    const host = noopHost({ tabMove });
+    const request: WsRequest = {
+      id: "25",
+      host: "local",
+      method: "tab.move",
+      params: { tab_id: "tab-1", insert_index: 0 },
+    };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+
+    expect(tabMove).toHaveBeenCalledWith({ tab_id: "tab-1", insert_index: 0 });
+    expect(response).toEqual({ id: "25", host: "local", ok: true, data: { tabs: [SAMPLE_TAB] } });
+  });
+
+  it("proxies workspace.create to the host, defaulting missing params to {}", async () => {
+    const workspaceCreate = vi.fn(() =>
+      Promise.resolve({ workspace: SAMPLE_WORKSPACE, tab: SAMPLE_TAB, pane: SAMPLE_PANE }),
+    );
+    const host = noopHost({ workspaceCreate });
+    const request: WsRequest = { id: "26", host: "local", method: "workspace.create" };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+
+    expect(workspaceCreate).toHaveBeenCalledWith({});
+    expect(response).toEqual({
+      id: "26",
+      host: "local",
+      ok: true,
+      data: { workspace: SAMPLE_WORKSPACE, tab: SAMPLE_TAB, pane: SAMPLE_PANE },
+    });
+  });
+
+  it("proxies workspace.rename to the host", async () => {
+    const workspaceRename = vi.fn(() => Promise.resolve({ workspace: SAMPLE_WORKSPACE }));
+    const host = noopHost({ workspaceRename });
+    const request: WsRequest = {
+      id: "27",
+      host: "local",
+      method: "workspace.rename",
+      params: { workspace_id: "ws-1", label: "Renamed" },
+    };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+
+    expect(workspaceRename).toHaveBeenCalledWith({ workspace_id: "ws-1", label: "Renamed" });
+    expect(response).toEqual({ id: "27", host: "local", ok: true, data: { workspace: SAMPLE_WORKSPACE } });
+  });
+
+  it("proxies workspace.close to the host, passing close_group through verbatim", async () => {
+    const workspaceClose = vi.fn(() => Promise.resolve());
+    const host = noopHost({ workspaceClose });
+    const request: WsRequest = {
+      id: "28",
+      host: "local",
+      method: "workspace.close",
+      params: { workspace_id: "ws-1", close_group: true },
+    };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+
+    expect(workspaceClose).toHaveBeenCalledWith({ workspace_id: "ws-1", close_group: true });
+    expect(response).toEqual({ id: "28", host: "local", ok: true, data: {} });
+  });
+
+  it("rejects workspace.close without a workspace_id", async () => {
+    const request: WsRequest = {
+      id: "29",
+      host: "local",
+      method: "workspace.close",
+      params: {} as never,
+    };
+    const response = await dispatch(request, baseCtx());
+
+    expect(response.ok).toBe(false);
+    if (!response.ok) expect(response.error.code).toBe("invalid_params");
+  });
+
+  it("propagates workspace_group_close_required from a HerdrRequestError verbatim", async () => {
+    const workspaceClose = vi.fn(() =>
+      Promise.reject(
+        new HerdrRequestError(
+          "workspace_group_close_required",
+          "workspace has linked worktree workspaces; use close_group=true",
+        ),
+      ),
+    );
+    const host = noopHost({ workspaceClose });
+    const request: WsRequest = {
+      id: "30",
+      host: "local",
+      method: "workspace.close",
+      params: { workspace_id: "ws-1" },
+    };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+
+    expect(response.ok).toBe(false);
+    if (!response.ok) {
+      expect(response.error.code).toBe("workspace_group_close_required");
+      expect(response.error.message).toMatch(/close_group/);
+    }
   });
 });

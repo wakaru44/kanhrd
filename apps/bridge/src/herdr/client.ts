@@ -4,10 +4,41 @@ import { EventEmitter } from "node:events";
 import type { EventKind } from "@kanhrd/schema";
 import type { RawHerdrLine } from "../types.js";
 
-/** One event frame herdr pushed on a subscribed socket. */
+/** One event frame herdr pushed on a subscribed socket. `event` is already normalized to the bridge/`EventKind` dot form — see `herdrEventKindToDotName`. */
 export interface HerdrPushedEvent {
   event: string;
   data: unknown;
+}
+
+/**
+ * Verified against a live herdr socket (not just the schema): herdr's
+ * OUTGOING `EventEnvelope.event` field serializes via `EventKind`'s own
+ * `#[serde(rename_all = "snake_case")]` derive (src/api/schema/events.rs:192-221)
+ * — e.g. `"tab_created"`, `"pane_agent_status_changed"` — which is a
+ * DIFFERENT enum from the dot-named `Subscription` request enum
+ * (`#[serde(tag = "type")]` with per-variant `#[serde(rename = "tab.created")]`,
+ * same file, ~lines 17-88) used to build `events.subscribe`'s request
+ * payload. herdr also defines a manual `EventKind::dot_name()` helper
+ * (~events.rs:224) that produces the dot form, but it is NOT wired into
+ * `EventEnvelope`'s actual `Serialize` impl — only used internally
+ * (schema introspection), confirmed by reading the broadcast call sites in
+ * `src/api/subscriptions.rs`, which construct `EventEnvelope` directly with
+ * the derived (non-dot) serialization.
+ *
+ * herdr.ts's `HerdrEventEnvelope`/`EventKind` types (mirrored from the
+ * `Subscription` enum's dot names, matching the bridge's own `EventKind`)
+ * assume the dot form throughout — so incoming events are normalized here,
+ * once, at the only place raw herdr JSON is parsed. Every noun (`workspace`/
+ * `worktree`/`tab`/`pane`/`layout`) is a single word, so "replace the FIRST
+ * underscore with a dot" round-trips `dot_name()` exactly for every variant
+ * (verified line-by-line against `dot_name()`'s full match arm list) —
+ * including multi-word suffixes like `pane_agent_status_changed` ->
+ * `pane.agent_status_changed`.
+ */
+export function herdrEventKindToDotName(raw: string): string {
+  const underscoreIndex = raw.indexOf("_");
+  if (underscoreIndex === -1) return raw;
+  return `${raw.slice(0, underscoreIndex)}.${raw.slice(underscoreIndex + 1)}`;
 }
 
 /**
@@ -32,6 +63,24 @@ export interface HerdrSubscriptionSpec {
 export interface HerdrSubscription {
   close(): void;
   on(event: "disconnect", listener: (err?: Error) => void): this;
+}
+
+/**
+ * A herdr `ErrorBody` (`{code, message}`) surfaced as a JS `Error` that keeps
+ * `code` around. Tier-1/2 only ever needed the message (herdr errors were
+ * all "just fail the call" cases); tier-3's `workspace.close` needs the
+ * caller to distinguish `workspace_group_close_required` from any other
+ * failure (CONTRACT-TIER3.md section 5.4/6), so `request()` now preserves
+ * the code instead of discarding it.
+ */
+export class HerdrRequestError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "HerdrRequestError";
+  }
 }
 
 class HerdrSubscriptionHandle extends EventEmitter implements HerdrSubscription {
@@ -91,7 +140,7 @@ export class HerdrClient {
         }
 
         if (parsed.ok === false) {
-          reject(new Error(parsed.error?.message ?? "herdr request failed"));
+          reject(new HerdrRequestError(parsed.error?.code ?? "herdr_error", parsed.error?.message ?? "herdr request failed"));
         } else {
           resolve(parsed.result as T);
         }
@@ -162,7 +211,12 @@ export class HerdrClient {
             if (parsed.error) {
               settled = true;
               socket.end();
-              reject(new Error(parsed.error.message ?? "events.subscribe failed"));
+              // Preserve `code` (not just `message`) same as `request()` —
+              // `HostRuntime` needs to distinguish a recoverable
+              // `pane_not_found` (one stale per-pane subscription spec,
+              // herdr rejects the WHOLE subscribe call) from a real
+              // connection failure. See `HostRuntime.subscribeWithPaneRecovery`.
+              reject(new HerdrRequestError(parsed.error.code ?? "herdr_error", parsed.error.message ?? "events.subscribe failed"));
               return;
             }
             settled = true;
@@ -171,7 +225,7 @@ export class HerdrClient {
           }
 
           if (typeof parsed.event === "string") {
-            onEvent({ event: parsed.event, data: parsed.data });
+            onEvent({ event: herdrEventKindToDotName(parsed.event), data: parsed.data });
           }
         }
       });

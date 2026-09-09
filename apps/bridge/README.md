@@ -57,4 +57,25 @@ traffic; requests to a disconnected host respond with
 - `pnpm --filter @kanhrd/bridge dev` — `tsx watch src/main.ts`
 - `pnpm --filter @kanhrd/bridge build` — compiles to `dist/`
 - `pnpm --filter @kanhrd/bridge typecheck` — `tsc --noEmit`
-- `pnpm --filter @kanhrd/bridge test` — `vitest run`
+- `pnpm --filter @kanhrd/bridge test` — `vitest run` (unit tests, `src/**/*.test.ts`, fake sockets, no real herdr needed)
+- `pnpm --filter @kanhrd/bridge test:int` — `vitest run --config vitest.integration.config.ts` (integration tests, see below)
+
+## Integration tests
+
+`apps/bridge/integration/` is a permanent test suite that spawns the real
+bridge as a subprocess and exercises its HTTP + WebSocket surface end to end
+against a live local herdr server — the bridge/herdr/browser boundary that
+unit tests (fake sockets) and the Playwright suite (browser-level flows)
+both leave uncovered. It replaces the one-off `curl`/`wscat`/Node-script
+smoke tests that used to get reinvented for every validation round.
+
+```bash
+pnpm test:int                                    # from repo root
+pnpm --filter @kanhrd/bridge test:int             # equivalent, scoped
+```
+
+Requires a running local herdr server (`~/.config/herdr/herdr.sock`) with at
+least one open pane — the suite skips with a clear message if herdr isn't
+reachable, the same pattern `apps/web/e2e` uses. See
+`apps/bridge/integration/README.md` for what each file covers and how it
+maps to the historical validation rounds.

@@ -1,4 +1,11 @@
-import type { HerdrPaneInfo, Pane } from "@kanhrd/schema";
+import type {
+  HerdrPaneInfo,
+  HerdrTabDetail,
+  HerdrWorkspaceDetail,
+  Pane,
+  TabSummary,
+  WorkspaceSummary,
+} from "@kanhrd/schema";
 import type { WorkspaceTabNameCache } from "./names.js";
 
 /**
@@ -22,4 +29,18 @@ export function projectPane(host: string, pane: HerdrPaneInfo, names: WorkspaceT
   if (agentName !== undefined) projected.agent = { name: agentName };
 
   return projected;
+}
+
+/**
+ * Tier-3: project herdr's `HerdrWorkspaceDetail` into the bridge-invented
+ * `WorkspaceSummary` shape (same "inject host, drop the rest" trimming
+ * `projectPane` already does for panes) — see CONTRACT-TIER3.md section 3.
+ */
+export function projectWorkspace(host: string, workspace: HerdrWorkspaceDetail): WorkspaceSummary {
+  return { id: workspace.workspace_id, host, name: workspace.label };
+}
+
+/** Tier-3: project herdr's `HerdrTabDetail` into the bridge-invented `TabSummary` shape. */
+export function projectTab(host: string, tab: HerdrTabDetail): TabSummary {
+  return { id: tab.tab_id, host, workspace: { id: tab.workspace_id }, name: tab.label };
 }

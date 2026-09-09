@@ -3,7 +3,7 @@ import { createServer, type Server, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { HerdrClient, type HerdrPushedEvent, type HerdrSubscription } from "./client.js";
+import { HerdrClient, herdrEventKindToDotName, type HerdrPushedEvent, type HerdrSubscription } from "./client.js";
 
 // ponytail: hand-rolled fake herdr server instead of pulling in a mock-socket
 // library — newline-delimited JSON over a unix socket is a few lines of
@@ -150,5 +150,30 @@ describe("HerdrClient", () => {
 
     subscription.close();
     await disconnected;
+  });
+});
+
+/**
+ * Verified live against herdr (2026-09-09): the real `EventEnvelope.event`
+ * wire value is snake_case from `EventKind`'s own derive (e.g.
+ * `"tab_created"`), NOT the dot-form `Subscription` request enum's names —
+ * two different herdr enums that happen to share dot_name() output only for
+ * one of them. See `herdrEventKindToDotName`'s doc for the full source
+ * citation.
+ */
+describe("herdrEventKindToDotName", () => {
+  it("converts the first underscore to a dot, leaving the rest of a multi-word suffix intact", () => {
+    expect(herdrEventKindToDotName("tab_created")).toBe("tab.created");
+    expect(herdrEventKindToDotName("tab_renamed")).toBe("tab.renamed");
+    expect(herdrEventKindToDotName("tab_closed")).toBe("tab.closed");
+    expect(herdrEventKindToDotName("workspace_created")).toBe("workspace.created");
+    expect(herdrEventKindToDotName("workspace_closed")).toBe("workspace.closed");
+    expect(herdrEventKindToDotName("pane_moved")).toBe("pane.moved");
+    expect(herdrEventKindToDotName("pane_agent_status_changed")).toBe("pane.agent_status_changed");
+  });
+
+  it("is a no-op for a string with no underscore", () => {
+    expect(herdrEventKindToDotName("pane.created")).toBe("pane.created");
+    expect(herdrEventKindToDotName("ping")).toBe("ping");
   });
 });
