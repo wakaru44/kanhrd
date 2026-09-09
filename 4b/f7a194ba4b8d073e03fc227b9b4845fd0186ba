@@ -1,0 +1,32 @@
+docs/adr/0003-delegated-auth-with-loopback-default.md
+  s_0c2ef12b51a130::t_e2606f32cc3bf7 1-50
+docs/adr/README.md
+  s_0c2ef12b51a130::t_ef98875c50510c 1-9
+docs/adr/0002-greenfield-vs-forking-existing-web-uis.md
+  s_0c2ef12b51a130::t_9a42c8440c50d9 1-48
+docs/adr/0001-hub-bridge-ssh-tunnels.md
+  s_0c2ef12b51a130::t_150fa72ae2a568 1-55
+docs/CONTEXT.md
+  s_0c2ef12b51a130::t_65c81b56a4c2a9 1-92
+README.md
+  s_0c2ef12b51a130::t_396569dea36c57 3-60
+  s_0c2ef12b51a130::t_2543b82fce1d84 1-2
+docs/OPERATING.md
+  s_0c2ef12b51a130::t_f706ff25e48c70 1-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "4bf7a194ba4b8d073e03fc227b9b4845fd0186ba",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
