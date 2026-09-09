@@ -36,7 +36,33 @@ export type AgentStatus = "idle" | "working" | "blocked" | "done" | "unknown";
  * name is `pane.closed` (events.rs:53, :212, :243). Deviation recorded in
  * CONTRACT.md.
  */
-export type EventKind = "pane.created" | "pane.closed" | "pane.agent_status_changed";
+export type EventKind =
+  | "pane.created"
+  | "pane.closed"
+  | "pane.agent_status_changed"
+  | "pane.output"
+  | "pane.graphics_frame";
+
+/**
+ * `pane.output` and `pane.graphics_frame` are BRIDGE-SYNTHESIZED and have no
+ * matching herdr `EventKind`/`Subscription` variant — the browser subscribes
+ * to them via `pane.subscribe_output` / `pane.graphics.stream`, not via
+ * `events.subscribe`.
+ *
+ * herdr does define `EventKind::PaneOutputChanged` (events.rs:216,
+ * `"pane.output_changed"`) and `EventData::PaneOutputChanged { pane_id,
+ * min_revision }` (events.rs:173-177), but it has NO corresponding
+ * `Subscription` variant (events.rs:16-85) — it cannot be requested through
+ * the public `events.subscribe` method, only used internally. The nearest
+ * requestable primitive is `Subscription::PaneOutputMatched` (events.rs:65-74),
+ * which fires once per matched line against a caller-supplied regex/pattern
+ * (`OutputMatch`, events.rs:109+) — a one-shot "wait for this text" trigger,
+ * not a continuous output-delta stream. Neither is suitable as a general
+ * "tell me whenever this pane's content changes" push primitive, so the
+ * bridge implements `pane.output` by polling `pane.read` per subscribed
+ * pane instead. See CONTRACT-TIER2.md section 5.
+ */
+export type Tier2SynthesizedEventKind = "pane.output" | "pane.graphics_frame";
 
 /**
  * Raw `PaneInfo` fields the bridge reads off herdr, trimmed to what feeds a
@@ -165,3 +191,172 @@ export interface HostSummary {
   connected: boolean;
   last_error?: string;
 }
+
+// ============================================================================
+// Tier-2 (terminal detail view) — added by lane LC2. Tier-1 types above are
+// UNCHANGED. Primary new sources:
+//   - src/api/schema.rs            (`Method` enum, ~lines 141-266)
+//   - src/api/schema/panes.rs      (`PaneReadParams` :355-367, `PaneReadResult`
+//     :755-764, `PaneSendTextParams` :334-337, `PaneSendKeysParams` :339-343,
+//     `PaneResizeParams` :237-243, `PaneGraphicsStreamParams` :436-445)
+//   - src/api/schema/common.rs     (`ReadSource` :77-84, `ReadFormat` :93-101)
+//   - src/api/schema/response.rs   (`ResponseResult::PaneRead` :162-164,
+//     `ResponseResult::PaneGraphicsInfo` :188-209, `ResponseResult::Ok` :304)
+//   - src/api/schema/events.rs     (`EventKind::PaneOutputChanged` :216,
+//     `Subscription` :16-85, `SubscriptionEventKind`/`Data` :367-419)
+//   - src/api/server/pane_graphics_stream.rs (`FrameHeader` :36-51, direction
+//     of the stream, timeouts :21-27)
+// ============================================================================
+
+/**
+ * herdr's `ReadSource` enum, `#[serde(rename_all = "snake_case")]`.
+ * Source: src/api/schema/common.rs:77-84.
+ *
+ * - `visible`: exactly the on-screen viewport (cols x rows), cheapest.
+ * - `recent` / `recent_unwrapped`: viewport + scrollback, wrapped/unwrapped
+ *   to the terminal's current width.
+ * - `detection`: the narrow buffer herdr's own agent-status detector reads;
+ *   not meant for human display, listed here only for completeness.
+ */
+export type ReadSource = "visible" | "recent" | "recent_unwrapped" | "detection";
+
+/**
+ * herdr's `ReadFormat` enum, `#[serde(rename_all = "snake_case")]`.
+ * Source: src/api/schema/common.rs:93-101. Default is `text`.
+ */
+export type ReadFormat = "text" | "ansi";
+
+/**
+ * `Method::PaneRead` params. Source: src/api/schema/panes.rs:355-367.
+ * herdr also carries a private `intent: ReadIntent` field
+ * (`#[serde(skip)]`, common.rs:86-91) — not part of the public wire shape,
+ * omitted here.
+ */
+export interface HerdrPaneReadParams {
+  pane_id: string;
+  source: ReadSource;
+  lines?: number;
+  format?: ReadFormat;
+  strip_ansi?: boolean;
+}
+
+/**
+ * `ResponseResult::PaneRead` → `PaneReadResult`. Source:
+ * src/api/schema/panes.rs:755-764 and response.rs:162-164.
+ */
+export interface HerdrPaneReadResult {
+  pane_id: string;
+  workspace_id: string;
+  tab_id: string;
+  source: ReadSource;
+  format: ReadFormat;
+  text: string;
+  revision: number;
+  truncated: boolean;
+}
+
+/**
+ * `Method::PaneSendText` params. Source: src/api/schema/panes.rs:334-337.
+ */
+export interface HerdrPaneSendTextParams {
+  pane_id: string;
+  text: string;
+}
+
+/**
+ * `Method::PaneSendKeys` params. Source: src/api/schema/panes.rs:339-343.
+ * NOTE: `keys` is a `Vec<String>` of herdr key-name tokens (e.g.
+ * `["ctrl+c"]`, `["Enter"]`), not a single string. The original tier-2 brief
+ * assumed `keys: string`; corrected here to match herdr's real shape. See
+ * CONTRACT-TIER2.md section 2.
+ */
+export interface HerdrPaneSendKeysParams {
+  pane_id: string;
+  keys: string[];
+}
+
+/**
+ * `Method::PaneResize` params. Source: src/api/schema/panes.rs:237-243.
+ *
+ * IMPORTANT: despite the name, this is NOT "set this pane's PTY to N cols
+ * by M rows." It resizes a pane's split geometry within herdr's layout
+ * tree (`direction` + `amount`, tmux-`resize-pane`-style) — the same
+ * concept as dragging a split divider. herdr's `PaneInfo` (panes.rs:527-560)
+ * carries no cols/rows fields at all, and PTY geometry is driven by the
+ * primary TUI client's real terminal window
+ * (`src/client/terminal_geometry.rs`, part of the private
+ * same-install client/activation protocol, not the public JSON API).
+ * There is currently no public herdr method that lets an external client
+ * set or read a pane's PTY dimensions. See CONTRACT-TIER2.md section 5.
+ */
+export interface HerdrPaneResizeParams {
+  pane_id?: string;
+  direction: "up" | "down" | "left" | "right";
+  amount?: number;
+}
+
+/**
+ * `Method::PaneGraphicsInfo` result. Source: src/api/schema/response.rs:188-209.
+ *
+ * This is capability/config metadata for the graphics-overlay *write* path
+ * (cell pixel size, which image formats and transports the server accepts,
+ * size limits) — NOT a list of images currently drawn on the pane, and NOT
+ * a way to read out a kitty-graphics/sixel escape sequence an agent process
+ * emitted into the PTY. See CONTRACT-TIER2.md section 5 for why this means
+ * tier-2's "view an agent's rendered graphics" goal is not achievable
+ * through this method.
+ */
+export interface HerdrPaneGraphicsInfoResult {
+  cell_width_px: number;
+  cell_height_px: number;
+  pane_visible: boolean;
+  file_frame_directory?: string;
+  file_frame_formats: string[];
+  file_frame_max_bytes?: number;
+  file_frame_direct_max_bytes?: number;
+  file_frame_damage: boolean;
+  max_layers_per_pane: number;
+  pixel_mouse: boolean;
+  file_frame_transport?: string;
+}
+
+/**
+ * herdr's `PaneGraphicsFormat` enum. Source: src/api/schema/panes.rs:369-376.
+ */
+export type PaneGraphicsFormat = "png" | "rgb" | "rgba" | "bgra";
+
+/**
+ * herdr's private (non-schema, hand-parsed) `FrameHeader` JSON line that a
+ * `pane.graphics.stream` client sends immediately before each binary frame
+ * body. Source: src/api/server/pane_graphics_stream.rs:36-51.
+ *
+ * DIRECTION: `pane.graphics.stream` is a client → herdr PUSH — the caller
+ * opens a dedicated connection, sends a `PaneGraphicsStreamParams` open
+ * request, then repeatedly sends `{FrameHeader JSON}\n{binary body}` to
+ * DRAW an image onto the pane's overlay layer (server methods
+ * `PaneGraphicsStreamSet`/`...Direct`, both `#[serde(skip)]` / TUI-private
+ * and unreachable from outside this framing). It is not a channel herdr
+ * uses to push a pane's own rendered graphics content OUT to a viewer.
+ * See CONTRACT-TIER2.md section 5.
+ */
+export interface HerdrGraphicsFrameHeader {
+  format: PaneGraphicsFormat;
+  image_width: number;
+  image_height: number;
+  data_length?: number;
+  file?: { path: string };
+  sequence?: number;
+  revision?: number;
+  placement?: {
+    viewport_col?: number;
+    viewport_row?: number;
+    grid_cols?: number;
+    grid_rows?: number;
+  };
+}
+
+/** Alias kept for wire.ts import ergonomics; identical shape to {@link HerdrGraphicsFrameHeader}. */
+export type GraphicsFrameHeader = HerdrGraphicsFrameHeader;
+
+/** Alias kept for wire.ts import ergonomics; identical shape to {@link HerdrPaneGraphicsInfoResult}. */
+export type PaneGraphicsInfoData = HerdrPaneGraphicsInfoResult;
