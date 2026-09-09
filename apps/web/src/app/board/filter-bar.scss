@@ -27,6 +27,16 @@
     opacity: 0.4;
     text-decoration: line-through;
   }
+
+  // 40x40px is the touch-target minimum (WCAG 2.5.5 / mobile HIG). Below
+  // 600px, grow the tap area via padding + min-height/width instead of
+  // resizing the visible pill, so the touch target is generous without
+  // making the chip visually bulky on a small screen.
+  @media (max-width: 600px) {
+    min-height: 40px;
+    min-width: 40px;
+    padding: 0.6rem 1rem;
+  }
 }
 
 .host-chip {

@@ -3,6 +3,7 @@ import { PanesStore, STATUS_COLUMN_ORDER } from "../state/panes.store";
 import { Column } from "./column";
 import { FilterBar } from "./filter-bar";
 import { Rail } from "../rail/rail";
+import { LayoutService } from "../state/layout.service";
 
 @Component({
   selector: "app-board",
@@ -12,6 +13,7 @@ import { Rail } from "../rail/rail";
 })
 export class Board {
   protected readonly store = inject(PanesStore);
+  protected readonly layout = inject(LayoutService);
   protected readonly statusOrder = STATUS_COLUMN_ORDER;
   protected readonly columns = this.store.columnsSignal;
   protected readonly loading = this.store.hostsLoading;

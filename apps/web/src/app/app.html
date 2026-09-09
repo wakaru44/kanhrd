@@ -1,5 +1,21 @@
 <header class="app-header">
+  <button
+    type="button"
+    class="icon-btn hamburger"
+    title="Toggle navigation"
+    aria-label="Toggle navigation"
+    (click)="toggleRail()"
+  >&#9776;</button>
   <a routerLink="/" class="brand">kanhrd</a>
+  <span class="header-spacer"></span>
+  <button
+    type="button"
+    class="icon-btn theme-toggle"
+    [title]="themeService.theme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+    [attr.aria-label]="themeService.theme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+    (click)="toggleTheme()"
+  >{{ themeService.theme() === 'dark' ? '☀' : '☾' }}</button>
+  <a routerLink="/settings" class="icon-btn" title="Settings" aria-label="Settings">&#9881;</a>
 </header>
 <main>
   <router-outlet />

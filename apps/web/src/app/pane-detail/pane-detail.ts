@@ -19,14 +19,27 @@ import type { BridgeEventPayload, WsEvent } from "@kanhrd/schema";
 import { PanesStore, paneKey } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
 import { classifyInput } from "./key-mapping";
+import { ThemeService } from "../state/theme.service";
+import { ClockTick, formatElapsed } from "../util/clock";
 
-const XTERM_THEME = {
+/** Mirrors `[data-theme="dark"]` in styles.scss — xterm.js takes its own theme object, it doesn't read CSS custom properties. */
+const XTERM_THEME_DARK = {
   background: "#14161c",
   foreground: "#e6e8ee",
   cursor: "#e6e8ee",
   selectionBackground: "#3c4252",
   black: "#14161c",
   brightBlack: "#5a6072",
+};
+
+/** Mirrors `[data-theme="light"]` in styles.scss. */
+const XTERM_THEME_LIGHT = {
+  background: "#f4f5f7",
+  foreground: "#1b1e26",
+  cursor: "#1b1e26",
+  selectionBackground: "#d7dae1",
+  black: "#f4f5f7",
+  brightBlack: "#8b91a1",
 };
 
 const XTERM_FONT_FAMILY =
@@ -49,6 +62,8 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly ws = inject(WsClient);
   private readonly store = inject(PanesStore);
+  private readonly themeService = inject(ThemeService);
+  protected readonly clock = inject(ClockTick);
 
   @ViewChild("terminalContainer", { static: true })
   private readonly containerRef!: ElementRef<HTMLDivElement>;
@@ -96,7 +111,35 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     this.fitAddon?.fit();
   };
 
+  // --- stats strip: revision count, last-poll timestamp, subscription
+  // health. All from data already on the tier-2 wire surface (`pane.read`'s
+  // and `pane.output`'s `revision` — see BridgeMethodResult/BridgeEventPayload
+  // in wire.ts) — no bridge change needed.
+  protected readonly revision = signal<number | null>(null);
+  protected readonly lastPollAt = signal<number | null>(null);
+  protected readonly subscribed = signal(false);
+
+  protected readonly lastPollLabel = computed(() => {
+    const at = this.lastPollAt();
+    if (at === null) {
+      return "never";
+    }
+    return `${formatElapsed(this.clock.now() - at)} ago`;
+  });
+
   constructor() {
+    // Switches the live terminal's colors immediately when the header/
+    // settings theme toggle flips — xterm.js takes its own theme object and
+    // does not read CSS custom properties.
+    effect(() => {
+      const theme = this.themeService.theme();
+      untracked(() => {
+        if (this.term) {
+          this.term.options.theme = theme === "light" ? XTERM_THEME_LIGHT : XTERM_THEME_DARK;
+        }
+      });
+    });
+
     // Fetch (and refetch) this pane's content whenever the route resolves to
     // a different pane or the socket (re)connects — driven off signals
     // (Angular 20 way) rather than a one-shot `ngOnInit`/`ngAfterViewInit`
@@ -124,7 +167,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     const term = new Terminal({
-      theme: XTERM_THEME,
+      theme: this.themeService.theme() === "light" ? XTERM_THEME_LIGHT : XTERM_THEME_DARK,
       fontFamily: XTERM_FONT_FAMILY,
       fontSize: 13,
       convertEol: true,
@@ -163,6 +206,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     }
     this.subscriptionId = null;
     this.subscriptionHost = null;
+    this.subscribed.set(false);
   }
 
   private async loadForPane(host: string, id: string): Promise<void> {
@@ -182,6 +226,8 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       }
       if (result) {
         this.term.write(result.content);
+        this.revision.set(result.revision);
+        this.lastPollAt.set(Date.now());
       }
       const sub = await this.ws.request(host, "pane.subscribe_output", { pane_id: id });
       if (this.host() !== host || this.id() !== id) {
@@ -193,6 +239,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       if (sub) {
         this.subscriptionId = sub.subscription_id;
         this.subscriptionHost = host;
+        this.subscribed.set(true);
       }
     } catch {
       // Bridge unreachable, tier-1 bridge, or connection dropped mid-load —
@@ -212,6 +259,8 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     }
     this.term.reset();
     this.term.write(payload.content);
+    this.revision.set(payload.revision);
+    this.lastPollAt.set(Date.now());
   }
 
   private handleInput(data: string): void {

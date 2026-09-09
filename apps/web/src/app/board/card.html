@@ -6,6 +6,13 @@
   <div class="path">{{ path() }}</div>
   <span class="host-chip" [style.background]="hostColor()">{{ pane().host }}</span>
 
+  <div class="stats-badge" title="Time in current status{{ lineCount() ? ' and last known output size' : '' }}">
+    <span>{{ pane().agent_status }} · {{ elapsed() }}</span>
+    @if (lineCount(); as lines) {
+      <span> · {{ lines }} lines</span>
+    }
+  </div>
+
   @if (paneSplitAvailable() || paneCloseAvailable()) {
     <div class="card-actions">
       @if (paneSplitAvailable()) {

@@ -73,35 +73,45 @@ test("card text stays within the viewport width", async ({ app }) => {
   }
 });
 
-test("filter chips are tappable (measures against the 40x40px touch-target minimum)", async ({ app }) => {
+test("filter chips meet the 40x40px touch-target minimum and are tappable", async ({ app }) => {
   await expect(filterBar(app)).toBeVisible();
   const chips = app.locator(".chip");
   const count = await chips.count();
   expect(count).toBeGreaterThan(0);
 
-  // Chips must at least be clickable (functional tap check) — this suite
-  // owns e2e/*, not apps/web/src/**, so it can't resize them.
   await chips.first().click();
   await chips.first().click(); // toggle back off, leaves filter state as found
 
-  const undersized: string[] = [];
+  // L-UX fixed the sizing gap this test used to only annotate (filter-bar.scss
+  // now sets `min-height: 40px` + wider padding under 600px) — asserted as a
+  // hard failure now that the fix is in place.
   for (let i = 0; i < count; i++) {
     const box = await chips.nth(i).boundingBox();
-    if (!box || box.width < 40 || box.height < 40) {
-      undersized.push((await chips.nth(i).textContent())?.trim() ?? `chip[${i}]`);
-    }
+    const label = (await chips.nth(i).textContent())?.trim() ?? `chip[${i}]`;
+    expect(box, `chip "${label}" has no bounding box`).not.toBeNull();
+    expect(box!.width, `chip "${label}" width`).toBeGreaterThanOrEqual(40);
+    expect(box!.height, `chip "${label}" height`).toBeGreaterThanOrEqual(40);
   }
-  // Known layout gap, not asserted as a hard failure: sizing is owned by
-  // L-UX, not this e2e lane (report-only per this lane's brief). Recorded
-  // as a test annotation so it shows up in the HTML/list report without
-  // failing the mobile project run.
-  test.info().annotations.push({
-    type: undersized.length > 0 ? "issue" : "info",
-    description:
-      undersized.length > 0
-        ? `chips under the 40x40 touch-target minimum: ${undersized.join(", ")}`
-        : "all chips meet the 40x40 touch-target minimum",
-  });
+});
+
+test("hamburger button opens the nav rail as an overlay drawer below 900px", async ({ app }) => {
+  const hamburger = app.locator(".hamburger");
+  await expect(hamburger).toBeVisible();
+
+  // Still hidden until toggled — matches the "hidden by default" test above.
+  await expect(app.locator("nav.rail")).toBeHidden();
+
+  await hamburger.click();
+  await expect(app.locator("nav.rail")).toBeVisible({ timeout: 3_000 });
+  await expect(app.locator(".rail-backdrop")).toBeVisible();
+
+  // The drawer is pinned to the left (`.rail.open`) and sits above the
+  // backdrop (higher z-index) — click the backdrop near the right edge of
+  // the viewport so the click actually lands on it, not the drawer.
+  const viewport = app.viewportSize();
+  expect(viewport).not.toBeNull();
+  await app.locator(".rail-backdrop").click({ position: { x: viewport!.width - 5, y: 10 } });
+  await expect(app.locator("nav.rail")).toBeHidden();
 });
 
 test("clicking a card opens the terminal and xterm.js renders content", async ({ app, panePicker }) => {

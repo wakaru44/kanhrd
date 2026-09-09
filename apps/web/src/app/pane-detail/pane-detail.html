@@ -10,6 +10,12 @@
     <span class="live-indicator">Live · updates every ~{{ pollIntervalMs() }}ms</span>
   </header>
 
+  <div class="stats-strip">
+    <span>rev {{ revision() ?? "–" }}</span>
+    <span>updated {{ lastPollLabel() }}</span>
+    <span>{{ subscribed() ? "live" : "not subscribed" }}</span>
+  </div>
+
   <div class="detail-body">
     <div class="terminal-container" #terminalContainer></div>
 

@@ -1,0 +1,118 @@
+<div class="settings">
+  <header class="settings-header">
+    <a routerLink="/" class="back">&larr; Back to board</a>
+    <h1>Settings</h1>
+  </header>
+
+  <section class="settings-section">
+    <h2>Appearance</h2>
+
+    <div class="setting-row">
+      <span class="setting-label">Theme</span>
+      <button type="button" class="btn" (click)="toggleTheme()">
+        {{ themeService.theme() === "dark" ? "Switch to light" : "Switch to dark" }}
+      </button>
+    </div>
+
+    <div class="setting-row">
+      <span class="setting-label">Density</span>
+      <div class="segmented">
+        <button
+          type="button"
+          class="segment"
+          [class.active]="density() === 'comfortable'"
+          (click)="setDensity('comfortable')"
+        >Comfortable</button>
+        <button
+          type="button"
+          class="segment"
+          [class.active]="density() === 'compact'"
+          (click)="setDensity('compact')"
+        >Compact</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="settings-section">
+    <h2>Runtime</h2>
+    <p class="section-note">
+      The output poll interval is bridge-owned. Each connected host advertises its own cadence below.
+    </p>
+
+    @if (hosts().length === 0) {
+      <p class="empty">No hosts connected yet.</p>
+    } @else {
+      <div class="host-poll-list">
+        @for (host of hosts(); track host.name) {
+          <div class="setting-row">
+            <span class="setting-label">{{ host.name }}</span>
+            <span class="setting-value">
+              {{ advertisedPollInterval(host.name) ? advertisedPollInterval(host.name) + "ms" : "n/a" }}
+            </span>
+          </div>
+        }
+      </div>
+    }
+
+    <div class="setting-row">
+      <label class="setting-label" for="requested-poll-ms">Requested override (ms)</label>
+      <input
+        id="requested-poll-ms"
+        type="number"
+        class="text-input"
+        min="0"
+        [value]="requestedPollIntervalMs() ?? ''"
+        (input)="onRequestedPollIntervalInput($any($event.target).value)"
+      />
+    </div>
+    <p class="section-note coming-soon">
+      Coming soon — the bridge doesn't yet accept a per-subscription poll-interval override, so this value
+      is saved locally but has no effect on live polling.
+    </p>
+  </section>
+
+  <section class="settings-section">
+    <h2>Servers / hosts</h2>
+    <p class="section-note">
+      The host list is bridge-owned. To add, remove, or reconfigure a host, edit
+      <code>kanhrd.config.yaml</code> on the bridge host — this screen is read-only.
+    </p>
+
+    @if (hosts().length === 0) {
+      <p class="empty">No hosts configured.</p>
+    } @else {
+      <ul class="host-list">
+        @for (host of hosts(); track host.name) {
+          <li class="host-row">
+            <span class="conn-dot" [class.ok]="host.connected" [class.err]="!host.connected"></span>
+            <span class="host-name">{{ host.name }}</span>
+            <span class="host-status">{{ host.connected ? "connected" : "not connected" }}</span>
+            @if (host.last_error) {
+              <span class="host-error">{{ host.last_error }}</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <section class="settings-section">
+    <h2>Data</h2>
+    <p class="section-note">
+      Clears filters, theme, density, and every other kanhrd setting stored in this browser. This does not
+      affect the bridge or any host.
+    </p>
+    <button type="button" class="btn danger" (click)="requestClearData()">Clear local data</button>
+  </section>
+</div>
+
+@if (showClearConfirm()) {
+  <app-confirm-modal
+    title="Clear local data?"
+    body="This clears filters, theme, density, and other saved settings from this browser and reloads the page. This cannot be undone."
+    confirmLabel="Clear data"
+    [danger]="true"
+    (confirmed)="confirmClearData()"
+    (cancelled)="cancelClearData()"
+  />
+}

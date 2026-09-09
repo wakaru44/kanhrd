@@ -29,7 +29,10 @@
   <p class="state empty">No herdr hosts are configured yet.</p>
 } @else {
   <div class="board-layout">
-    <app-rail class="rail" />
+    @if (layout.railOpen()) {
+      <div class="rail-backdrop" (click)="layout.closeRail()"></div>
+    }
+    <app-rail class="rail" [class.open]="layout.railOpen()" />
     <div class="board-grid">
       @for (status of statusOrder; track status) {
         @if (!isStatusHidden(status)) {

@@ -24,3 +24,35 @@ main {
   color: var(--text);
   text-decoration: none;
 }
+
+.header-spacer {
+  flex: 1;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--border-hover);
+  }
+}
+
+.hamburger {
+  display: none;
+
+  @media (max-width: 900px) {
+    display: inline-flex;
+  }
+}

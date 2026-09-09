@@ -83,6 +83,32 @@
 
   @media (max-width: 900px) {
     display: none;
+
+    &.open {
+      display: block;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 50;
+      width: 80vw;
+      max-width: 20rem;
+      background: var(--surface-1);
+      box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+      overflow-y: auto;
+    }
+  }
+}
+
+.rail-backdrop {
+  display: none;
+
+  @media (max-width: 900px) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.5);
   }
 }
 

@@ -1,7 +1,14 @@
 /* Global styles — dark by default to match herdr's terminal aesthetic. */
 @use "@xterm/xterm/css/xterm.css";
 
-:root {
+/*
+ * Theme: `ThemeService` (src/app/state/theme.service.ts) stamps
+ * `data-theme="dark"|"light"` on <html>. `:root` alone stays the dark
+ * palette so a stylesheet-only context (e.g. before the app bootstraps)
+ * still renders dark, matching herdr's terminal aesthetic.
+ */
+:root,
+[data-theme="dark"] {
   --bg: #14161c;
   --surface-1: #1b1e26;
   --surface-2: #232733;
@@ -14,6 +21,37 @@
   --status-idle: #e5c07b;
   --status-done: #6d8fe0;
   --status-unknown: #5a6072;
+}
+
+[data-theme="light"] {
+  --bg: #f4f5f7;
+  --surface-1: #ffffff;
+  --surface-2: #eceef2;
+  --border: #d7dae1;
+  --border-hover: #b9bfcb;
+  --text: #1b1e26;
+  --text-dim: #5b6273;
+  --status-working: #2f9e63;
+  --status-blocked: #c73b46;
+  --status-idle: #a5760a;
+  --status-done: #3f63c0;
+  --status-unknown: #8b91a1;
+}
+
+/*
+ * Density: `SettingsService` (src/app/state/settings.service.ts) stamps
+ * `data-density="comfortable"|"compact"` on <html>. Comfortable (default)
+ * keeps every component's own padding/gap values as-is; compact scales them
+ * down via one shared multiplier so individual components don't need their
+ * own compact variant.
+ */
+:root,
+[data-density="comfortable"] {
+  --density-scale: 1;
+}
+
+[data-density="compact"] {
+  --density-scale: 0.65;
 }
 
 * {

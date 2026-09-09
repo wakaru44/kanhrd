@@ -96,7 +96,18 @@
   flex: 1;
   min-width: 0;
   padding: 0.5rem;
-  background: #14161c;
+  background: var(--bg);
+}
+
+.stats-strip {
+  flex: none;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.3rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-dim);
+  font-size: 0.72rem;
 }
 
 .graphics-panel {

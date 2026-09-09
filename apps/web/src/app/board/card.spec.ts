@@ -158,6 +158,24 @@ describe("Card", () => {
     expect(store.closePane).toHaveBeenCalledWith("laptop", "pane-12345678");
   });
 
+  it("stats badge shows the agent status and an elapsed-time segment", () => {
+    const el = render(pane({ agent_status: "working" }));
+    const badge = el.querySelector(".stats-badge");
+    expect(badge).toBeTruthy();
+    expect(badge?.textContent).toContain("working");
+    expect(badge?.textContent).toMatch(/\d+[smh]/);
+  });
+
+  it("stats badge shows a line count when last_output_snippet is present", () => {
+    const el = render(pane({ last_output_snippet: "line one\nline two\nline three" }));
+    expect(el.querySelector(".stats-badge")?.textContent).toContain("3 lines");
+  });
+
+  it("stats badge hides the line-count segment when last_output_snippet is absent", () => {
+    const el = render(pane({ last_output_snippet: undefined }));
+    expect(el.querySelector(".stats-badge")?.textContent).not.toContain("lines");
+  });
+
   it("clicking the close/split buttons does not navigate the card link", () => {
     const el = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneClose: true, paneCreate: true }));
     const closeEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
