@@ -1,0 +1,19 @@
+pnpm-lock.yaml
+  s_0c2ef12b51a130::t_4e9c0252cc6ad9 74-79,1764-1769,4983-4986
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "d432c516476bf6fd89a9c730b7527b68fce07682",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
