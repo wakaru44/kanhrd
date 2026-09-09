@@ -1,0 +1,101 @@
+apps/bridge/src/herdr/project.ts
+  s_0c2ef12b51a130::t_e8e9d907437793 1-8,33-46
+apps/bridge/integration/connectivity.test.ts
+  s_0c2ef12b51a130::t_962b6bc02eb336 2
+  s_0c2ef12b51a130::t_e5a620f36e10bb 37-42,55
+  s_0c2ef12b51a130::t_b58e0bcb3d7365 1,3-36,43-54,56-75,77-127
+  s_0c2ef12b51a130::t_1b8d405ca7a942 76
+apps/bridge/src/herdr/hosts.ts
+  s_0c2ef12b51a130::t_f12558f6b86862 720-723
+  s_0c2ef12b51a130::t_2d313139e0ae81 4-5,7,9,11-17,34-35,72-86,89,99-100,144,201-410,422,437,444,562,579,602-626,628-719,724,726-737,739
+  s_0c2ef12b51a130::t_f3be8b6f524585 725
+  s_0c2ef12b51a130::t_c1a77032dd5371 28
+  s_0c2ef12b51a130::t_245945c02b766a 627
+  s_0c2ef12b51a130::t_a40f3255b1e079 3,22
+  s_0c2ef12b51a130::t_f3e8e63e3afdb0 57-71
+  s_0c2ef12b51a130::t_184980fa6a51a6 438-440,442,445-448,453-497,508
+apps/bridge/integration/lifecycle.test.ts
+  s_0c2ef12b51a130::t_b6d4049bed06a8 91-94,103,106,111
+  s_0c2ef12b51a130::t_adbe5c728ca832 55
+  s_0c2ef12b51a130::t_272340cd3e912c 2
+  s_0c2ef12b51a130::t_c48c3f5ae85be3 1,3-14,42-54,56-90,95-102,105,107-110,112-118,120-133,135-137,139-140
+  s_0c2ef12b51a130::t_464267e0690ad1 15-16
+  s_0c2ef12b51a130::t_708c2cf69bee89 17-41
+  s_0c2ef12b51a130::t_ee90fa619f37e3 104
+  s_0c2ef12b51a130::t_a4d1a5e03e3a31 119
+  s_0c2ef12b51a130::t_65291979465434 134
+  s_0c2ef12b51a130::t_97127b0cafccff 138
+apps/bridge/integration/fixtures/require-herdr.ts
+  s_0c2ef12b51a130::t_703c582f1ca491 12,14,16-19,21-22
+  s_0c2ef12b51a130::t_86f728af7312c5 1-11,13,15,20,23-27
+apps/bridge/integration/ws-methods.test.ts
+  s_0c2ef12b51a130::t_5732baa53e4d09 24
+  s_0c2ef12b51a130::t_3f86886a1d74f8 2
+  s_0c2ef12b51a130::t_0db231056443ef 1,3-23,25-140
+apps/bridge/vitest.config.ts
+  s_0c2ef12b51a130::t_d5049af81d8932 1-15
+apps/bridge/src/ws/dispatch.ts
+  s_0c2ef12b51a130::t_d39f28c833b87b 5,13,16,28-39,54,59-66,164-240,253-256
+  s_0c2ef12b51a130::t_df9eee91bb1640 257-258
+apps/bridge/src/herdr/names.test.ts
+  s_0c2ef12b51a130::t_9ccbc7d324ca3e 1-119
+apps/bridge/integration/fixtures/bridge.ts
+  s_0c2ef12b51a130::t_8fc13e39046312 3-42,44-100
+  s_0c2ef12b51a130::t_9bbd3995eb50c8 43
+  s_0c2ef12b51a130::t_e7fc20ac207cc6 1-2
+  s_0c2ef12b51a130::t_75b3d9aab9cc66 101-129
+apps/bridge/src/herdr/hosts.test.ts
+  s_0c2ef12b51a130::t_0c6fb21bd0cb3b 1-140
+apps/bridge/src/herdr/write-queue.ts
+  s_0c2ef12b51a130::t_20e056d89eff3c 29-69
+apps/bridge/integration/fixtures/ws-client.ts
+  s_0c2ef12b51a130::t_1bece17e3367bb 1-120
+apps/bridge/integration/README.md
+  s_0c2ef12b51a130::t_e3eb5de6e19a5d 1-93
+apps/bridge/integration/fixtures/herdr-cli.ts
+  s_0c2ef12b51a130::t_65bce8b818a548 1-135
+apps/bridge/src/herdr/names.ts
+  s_0c2ef12b51a130::t_029b240d8d284d 33
+  s_0c2ef12b51a130::t_019aba2df5015f 4-9,15-27,32,42-44,47,52,54-62,72-106
+apps/bridge/src/herdr/client.test.ts
+  s_0c2ef12b51a130::t_a7288d22171857 6
+  s_0c2ef12b51a130::t_d9d82722317829 155-179
+apps/bridge/integration/ordering.test.ts
+  s_0c2ef12b51a130::t_e1c9a8166792aa 1,3-34,36-58,64-108
+  s_0c2ef12b51a130::t_593c625ee34296 35
+  s_0c2ef12b51a130::t_765702db11350b 2
+  s_0c2ef12b51a130::t_d4cd99b9e61325 59-63
+apps/bridge/vitest.integration.config.ts
+  s_0c2ef12b51a130::t_d6c6bd721eb273 1-22
+apps/bridge/package.json
+  s_0c2ef12b51a130::t_102a536275d29b 13-14,30-31
+apps/bridge/README.md
+  s_0c2ef12b51a130::t_76b86d35b3e312 60-81
+apps/bridge/src/ws/dispatch.test.ts
+  s_0c2ef12b51a130::t_e5f825fe9f99f7 2,4,15-17,25-40
+  s_0c2ef12b51a130::t_28e6bd9423c508 132,137-141
+  s_0c2ef12b51a130::t_f3fea3e8702318 283-512
+apps/bridge/src/herdr/client.ts
+  s_0c2ef12b51a130::t_eb161afc4f9769 42,68-85
+  s_0c2ef12b51a130::t_f08c9bbc9ed757 214-219
+  s_0c2ef12b51a130::t_bd2bfba8222c13 228
+  s_0c2ef12b51a130::t_4c69eddbbc5db6 7,13-41
+  s_0c2ef12b51a130::t_5d386771c5c28c 143
+  s_0c2ef12b51a130::t_278845bd64d7da 43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "a48056584b740dfb507b2d9296128b0e93f305c4",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
