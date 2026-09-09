@@ -16,8 +16,9 @@ CONTEXT = """
 This repo uses **openspec** (https://openspec.dev / `openspec --help`) for
 spec-driven change management. Every substantial lane follows:
 
-1. **Propose first** — `openspec change add <name>`, then draft
-   `openspec/changes/<name>/{proposal.md, tasks.md, specs/<cap>/spec.md}`.
+1. **Propose first** — `openspec new change <name> --description "..."`
+   scaffolds a change; then hand-author `openspec/changes/<name>/{proposal.md,
+   tasks.md, specs/<cap>/spec.md}` (the CLI only creates README/.yaml).
    Run `openspec validate <name> --strict`. Only then implement.
 2. **Archive on landing** — when the code ships and tests pass, run
    `openspec archive <name> --yes`. Spec deltas merge into

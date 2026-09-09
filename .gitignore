@@ -11,3 +11,6 @@ tmp/
 
 # Local code intelligence index (codegraph init).
 .codegraph/
+
+# Accidental `nohup` output from ad-hoc runs.
+nohup.out
