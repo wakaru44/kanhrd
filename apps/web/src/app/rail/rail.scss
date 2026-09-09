@@ -45,6 +45,15 @@
 
 .workspace-row {
   font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-2);
+  }
+
+  &.active {
+    background: var(--surface-2);
+  }
 }
 
 .tab-row {
@@ -79,6 +88,9 @@
 }
 
 .row-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 1.2rem;
   height: 1.2rem;
   line-height: 1;
@@ -87,11 +99,15 @@
   background: var(--surface-1);
   color: var(--text-dim);
   cursor: pointer;
-  font-size: 0.7rem;
 
   &:hover {
     color: var(--text);
     border-color: var(--border-hover);
+  }
+
+  .icon {
+    width: 0.7rem;
+    height: 0.7rem;
   }
 }
 

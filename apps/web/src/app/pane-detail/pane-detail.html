@@ -17,7 +17,12 @@
   </div>
 
   <div class="detail-body">
-    <div class="terminal-container" #terminalContainer></div>
+    <div class="terminal-wrap">
+      <div class="terminal-container" #terminalContainer></div>
+      @if (loading()) {
+        <div class="terminal-loading">Loading…</div>
+      }
+    </div>
 
     @if (graphicsAvailable()) {
       <aside class="graphics-panel">

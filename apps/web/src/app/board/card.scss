@@ -39,6 +39,9 @@
 }
 
 .card-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 1.4rem;
   height: 1.4rem;
   line-height: 1;
@@ -47,7 +50,6 @@
   background: var(--surface-1);
   color: var(--text-dim);
   cursor: pointer;
-  font-size: 0.8rem;
 
   &:hover {
     color: var(--text);
@@ -58,6 +60,11 @@
     background: var(--status-blocked);
     color: #1a0a0c;
     border-color: var(--status-blocked);
+  }
+
+  .icon {
+    width: 0.8rem;
+    height: 0.8rem;
   }
 }
 
@@ -113,6 +120,8 @@
 
 .agent-name {
   font-weight: 600;
+  font-size: calc(1rem * var(--density-text-scale, 1));
+  line-height: var(--density-line-height, 1.4);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -143,7 +152,8 @@
 }
 
 .path {
-  font-size: 0.8rem;
+  font-size: calc(0.8rem * var(--density-text-scale, 1));
+  line-height: var(--density-line-height, 1.4);
   color: var(--text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -154,7 +164,7 @@
   align-self: flex-start;
   padding: 0.1rem 0.5rem;
   border-radius: 999px;
-  font-size: 0.7rem;
+  font-size: calc(0.7rem * var(--density-text-scale, 1));
   font-weight: 600;
   color: #10131a;
 }
@@ -165,7 +175,7 @@
  * (no hover affordance there) via the `pointer: coarse` breakpoint below.
  */
 .stats-badge {
-  font-size: 0.68rem;
+  font-size: calc(0.68rem * var(--density-text-scale, 1));
   color: var(--text-dim);
   opacity: 0.55;
   transition: opacity 0.1s ease;

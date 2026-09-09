@@ -5,7 +5,11 @@
         <div class="host-name">{{ entry.key }}</div>
 
         @for (group of entry.value; track group.workspace.id) {
-          <div class="workspace-row">
+          <div
+            class="workspace-row"
+            [class.active]="isWorkspaceScopeActive(group.workspace.id)"
+            (click)="onWorkspaceClick(group.workspace)"
+          >
             @if (isEditing("workspace", group.workspace.host, group.workspace.id)) {
               <input
                 class="edit-input"
@@ -26,13 +30,13 @@
                     class="row-action"
                     title="Rename workspace"
                     (click)="startRenameWorkspace(group.workspace, $event)"
-                  >✎</button>
+                  ><svg lucidePencil class="icon"></svg></button>
                   <button
                     type="button"
                     class="row-action"
                     title="Close workspace"
                     (click)="requestCloseWorkspace(group.workspace, $event)"
-                  >×</button>
+                  ><svg lucideX class="icon"></svg></button>
                 </span>
               }
             }
@@ -64,13 +68,13 @@
                       class="row-action"
                       title="Rename tab"
                       (click)="startRenameTab(tab, $event)"
-                    >✎</button>
+                    ><svg lucidePencil class="icon"></svg></button>
                     <button
                       type="button"
                       class="row-action"
                       title="Close tab"
                       (click)="requestCloseTab(tab, $event)"
-                    >×</button>
+                    ><svg lucideX class="icon"></svg></button>
                   </span>
                 }
               }

@@ -1,13 +1,14 @@
 import { provideZonelessChangeDetection, signal } from "@angular/core";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
-import { provideRouter } from "@angular/router";
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from "@angular/router";
 import { provideHttpClient } from "@angular/common/http";
 import { HttpTestingController, provideHttpClientTesting } from "@angular/common/http/testing";
-import { Subject } from "rxjs";
+import { BehaviorSubject, Subject } from "rxjs";
 import type { WsEvent } from "@kanhrd/schema";
 import { Board } from "./board";
 import { PanesStore } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
+import { KeyboardService } from "../state/keyboard.service";
 
 /**
  * Full-stack integration test for the "+ -> New tab" flow, covering the
@@ -346,5 +347,138 @@ describe("Board: two panes sharing one tab (split view) both render as separate 
     expect(hrefs).withContext("both panes should each render their own card").toContain("/pane/local/w6:p2");
     expect(hrefs).toContain("/pane/local/w6:p90");
     expect(cards.length).toBe(2);
+  });
+});
+
+describe("Board: URL scope (rail = navigator, decision locked)", () => {
+  // `Board` derives `PanesStore.scopeSignal` from `ActivatedRoute.paramMap`
+  // rather than the rail writing it on click — this exercises that derivation
+  // plus the scope pill and its Escape-dismiss wiring, without pulling in a
+  // full RouterTestingHarness: a fake `ActivatedRoute` backed by a
+  // `BehaviorSubject` stands in for real navigation, and `Router.navigate` is
+  // a spy so the pill's "×"/Escape path can be asserted without depending on
+  // route resolution actually completing.
+  let ws: FakeWsClient;
+  let fixture: ComponentFixture<Board>;
+  let httpMock: HttpTestingController;
+  let store: PanesStore;
+  let paramMap$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+  let navigateSpy: jasmine.Spy;
+
+  beforeEach(async () => {
+    ws = new FakeWsClient();
+    paramMap$ = new BehaviorSubject(convertToParamMap({}));
+    navigateSpy = jasmine.createSpy("navigate").and.resolveTo(true);
+
+    ws.request.and.callFake((_host: string, method: string) => {
+      if (method === "pane.list") {
+        return Promise.resolve({
+          panes: [
+            {
+              id: "w6:p1",
+              host: "local",
+              workspace: { id: "w6", name: "jmorales" },
+              tab: { id: "w6:t1", name: "one" },
+              agent_status: "idle",
+            },
+            {
+              id: "w6:p2",
+              host: "local",
+              workspace: { id: "w6", name: "jmorales" },
+              tab: { id: "w6:t2", name: "two" },
+              agent_status: "working",
+            },
+          ],
+        });
+      }
+      if (method === "events.subscribe") return Promise.resolve({ subscription_id: "s1" });
+      if (method === "bridge.capabilities") {
+        return Promise.resolve({
+          tier: 1,
+          terminal: false,
+          paneResize: false,
+          paneGraphics: false,
+          outputPollIntervalMs: 0,
+          paneCreate: false,
+          paneClose: false,
+          paneMove: false,
+          tabCrud: false,
+          workspaceCrud: false,
+        });
+      }
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+
+    await TestBed.configureTestingModule({
+      imports: [Board],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: ws },
+        { provide: ActivatedRoute, useValue: { paramMap: paramMap$.asObservable() } },
+        { provide: Router, useValue: { navigate: navigateSpy } },
+      ],
+    }).compileComponents();
+    httpMock = TestBed.inject(HttpTestingController);
+
+    fixture = TestBed.createComponent(Board);
+    store = TestBed.inject(PanesStore);
+    fixture.detectChanges();
+    await settle(fixture);
+    for (const req of httpMock.match("/api/hosts")) {
+      if (!req.cancelled) {
+        req.flush({ hosts: [{ name: "local", connected: true }] });
+      }
+    }
+    await settle(fixture);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it("navigating to /workspace/:id/tab/:id sets scopeSignal and renders the scope pill", async () => {
+    paramMap$.next(convertToParamMap({ workspaceId: "w6", tabId: "w6:t2" }));
+    await settle(fixture);
+
+    expect(store.scopeSignal()).toEqual({ host: "local", workspaceId: "w6", tabId: "w6:t2" });
+
+    const el = fixture.nativeElement as HTMLElement;
+    const pill = el.querySelector(".scope-pill");
+    expect(pill).withContext("scope pill should render once scoped").toBeTruthy();
+    expect(pill?.textContent).toContain("jmorales / two");
+
+    // Scoped to one tab: only that tab's card should render.
+    const cards = el.querySelectorAll(".card");
+    expect(cards.length).toBe(1);
+  });
+
+  it("clicking the scope pill's × navigates back to /", async () => {
+    paramMap$.next(convertToParamMap({ workspaceId: "w6", tabId: "w6:t2" }));
+    await settle(fixture);
+
+    const el = fixture.nativeElement as HTMLElement;
+    el.querySelector<HTMLButtonElement>(".scope-pill-close")?.click();
+
+    expect(navigateSpy).toHaveBeenCalledWith(["/"]);
+  });
+
+  it("Escape clears the scope by navigating back to /", async () => {
+    paramMap$.next(convertToParamMap({ workspaceId: "w6", tabId: "w6:t2" }));
+    await settle(fixture);
+    navigateSpy.calls.reset();
+
+    const keyboard = TestBed.inject(KeyboardService);
+    keyboard.handleKeydown(new KeyboardEvent("keydown", { key: "Escape" }), document.body);
+
+    expect(navigateSpy).toHaveBeenCalledWith(["/"]);
+  });
+
+  it("no workspaceId in the route means no scope and no pill", async () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(store.scopeSignal()).toBeNull();
+    expect(el.querySelector(".scope-pill")).toBeNull();
   });
 });

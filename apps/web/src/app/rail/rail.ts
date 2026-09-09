@@ -1,5 +1,7 @@
 import { Component, computed, effect, inject, signal, untracked } from "@angular/core";
 import { KeyValuePipe } from "@angular/common";
+import { Router } from "@angular/router";
+import { LucidePencil, LucideX } from "@lucide/angular";
 import type { TabSummary, WorkspaceSummary } from "@kanhrd/schema";
 import { isWorkspaceGroupCloseRequiredError, paneKey, PanesStore } from "../state/panes.store";
 import { ConfirmModal } from "../shared/confirm-modal";
@@ -10,21 +12,24 @@ interface WorkspaceGroup {
 }
 
 /**
- * Tier-3 workspace/tab navigation rail. Per host: a workspace list, each
+ * Rail = navigator (decision locked): per host, a workspace list, each
  * workspace listing its tabs. Hovering a workspace/tab reveals rename
  * (pencil) and close (×) actions, gated on `workspaceCrud`/`tabCrud`.
- * Clicking a tab filters the board to that tab's panes via
- * `PanesStore.tabFilterSignal` (on top of the existing status/host
- * filters); clicking the active tab again clears the filter.
+ * Clicking a workspace or tab NAVIGATES to `/workspace/:workspaceId` or
+ * `/workspace/:workspaceId/tab/:tabId` — it does not write
+ * `PanesStore.scopeSignal` directly; `Board`'s route-sync effect derives
+ * that from the URL. Clicking the already-active workspace/tab navigates
+ * back to `/` (unscoped).
  */
 @Component({
   selector: "app-rail",
-  imports: [ConfirmModal, KeyValuePipe],
+  imports: [ConfirmModal, KeyValuePipe, LucidePencil, LucideX],
   templateUrl: "./rail.html",
   styleUrl: "./rail.scss",
 })
 export class Rail {
   protected readonly store = inject(PanesStore);
+  private readonly router = inject(Router);
 
   protected readonly hostGroups = computed(() => {
     const workspaces = this.store.workspacesSignal();
@@ -148,18 +153,31 @@ export class Rail {
     });
   }
 
-  // --- tab filter ------------------------------------------------------
+  // --- navigation (rail = navigator) ------------------------------------
 
   protected isTabFilterActive(host: string, tabId: string): boolean {
     const filter = this.tabFilter();
     return filter !== null && filter.host === host && filter.tabId === tabId;
   }
 
+  protected isWorkspaceScopeActive(workspaceId: string): boolean {
+    const scope = this.store.scopeSignal();
+    return scope !== null && scope.workspaceId === workspaceId && scope.tabId === null;
+  }
+
   protected onTabClick(tab: TabSummary): void {
     if (this.isTabFilterActive(tab.host, tab.id)) {
-      this.store.clearTabFilter();
+      void this.router.navigate(["/"]);
     } else {
-      this.store.setTabFilter(tab.host, tab.id);
+      void this.router.navigate(["/workspace", tab.workspace.id, "tab", tab.id]);
+    }
+  }
+
+  protected onWorkspaceClick(workspace: WorkspaceSummary): void {
+    if (this.isWorkspaceScopeActive(workspace.id)) {
+      void this.router.navigate(["/"]);
+    } else {
+      void this.router.navigate(["/workspace", workspace.id]);
     }
   }
 

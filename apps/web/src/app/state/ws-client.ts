@@ -1,4 +1,4 @@
-import { Injectable, signal } from "@angular/core";
+import { Injectable, inject, signal } from "@angular/core";
 import { Subject } from "rxjs";
 import type {
   BridgeMethod,
@@ -8,6 +8,7 @@ import type {
   WsRequest,
   WsServerMessage,
 } from "@kanhrd/schema";
+import { ToastService } from "./toast.service";
 
 const INITIAL_BACKOFF_MS = 500;
 const MAX_BACKOFF_MS = 30_000;
@@ -25,10 +26,15 @@ interface PendingRequest {
  */
 @Injectable({ providedIn: "root" })
 export class WsClient {
+  private readonly toast = inject(ToastService);
+
   /** True while the socket is open and usable for `request()`. */
   readonly connected = signal(false);
   /** Human-readable reason the socket is currently down, if any. */
   readonly lastError = signal<string | null>(null);
+
+  /** Id of the persistent "connection lost" toast while one is showing, so it can be dismissed on reconnect. */
+  private connectionLostToastId: number | null = null;
 
   private readonly eventsSubject = new Subject<WsEvent>();
   /** Every event frame pushed by the bridge, across all hosts. */
@@ -84,6 +90,10 @@ export class WsClient {
       this.reconnectAttempt = 0;
       this.lastError.set(null);
       this.connected.set(true);
+      if (this.connectionLostToastId !== null) {
+        this.toast.dismiss(this.connectionLostToastId);
+        this.connectionLostToastId = null;
+      }
     });
 
     socket.addEventListener("message", (ev) => {
@@ -91,9 +101,19 @@ export class WsClient {
     });
 
     socket.addEventListener("close", () => {
+      const wasConnected = this.connected();
       this.connected.set(false);
       this.rejectAllPending(new Error("ws connection closed"));
       this.scheduleReconnect();
+      // Only surface the persistent "connection lost" toast once per
+      // outage, not on every retry that also fails to connect.
+      if (wasConnected && this.connectionLostToastId === null) {
+        this.connectionLostToastId = this.toast.push({
+          level: "warn",
+          message: "Connection to the bridge was lost — reconnecting…",
+          persistent: true,
+        });
+      }
     });
 
     socket.addEventListener("error", () => {

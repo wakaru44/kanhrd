@@ -34,6 +34,27 @@
   </section>
 
   <section class="settings-section">
+    <h2>Terminal</h2>
+    <p class="section-note">
+      Applied to every open terminal the same way — panes are told apart by title, host chip, and labels,
+      not by terminal color.
+    </p>
+    <div class="setting-row">
+      <label class="setting-label" for="terminal-theme">Color theme</label>
+      <select
+        id="terminal-theme"
+        class="text-input"
+        [value]="terminalThemeService.name()"
+        (change)="onTerminalThemeChange($any($event.target).value)"
+      >
+        @for (option of terminalThemeOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+  </section>
+
+  <section class="settings-section">
     <h2>Runtime</h2>
     <p class="section-note">
       The output poll interval is bridge-owned. Each connected host advertises its own cadence below.

@@ -17,14 +17,15 @@
 
   h2 {
     margin: 0;
-    font-size: 0.85rem;
+    font-size: calc(0.85rem * var(--density-text-scale, 1));
+    line-height: var(--density-line-height, 1.4);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--text-dim);
   }
 
   .count {
-    font-size: 0.75rem;
+    font-size: calc(0.75rem * var(--density-text-scale, 1));
     color: var(--text-dim);
     background: var(--surface-2);
     border-radius: 999px;
@@ -40,8 +41,14 @@
   overflow-y: auto;
 }
 
-.empty {
-  color: var(--text-dim);
-  font-size: 0.8rem;
-  margin: 0.25rem 0;
+.virtual-viewport {
+  // Virtual scroll needs a bounded height to compute which items are
+  // visible — a column with >20 cards gets a tall-but-capped scroll area
+  // instead of growing the whole page.
+  height: min(32rem, 70vh);
+
+  ::ng-deep .cdk-virtual-scroll-content-wrapper > app-card {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
 }

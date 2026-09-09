@@ -1,7 +1,9 @@
 import { Injectable, effect, inject, signal } from "@angular/core";
+import { Router } from "@angular/router";
 import { PanesStore } from "./panes.store";
 import { LayoutService } from "./layout.service";
 import { ThemeService } from "./theme.service";
+import { ToastService } from "./toast.service";
 
 export type ShortcutCategory = "Navigation" | "Lifecycle" | "View" | "Help";
 
@@ -214,6 +216,8 @@ export class KeyboardService {
   private readonly store = inject(PanesStore);
   private readonly layout = inject(LayoutService);
   private readonly themeService = inject(ThemeService);
+  private readonly toastService = inject(ToastService);
+  private readonly router = inject(Router);
 
   readonly prefix = signal<string>(loadPrefix());
   readonly helpOpen = signal(false);
@@ -390,6 +394,10 @@ export class KeyboardService {
       this.closeHelp();
       return;
     }
+    if (this.toastService.toasts().length > 0) {
+      this.toastService.dismissTop();
+      return;
+    }
     if (this.layout.plusMenuOpen()) {
       this.layout.closePlusMenu();
       return;
@@ -397,6 +405,13 @@ export class KeyboardService {
     if (this.layout.railOpen()) {
       this.layout.closeRail();
       return;
+    }
+    if (this.store.scopeSignal()) {
+      // Mirrors the board's scope pill's own × button — navigates back to
+      // `/` rather than clearing `PanesStore.scopeSignal` directly, so the
+      // URL (the source of truth `Board`'s route-sync effect derives the
+      // scope from) and the store never disagree.
+      void this.router.navigate(["/"]);
     }
   }
 
@@ -417,8 +432,12 @@ export class KeyboardService {
     document.querySelector<HTMLElement>(".rail")?.focus();
   }
 
-  private orderedTabs(): { host: string; id: string }[] {
-    return [...this.store.tabsSignal().values()].map((tab) => ({ host: tab.host, id: tab.id }));
+  private orderedTabs(): { host: string; id: string; workspaceId: string }[] {
+    return [...this.store.tabsSignal().values()].map((tab) => ({
+      host: tab.host,
+      id: tab.id,
+      workspaceId: tab.workspace.id,
+    }));
   }
 
   private cycleTab(direction: 1 | -1): void {
@@ -449,13 +468,16 @@ export class KeyboardService {
     }
     const current = this.store.tabFilterSignal();
     this.previousTab = current ? { host: current.host, tabId: current.tabId } : null;
-    this.store.setTabFilter(prev.host, prev.tabId);
+    const workspaceId = this.orderedTabs().find((t) => t.host === prev.host && t.id === prev.tabId)?.workspaceId;
+    if (workspaceId) {
+      this.store.setScope(prev.host, workspaceId, prev.tabId);
+    }
   }
 
-  private setCurrentTab(target: { host: string; id: string }): void {
+  private setCurrentTab(target: { host: string; id: string; workspaceId: string }): void {
     const current = this.store.tabFilterSignal();
     this.previousTab = current ? { host: current.host, tabId: current.tabId } : null;
-    this.store.setTabFilter(target.host, target.id);
+    this.store.setScope(target.host, target.workspaceId, target.id);
   }
 
   private renameCurrentTab(): void {

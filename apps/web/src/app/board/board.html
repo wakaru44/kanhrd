@@ -1,9 +1,20 @@
+@if (scopePillLabel(); as label) {
+  <div class="scope-pill">
+    <span>In: {{ label }}</span>
+    <button type="button" class="scope-pill-close" title="Clear scope" aria-label="Clear scope" (click)="clearScope()">
+      <svg lucideX class="icon"></svg>
+    </button>
+  </div>
+}
+
 <div class="board-header">
   <app-filter-bar />
 
   @if (plusMenuAvailable()) {
     <div class="plus-menu-wrap">
-      <button type="button" class="plus-button" title="Create" (click)="togglePlusMenu()">+</button>
+      <button type="button" class="plus-button" title="Create" (click)="togglePlusMenu()">
+        <svg lucidePlus class="icon"></svg>
+      </button>
       @if (plusMenuOpen()) {
         <div class="plus-menu">
           @if (newPaneAvailable()) {
@@ -25,20 +36,21 @@
   <p class="state loading">loading hosts…</p>
 } @else if (error()) {
   <p class="state error">Could not reach the bridge: {{ error() }}</p>
-} @else if (!hasAnyHosts()) {
-  <p class="state empty">No herdr hosts are configured yet.</p>
 } @else {
-  <div class="board-layout">
-    @if (layout.railOpen()) {
-      <div class="rail-backdrop" (click)="layout.closeRail()"></div>
-    }
-    <app-rail class="rail" [class.open]="layout.railOpen()" />
-    <div class="board-grid">
-      @for (status of statusOrder; track status) {
-        @if (!isStatusHidden(status)) {
-          <app-column [status]="status" [panes]="columns()[status]" [capabilities]="capabilities()" />
-        }
+  <app-empty-state #emptyState [hosts]="store.hostsSignal()" />
+  @if (!emptyState.show()) {
+    <div class="board-layout">
+      @if (layout.railOpen()) {
+        <div class="rail-backdrop" (click)="layout.closeRail()"></div>
       }
+      <app-rail class="rail" [class.open]="layout.railOpen()" />
+      <div class="board-grid">
+        @for (status of statusOrder; track status) {
+          @if (!isStatusHidden(status)) {
+            <app-column [status]="status" [panes]="columns()[status]" [capabilities]="capabilities()" />
+          }
+        }
+      </div>
     </div>
-  </div>
+  }
 }

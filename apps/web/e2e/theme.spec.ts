@@ -39,8 +39,11 @@ test("clicking the header theme toggle switches data-theme and persists across r
   await expect(html).toHaveAttribute("data-theme", expectedToggled, { timeout: 3_000 });
 });
 
-test("theme toggle button label reflects the opposite theme (what clicking it switches to)", async ({ app }) => {
+test("theme toggle button icon reflects the opposite theme (what clicking it switches to)", async ({ app }) => {
+  // The glyph became a lucide-angular <svg> icon (L-UX2 icon pass) —
+  // `data-theme-target` on the button carries the same "what clicking this
+  // switches to" fact for assertions, now that there's no text to read.
   const theme = await app.locator("html").getAttribute("data-theme");
-  const expectedGlyph = theme === "dark" ? "☀" : "☾";
-  await expect(app.locator(".theme-toggle")).toHaveText(expectedGlyph);
+  const expectedTarget = theme === "dark" ? "light" : "dark";
+  await expect(app.locator(".theme-toggle")).toHaveAttribute("data-theme-target", expectedTarget);
 });

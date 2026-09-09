@@ -3,6 +3,11 @@ import { RouterLink } from "@angular/router";
 import { PanesStore } from "../state/panes.store";
 import { ThemeService } from "../state/theme.service";
 import { SettingsService, type Density } from "../state/settings.service";
+import {
+  TERMINAL_THEME_OPTIONS,
+  TerminalThemeService,
+  type TerminalThemeName,
+} from "../state/terminal-theme.service";
 import { DEFAULT_PREFIX, KeyboardService, formatBinding, type ShortcutBinding } from "../state/keyboard.service";
 import { ConfirmModal } from "../shared/confirm-modal";
 
@@ -25,6 +30,8 @@ export class Settings {
   protected readonly themeService = inject(ThemeService);
   protected readonly settingsService = inject(SettingsService);
   protected readonly keyboardService = inject(KeyboardService);
+  protected readonly terminalThemeService = inject(TerminalThemeService);
+  protected readonly terminalThemeOptions = TERMINAL_THEME_OPTIONS;
 
   protected readonly hosts = this.store.hostsSignal;
   protected readonly capabilities = this.store.capabilitiesSignal;
@@ -39,6 +46,10 @@ export class Settings {
 
   protected setDensity(density: Density): void {
     this.settingsService.setDensity(density);
+  }
+
+  protected onTerminalThemeChange(value: string): void {
+    this.terminalThemeService.set(value as TerminalThemeName);
   }
 
   protected onRequestedPollIntervalInput(value: string): void {

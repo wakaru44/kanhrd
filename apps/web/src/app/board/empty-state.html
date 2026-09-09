@@ -1,0 +1,13 @@
+@if (show()) {
+  <div class="empty-state">
+    <h2>{{ noHostsConfigured() ? "Connect a herdr host to get started" : "Waiting for herdr to come online" }}</h2>
+    <p>Add a host to <code>kanhrd.config.yaml</code>:</p>
+    <pre class="config-snippet">{{ configSnippet }}</pre>
+    <p>Then start the bridge:</p>
+    <pre class="config-snippet">{{ startCommand }}</pre>
+    <div class="heartbeat">
+      <span class="pulse-dot"></span>
+      <span>waiting for host…</span>
+    </div>
+  </div>
+}

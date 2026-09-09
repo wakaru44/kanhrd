@@ -121,9 +121,12 @@ describe("Card", () => {
     expect(el.querySelector(".agent-name")?.textContent?.length).toBeGreaterThan(0);
   });
 
-  it("shows the close button when paneClose capability is true", () => {
+  it("shows the close button when paneClose capability is true, as a lucide svg icon (not '×' text)", () => {
     const el = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneClose: true }));
-    expect(el.querySelector(".card-action.close")).toBeTruthy();
+    const closeButton = el.querySelector(".card-action.close");
+    expect(closeButton).toBeTruthy();
+    expect(closeButton?.querySelector("svg")).toBeTruthy();
+    expect(closeButton?.textContent?.trim()).toBe("");
   });
 
   it("hides the close button when paneClose capability is false", () => {
@@ -133,7 +136,9 @@ describe("Card", () => {
 
   it("shows the split button when paneCreate capability is true, hides it otherwise", () => {
     const shown = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneCreate: true }));
-    expect(shown.querySelector(".card-action.split")).toBeTruthy();
+    const splitButton = shown.querySelector(".card-action.split");
+    expect(splitButton).toBeTruthy();
+    expect(splitButton?.querySelector("svg")).toBeTruthy();
 
     const hidden = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneCreate: false }));
     expect(hidden.querySelector(".card-action.split")).toBeFalsy();

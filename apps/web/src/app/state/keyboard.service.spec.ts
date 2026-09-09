@@ -1,5 +1,6 @@
 import { TestBed } from "@angular/core/testing";
 import { provideZonelessChangeDetection, signal } from "@angular/core";
+import { Router } from "@angular/router";
 import type { TabSummary } from "@kanhrd/schema";
 import {
   DEFAULT_PREFIX,
@@ -14,6 +15,7 @@ import {
 import { PanesStore, paneKey } from "./panes.store";
 import { LayoutService } from "./layout.service";
 import { ThemeService } from "./theme.service";
+import { ToastService } from "./toast.service";
 
 function keyEvent(key: string, mods: Partial<{ ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }> = {}): KeyboardEvent {
   return new KeyboardEvent("keydown", { key, cancelable: true, ...mods });
@@ -27,12 +29,15 @@ function tab(host: string, id: string): TabSummary {
 class FakePanesStore {
   readonly tabsSignal = signal<ReadonlyMap<string, TabSummary>>(new Map());
   readonly tabFilterSignal = signal<{ host: string; tabId: string } | null>(null);
+  readonly scopeSignal = signal<{ host: string; workspaceId: string; tabId: string | null } | null>(null);
 
   findHostForCapability = jasmine.createSpy("findHostForCapability").and.returnValue(null);
   splitPane = jasmine.createSpy("splitPane").and.resolveTo(undefined);
-  setTabFilter = jasmine.createSpy("setTabFilter").and.callFake((host: string, tabId: string) => {
-    this.tabFilterSignal.set({ host, tabId });
-  });
+  setScope = jasmine
+    .createSpy("setScope")
+    .and.callFake((host: string, _workspaceId: string, tabId: string | null) => {
+      this.tabFilterSignal.set(tabId ? { host, tabId } : null);
+    });
   requestPendingRename = jasmine.createSpy("requestPendingRename");
   requestCloseTabById = jasmine.createSpy("requestCloseTabById");
 
@@ -118,7 +123,9 @@ describe("KeyboardService", () => {
         provideZonelessChangeDetection(),
         LayoutService,
         ThemeService,
+        ToastService,
         { provide: PanesStore, useValue: store },
+        { provide: Router, useValue: { navigate: jasmine.createSpy("navigate") } },
       ],
     });
     service = TestBed.inject(KeyboardService);
@@ -239,7 +246,7 @@ describe("KeyboardService", () => {
   describe("tab navigation (chord)", () => {
     it("prefix+n advances tabFilterSignal to the next tab in tabsSignal order", () => {
       store.setTabs([tab("local", "t1"), tab("local", "t2")]);
-      store.setTabFilter("local", "t1");
+      store.setScope("local", "w1", "t1");
 
       service.handleKeydown(keyEvent("b", { ctrlKey: true }), document.body);
       service.handleKeydown(keyEvent("n"), document.body);

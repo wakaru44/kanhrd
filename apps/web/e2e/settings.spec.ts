@@ -28,7 +28,14 @@ test("header gear icon navigates to /settings", async ({ app }) => {
 test("settings route renders every section", async ({ app }) => {
   await app.goto("/settings");
   const headings = app.locator(".settings-section h2");
-  await expect(headings).toHaveText(["Appearance", "Runtime", "Servers / hosts", "Keyboard", "Data"]);
+  await expect(headings).toHaveText([
+    "Appearance",
+    "Terminal",
+    "Runtime",
+    "Servers / hosts",
+    "Keyboard",
+    "Data",
+  ]);
 });
 
 test("toggling density on the settings screen persists to localStorage", async ({ app }) => {

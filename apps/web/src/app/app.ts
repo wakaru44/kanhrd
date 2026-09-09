@@ -1,13 +1,15 @@
 import { Component, HostListener, inject } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
+import { LucideMenu, LucideMoon, LucideSettings, LucideSun } from '@lucide/angular';
 import { ThemeService } from './state/theme.service';
 import { LayoutService } from './state/layout.service';
 import { KeyboardService } from './state/keyboard.service';
 import { KeyboardHelpOverlay } from './shared/keyboard-help-overlay';
+import { ToastHost } from './shared/toast-host';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, KeyboardHelpOverlay],
+  imports: [RouterOutlet, RouterLink, KeyboardHelpOverlay, ToastHost, LucideMenu, LucideSun, LucideMoon, LucideSettings],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

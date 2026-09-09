@@ -1,13 +1,30 @@
 <section class="column" [attr.data-status]="status()">
   <header class="column-header">
     <h2>{{ status() }}</h2>
-    <span class="count">{{ panes().length }}</span>
+    <span class="count">{{ panes().length === 0 ? "no working panes" : panes().length }}</span>
   </header>
+  <!--
+    ponytail: cdkDropList/cdkDrag stay wired but disabled — column membership
+    is driven by `agent_status`, a herdr-owned fact the browser can't change
+    in tier-1/2/3. Kept (not ripped out as dead code) for a future
+    user-controlled "park"/archive column: drag a pane out of the live flow,
+    it comes back automatically on its next activity. See board brief L-UX2.
+  -->
   <div class="drop-list" cdkDropList [cdkDropListDisabled]="true" [cdkDropListData]="panes()">
-    @for (pane of panes(); track trackPane($index, pane)) {
-      <app-card [pane]="pane" [capabilities]="capabilities()" cdkDrag [cdkDragDisabled]="true" />
-    } @empty {
-      <p class="empty">No panes</p>
+    @if (virtualized()) {
+      <cdk-virtual-scroll-viewport itemSize="84" class="virtual-viewport">
+        <app-card
+          *cdkVirtualFor="let pane of panes(); trackBy: trackPane"
+          [pane]="pane"
+          [capabilities]="capabilities()"
+          cdkDrag
+          [cdkDragDisabled]="true"
+        />
+      </cdk-virtual-scroll-viewport>
+    } @else {
+      @for (pane of panes(); track trackPane($index, pane)) {
+        <app-card [pane]="pane" [capabilities]="capabilities()" cdkDrag [cdkDragDisabled]="true" />
+      }
     }
   </div>
 </section>

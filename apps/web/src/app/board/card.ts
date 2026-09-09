@@ -1,21 +1,24 @@
 import { Component, computed, effect, inject, input, signal } from "@angular/core";
 import { NgTemplateOutlet } from "@angular/common";
 import { RouterLink } from "@angular/router";
+import { LucideArrowRight, LucideX } from "@lucide/angular";
 import type { BridgeCapabilities, Pane, SplitDirection } from "@kanhrd/schema";
 import { PanesStore } from "../state/panes.store";
 import { hostColor } from "../util/host-color";
 import { ConfirmModal } from "../shared/confirm-modal";
 import { ClockTick, formatElapsed } from "../util/clock";
+import { ToastService } from "../state/toast.service";
 
 @Component({
   selector: "app-card",
-  imports: [RouterLink, NgTemplateOutlet, ConfirmModal],
+  imports: [RouterLink, NgTemplateOutlet, ConfirmModal, LucideArrowRight, LucideX],
   templateUrl: "./card.html",
   styleUrl: "./card.scss",
 })
 export class Card {
   private readonly store = inject(PanesStore);
   private readonly clock = inject(ClockTick);
+  private readonly toast = inject(ToastService);
 
   readonly pane = input.required<Pane>();
   /** Per-host `bridge.capabilities` results, threaded down from the store via Board/Column. */
@@ -90,9 +93,16 @@ export class Card {
     this.showCloseConfirm.set(true);
   }
 
-  protected confirmClose(): void {
+  protected async confirmClose(): Promise<void> {
     this.showCloseConfirm.set(false);
-    void this.store.closePane(this.pane().host, this.pane().id);
+    try {
+      await this.store.closePane(this.pane().host, this.pane().id);
+    } catch (err) {
+      this.toast.push({
+        level: "error",
+        message: `Could not close "${this.displayName()}": ${err instanceof Error ? err.message : String(err)}`,
+      });
+    }
   }
 
   protected onSplitClick(event: Event): void {

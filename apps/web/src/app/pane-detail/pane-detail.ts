@@ -19,28 +19,9 @@ import type { BridgeEventPayload, WsEvent } from "@kanhrd/schema";
 import { PanesStore, paneKey } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
 import { classifyInput } from "./key-mapping";
-import { ThemeService } from "../state/theme.service";
+import { TerminalThemeService } from "../state/terminal-theme.service";
+import { ToastService } from "../state/toast.service";
 import { ClockTick, formatElapsed } from "../util/clock";
-
-/** Mirrors `[data-theme="dark"]` in styles.scss — xterm.js takes its own theme object, it doesn't read CSS custom properties. */
-const XTERM_THEME_DARK = {
-  background: "#14161c",
-  foreground: "#e6e8ee",
-  cursor: "#e6e8ee",
-  selectionBackground: "#3c4252",
-  black: "#14161c",
-  brightBlack: "#5a6072",
-};
-
-/** Mirrors `[data-theme="light"]` in styles.scss. */
-const XTERM_THEME_LIGHT = {
-  background: "#f4f5f7",
-  foreground: "#1b1e26",
-  cursor: "#1b1e26",
-  selectionBackground: "#d7dae1",
-  black: "#f4f5f7",
-  brightBlack: "#8b91a1",
-};
 
 const XTERM_FONT_FAMILY =
   'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
@@ -62,8 +43,12 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly ws = inject(WsClient);
   private readonly store = inject(PanesStore);
-  private readonly themeService = inject(ThemeService);
+  private readonly terminalTheme = inject(TerminalThemeService);
+  private readonly toast = inject(ToastService);
   protected readonly clock = inject(ClockTick);
+
+  /** True from the moment a `pane.read` request goes out until its first content lands (or fails). Drives the `.terminal-loading` overlay. */
+  protected readonly loading = signal(false);
 
   @ViewChild("terminalContainer", { static: true })
   private readonly containerRef!: ElementRef<HTMLDivElement>;
@@ -128,14 +113,15 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   });
 
   constructor() {
-    // Switches the live terminal's colors immediately when the header/
-    // settings theme toggle flips — xterm.js takes its own theme object and
-    // does not read CSS custom properties.
+    // Swaps the live terminal's colors immediately when the terminal theme
+    // setting changes (Settings > Terminal) — xterm.js takes its own theme
+    // object and does not read CSS custom properties. Applied uniformly to
+    // every terminal instance; see TerminalThemeService's doc.
     effect(() => {
-      const theme = this.themeService.theme();
+      const theme = this.terminalTheme.theme();
       untracked(() => {
         if (this.term) {
-          this.term.options.theme = theme === "light" ? XTERM_THEME_LIGHT : XTERM_THEME_DARK;
+          this.term.options.theme = theme;
         }
       });
     });
@@ -167,7 +153,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     const term = new Terminal({
-      theme: this.themeService.theme() === "light" ? XTERM_THEME_LIGHT : XTERM_THEME_DARK,
+      theme: this.terminalTheme.theme(),
       fontFamily: XTERM_FONT_FAMILY,
       fontSize: 13,
       convertEol: true,
@@ -215,6 +201,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     }
     this.teardownSubscription();
     this.term.reset();
+    this.loading.set(true);
     try {
       const result = await this.ws.request(host, "pane.read", {
         pane_id: id,
@@ -229,23 +216,33 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
         this.revision.set(result.revision);
         this.lastPollAt.set(Date.now());
       }
-      const sub = await this.ws.request(host, "pane.subscribe_output", { pane_id: id });
-      if (this.host() !== host || this.id() !== id) {
-        if (sub) {
-          void this.ws.request(host, "pane.unsubscribe_output", { subscription_id: sub.subscription_id });
+      this.loading.set(false);
+      try {
+        const sub = await this.ws.request(host, "pane.subscribe_output", { pane_id: id });
+        if (this.host() !== host || this.id() !== id) {
+          if (sub) {
+            void this.ws.request(host, "pane.unsubscribe_output", { subscription_id: sub.subscription_id });
+          }
+          return;
         }
-        return;
-      }
-      if (sub) {
-        this.subscriptionId = sub.subscription_id;
-        this.subscriptionHost = host;
-        this.subscribed.set(true);
+        if (sub) {
+          this.subscriptionId = sub.subscription_id;
+          this.subscriptionHost = host;
+          this.subscribed.set(true);
+        }
+      } catch (err) {
+        this.toast.push({
+          level: "error",
+          message: `Live updates unavailable for this pane: ${err instanceof Error ? err.message : String(err)}`,
+        });
       }
     } catch {
       // Bridge unreachable, tier-1 bridge, or connection dropped mid-load —
       // per the runtime/client boundary guardrail this is a client-local
       // outcome: leave the terminal showing whatever it already has rather
       // than tearing down the view or the WS connection.
+    } finally {
+      this.loading.set(false);
     }
   }
 

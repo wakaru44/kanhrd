@@ -18,7 +18,7 @@
       @if (paneSplitAvailable()) {
         <div class="split-wrap">
           <button type="button" class="card-action split" title="Split pane" (click)="onSplitClick($event)">
-            ⟶
+            <svg lucideArrowRight class="icon"></svg>
           </button>
           @if (showSplitMenu()) {
             <div class="split-menu" (click)="$event.stopPropagation()">
@@ -30,7 +30,7 @@
       }
       @if (paneCloseAvailable()) {
         <button type="button" class="card-action close" title="Close pane" (click)="onCloseClick($event)">
-          ×
+          <svg lucideX class="icon"></svg>
         </button>
       }
     </div>

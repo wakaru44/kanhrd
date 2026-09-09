@@ -41,21 +41,39 @@
 /*
  * Density: `SettingsService` (src/app/state/settings.service.ts) stamps
  * `data-density="comfortable"|"compact"` on <html>. Comfortable (default)
- * keeps every component's own padding/gap values as-is; compact scales them
- * down via one shared multiplier so individual components don't need their
- * own compact variant.
+ * keeps every component's own padding/gap/font-size/line-height values
+ * as-is; compact scales them down via two shared multipliers (spacing
+ * shrinks a lot more than text — `--density-scale` for padding/gap,
+ * `--density-text-scale` for font-size/line-height) so individual
+ * components don't need their own compact variant.
  */
 :root,
 [data-density="comfortable"] {
   --density-scale: 1;
+  --density-text-scale: 1;
 }
 
 [data-density="compact"] {
   --density-scale: 0.65;
+  --density-text-scale: 0.92;
+  --density-line-height: 1.25;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/*
+ * lucide-angular icons (@lucide/angular): every icon is `<svg lucideX>` etc.
+ * — they stroke with `currentColor` by default, so the theme toggle "just
+ * works" for free. This is the shared default size; individual call sites
+ * override `.icon` width/height where a different scale is needed.
+ */
+.icon {
+  display: inline-block;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
 }
 
 html,

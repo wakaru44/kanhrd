@@ -449,8 +449,22 @@ export class PanesStore {
   readonly tabsSignal = signal<TabMap>(new Map());
   readonly filtersSignal = signal<Filters>(loadFilters());
 
-  /** Set by the nav rail when a tab is clicked; filters the board to that tab's panes on top of `filtersSignal`. */
-  readonly tabFilterSignal = signal<{ host: string; tabId: string } | null>(null);
+  /**
+   * The board's current URL scope (`/workspace/:workspaceId` or
+   * `/workspace/:workspaceId/tab/:tabId`) — derived from the route by
+   * `Board`'s route-sync effect, the single writer. Filters the board to a
+   * workspace's (or one tab's) panes on top of `filtersSignal`. The rail
+   * navigates rather than writing this directly (rail = navigator, per the
+   * brief); `KeyboardService`'s tab-cycling shortcuts navigate too, so this
+   * stays a pure reflection of the current URL either way.
+   */
+  readonly scopeSignal = signal<{ host: string; workspaceId: string; tabId: string | null } | null>(null);
+
+  /** Convenience view of `scopeSignal` for tab-only scoping, e.g. the rail's active-tab highlight. */
+  readonly tabFilterSignal = computed(() => {
+    const scope = this.scopeSignal();
+    return scope && scope.tabId ? { host: scope.host, tabId: scope.tabId } : null;
+  });
 
   /**
    * Set right after a `tab.create`/`workspace.create` action succeeds, so
@@ -476,12 +490,16 @@ export class PanesStore {
   readonly capabilitiesSignal = signal<ReadonlyMap<string, BridgeCapabilities>>(new Map());
 
   readonly columnsSignal = computed(() => {
-    const tabFilter = this.tabFilterSignal();
-    const panes = tabFilter
-      ? [...this.panesSignal().values()].filter(
-          (p) => p.host === tabFilter.host && p.tab.id === tabFilter.tabId,
-        )
-      : this.panesSignal().values();
+    const scope = this.scopeSignal();
+    let panes: Iterable<Pane> = this.panesSignal().values();
+    if (scope) {
+      panes = [...panes].filter((p) => {
+        if (p.host !== scope.host || p.workspace.id !== scope.workspaceId) {
+          return false;
+        }
+        return scope.tabId === null || p.tab.id === scope.tabId;
+      });
+    }
     return groupByStatus(panes, this.filtersSignal());
   });
 
@@ -768,12 +786,13 @@ export class PanesStore {
     return count;
   }
 
-  setTabFilter(host: string, tabId: string): void {
-    this.tabFilterSignal.set({ host, tabId });
+  /** Sets the board's current scope. Written only by `Board`'s route-sync effect — see `scopeSignal`'s doc. */
+  setScope(host: string, workspaceId: string, tabId: string | null): void {
+    this.scopeSignal.set({ host, workspaceId, tabId });
   }
 
-  clearTabFilter(): void {
-    this.tabFilterSignal.set(null);
+  clearScope(): void {
+    this.scopeSignal.set(null);
   }
 
   requestPendingRename(kind: "workspace" | "tab", host: string, id: string): void {

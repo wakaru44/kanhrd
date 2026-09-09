@@ -5,6 +5,8 @@ import { Settings } from './settings/settings';
 
 export const routes: Routes = [
   { path: '', component: Board },
+  { path: 'workspace/:workspaceId', component: Board },
+  { path: 'workspace/:workspaceId/tab/:tabId', component: Board },
   { path: 'pane/:host/:id', component: PaneDetail },
   { path: 'settings', component: Settings },
 ];
