@@ -1,0 +1,29 @@
+openspec/changes/add-tier-3-lifecycle/proposal.md
+  s_0c2ef12b51a130::t_793712e7c0ca97 1-92
+openspec/changes/add-tier-3-lifecycle/.openspec.yaml
+  s_0c2ef12b51a130::t_f0f8b2ec0319c1 1-2
+openspec/changes/add-tier-3-lifecycle/design.md
+  s_0c2ef12b51a130::t_182c0a9a396d53 1-122
+openspec/changes/add-tier-3-lifecycle/README.md
+  s_0c2ef12b51a130::t_e67dc6b2cb22bd 1-3
+openspec/changes/add-tier-3-lifecycle/tasks.md
+  s_0c2ef12b51a130::t_3f64d5911eea03 1-40
+openspec/changes/add-tier-3-lifecycle/specs/tier-3-lifecycle/spec.md
+  s_0c2ef12b51a130::t_25c2cf778ce082 1-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "db4c2ecaf5ee46e252ca149991c8286a8df56260",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
