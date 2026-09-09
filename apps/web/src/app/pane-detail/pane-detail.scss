@@ -1,18 +1,109 @@
 .pane-detail {
-  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+  flex: none;
 
   .back {
     color: var(--text-dim);
     text-decoration: none;
     font-size: 0.85rem;
+    flex: none;
   }
 
-  .host {
+  .title-block {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+
+    h1 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .status-dot {
+    flex: none;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--status-unknown);
+
+    &.working {
+      background: var(--status-working);
+    }
+
+    &.blocked {
+      background: var(--status-blocked);
+    }
+
+    &.idle {
+      background: var(--status-idle);
+    }
+
+    &.done {
+      background: var(--status-done);
+    }
+  }
+
+  .host-chip {
+    flex: none;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+
+  .pane-id {
+    flex: none;
     font-family: monospace;
+    font-size: 0.75rem;
     color: var(--text-dim);
   }
 
-  .placeholder {
+  .live-indicator {
+    margin-left: auto;
+    flex: none;
+    font-size: 0.75rem;
     color: var(--text-dim);
   }
+}
+
+.detail-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.terminal-container {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem;
+  background: #14161c;
+}
+
+.graphics-panel {
+  flex: none;
+  width: 240px;
+  border-left: 1px solid var(--border);
+  padding: 0.75rem;
+  color: var(--text-dim);
+  font-size: 0.8rem;
 }

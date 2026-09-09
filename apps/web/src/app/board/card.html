@@ -1,8 +1,18 @@
-<a class="card" [routerLink]="['/pane', pane().host, pane().id]">
+<ng-template #cardContent>
   <div class="card-top">
     <span class="agent-name">{{ displayName() }}</span>
     <span class="status-dot" [class]="pane().agent_status" [attr.title]="pane().agent_status"></span>
   </div>
   <div class="path">{{ path() }}</div>
   <span class="host-chip" [style.background]="hostColor()">{{ pane().host }}</span>
-</a>
+</ng-template>
+
+@if (terminalAvailable()) {
+  <a class="card" [routerLink]="['/pane', pane().host, pane().id]">
+    <ng-container [ngTemplateOutlet]="cardContent" />
+  </a>
+} @else {
+  <div class="card card--static" title="Terminal detail requires a tier-2 bridge">
+    <ng-container [ngTemplateOutlet]="cardContent" />
+  </div>
+}

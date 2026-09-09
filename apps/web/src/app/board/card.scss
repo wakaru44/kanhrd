@@ -15,6 +15,15 @@
   }
 }
 
+.card--static {
+  cursor: default;
+  opacity: 0.7;
+
+  &:hover {
+    border-color: var(--border);
+  }
+}
+
 .card-top {
   display: flex;
   align-items: center;

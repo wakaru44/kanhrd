@@ -1,14 +1,22 @@
-import type { Pane } from "@kanhrd/schema";
+import { provideZonelessChangeDetection, signal } from "@angular/core";
+import { TestBed } from "@angular/core/testing";
+import { provideHttpClient } from "@angular/common/http";
+import { HttpTestingController, provideHttpClientTesting } from "@angular/common/http/testing";
+import { Subject } from "rxjs";
+import type { Pane, WsEvent } from "@kanhrd/schema";
 import {
   applyEvent,
   applyPaneAgentStatusChanged,
   applyPaneClosed,
   applyPaneCreated,
   defaultFilters,
+  fallbackCapabilities,
   groupByStatus,
+  PanesStore,
   paneKey,
   type PaneMap,
 } from "./panes.store";
+import { WsClient } from "./ws-client";
 
 function pane(overrides: Partial<Pane> = {}): Pane {
   return {
@@ -126,5 +134,115 @@ describe("groupByStatus", () => {
       hiddenStatuses: new Set(["working"]),
     });
     expect(groups.working).toEqual([]);
+  });
+});
+
+class FakeWsClient {
+  readonly connected = signal(true);
+  readonly lastError = signal<string | null>(null);
+  readonly events$ = new Subject<WsEvent>();
+  connect(): void {
+    // no-op: tests drive `connected` directly.
+  }
+  request = jasmine.createSpy("request");
+}
+
+async function flushMicrotasks(): Promise<void> {
+  for (let i = 0; i < 5; i++) {
+    await Promise.resolve();
+  }
+}
+
+/** Lets root effects (created outside a component tree, e.g. in an `@Injectable`) flush. */
+async function settle(): Promise<void> {
+  await flushMicrotasks();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await flushMicrotasks();
+}
+
+describe("PanesStore capabilities probing", () => {
+  let ws: FakeWsClient;
+
+  function setUp(): { store: PanesStore; httpMock: HttpTestingController } {
+    ws = new FakeWsClient();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: ws },
+      ],
+    });
+    const store = TestBed.inject(PanesStore);
+    const httpMock = TestBed.inject(HttpTestingController);
+    return { store, httpMock };
+  }
+
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  it("records the probed capabilities for a tier-2 bridge that answers bridge.capabilities", async () => {
+    const { store, httpMock } = setUp();
+    ws.request.and.callFake((_host: string, method: string) => {
+      if (method === "pane.list") return Promise.resolve({ panes: [] });
+      if (method === "events.subscribe") return Promise.resolve({ subscription_id: "s1" });
+      if (method === "bridge.capabilities") {
+        return Promise.resolve({
+          tier: 2,
+          terminal: true,
+          paneResize: false,
+          paneGraphics: false,
+          outputPollIntervalMs: 150,
+        });
+      }
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+
+    // `hostsResource` re-fires whenever `connectTick` bumps (once for the
+    // initial computation, again once the `ws.connected` effect runs); the
+    // resource cancels the now-stale first request when that happens, so
+    // only the still-live request(s) can actually be flushed.
+    await settle();
+    for (const req of httpMock.match("/api/hosts")) {
+      if (!req.cancelled) {
+        req.flush({ hosts: [{ name: "laptop", connected: true }] });
+      }
+    }
+    await settle();
+
+    expect(store.capabilitiesSignal().get("laptop")).toEqual({
+      tier: 2,
+      terminal: true,
+      paneResize: false,
+      paneGraphics: false,
+      outputPollIntervalMs: 150,
+    });
+  });
+
+  it("falls back to disabled terminal support when bridge.capabilities errors (tier-1 bridge)", async () => {
+    const { store, httpMock } = setUp();
+    ws.request.and.callFake((_host: string, method: string) => {
+      if (method === "pane.list") return Promise.resolve({ panes: [] });
+      if (method === "events.subscribe") return Promise.resolve({ subscription_id: "s1" });
+      if (method === "bridge.capabilities") {
+        return Promise.reject(new Error("unknown_method: bridge.capabilities"));
+      }
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+
+    // `hostsResource` re-fires whenever `connectTick` bumps (once for the
+    // initial computation, again once the `ws.connected` effect runs); the
+    // resource cancels the now-stale first request when that happens, so
+    // only the still-live request(s) can actually be flushed.
+    await settle();
+    for (const req of httpMock.match("/api/hosts")) {
+      if (!req.cancelled) {
+        req.flush({ hosts: [{ name: "laptop", connected: true }] });
+      }
+    }
+    await settle();
+
+    expect(store.capabilitiesSignal().get("laptop")).toEqual(fallbackCapabilities());
   });
 });

@@ -1,6 +1,22 @@
 <div class="pane-detail">
-  <a routerLink="/" class="back">&larr; Back to board</a>
-  <h1>Pane detail</h1>
-  <p class="host">{{ host() }} / {{ id() }}</p>
-  <p class="placeholder">Detail coming in tier 2.</p>
+  <header class="detail-header">
+    <a routerLink="/" class="back">&larr; Back to board</a>
+    <div class="title-block">
+      <h1>{{ pane()?.agent?.name ?? pane()?.title ?? id() }}</h1>
+      <span class="status-dot" [class]="pane()?.agent_status ?? 'unknown'" [attr.title]="pane()?.agent_status"></span>
+    </div>
+    <span class="host-chip">{{ host() }}</span>
+    <span class="pane-id">{{ id() }}</span>
+    <span class="live-indicator">Live · updates every ~{{ pollIntervalMs() }}ms</span>
+  </header>
+
+  <div class="detail-body">
+    <div class="terminal-container" #terminalContainer></div>
+
+    @if (graphicsAvailable()) {
+      <aside class="graphics-panel">
+        <p>Graphics overlay (coming soon)</p>
+      </aside>
+    }
+  </div>
 </div>

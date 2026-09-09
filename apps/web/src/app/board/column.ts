@@ -1,6 +1,6 @@
 import { Component, input } from "@angular/core";
 import { CdkDrag, CdkDropList } from "@angular/cdk/drag-drop";
-import type { AgentStatus, Pane } from "@kanhrd/schema";
+import type { AgentStatus, BridgeCapabilities, Pane } from "@kanhrd/schema";
 import { Card } from "./card";
 
 /**
@@ -18,6 +18,7 @@ import { Card } from "./card";
 export class Column {
   readonly status = input.required<AgentStatus>();
   readonly panes = input.required<Pane[]>();
+  readonly capabilities = input.required<ReadonlyMap<string, BridgeCapabilities>>();
 
   protected trackPane(_index: number, pane: Pane): string {
     return `${pane.host}:${pane.id}`;

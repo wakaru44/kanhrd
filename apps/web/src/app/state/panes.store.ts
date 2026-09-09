@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { httpResource } from "@angular/common/http";
 import type {
   AgentStatus,
+  BridgeCapabilities,
   BridgeEventPayload,
   GetHostsResponse,
   HostSummary,
@@ -10,6 +11,11 @@ import type {
   WsEvent,
 } from "@kanhrd/schema";
 import { WsClient } from "./ws-client";
+
+/** What a bridge that never answers (or errors on) `bridge.capabilities` gets treated as: tier-1, no terminal. */
+export function fallbackCapabilities(): BridgeCapabilities {
+  return { tier: 1, terminal: false, paneResize: false, paneGraphics: false, outputPollIntervalMs: 0 };
+}
 
 /** Column order per CONTRACT/brief: working first so live activity shows on load. */
 export const STATUS_COLUMN_ORDER: readonly AgentStatus[] = [
@@ -178,6 +184,9 @@ export class PanesStore {
   readonly panesSignal = signal<PaneMap>(new Map());
   readonly filtersSignal = signal<Filters>(loadFilters());
 
+  /** Per-host `bridge.capabilities` result; a tier-1 bridge (or a failed probe) yields `fallbackCapabilities()`. */
+  readonly capabilitiesSignal = signal<ReadonlyMap<string, BridgeCapabilities>>(new Map());
+
   readonly columnsSignal = computed(() =>
     groupByStatus(this.panesSignal().values(), this.filtersSignal()),
   );
@@ -259,7 +268,25 @@ export class PanesStore {
       // Connection dropped mid-subscribe; the next `connected` transition
       // clears `subscribedHosts` and retries every host from scratch.
       this.subscribedHosts.delete(host);
+      return;
     }
+    await this.probeCapabilities(host);
+  }
+
+  /**
+   * Probes tier-2 support for one host. A tier-1 bridge (or any transport
+   * error) responds with an error frame, which the contract says to treat
+   * as "no tier-2 support" without disconnecting or touching the board —
+   * so any failure here just records the fallback, never throws.
+   */
+  private async probeCapabilities(host: string): Promise<void> {
+    let caps: BridgeCapabilities;
+    try {
+      caps = (await this.ws.request(host, "bridge.capabilities", {})) ?? fallbackCapabilities();
+    } catch {
+      caps = fallbackCapabilities();
+    }
+    this.capabilitiesSignal.update((map) => new Map(map).set(host, caps));
   }
 }
 

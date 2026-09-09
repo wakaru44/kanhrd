@@ -5,7 +5,7 @@
   </header>
   <div class="drop-list" cdkDropList [cdkDropListDisabled]="true" [cdkDropListData]="panes()">
     @for (pane of panes(); track trackPane($index, pane)) {
-      <app-card [pane]="pane" cdkDrag [cdkDragDisabled]="true" />
+      <app-card [pane]="pane" [capabilities]="capabilities()" cdkDrag [cdkDragDisabled]="true" />
     } @empty {
       <p class="empty">No panes</p>
     }

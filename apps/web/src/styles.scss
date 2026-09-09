@@ -1,4 +1,6 @@
 /* Global styles — dark by default to match herdr's terminal aesthetic. */
+@use "@xterm/xterm/css/xterm.css";
+
 :root {
   --bg: #14161c;
   --surface-1: #1b1e26;

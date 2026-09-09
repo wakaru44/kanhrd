@@ -15,6 +15,7 @@ export class Board {
   protected readonly columns = this.store.columnsSignal;
   protected readonly loading = this.store.hostsLoading;
   protected readonly error = this.store.hostsError;
+  protected readonly capabilities = this.store.capabilitiesSignal;
 
   protected readonly hasAnyHosts = computed(() => this.store.hostsSignal().length > 0);
 

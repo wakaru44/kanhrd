@@ -10,7 +10,7 @@
   <div class="board-grid">
     @for (status of statusOrder; track status) {
       @if (!isStatusHidden(status)) {
-        <app-column [status]="status" [panes]="columns()[status]" />
+        <app-column [status]="status" [panes]="columns()[status]" [capabilities]="capabilities()" />
       }
     }
   </div>
