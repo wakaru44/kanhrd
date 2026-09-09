@@ -8,3 +8,6 @@ tmp/
 *.log
 .vscode/
 .idea/
+
+# Local code intelligence index (codegraph init).
+.codegraph/

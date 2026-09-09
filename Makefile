@@ -1,0 +1,128 @@
+# kanhrd — self-documenting Makefile.
+#
+# Every target below carries a `## <description>` comment that `make help`
+# scrapes into a listing. Keep targets short (mostly one-liners delegating to
+# pnpm/docker/pre-commit) so the Makefile stays the entry point without
+# reimplementing tooling.
+
+SHELL       := /bin/bash
+.SHELLFLAGS := -eu -o pipefail -c
+.DEFAULT_GOAL := help
+
+# ---- meta -----------------------------------------------------------------
+
+.PHONY: help
+help: ## Show this help.
+	@awk 'BEGIN { \
+	    FS = ":.*?## "; \
+	    printf "\n\033[1mkanhrd\033[0m — a kanban web UI for herdr.\n\n"; \
+	    printf "\033[1mUsage:\033[0m make \033[36m<target>\033[0m\n\n"; \
+	    printf "\033[1mTargets:\033[0m\n"; \
+	  } \
+	  /^[a-zA-Z0-9_.-]+:.*?## / { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } \
+	  /^## / { printf "\n\033[1m%s\033[0m\n", substr($$0, 4) }' $(MAKEFILE_LIST)
+	@echo
+
+## Setup
+.PHONY: install
+install: ## Install workspace dependencies (pnpm --frozen-lockfile).
+	pnpm install --frozen-lockfile
+
+.PHONY: hooks
+hooks: ## Install the pre-commit git hooks locally.
+	pre-commit install
+
+## Dev
+.PHONY: dev
+dev: build-web build-bridge ## Build everything and run the bridge locally (127.0.0.1:5173).
+	node apps/bridge/dist/main.js
+
+.PHONY: dev-web
+dev-web: ## Angular dev server for the SPA (proxies /api and /ws to :5173).
+	pnpm --filter @kanhrd/web start
+
+.PHONY: dev-bridge
+dev-bridge: ## Bridge in watch mode (tsx watch).
+	pnpm --filter @kanhrd/bridge dev
+
+## Build
+.PHONY: build
+build: build-schema build-bridge build-web ## Build every workspace package.
+
+.PHONY: build-schema
+build-schema: ## Build @kanhrd/schema (TS types).
+	pnpm --filter @kanhrd/schema build
+
+.PHONY: build-bridge
+build-bridge: ## Build @kanhrd/bridge (Node/TS).
+	pnpm --filter @kanhrd/bridge build
+
+.PHONY: build-web
+build-web: ## Build @kanhrd/web (Angular SPA).
+	pnpm --filter @kanhrd/web build
+
+## Quality
+.PHONY: typecheck
+typecheck: ## Typecheck every package.
+	pnpm -r typecheck
+
+.PHONY: test
+test: test-unit test-int test-e2e ## Run every test suite (unit + integration + e2e).
+
+.PHONY: test-unit
+test-unit: ## Unit tests for bridge and web.
+	pnpm --filter @kanhrd/bridge test
+	pnpm --filter @kanhrd/web test
+
+.PHONY: test-int
+test-int: ## Bridge integration tests (spawns real bridge; skips if herdr absent).
+	pnpm test:int
+
+.PHONY: test-e2e
+test-e2e: build-web build-bridge ## Playwright E2E suite (desktop + mobile; needs herdr).
+	pnpm test:e2e
+
+.PHONY: test-e2e-install
+test-e2e-install: ## One-time Playwright browser install.
+	pnpm --filter @kanhrd/web test:e2e:install
+
+.PHONY: lint
+lint: ## Run pre-commit over the whole tree.
+	pnpm lint
+
+.PHONY: format
+format: ## Auto-format everything Prettier owns.
+	pnpm format
+
+## Docker
+.PHONY: docker-build
+docker-build: ## Build the kanhrd:latest container image.
+	docker build -t kanhrd:latest .
+
+.PHONY: docker-up
+docker-up: ## Start the bridge container (docker compose up -d).
+	docker compose up -d
+
+.PHONY: docker-down
+docker-down: ## Stop the bridge container.
+	docker compose down
+
+.PHONY: docker-logs
+docker-logs: ## Tail bridge container logs.
+	docker compose logs -f bridge
+
+## CI
+.PHONY: ci
+ci: install typecheck test-unit lint build ## Same suite CI would run on a fresh checkout (fast bits).
+
+.PHONY: ci-full
+ci-full: ci test-int test-e2e ## Full CI including herdr-dependent suites.
+
+## Housekeeping
+.PHONY: clean
+clean: ## Remove build outputs (keeps node_modules).
+	rm -rf apps/*/dist packages/*/dist
+
+.PHONY: nuke
+nuke: clean ## Also remove node_modules and Playwright browser cache.
+	rm -rf node_modules apps/*/node_modules packages/*/node_modules
