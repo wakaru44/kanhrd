@@ -19,7 +19,7 @@ The browser loads the kanhrd web UI (dark theme, empty or populated pane list de
 
 Verify from the command line instead of, or in addition to, the browser:
 
-```
+```shell
 docker compose logs -f bridge
 ```
 

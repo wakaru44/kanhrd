@@ -20,7 +20,7 @@ story for the same topology.
 
 ## Wire flow
 
-```
+```text
                     HTTPS (443)                 internal Docker network only
  browser  ────────────────────────▶  nginx  ──────────────┬─────────────────▶  bridge:5173
                                        │                    │  (auth_request

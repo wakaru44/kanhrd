@@ -29,6 +29,10 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: check-yaml
+        # docker-compose files legitimately use Compose Spec YAML tags
+        # (e.g. `!reset`) that PyYAML rejects without --unsafe.
+        args: [--unsafe]
+        exclude: ^\.forgejo/workflows/
       - id: check-json
       - id: check-added-large-files
 
@@ -38,7 +42,15 @@ repos:
       - id: yamllint
         args:
           - -d
-          - '{extends: default, rules: {line-length: {max: 120}, document-start: disable}}'
+          - >-
+            {extends: default,
+             rules: {line-length: {max: 120},
+                     document-start: disable,
+                     comments-indentation: disable}}
+        # Forgejo/GitHub Actions workflow files use `on:` (truthy) intentionally
+        # and often contain long single-line `run:` commands. Not worth
+        # re-flowing for lint's sake.
+        exclude: ^\.forgejo/workflows/
 
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
