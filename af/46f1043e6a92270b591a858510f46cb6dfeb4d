@@ -1,0 +1,174 @@
+apps/web/src/app/pane-detail/pane-detail.ts
+  s_0c2ef12b51a130::t_ff7fcc374e678f 46-47,50-51
+  s_0c2ef12b51a130::t_356ab12be77346 22-23
+  s_0c2ef12b51a130::t_a0eac4a3950ed3 204,219-227,229-231,233-237,244-245
+  s_0c2ef12b51a130::t_32de80947cdfe7 116-119,121,124
+  s_0c2ef12b51a130::t_f17a4cbf5e7558 156
+  s_0c2ef12b51a130::t_5be8ab352f9b07 52
+apps/web/src/app/board/board.html
+  s_0c2ef12b51a130::t_c5e721b61da735 40-44,46-53,55
+  s_0c2ef12b51a130::t_60872faac0139a 15-17
+  s_0c2ef12b51a130::t_3b2cba1aeeea5f 1-9
+apps/web/src/app/shared/toast-host.html
+  s_0c2ef12b51a130::t_389995503971b7 1-12
+apps/web/e2e/rail-nav.spec.ts
+  s_0c2ef12b51a130::t_6e18d707db96d3 1-81
+apps/web/src/app/pane-detail/pane-detail.html
+  s_0c2ef12b51a130::t_906a40a99023c2 20-25
+apps/web/src/app/state/terminal-theme.service.spec.ts
+  s_0c2ef12b51a130::t_57deb3d850428e 1-11,19,23-81,83-94
+  s_0c2ef12b51a130::t_d4a8be5840b887 82
+  s_0c2ef12b51a130::t_4182df5346f1a1 12-18,20-22
+apps/web/src/app/settings/settings.ts
+  s_0c2ef12b51a130::t_44e61beca075b9 6-10
+  s_0c2ef12b51a130::t_e6d40e8feea296 33-34
+  s_0c2ef12b51a130::t_e6c0589a53657f 51-52
+  s_0c2ef12b51a130::t_c09e8c68d8004b 53-54
+apps/web/src/app/state/keyboard.service.ts
+  s_0c2ef12b51a130::t_9b0fadf192a2c6 219-220
+  s_0c2ef12b51a130::t_ec9756344fff04 2,6
+  s_0c2ef12b51a130::t_bdfe552406d8f9 397-400,409-414
+  s_0c2ef12b51a130::t_d1cc82aa537a68 415,435-440,471-474,477,480
+apps/web/src/app/app.routes.ts
+  s_0c2ef12b51a130::t_af28b57a52c064 8-9
+apps/web/src/app/settings/settings.html
+  s_0c2ef12b51a130::t_bd1c63149f825c 37-56
+  s_0c2ef12b51a130::t_993d51455be5d1 36
+apps/web/src/app/app.ts
+  s_0c2ef12b51a130::t_662324b3b29c9c 3,8,12
+apps/web/src/styles.scss
+  s_0c2ef12b51a130::t_d36a541ef73511 44-48,53,58-59
+  s_0c2ef12b51a130::t_1875318666fe3e 66-76
+  s_0c2ef12b51a130::t_678a80037101dd 77-78
+apps/web/src/app/board/board.spec.ts
+  s_0c2ef12b51a130::t_3cc6c05ffdebc1 3,6,11
+  s_0c2ef12b51a130::t_4f74d75d8a5671 352-484
+apps/web/src/app/shared/toast-host.scss
+  s_0c2ef12b51a130::t_6a80d1e462e2c6 1-75
+apps/web/e2e/toasts.spec.ts
+  s_0c2ef12b51a130::t_4e09df725d7b54 1-60,65-71
+  s_0c2ef12b51a130::t_26385331f41c46 61-64
+apps/web/src/app/board/empty-state.ts
+  s_0c2ef12b51a130::t_430996435952b6 1-49,52-61
+  s_0c2ef12b51a130::t_ba9cc421d4c77c 50-51
+apps/web/src/app/app.html
+  s_0c2ef12b51a130::t_d198b130058ed3 8,14,18-27,34
+apps/web/angular.json
+  s_0c2ef12b51a130::t_97a53c45672244 42
+  s_0c2ef12b51a130::t_7ceee5149803a3 5-6
+apps/web/src/app/state/terminal-theme.service.ts
+  s_0c2ef12b51a130::t_b2660ba96f0e8a 1-181
+apps/web/src/app/state/toast.service.spec.ts
+  s_0c2ef12b51a130::t_61b9f3fc969dd5 1-67
+apps/web/src/app/board/card.ts
+  s_0c2ef12b51a130::t_7f5f0bc18ba2fa 10
+  s_0c2ef12b51a130::t_41f35b2f57b2c9 96,98-105
+  s_0c2ef12b51a130::t_af022188d202f8 4,14
+  s_0c2ef12b51a130::t_4565f068d0cbc8 21
+apps/web/src/app/state/panes.store.ts
+  s_0c2ef12b51a130::t_1086f6d8e27414 789-791,794-795
+  s_0c2ef12b51a130::t_6d93e1cfbdc7b1 493-502
+  s_0c2ef12b51a130::t_8de058af7d48c5 452-467
+apps/web/src/app/shared/toast-host.ts
+  s_0c2ef12b51a130::t_2c66fcaef95d60 1,3-12,14-24
+  s_0c2ef12b51a130::t_0a710232fa1841 2,13
+apps/web/src/app/board/card.scss
+  s_0c2ef12b51a130::t_75a7814dab827a 42-44,64-67
+  s_0c2ef12b51a130::t_957abd2568c600 178
+  s_0c2ef12b51a130::t_ba9030535e8d32 155-156,167
+  s_0c2ef12b51a130::t_ab14c4b4f8fa7b 123-124
+  s_0c2ef12b51a130::t_3fa655acb54fd0 68
+apps/web/src/app/state/toast.service.ts
+  s_0c2ef12b51a130::t_7e5ca0d16fd146 1-66
+apps/web/src/app/board/empty-state.spec.ts
+  s_0c2ef12b51a130::t_8bb41b6959467a 1-6,8-14,16-50,55-87
+  s_0c2ef12b51a130::t_c7350abeabe18c 15
+  s_0c2ef12b51a130::t_d995f1c01fd3b6 51-54
+  s_0c2ef12b51a130::t_be9b6cc576f471 7
+apps/web/e2e/theme.spec.ts
+  s_0c2ef12b51a130::t_2ebfc08cd60a01 42-45,47-48
+apps/web/src/app/state/ws-client.ts
+  s_0c2ef12b51a130::t_cd646be1680b71 93-96,104,108-116
+  s_0c2ef12b51a130::t_910fa16a57aba6 1,11
+  s_0c2ef12b51a130::t_f29c41a450cd94 29-30,36-37
+  s_0c2ef12b51a130::t_a00e449013f11f 38
+apps/web/src/app/rail/rail.scss
+  s_0c2ef12b51a130::t_ad0dc37b611373 91-93,107-110
+  s_0c2ef12b51a130::t_9fbbb15ad3f21b 48-56,111
+apps/web/src/app/board/board.scss
+  s_0c2ef12b51a130::t_d5aa8194c58757 15-50
+apps/web/src/app/rail/rail.html
+  s_0c2ef12b51a130::t_a05c86c9dd9aeb 8-12,33,39,71,77
+apps/web/src/app/board/column.html
+  s_0c2ef12b51a130::t_ff03ee1e32a83f 14-27
+  s_0c2ef12b51a130::t_e566aae32e6f68 4,6-12
+apps/web/src/app/board/column.scss
+  s_0c2ef12b51a130::t_8cd3f09727e454 20-21,28
+  s_0c2ef12b51a130::t_5a7905f72ee6c6 44-53
+apps/web/src/app/shared/keyboard-help-overlay.spec.ts
+  s_0c2ef12b51a130::t_4d88a8d5cbe3ba 3,8,14,31,33
+  s_0c2ef12b51a130::t_048db22e8cfad6 17
+apps/web/src/app/pane-detail/pane-detail.scss
+  s_0c2ef12b51a130::t_485529c476ffdb 95-101,109-119
+  s_0c2ef12b51a130::t_490d7e4c625b86 120
+apps/web/src/app/state/keyboard.service.spec.ts
+  s_0c2ef12b51a130::t_b6273e08b1fbdb 3,18
+  s_0c2ef12b51a130::t_470bd58dfc3877 36-40
+  s_0c2ef12b51a130::t_b032b1bdb055ff 32
+  s_0c2ef12b51a130::t_af405d3a079565 126,128
+  s_0c2ef12b51a130::t_bae1ff5036ba03 249
+apps/web/e2e/settings.spec.ts
+  s_0c2ef12b51a130::t_064d931d64e861 31-38
+apps/web/src/app/board/card.spec.ts
+  s_0c2ef12b51a130::t_b9b175ea975d28 124,126-129
+  s_0c2ef12b51a130::t_b65e06910f54dc 139-141
+apps/web/e2e/terminal-theme.spec.ts
+  s_0c2ef12b51a130::t_d1b97a3568466c 9-14
+  s_0c2ef12b51a130::t_6d9c35c5c8671a 42-43,45
+  s_0c2ef12b51a130::t_9fb7f5b3c8d2d0 1-8,15-41,44,46-48
+apps/web/src/app/board/board.ts
+  s_0c2ef12b51a130::t_115675cd9ad831 16
+  s_0c2ef12b51a130::t_54354aff71770d 2-4,24-25,36-116
+  s_0c2ef12b51a130::t_bb651fd485e1ef 5
+  s_0c2ef12b51a130::t_7ad6e37c6eb140 1
+  s_0c2ef12b51a130::t_96837a87c6eb44 166
+  s_0c2ef12b51a130::t_4d4af214a23898 182
+  s_0c2ef12b51a130::t_801b20f372819f 198,202-204
+  s_0c2ef12b51a130::t_8c89010afc36b8 11-12,23
+  s_0c2ef12b51a130::t_21022137a09426 117,205
+apps/web/src/app/board/column.ts
+  s_0c2ef12b51a130::t_1f32e060e4b3c9 13-17
+  s_0c2ef12b51a130::t_8f78b42e858a27 1,3,7-8
+  s_0c2ef12b51a130::t_92cbbe4b7aaa9e 21,30
+  s_0c2ef12b51a130::t_58f79ab354596d 9,31
+apps/web/src/app/board/empty-state.scss
+  s_0c2ef12b51a130::t_c73033a7d0b788 1-65
+apps/web/src/app/board/empty-state.html
+  s_0c2ef12b51a130::t_d36d69f8f454a7 1-13
+apps/web/src/app/rail/rail.ts
+  s_0c2ef12b51a130::t_b5d40609a16f92 15,18-22,26,32
+  s_0c2ef12b51a130::t_d25b4e336c12e2 3-4
+  s_0c2ef12b51a130::t_4f765684ba6b92 156,163-167,170-178,180
+apps/web/src/app/board/card.html
+  s_0c2ef12b51a130::t_9bc8eb8e6723dd 21,33
+apps/web/package.json
+  s_0c2ef12b51a130::t_a9ee35c0216881 37
+pnpm-lock.yaml
+  s_0c2ef12b51a130::t_3b49653f6d5b07 77-79,1122-1127,4523-4528
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "af46f1043e6a92270b591a858510f46cb6dfeb4d",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
