@@ -1,0 +1,40 @@
+apps/web/src/app/state/panes.store.spec.ts
+  s_0c2ef12b51a130::t_962d12da737d1c 752-819
+packages/schema/src/wire.ts
+  s_0c2ef12b51a130::t_d858d2a1e2b1e3 22-23,29-31
+  s_0c2ef12b51a130::t_e49b8e5a0b8c21 242,251-264
+  s_0c2ef12b51a130::t_bb6cc722e0fdc5 375-414
+  s_0c2ef12b51a130::t_8c462c3352122c 13-16
+  s_0c2ef12b51a130::t_b2680c2740ddff 177-236
+  s_0c2ef12b51a130::t_b5780c76ccf737 294-327,415
+  s_0c2ef12b51a130::t_4fe49d5116cd4d 107-124
+apps/web/src/app/board/board.spec.ts
+  s_0c2ef12b51a130::t_c913bcc8024905 71-87
+packages/schema/src/herdr.ts
+  s_0c2ef12b51a130::t_51d41a9a69cfd1 415-636,657-693
+  s_0c2ef12b51a130::t_f86c30062bf18d 637-656
+  s_0c2ef12b51a130::t_f2a0eace54e6d9 44-52
+  s_0c2ef12b51a130::t_e78514f248bcbd 169-212
+apps/web/src/app/state/panes.store.ts
+  s_0c2ef12b51a130::t_4a4db6a4958bb5 619-638
+  s_0c2ef12b51a130::t_eccd7e3eaa7a66 704-718
+  s_0c2ef12b51a130::t_4f267c2be81558 664-682
+Dockerfile
+  s_0c2ef12b51a130::t_09b00289e33ac7 42-45,47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "fc47b35bc01dd879c66c3b87bf3aed7862e4fd6a",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
