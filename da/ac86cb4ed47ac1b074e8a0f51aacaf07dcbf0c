@@ -1,0 +1,53 @@
+docs/CONTRIBUTING.md
+  s_0c2ef12b51a130::t_32f2445b8a526a 1-89
+docs/how-to/oauth-proxy.md
+  s_0c2ef12b51a130::t_34ef2750f58d60 1-122
+.prettierignore
+  s_0c2ef12b51a130::t_f1a5a8331d9360 12-14
+  s_0c2ef12b51a130::t_be0e9e318446e4 15-17
+  s_0c2ef12b51a130::t_2269afbf5a7e58 1-11,18-23
+docs/CONTEXT.md
+  s_0c2ef12b51a130::t_291f889ca78136 49-82,95-103
+  s_0c2ef12b51a130::t_f1c9e783ac056f 133
+  s_0c2ef12b51a130::t_d87fba8a6bf013 104
+.pre-commit-config.yaml
+  s_0c2ef12b51a130::t_7cad24ca8f7eb4 19-20
+  s_0c2ef12b51a130::t_a36087ad323406 1-17,21-38,42-75
+  s_0c2ef12b51a130::t_29fc532933fd79 39-41
+  s_0c2ef12b51a130::t_efffa5531eac56 18
+docs/OPERATING.md
+  s_0c2ef12b51a130::t_fe576c41ab0fd6 36-42
+  s_0c2ef12b51a130::t_afbbd50b23411f 98-108
+  s_0c2ef12b51a130::t_3503d06dde34a6 109
+docs/adr/0005-client-side-cascade-purge-and-destructive-op-confirmations.md
+  s_0c2ef12b51a130::t_b25127d19d9a22 1-82
+.prettierrc
+  s_0c2ef12b51a130::t_08137f074de3c6 1-16
+docs/adr/README.md
+  s_0c2ef12b51a130::t_a885eee0eba2b0 11
+README.md
+  s_0c2ef12b51a130::t_a40ca62a881435 40-41
+  s_0c2ef12b51a130::t_c6ef3c17eb6635 5
+  s_0c2ef12b51a130::t_a5f9dd26ac04b4 69-92
+  s_0c2ef12b51a130::t_64401e36028ced 93
+.markdownlint.yaml
+  s_0c2ef12b51a130::t_18ea2daafbf646 1-5
+.dockerignore
+  s_0c2ef12b51a130::t_2820317e43d110 1-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "daac86cb4ed47ac1b074e8a0f51aacaf07dcbf0c",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
