@@ -1,0 +1,25 @@
+deploy/docker/README.md
+  s_0c2ef12b51a130::t_bd506af3d64caa 22
+deploy/oauth/README.md
+  s_0c2ef12b51a130::t_dcf2790e42e8cd 23
+.pre-commit-config.yaml
+  s_0c2ef12b51a130::t_5a60405dd1116e 32-35
+  s_0c2ef12b51a130::t_29f2a733e93854 45-49
+  s_0c2ef12b51a130::t_373dfb59d57c29 50-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "76d79a5c02b74f292fc0507867bfb5aca853558e",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
