@@ -1,0 +1,17 @@
+<app-filter-bar />
+
+@if (loading()) {
+  <p class="state loading">loading hosts…</p>
+} @else if (error()) {
+  <p class="state error">Could not reach the bridge: {{ error() }}</p>
+} @else if (!hasAnyHosts()) {
+  <p class="state empty">No herdr hosts are configured yet.</p>
+} @else {
+  <div class="board-grid">
+    @for (status of statusOrder; track status) {
+      @if (!isStatusHidden(status)) {
+        <app-column [status]="status" [panes]="columns()[status]" />
+      }
+    }
+  </div>
+}

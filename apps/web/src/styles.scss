@@ -1,0 +1,36 @@
+/* Global styles — dark by default to match herdr's terminal aesthetic. */
+:root {
+  --bg: #14161c;
+  --surface-1: #1b1e26;
+  --surface-2: #232733;
+  --border: #2e333f;
+  --border-hover: #3c4252;
+  --text: #e6e8ee;
+  --text-dim: #8b91a1;
+  --status-working: #61c98e;
+  --status-blocked: #e0616c;
+  --status-idle: #e5c07b;
+  --status-done: #6d8fe0;
+  --status-unknown: #5a6072;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}

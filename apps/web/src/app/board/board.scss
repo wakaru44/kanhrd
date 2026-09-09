@@ -1,0 +1,30 @@
+:host {
+  display: block;
+}
+
+.state {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.state.error {
+  color: var(--status-blocked);
+}
+
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+  padding: 0 1rem 1rem;
+  align-items: start;
+
+  @media (max-width: 1100px) {
+    grid-auto-flow: column;
+    grid-auto-columns: 80vw;
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 1rem;
+  }
+}

@@ -1,0 +1,13 @@
+<section class="column" [attr.data-status]="status()">
+  <header class="column-header">
+    <h2>{{ status() }}</h2>
+    <span class="count">{{ panes().length }}</span>
+  </header>
+  <div class="drop-list" cdkDropList [cdkDropListDisabled]="true" [cdkDropListData]="panes()">
+    @for (pane of panes(); track trackPane($index, pane)) {
+      <app-card [pane]="pane" cdkDrag [cdkDragDisabled]="true" />
+    } @empty {
+      <p class="empty">No panes</p>
+    }
+  </div>
+</section>

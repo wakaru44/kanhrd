@@ -1,0 +1,34 @@
+<div class="filter-bar">
+  <div class="chip-row">
+    @for (host of store.hostsSignal(); track host.name) {
+      <button
+        type="button"
+        class="chip host-chip"
+        [class.excluded]="isHostExcluded(host.name)"
+        [style.--chip-color]="hostColor(host.name)"
+        (click)="toggleHost(host.name)"
+      >
+        <span
+          class="conn-dot"
+          [class.ok]="host.connected"
+          [class.err]="!host.connected"
+          [attr.title]="host.connected ? 'connected' : (host.last_error ?? 'not connected')"
+        ></span>
+        {{ host.name }}
+      </button>
+    }
+  </div>
+
+  <div class="chip-row">
+    @for (status of statusOrder; track status) {
+      <button
+        type="button"
+        class="chip status-chip"
+        [class.excluded]="isStatusHidden(status)"
+        (click)="toggleStatus(status)"
+      >
+        {{ status }}
+      </button>
+    }
+  </div>
+</div>

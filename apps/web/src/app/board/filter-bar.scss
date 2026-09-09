@@ -1,0 +1,49 @@
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &.excluded {
+    opacity: 0.4;
+    text-decoration: line-through;
+  }
+}
+
+.host-chip {
+  border-color: var(--chip-color, var(--border));
+}
+
+.conn-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--status-unknown);
+
+  &.ok {
+    background: var(--status-working);
+  }
+
+  &.err {
+    background: var(--status-blocked);
+  }
+}
