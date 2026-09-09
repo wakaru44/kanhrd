@@ -1,0 +1,29 @@
+openspec/changes/add-tier-2-terminal/.openspec.yaml
+  s_0c2ef12b51a130::t_8fc2f40512e698 1-2
+openspec/changes/add-tier-2-terminal/design.md
+  s_0c2ef12b51a130::t_9402c86cb1d23b 1-128
+openspec/changes/add-tier-2-terminal/tasks.md
+  s_0c2ef12b51a130::t_7dbd17b0c20840 1-34
+openspec/changes/add-tier-2-terminal/README.md
+  s_0c2ef12b51a130::t_e060473916e00b 1-3
+openspec/changes/add-tier-2-terminal/proposal.md
+  s_0c2ef12b51a130::t_7e76d946bbc88b 1-76
+openspec/changes/add-tier-2-terminal/specs/tier-2-terminal/spec.md
+  s_0c2ef12b51a130::t_2312baa29de41f 1-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "8db20cf3d13fc21d75f544e3aed4c09770231722",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
