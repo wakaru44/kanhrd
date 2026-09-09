@@ -1,0 +1,96 @@
+openspec/changes/add-l-ux2-empty-state-nav-feedback-density-terminal-themes/specs/l-ux2-empty-state-nav-feedback-density-terminal-themes/spec.md
+  s_0c2ef12b51a130::t_bc822066acb7f0 1-92
+openspec/changes/add-l-ux2-empty-state-nav-feedback-density-terminal-themes/tasks.md
+  s_0c2ef12b51a130::t_e09c995263131f 1-63
+.claude/hooks/openspec_context.py
+  s_0c2ef12b51a130::t_8062b9c4e1ea5c 19-21
+.gitignore
+  s_0c2ef12b51a130::t_d2320bb2509624 14-16
+openspec/README.md
+  s_0c2ef12b51a130::t_d47e8faa04ab78 1-28
+  s_0c2ef12b51a130::t_9db7b80199a34d 29-35
+openspec/changes/add-l-ux2-empty-state-nav-feedback-density-terminal-themes/proposal.md
+  s_0c2ef12b51a130::t_bc376e0ee1f9ea 1-84
+openspec/changes/add-l-ux2-empty-state-nav-feedback-density-terminal-themes/.openspec.yaml
+  s_0c2ef12b51a130::t_eeffbcfd19abab 1-2
+openspec/changes/add-l-ux2-empty-state-nav-feedback-density-terminal-themes/README.md
+  s_0c2ef12b51a130::t_67bc01112d675b 1-3
+openspec/changes/archive/2026-09-10-add-l-ci-forgejo/.openspec.yaml
+  s_0c2ef12b51a130::t_a7e4fd177e394d 1-2
+openspec/changes/archive/2026-09-10-add-l-ci-forgejo/README.md
+  s_0c2ef12b51a130::t_186ea7a8792fce 1-3
+openspec/changes/archive/2026-09-10-add-l-docker-image/.openspec.yaml
+  s_0c2ef12b51a130::t_63d8cf355836aa 1-2
+openspec/changes/archive/2026-09-10-add-l-docker-image/README.md
+  s_0c2ef12b51a130::t_065b1562e09843 1-3
+openspec/changes/archive/2026-09-10-add-l-int-bridge-integration-suite/.openspec.yaml
+  s_0c2ef12b51a130::t_3680d2030d3552 1-2
+openspec/changes/archive/2026-09-10-add-l-int-bridge-integration-suite/README.md
+  s_0c2ef12b51a130::t_97c2efa0def381 1-3
+openspec/changes/archive/2026-09-10-add-l-keys-keyboard-shortcuts/.openspec.yaml
+  s_0c2ef12b51a130::t_83e2cec59ca75f 1-2
+openspec/changes/archive/2026-09-10-add-l-keys-keyboard-shortcuts/README.md
+  s_0c2ef12b51a130::t_df56d79acb1175 1-3
+openspec/changes/archive/2026-09-10-add-l-mobile-e2e-playwright-project/.openspec.yaml
+  s_0c2ef12b51a130::t_37c2a1f5ed2361 1-2
+openspec/changes/archive/2026-09-10-add-l-mobile-e2e-playwright-project/README.md
+  s_0c2ef12b51a130::t_ea2cc0bf067755 1-3
+openspec/changes/archive/2026-09-10-add-l-oauth-proxy-deploy/.openspec.yaml
+  s_0c2ef12b51a130::t_e957ca6858c5f4 1-2
+openspec/changes/archive/2026-09-10-add-l-oauth-proxy-deploy/README.md
+  s_0c2ef12b51a130::t_c4142ea5432053 1-3
+openspec/changes/archive/2026-09-10-add-l-precommit-lint-gate/.openspec.yaml
+  s_0c2ef12b51a130::t_aa369229aefe2a 1-2
+openspec/changes/archive/2026-09-10-add-l-precommit-lint-gate/README.md
+  s_0c2ef12b51a130::t_02ff4866052e64 1-3
+openspec/changes/archive/2026-09-10-add-l-ux-theme-and-polish/.openspec.yaml
+  s_0c2ef12b51a130::t_7dcd8f57ff2dd9 1-2
+openspec/changes/archive/2026-09-10-add-l-ux-theme-and-polish/README.md
+  s_0c2ef12b51a130::t_05296da65ed0a3 1-3
+openspec/changes/archive/2026-09-10-add-tier-3-lifecycle/specs/tier-3-lifecycle/spec.md
+  s_0c2ef12b51a130::t_6ed1ce3a37abf7 102-131
+openspec/changes/archive/2026-09-10-add-tooling-makefile/.openspec.yaml
+  s_0c2ef12b51a130::t_b998782f489206 1-2
+openspec/changes/archive/2026-09-10-add-tooling-makefile/README.md
+  s_0c2ef12b51a130::t_701215eaa6340e 1-3
+openspec/specs/bridge-integration-suite/spec.md
+  s_0c2ef12b51a130::t_0434d8245706b1 1-39
+openspec/specs/docker-image/spec.md
+  s_0c2ef12b51a130::t_341bb45423be13 1-35
+openspec/specs/forgejo-ci/spec.md
+  s_0c2ef12b51a130::t_c07e9dd752bd4c 1-40
+openspec/specs/keyboard-shortcuts/spec.md
+  s_0c2ef12b51a130::t_ee23adef43da28 1-48
+openspec/specs/mobile-e2e-playwright-project/spec.md
+  s_0c2ef12b51a130::t_b33fbcf55d0cd6 1-35
+openspec/specs/oauth-proxy-deploy/spec.md
+  s_0c2ef12b51a130::t_599ebbf7992ec8 1-36
+openspec/specs/precommit-lint-gate/spec.md
+  s_0c2ef12b51a130::t_67be0f29352289 1-37
+openspec/specs/tier-1-kanban/spec.md
+  s_0c2ef12b51a130::t_76bd9f8103cae2 1-70
+openspec/specs/tier-2-terminal/spec.md
+  s_0c2ef12b51a130::t_86f49920a06c39 1-103
+openspec/specs/tier-3-lifecycle/spec.md
+  s_0c2ef12b51a130::t_feb5d107ec88c6 1-131
+openspec/specs/tooling-makefile/spec.md
+  s_0c2ef12b51a130::t_32dc9cdf12188d 1-36
+openspec/specs/ux-theme-and-polish/spec.md
+  s_0c2ef12b51a130::t_5bd9ea0607a6f3 1-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "94e5566d25fa2ef7b68a3462c89f20867058b7fc",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
