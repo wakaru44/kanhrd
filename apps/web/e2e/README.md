@@ -85,6 +85,32 @@ the app's routing (out of this lane's file scope — `apps/web/src/**` belongs
 to L3B/L3C), not an E2E suite bug; this suite documents it here and tests the
 flow the brief actually describes and real users actually take.
 
+## Keyboard
+
+**`keyboard.spec.ts`** covers the herdr/tmux-style prefix keyboard shortcuts
+(L-KEYS) from `src/app/state/keyboard.service.ts`: default prefix `Ctrl+B`,
+a two-stage chord (press prefix, release, then the action key within 2s).
+
+- `?` opens the help overlay (`app-keyboard-help-overlay`), grouped into
+  Navigation / Lifecycle / View / Help sections; `Escape` closes it.
+- `prefix+t` toggles the theme through `KeyboardService` -> `ThemeService`.
+- `prefix+n` advances the rail's "current tab" (`PanesStore.tabFilterSignal`)
+  to the next tab.
+- `Escape` also closes the header `+` menu.
+- Focused inputs — including xterm.js's terminal, whose hidden input is a
+  real `<textarea>` (`.xterm-helper-textarea`) — suppress shortcut handling
+  entirely, so `Ctrl+B` reaches the terminal instead of arming the prefix
+  chord. Verified indirectly (per this suite's herdr-CLI pattern): focus a
+  real pane's terminal, send `prefix+c`, and confirm via `herdr pane list`
+  that no new pane was created.
+
+`prefix+x` (close current pane) is a documented no-op today — the board
+renders every pane simultaneously with no single "focused pane" concept to
+act on, unlike herdr's own single-pane TUI view — so it isn't covered here.
+Selectors specific to this markup are kept local to `keyboard.spec.ts`
+rather than added to `helpers/selectors.ts`, matching `tier3.spec.ts`'s
+precedent.
+
 ## Mobile viewport
 
 **`mobile.spec.ts`** runs only under the `mobile` Playwright project

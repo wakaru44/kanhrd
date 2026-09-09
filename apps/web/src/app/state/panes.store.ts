@@ -463,6 +463,15 @@ export class PanesStore {
     null,
   );
 
+  /**
+   * Same pattern as `pendingRenameSignal`, for `KeyboardService`'s
+   * `prefix+&` (close current tab): keyboard shortcuts have no direct
+   * reference to `Rail`'s `ConfirmModal`, so they request a close here and
+   * `Rail` consumes it to open its existing confirmation flow — the same
+   * dangerous action a user gets from clicking the tab's × button.
+   */
+  readonly pendingCloseTabSignal = signal<{ host: string; id: string } | null>(null);
+
   /** Per-host `bridge.capabilities` result; a tier-1 bridge (or a failed probe) yields `fallbackCapabilities()`. */
   readonly capabilitiesSignal = signal<ReadonlyMap<string, BridgeCapabilities>>(new Map());
 
@@ -773,6 +782,32 @@ export class PanesStore {
 
   consumePendingRename(): void {
     this.pendingRenameSignal.set(null);
+  }
+
+  requestCloseTabById(host: string, id: string): void {
+    this.pendingCloseTabSignal.set({ host, id });
+  }
+
+  consumePendingCloseTab(): void {
+    this.pendingCloseTabSignal.set(null);
+  }
+
+  /**
+   * First host advertising any of the given capabilities, in `hostsSignal`
+   * order. Mirrors `Board`'s local `primaryHost` computed (header `+`
+   * menu), generalized to a single-capability lookup for
+   * `KeyboardService`'s `prefix+c` (new pane needs `paneCreate`
+   * specifically, not "any lifecycle capability").
+   */
+  findHostForCapability(...caps: (keyof BridgeCapabilities)[]): string | null {
+    const capabilities = this.capabilitiesSignal();
+    for (const host of this.hostsSignal()) {
+      const hostCaps = capabilities.get(host.name);
+      if (hostCaps && caps.some((cap) => hostCaps[cap])) {
+        return host.name;
+      }
+    }
+    return null;
   }
 }
 

@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from "@angular/core";
+import { Component, computed, inject } from "@angular/core";
 import { PanesStore, STATUS_COLUMN_ORDER } from "../state/panes.store";
 import { Column } from "./column";
 import { FilterBar } from "./filter-bar";
@@ -59,14 +59,14 @@ export class Board {
     () => this.newPaneAvailable() || this.newTabAvailable() || this.newWorkspaceAvailable(),
   );
 
-  protected readonly plusMenuOpen = signal(false);
+  protected readonly plusMenuOpen = this.layout.plusMenuOpen;
 
   protected togglePlusMenu(): void {
-    this.plusMenuOpen.update((open) => !open);
+    this.layout.togglePlusMenu();
   }
 
   protected async newPane(): Promise<void> {
-    this.plusMenuOpen.set(false);
+    this.layout.closePlusMenu();
     const host = this.primaryHost();
     if (!host) {
       return;
@@ -79,7 +79,7 @@ export class Board {
   }
 
   protected async newTab(): Promise<void> {
-    this.plusMenuOpen.set(false);
+    this.layout.closePlusMenu();
     const host = this.primaryHost();
     if (!host) {
       return;
@@ -95,7 +95,7 @@ export class Board {
   }
 
   protected async newWorkspace(): Promise<void> {
-    this.plusMenuOpen.set(false);
+    this.layout.closePlusMenu();
     const host = this.primaryHost();
     if (!host) {
       return;

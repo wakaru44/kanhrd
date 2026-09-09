@@ -20,3 +20,5 @@
 <main>
   <router-outlet />
 </main>
+
+<app-keyboard-help-overlay [open]="keyboard.helpOpen()" (closed)="keyboard.closeHelp()" />

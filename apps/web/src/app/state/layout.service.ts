@@ -10,12 +10,26 @@ import { Injectable, signal } from "@angular/core";
 @Injectable({ providedIn: "root" })
 export class LayoutService {
   readonly railOpen = signal(false);
+  /** Board's header `+` menu open state — lives here (not on `Board`) so `KeyboardService`'s `Escape` handling can close it without a component reference. */
+  readonly plusMenuOpen = signal(false);
 
   toggleRail(): void {
     this.railOpen.update((open) => !open);
   }
 
+  openRail(): void {
+    this.railOpen.set(true);
+  }
+
   closeRail(): void {
     this.railOpen.set(false);
+  }
+
+  togglePlusMenu(): void {
+    this.plusMenuOpen.update((open) => !open);
+  }
+
+  closePlusMenu(): void {
+    this.plusMenuOpen.set(false);
   }
 }

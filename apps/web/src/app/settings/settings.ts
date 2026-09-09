@@ -3,6 +3,7 @@ import { RouterLink } from "@angular/router";
 import { PanesStore } from "../state/panes.store";
 import { ThemeService } from "../state/theme.service";
 import { SettingsService, type Density } from "../state/settings.service";
+import { DEFAULT_PREFIX, KeyboardService, formatBinding, type ShortcutBinding } from "../state/keyboard.service";
 import { ConfirmModal } from "../shared/confirm-modal";
 
 /**
@@ -23,6 +24,7 @@ export class Settings {
   protected readonly store = inject(PanesStore);
   protected readonly themeService = inject(ThemeService);
   protected readonly settingsService = inject(SettingsService);
+  protected readonly keyboardService = inject(KeyboardService);
 
   protected readonly hosts = this.store.hostsSignal;
   protected readonly capabilities = this.store.capabilitiesSignal;
@@ -46,6 +48,22 @@ export class Settings {
 
   protected advertisedPollInterval(host: string): number | null {
     return this.capabilities().get(host)?.outputPollIntervalMs ?? null;
+  }
+
+  // --- keyboard shortcuts --------------------------------------------------
+
+  protected readonly shortcutRows = computed(() => [...this.keyboardService.shortcuts().values()]);
+
+  protected defaultBindingLabel(binding: ShortcutBinding): string {
+    return formatBinding(binding, DEFAULT_PREFIX);
+  }
+
+  protected currentBindingLabel(binding: ShortcutBinding): string {
+    return formatBinding(binding, this.keyboardService.prefix());
+  }
+
+  protected resetKeyboardDefaults(): void {
+    this.keyboardService.resetToDefault();
   }
 
   // --- clear local data --------------------------------------------------

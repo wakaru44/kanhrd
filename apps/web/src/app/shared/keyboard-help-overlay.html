@@ -1,0 +1,33 @@
+@if (open()) {
+  <div class="modal-backdrop" (click)="onBackdropClick()">
+    <div
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Keyboard shortcuts"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-header">
+        <h2 class="modal-title">Keyboard shortcuts</h2>
+        <button type="button" class="close-btn" title="Close" aria-label="Close" (click)="close()">×</button>
+      </div>
+      <p class="prefix-note">
+        Prefix: <kbd>{{ keyboard.prefix() }}</kbd> — press it, release, then the action key within 2s.
+      </p>
+
+      @for (group of groups(); track group.category) {
+        <section class="shortcut-group">
+          <h3>{{ group.category }}</h3>
+          <dl>
+            @for (binding of group.bindings; track binding.action) {
+              <div class="shortcut-row">
+                <dt><kbd>{{ keysLabel(binding) }}</kbd></dt>
+                <dd>{{ binding.description }}</dd>
+              </div>
+            }
+          </dl>
+        </section>
+      }
+    </div>
+  </div>
+}

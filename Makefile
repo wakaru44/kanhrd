@@ -141,3 +141,7 @@ clean: ## Remove build outputs (keeps node_modules).
 .PHONY: nuke
 nuke: clean ## Also remove node_modules and Playwright browser cache.
 	rm -rf node_modules apps/*/node_modules packages/*/node_modules
+
+.PHONY: tailconnect
+tailconnect: ## Just connect tailscale
+	tailscale serve --https 5173 http://127.0.0.1:5173

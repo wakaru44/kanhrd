@@ -97,6 +97,35 @@
   </section>
 
   <section class="settings-section">
+    <h2>Keyboard</h2>
+    <p class="section-note">
+      Herdr-style prefix shortcuts (tmux convention: press the prefix, release, then the action key).
+      Rebinding isn't available yet — this table is read-only besides resetting the prefix.
+    </p>
+
+    <table class="shortcut-table">
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>Default</th>
+          <th>Current</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (binding of shortcutRows(); track binding.action) {
+          <tr>
+            <td>{{ binding.description }}</td>
+            <td><kbd>{{ defaultBindingLabel(binding) }}</kbd></td>
+            <td><kbd>{{ currentBindingLabel(binding) }}</kbd></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <button type="button" class="btn" (click)="resetKeyboardDefaults()">Reset to defaults</button>
+  </section>
+
+  <section class="settings-section">
     <h2>Data</h2>
     <p class="section-note">
       Clears filters, theme, density, and every other kanhrd setting stored in this browser. This does not

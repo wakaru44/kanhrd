@@ -129,6 +129,23 @@ export class Rail {
         this.store.consumePendingRename();
       });
     });
+
+    // `KeyboardService`'s `prefix+&` ("close current tab") has no direct
+    // reference to this component's `ConfirmModal` — it requests a close via
+    // the store instead, mirroring the `pendingRenameSignal` handoff above.
+    effect(() => {
+      const pending = this.store.pendingCloseTabSignal();
+      if (!pending) {
+        return;
+      }
+      const tab = this.store.tabsSignal().get(paneKey(pending.host, pending.id));
+      untracked(() => {
+        if (tab) {
+          this.requestCloseTab(tab);
+        }
+        this.store.consumePendingCloseTab();
+      });
+    });
   }
 
   // --- tab filter ------------------------------------------------------
@@ -207,8 +224,8 @@ export class Rail {
     return this.store.tabCountForWorkspace(target.host, target.workspace.id) <= 1;
   });
 
-  protected requestCloseTab(tab: TabSummary, event: Event): void {
-    event.stopPropagation();
+  protected requestCloseTab(tab: TabSummary, event?: Event): void {
+    event?.stopPropagation();
     this.closeTabTarget.set(tab);
   }
 

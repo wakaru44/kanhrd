@@ -4,7 +4,7 @@ import { herdrAvailable } from "./fixtures/herdr";
 /**
  * Settings screen (`/settings`) — reachable from the header gear icon,
  * renders every section described in the brief: Appearance, Runtime,
- * Servers / hosts, Data. See `src/app/settings/settings.{ts,html}`.
+ * Servers / hosts, Keyboard, Data. See `src/app/settings/settings.{ts,html}`.
  */
 
 let preflightReason: string | undefined;
@@ -28,7 +28,7 @@ test("header gear icon navigates to /settings", async ({ app }) => {
 test("settings route renders every section", async ({ app }) => {
   await app.goto("/settings");
   const headings = app.locator(".settings-section h2");
-  await expect(headings).toHaveText(["Appearance", "Runtime", "Servers / hosts", "Data"]);
+  await expect(headings).toHaveText(["Appearance", "Runtime", "Servers / hosts", "Keyboard", "Data"]);
 });
 
 test("toggling density on the settings screen persists to localStorage", async ({ app }) => {
