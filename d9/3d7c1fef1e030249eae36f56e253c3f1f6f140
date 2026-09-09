@@ -1,0 +1,31 @@
+docs/CONTEXT.md
+  s_0c2ef12b51a130::t_66d75c0e73edc2 74
+  s_0c2ef12b51a130::t_d01554bdf1d863 88
+  s_0c2ef12b51a130::t_dc7308dee849ec 28-60
+docs/adr/README.md
+  s_0c2ef12b51a130::t_85f58a6bad951f 10
+README.md
+  s_0c2ef12b51a130::t_6192a80fa63bd0 38-40,44-66
+  s_0c2ef12b51a130::t_67f1845ca135f9 5
+  s_0c2ef12b51a130::t_da69784c526e66 67
+docs/adr/0004-full-snapshot-terminal-output-via-polling.md
+  s_0c2ef12b51a130::t_9b898543384b7a 1-64
+docs/OPERATING.md
+  s_0c2ef12b51a130::t_359552965f3ccc 29-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "d93d7c1fef1e030249eae36f56e253c3f1f6f140",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
