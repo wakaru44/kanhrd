@@ -1,0 +1,93 @@
+apps/web/src/app/settings/settings.ts
+  s_0c2ef12b51a130::t_6e6cc5416f8173 1-68
+apps/web/src/app/state/layout.service.ts
+  s_0c2ef12b51a130::t_19d42eed1f6b48 1-21
+apps/web/src/app/board/board.ts
+  s_0c2ef12b51a130::t_bd536a8ee93f19 16
+  s_0c2ef12b51a130::t_ad0968b96d9e87 6
+apps/web/src/styles.scss
+  s_0c2ef12b51a130::t_c58b15e3aff4cd 4-11,26-55
+  s_0c2ef12b51a130::t_eaf63f5d08d73f 56
+apps/web/src/app/util/clock.ts
+  s_0c2ef12b51a130::t_de1bc8aac75ee1 1-28
+apps/web/src/app/board/card.ts
+  s_0c2ef12b51a130::t_93e9d228c24ce8 57-84
+  s_0c2ef12b51a130::t_e77ee8b2e611e0 1,8
+  s_0c2ef12b51a130::t_533c93637265b6 18
+  s_0c2ef12b51a130::t_2dbcd42fc8d471 85
+apps/web/src/app/board/filter-bar.scss
+  s_0c2ef12b51a130::t_2d14f19ceb9077 30-39
+apps/web/src/app/board/board.scss
+  s_0c2ef12b51a130::t_183a1aaff60da6 86-111
+apps/web/src/app/settings/settings.html
+  s_0c2ef12b51a130::t_4b98aff9e12c40 1-118
+apps/web/src/app/app.routes.ts
+  s_0c2ef12b51a130::t_252623ebfe069f 4,9
+apps/web/src/app/board/board.html
+  s_0c2ef12b51a130::t_a3d58ebba6b240 32-35
+apps/web/src/app/app.scss
+  s_0c2ef12b51a130::t_945af74cdcae8f 27-58
+apps/web/src/app/board/card.html
+  s_0c2ef12b51a130::t_3fac4356c1486e 9-15
+apps/web/src/app/board/card.scss
+  s_0c2ef12b51a130::t_4342c5e83d7b09 161-185
+  s_0c2ef12b51a130::t_3f0409951aa026 5-6
+apps/web/e2e/theme.spec.ts
+  s_0c2ef12b51a130::t_c6b7e46c1efb0b 1-24,27,29-31,36-38,40-46
+  s_0c2ef12b51a130::t_8952253e69aa07 25-26,28,32-35,39
+apps/web/e2e/settings.spec.ts
+  s_0c2ef12b51a130::t_14a25172f9ed04 1-23,25-49
+  s_0c2ef12b51a130::t_155ccfef2eeeac 24
+apps/web/src/app/state/theme.service.spec.ts
+  s_0c2ef12b51a130::t_8e04670c6b4e42 67,70
+  s_0c2ef12b51a130::t_d677e143b67fbe 1-4,18-66,68-69,71-74
+  s_0c2ef12b51a130::t_e19b4db4ab1153 5-17
+apps/web/src/app/app.html
+  s_0c2ef12b51a130::t_5be5f57f6b76d9 2-8,10-18
+apps/web/src/app/state/theme.service.ts
+  s_0c2ef12b51a130::t_035339d509178b 1-43
+apps/web/src/app/board/card.spec.ts
+  s_0c2ef12b51a130::t_2121d44fe25135 161-178
+apps/web/e2e/mobile.spec.ts
+  s_0c2ef12b51a130::t_6c73b9f502b9a5 108-113
+  s_0c2ef12b51a130::t_8db46630acac90 76,85-87,90-93,95-107,114
+apps/web/src/app/board/column.scss
+  s_0c2ef12b51a130::t_2b81608ca288aa 8-10
+apps/web/src/app/settings/settings.spec.ts
+  s_0c2ef12b51a130::t_e3ce9ce10d2698 1-116
+apps/web/src/app/app.ts
+  s_0c2ef12b51a130::t_21d2a85af80955 1,3-4,12-23
+apps/web/src/app/pane-detail/pane-detail.scss
+  s_0c2ef12b51a130::t_f789050b274a84 99-110
+apps/web/src/app/pane-detail/pane-detail.ts
+  s_0c2ef12b51a130::t_6feb767a8db257 262-263
+  s_0c2ef12b51a130::t_5f70088da06c83 170
+  s_0c2ef12b51a130::t_ade20e2c65a8aa 229-230,242
+  s_0c2ef12b51a130::t_13c0556e36cfdd 22-23,25-26,35-42
+  s_0c2ef12b51a130::t_3bf40f68d9b117 209
+  s_0c2ef12b51a130::t_0f03bf0a8550b5 114-129,131-142
+  s_0c2ef12b51a130::t_e4122cabb83d0e 65-66
+  s_0c2ef12b51a130::t_efce8cd376197a 43-44
+apps/web/src/app/settings/settings.scss
+  s_0c2ef12b51a130::t_9cf2a9796304a8 1-193
+apps/web/src/app/pane-detail/pane-detail.html
+  s_0c2ef12b51a130::t_f684b7cb361571 13-18
+apps/web/src/app/state/settings.service.ts
+  s_0c2ef12b51a130::t_9c896353ed528e 1-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "f80da59b6cc3f9975f27c8d998d2cd39e7f9ed69",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
