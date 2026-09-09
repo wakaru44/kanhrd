@@ -1,0 +1,74 @@
+apps/web/src/app/board/card.scss
+  s_0c2ef12b51a130::t_4abd376d3c2989 18-26
+apps/web/src/app/state/panes.store.ts
+  s_0c2ef12b51a130::t_dc77fff04efcaa 187-189
+  s_0c2ef12b51a130::t_b5956b4dc27160 6,15-18
+  s_0c2ef12b51a130::t_f1f0ece3c1be3c 271-287,289
+  s_0c2ef12b51a130::t_08d9c546d41c2b 19
+apps/web/src/app/pane-detail/pane-detail.html
+  s_0c2ef12b51a130::t_08a99beb9803e4 2-21
+apps/web/src/app/state/panes.store.spec.ts
+  s_0c2ef12b51a130::t_7176c0a97edf7d 139-155,163-201,206,212-234,239,245-248
+  s_0c2ef12b51a130::t_46e4b508bd7701 203-205,208-210,236-238,241-243
+  s_0c2ef12b51a130::t_b03d118ef847c8 156-162
+  s_0c2ef12b51a130::t_1c71c722d04fef 2-6,13,15,19
+  s_0c2ef12b51a130::t_ffbfa298fd8de0 1
+  s_0c2ef12b51a130::t_6911e9289058b0 202,207,211,235,240,244
+apps/web/src/app/board/board.ts
+  s_0c2ef12b51a130::t_3613bfb946ad1d 18
+apps/web/src/app/board/column.html
+  s_0c2ef12b51a130::t_3e34c27d75804e 8
+apps/web/src/app/board/card.spec.ts
+  s_0c2ef12b51a130::t_455107d95653bb 65-76,79
+  s_0c2ef12b51a130::t_882a8f2c5ed1d5 32,35
+  s_0c2ef12b51a130::t_e571faf69db58a 77-78
+  s_0c2ef12b51a130::t_39fc3d56a86523 4,18-21
+  s_0c2ef12b51a130::t_e6ed62f93f2065 22-23
+apps/web/src/app/pane-detail/pane-detail.ts
+  s_0c2ef12b51a130::t_daaa3c6e7ad3f7 174-175,182-183
+  s_0c2ef12b51a130::t_5cc866b211b347 71-88
+  s_0c2ef12b51a130::t_2e76a166219512 1-9,12-18,20-38,45,47-51,61-70,89-173,176-181,184
+apps/web/src/app/board/card.ts
+  s_0c2ef12b51a130::t_139909e336a2db 2,4,9,15-16,29-33
+apps/web/src/app/pane-detail/pane-detail.scss
+  s_0c2ef12b51a130::t_c3f454ec828711 2-14,20-60,63-75,77,81-84,88-109
+apps/web/src/app/pane-detail/key-mapping.spec.ts
+  s_0c2ef12b51a130::t_99fa86b13d98ae 1-46
+apps/web/angular.json
+  s_0c2ef12b51a130::t_ecc041c57bfbcf 41
+apps/web/src/app/board/card.html
+  s_0c2ef12b51a130::t_aa805821ebca5e 1,8-18
+apps/web/src/styles.scss
+  s_0c2ef12b51a130::t_052b20f15981b0 2-3
+apps/web/src/app/pane-detail/pane-detail.spec.ts
+  s_0c2ef12b51a130::t_3394ef92805e2d 1-31,35-147,246
+  s_0c2ef12b51a130::t_1d91b2e0200894 148-245
+  s_0c2ef12b51a130::t_1bb5c5bab93896 32-34
+apps/web/src/app/board/column.ts
+  s_0c2ef12b51a130::t_ccafc50808914b 21
+  s_0c2ef12b51a130::t_b18ed00ee7943a 3
+apps/web/src/app/pane-detail/key-mapping.ts
+  s_0c2ef12b51a130::t_b66ed411eba396 1-70
+apps/web/src/app/board/board.html
+  s_0c2ef12b51a130::t_7bd617edd516a7 13
+apps/web/src/app/app.scss
+  s_0c2ef12b51a130::t_4107b72fe2d8fa 1-6,12-18
+apps/web/package.json
+  s_0c2ef12b51a130::t_7c74ba724414e4 34-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "70f1658f5b845841bd0eeb1d1bb01e33a6e129fa",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
