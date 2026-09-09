@@ -1,0 +1,22 @@
+<div class="modal-backdrop" (click)="onCancel()">
+  <div class="modal" role="dialog" aria-modal="true" [attr.aria-label]="title()" (click)="$event.stopPropagation()">
+    <h2 class="modal-title">{{ title() }}</h2>
+
+    @if (refusalReason()) {
+      <p class="modal-body refusal">{{ refusalReason() }}</p>
+      <div class="modal-actions">
+        <button type="button" class="btn" (click)="onCancel()">Close</button>
+      </div>
+    } @else {
+      @if (body()) {
+        <p class="modal-body">{{ body() }}</p>
+      }
+      <div class="modal-actions">
+        <button type="button" class="btn" (click)="onCancel()">{{ cancelLabel() }}</button>
+        <button type="button" class="btn" [class.danger]="danger()" (click)="onConfirm()">
+          {{ confirmLabel() }}
+        </button>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,107 @@
+:host {
+  display: block;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.75rem 0.5rem;
+  overflow-y: auto;
+  height: 100%;
+  font-size: 0.85rem;
+}
+
+.host-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.host-name {
+  padding: 0.2rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.workspace-row,
+.tab-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.3rem 0.4rem;
+  border-radius: 6px;
+  cursor: default;
+
+  &:hover .row-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.workspace-row {
+  font-weight: 600;
+}
+
+.tab-row {
+  padding-left: 1rem;
+  cursor: pointer;
+  color: var(--text-dim);
+
+  &:hover {
+    background: var(--surface-2);
+  }
+
+  &.active {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+}
+
+.workspace-name,
+.tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.2rem;
+  flex: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+}
+
+.row-action {
+  width: 1.2rem;
+  height: 1.2rem;
+  line-height: 1;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.7rem;
+
+  &:hover {
+    color: var(--text);
+    border-color: var(--border-hover);
+  }
+}
+
+.edit-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-hover);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}

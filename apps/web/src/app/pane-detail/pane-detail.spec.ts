@@ -1,7 +1,7 @@
-import { provideZonelessChangeDetection } from "@angular/core";
+import { provideZonelessChangeDetection, signal } from "@angular/core";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { ActivatedRoute, convertToParamMap } from "@angular/router";
-import { Subject, of } from "rxjs";
+import { BehaviorSubject, Subject, of } from "rxjs";
 import { Terminal } from "@xterm/xterm";
 import type { WsEvent } from "@kanhrd/schema";
 import { PaneDetail } from "./pane-detail";
@@ -9,6 +9,7 @@ import { PanesStore } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
 
 class FakeWsClient {
+  readonly connected = signal(true);
   readonly events$ = new Subject<WsEvent>();
   readonly request = jasmine.createSpy("request").and.callFake((_host: string, method: string) => {
     switch (method) {
@@ -39,9 +40,11 @@ async function flushMicrotasks(): Promise<void> {
 describe("PaneDetail", () => {
   let ws: FakeWsClient;
   let fixture: ComponentFixture<PaneDetail>;
+  let paramMap$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
   beforeEach(async () => {
     ws = new FakeWsClient();
+    paramMap$ = new BehaviorSubject(convertToParamMap({ host: "laptop", id: "pane-1" }));
 
     await TestBed.configureTestingModule({
       imports: [PaneDetail],
@@ -54,7 +57,7 @@ describe("PaneDetail", () => {
         },
         {
           provide: ActivatedRoute,
-          useValue: { paramMap: of(convertToParamMap({ host: "laptop", id: "pane-1" })) },
+          useValue: { paramMap: paramMap$ },
         },
       ],
     }).compileComponents();
@@ -242,5 +245,57 @@ describe("PaneDetail", () => {
 
     expect(sendCalls).toEqual(["a", "b"]);
     expect(warnSpy).toHaveBeenCalledWith("pane-detail: send failed", jasmine.any(Error));
+  });
+
+  it("does not fetch on mount while the socket is disconnected, then fetches once it connects", async () => {
+    ws.connected.set(false);
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+
+    expect(ws.request).not.toHaveBeenCalledWith("laptop", "pane.read", jasmine.anything());
+
+    // Simulates the cold-deep-link case from apps/web/e2e/README.md: the WS
+    // connection finishes opening after the component has already mounted.
+    ws.connected.set(true);
+    fixture.detectChanges();
+    await flushMicrotasks();
+
+    expect(ws.request).toHaveBeenCalledWith("laptop", "pane.read", {
+      pane_id: "pane-1",
+      format: "ansi",
+      source: "recent",
+    });
+    expect(ws.request).toHaveBeenCalledWith("laptop", "pane.subscribe_output", { pane_id: "pane-1" });
+  });
+
+  it("refetches when the route params change to a different pane, without remounting", async () => {
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+
+    expect(ws.request).toHaveBeenCalledWith("laptop", "pane.read", {
+      pane_id: "pane-1",
+      format: "ansi",
+      source: "recent",
+    });
+    ws.request.calls.reset();
+
+    paramMap$.next(convertToParamMap({ host: "laptop", id: "pane-2" }));
+    fixture.detectChanges();
+    await flushMicrotasks();
+
+    // Old subscription is torn down and a fresh read+subscribe pair is
+    // issued for the newly-active pane.
+    expect(ws.request).toHaveBeenCalledWith("laptop", "pane.unsubscribe_output", {
+      subscription_id: "sub-1",
+    });
+    expect(ws.request).toHaveBeenCalledWith("laptop", "pane.read", {
+      pane_id: "pane-2",
+      format: "ansi",
+      source: "recent",
+    });
+    expect(ws.request).toHaveBeenCalledWith("laptop", "pane.subscribe_output", { pane_id: "pane-2" });
   });
 });

@@ -1,0 +1,123 @@
+@if (hostGroups().size > 0) {
+  <nav class="rail">
+    @for (entry of hostGroups() | keyvalue; track entry.key) {
+      <div class="host-group">
+        <div class="host-name">{{ entry.key }}</div>
+
+        @for (group of entry.value; track group.workspace.id) {
+          <div class="workspace-row">
+            @if (isEditing("workspace", group.workspace.host, group.workspace.id)) {
+              <input
+                class="edit-input"
+                type="text"
+                [value]="editingValue()"
+                (input)="editingValue.set($any($event.target).value)"
+                (keydown)="onEditKeydown($event)"
+                (blur)="cancelRename()"
+                (click)="$event.stopPropagation()"
+                autofocus
+              />
+            } @else {
+              <span class="workspace-name">{{ group.workspace.name }}</span>
+              @if (workspaceCrudAvailable(group.workspace.host)) {
+                <span class="row-actions">
+                  <button
+                    type="button"
+                    class="row-action"
+                    title="Rename workspace"
+                    (click)="startRenameWorkspace(group.workspace, $event)"
+                  >✎</button>
+                  <button
+                    type="button"
+                    class="row-action"
+                    title="Close workspace"
+                    (click)="requestCloseWorkspace(group.workspace, $event)"
+                  >×</button>
+                </span>
+              }
+            }
+          </div>
+
+          @for (tab of group.tabs; track tab.id) {
+            <div
+              class="tab-row"
+              [class.active]="isTabFilterActive(tab.host, tab.id)"
+              (click)="onTabClick(tab)"
+            >
+              @if (isEditing("tab", tab.host, tab.id)) {
+                <input
+                  class="edit-input"
+                  type="text"
+                  [value]="editingValue()"
+                  (input)="editingValue.set($any($event.target).value)"
+                  (keydown)="onEditKeydown($event)"
+                  (blur)="cancelRename()"
+                  (click)="$event.stopPropagation()"
+                  autofocus
+                />
+              } @else {
+                <span class="tab-name">{{ tab.name }}</span>
+                @if (tabCrudAvailable(tab.host)) {
+                  <span class="row-actions">
+                    <button
+                      type="button"
+                      class="row-action"
+                      title="Rename tab"
+                      (click)="startRenameTab(tab, $event)"
+                    >✎</button>
+                    <button
+                      type="button"
+                      class="row-action"
+                      title="Close tab"
+                      (click)="requestCloseTab(tab, $event)"
+                    >×</button>
+                  </span>
+                }
+              }
+            </div>
+          }
+        }
+      </div>
+    }
+  </nav>
+}
+
+@if (closeWorkspaceTarget(); as target) {
+  @if (!closeWorkspaceGroupRequired()) {
+    <app-confirm-modal
+      title="Close workspace?"
+      body="Close &quot;{{ target.name }}&quot; and every tab and pane inside it? This cannot be undone."
+      confirmLabel="Close workspace"
+      [danger]="true"
+      [refusalReason]="closeWorkspaceRefusalReason()"
+      (confirmed)="confirmCloseWorkspace()"
+      (cancelled)="cancelCloseWorkspace()"
+    />
+  }
+}
+
+@if (closeWorkspaceGroupRequired()) {
+  <app-confirm-modal
+    title="Close linked workspaces?"
+    body="This workspace shares a linked git worktree with other open workspaces. Closing it will close all of them too. This cannot be undone."
+    confirmLabel="Close all linked workspaces"
+    [danger]="true"
+    (confirmed)="confirmCloseWorkspace()"
+    (cancelled)="cancelCloseWorkspace()"
+  />
+}
+
+@if (closeTabTarget(); as target) {
+  <app-confirm-modal
+    title="Close tab?"
+    [body]="
+      closeTabIsLastInWorkspace()
+        ? 'This is the last tab in its workspace. This will close the workspace too. This cannot be undone.'
+        : 'Close &quot;' + target.name + '&quot; and every pane inside it? This cannot be undone.'
+    "
+    confirmLabel="Close tab"
+    [danger]="true"
+    (confirmed)="confirmCloseTab()"
+    (cancelled)="cancelCloseTab()"
+  />
+}

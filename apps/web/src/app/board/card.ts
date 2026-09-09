@@ -1,16 +1,20 @@
-import { Component, computed, input } from "@angular/core";
+import { Component, computed, inject, input, signal } from "@angular/core";
 import { NgTemplateOutlet } from "@angular/common";
 import { RouterLink } from "@angular/router";
-import type { BridgeCapabilities, Pane } from "@kanhrd/schema";
+import type { BridgeCapabilities, Pane, SplitDirection } from "@kanhrd/schema";
+import { PanesStore } from "../state/panes.store";
 import { hostColor } from "../util/host-color";
+import { ConfirmModal } from "../shared/confirm-modal";
 
 @Component({
   selector: "app-card",
-  imports: [RouterLink, NgTemplateOutlet],
+  imports: [RouterLink, NgTemplateOutlet, ConfirmModal],
   templateUrl: "./card.html",
   styleUrl: "./card.scss",
 })
 export class Card {
+  private readonly store = inject(PanesStore);
+
   readonly pane = input.required<Pane>();
   /** Per-host `bridge.capabilities` results, threaded down from the store via Board/Column. */
   readonly capabilities = input.required<ReadonlyMap<string, BridgeCapabilities>>();
@@ -31,4 +35,48 @@ export class Card {
   protected readonly terminalAvailable = computed(
     () => this.capabilities().get(this.pane().host)?.terminal === true,
   );
+
+  /** Tier-3: whether `pane.close` will succeed on this pane's host. */
+  protected readonly paneCloseAvailable = computed(
+    () => this.capabilities().get(this.pane().host)?.paneClose === true,
+  );
+  /** Tier-3: whether `pane.split` will succeed on this pane's host. */
+  protected readonly paneSplitAvailable = computed(
+    () => this.capabilities().get(this.pane().host)?.paneCreate === true,
+  );
+
+  protected readonly showCloseConfirm = signal(false);
+  protected readonly showSplitMenu = signal(false);
+
+  protected readonly closeConfirmBody = computed(
+    () => `Terminate "${this.displayName()}"? This cannot be undone.`,
+  );
+
+  protected onCloseClick(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.showSplitMenu.set(false);
+    this.showCloseConfirm.set(true);
+  }
+
+  protected confirmClose(): void {
+    this.showCloseConfirm.set(false);
+    void this.store.closePane(this.pane().host, this.pane().id);
+  }
+
+  protected onSplitClick(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.showSplitMenu.update((open) => !open);
+  }
+
+  protected doSplit(direction: SplitDirection, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.showSplitMenu.set(false);
+    void this.store.splitPane(this.pane().host, {
+      target_pane_id: this.pane().id,
+      direction,
+    });
+  }
 }

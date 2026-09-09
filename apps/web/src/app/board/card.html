@@ -5,6 +5,29 @@
   </div>
   <div class="path">{{ path() }}</div>
   <span class="host-chip" [style.background]="hostColor()">{{ pane().host }}</span>
+
+  @if (paneSplitAvailable() || paneCloseAvailable()) {
+    <div class="card-actions">
+      @if (paneSplitAvailable()) {
+        <div class="split-wrap">
+          <button type="button" class="card-action split" title="Split pane" (click)="onSplitClick($event)">
+            ⟶
+          </button>
+          @if (showSplitMenu()) {
+            <div class="split-menu" (click)="$event.stopPropagation()">
+              <button type="button" (click)="doSplit('right', $event)">Split right</button>
+              <button type="button" (click)="doSplit('down', $event)">Split down</button>
+            </div>
+          }
+        </div>
+      }
+      @if (paneCloseAvailable()) {
+        <button type="button" class="card-action close" title="Close pane" (click)="onCloseClick($event)">
+          ×
+        </button>
+      }
+    </div>
+  }
 </ng-template>
 
 @if (terminalAvailable()) {
@@ -15,4 +38,15 @@
   <div class="card card--static" title="Terminal detail requires a tier-2 bridge">
     <ng-container [ngTemplateOutlet]="cardContent" />
   </div>
+}
+
+@if (showCloseConfirm()) {
+  <app-confirm-modal
+    title="Close pane?"
+    [body]="closeConfirmBody()"
+    confirmLabel="Close pane"
+    [danger]="true"
+    (confirmed)="confirmClose()"
+    (cancelled)="showCloseConfirm.set(false)"
+  />
 }

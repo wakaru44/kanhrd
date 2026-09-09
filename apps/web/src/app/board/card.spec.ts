@@ -3,6 +3,12 @@ import { TestBed } from "@angular/core/testing";
 import { provideRouter } from "@angular/router";
 import type { BridgeCapabilities, Pane } from "@kanhrd/schema";
 import { Card } from "./card";
+import { PanesStore } from "../state/panes.store";
+
+class FakePanesStore {
+  readonly closePane = jasmine.createSpy("closePane");
+  readonly splitPane = jasmine.createSpy("splitPane");
+}
 
 function pane(overrides: Partial<Pane> = {}): Pane {
   return {
@@ -15,26 +21,63 @@ function pane(overrides: Partial<Pane> = {}): Pane {
   };
 }
 
-function capsWithTerminal(host: string): ReadonlyMap<string, BridgeCapabilities> {
-  return new Map([
-    [host, { tier: 2, terminal: true, paneResize: false, paneGraphics: false, outputPollIntervalMs: 150 }],
-  ]);
+function capabilities(overrides: Partial<BridgeCapabilities> = {}): BridgeCapabilities {
+  return {
+    tier: 2,
+    terminal: true,
+    paneResize: false,
+    paneGraphics: false,
+    outputPollIntervalMs: 150,
+    paneCreate: false,
+    paneClose: false,
+    paneMove: false,
+    tabCrud: false,
+    workspaceCrud: false,
+    ...overrides,
+  };
+}
+
+function capsWithTerminal(
+  host: string,
+  overrides: Partial<BridgeCapabilities> = {},
+): ReadonlyMap<string, BridgeCapabilities> {
+  return new Map([[host, capabilities(overrides)]]);
 }
 
 describe("Card", () => {
+  let store: FakePanesStore;
+
   beforeEach(async () => {
+    store = new FakePanesStore();
     await TestBed.configureTestingModule({
       imports: [Card],
-      providers: [provideZonelessChangeDetection(), provideRouter([])],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: PanesStore, useValue: store },
+      ],
     }).compileComponents();
   });
 
-  function render(p: Pane, capabilities: ReadonlyMap<string, BridgeCapabilities> = capsWithTerminal(p.host)) {
+  function renderFixture(
+    p: Pane,
+    capabilities: ReadonlyMap<string, BridgeCapabilities> = capsWithTerminal(p.host),
+  ) {
     const fixture = TestBed.createComponent(Card);
     fixture.componentRef.setInput("pane", p);
     fixture.componentRef.setInput("capabilities", capabilities);
     fixture.detectChanges();
-    return fixture.nativeElement as HTMLElement;
+    return fixture;
+  }
+
+  function render(p: Pane, capabilities: ReadonlyMap<string, BridgeCapabilities> = capsWithTerminal(p.host)) {
+    return renderFixture(p, capabilities).nativeElement as HTMLElement;
+  }
+
+  /** Clicks `selector` inside `fixture` and flushes a change-detection pass so signal-driven `@if`s re-render. */
+  function clickAndSettle(fixture: ReturnType<typeof renderFixture>, selector: string): void {
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(selector)?.click();
+    fixture.detectChanges();
   }
 
   it("shows the agent name when present", () => {
@@ -76,5 +119,52 @@ describe("Card", () => {
     expect(el.querySelector("div.card--static")).toBeTruthy();
     // content still renders even without the click affordance
     expect(el.querySelector(".agent-name")?.textContent?.length).toBeGreaterThan(0);
+  });
+
+  it("shows the close button when paneClose capability is true", () => {
+    const el = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneClose: true }));
+    expect(el.querySelector(".card-action.close")).toBeTruthy();
+  });
+
+  it("hides the close button when paneClose capability is false", () => {
+    const el = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneClose: false }));
+    expect(el.querySelector(".card-action.close")).toBeFalsy();
+  });
+
+  it("shows the split button when paneCreate capability is true, hides it otherwise", () => {
+    const shown = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneCreate: true }));
+    expect(shown.querySelector(".card-action.split")).toBeTruthy();
+
+    const hidden = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneCreate: false }));
+    expect(hidden.querySelector(".card-action.split")).toBeFalsy();
+  });
+
+  it("clicking close opens a confirmation modal instead of closing immediately", () => {
+    const fixture = renderFixture(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneClose: true }));
+    clickAndSettle(fixture, ".card-action.close");
+
+    expect((fixture.nativeElement as HTMLElement).querySelector("app-confirm-modal")).toBeTruthy();
+    expect(store.closePane).not.toHaveBeenCalled();
+  });
+
+  it("confirming the close modal calls store.closePane", () => {
+    const fixture = renderFixture(
+      pane({ host: "laptop", id: "pane-12345678" }),
+      capsWithTerminal("laptop", { paneClose: true }),
+    );
+    clickAndSettle(fixture, ".card-action.close");
+    clickAndSettle(fixture, "app-confirm-modal .modal-actions .btn.danger");
+
+    expect(store.closePane).toHaveBeenCalledWith("laptop", "pane-12345678");
+  });
+
+  it("clicking the close/split buttons does not navigate the card link", () => {
+    const el = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneClose: true, paneCreate: true }));
+    const closeEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
+    spyOn(closeEvent, "preventDefault").and.callThrough();
+
+    el.querySelector<HTMLButtonElement>(".card-action.close")?.dispatchEvent(closeEvent);
+
+    expect(closeEvent.defaultPrevented).toBe(true);
   });
 });

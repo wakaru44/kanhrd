@@ -5,7 +5,10 @@ import {
   OnDestroy,
   ViewChild,
   computed,
+  effect,
   inject,
+  signal,
+  untracked,
 } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { ActivatedRoute, RouterLink } from "@angular/router";
@@ -67,7 +70,10 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   private term: Terminal | null = null;
   private fitAddon: FitAddon | null = null;
   private subscriptionId: string | null = null;
+  private subscriptionHost: string | null = null;
   private outputEventsSub: Subscription | null = null;
+  /** Flips true once the terminal container exists, so the load effect below has something to write into. */
+  private readonly viewReady = signal(false);
 
   /**
    * Serializes `pane.send_text`/`pane.send_keys` calls: the browser only
@@ -89,6 +95,32 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   private readonly onWindowResize = (): void => {
     this.fitAddon?.fit();
   };
+
+  constructor() {
+    // Fetch (and refetch) this pane's content whenever the route resolves to
+    // a different pane or the socket (re)connects — driven off signals
+    // (Angular 20 way) rather than a one-shot `ngOnInit`/`ngAfterViewInit`
+    // call. A cold full-page load of `/pane/:host/:id` used to race the WS
+    // connection: the old code fired `pane.read`/`pane.subscribe_output`
+    // exactly once from `ngAfterViewInit`, which silently failed (caught,
+    // swallowed) if the socket wasn't OPEN yet — that's the app-routing gap
+    // the E2E suite worked around (apps/web/e2e/README.md). Keying this off
+    // `ws.connected()` too means a later connect (or reconnect) retries it,
+    // and keying it off `host()`/`id()` means navigating between panes
+    // in-place (without an intervening destroy) also refetches.
+    effect(() => {
+      const host = this.host();
+      const id = this.id();
+      const connected = this.ws.connected();
+      const ready = this.viewReady();
+      if (!ready || !host || !id || !connected) {
+        return;
+      }
+      untracked(() => {
+        void this.loadForPane(host, id);
+      });
+    });
+  }
 
   ngAfterViewInit(): void {
     const term = new Terminal({
@@ -112,37 +144,56 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       .pipe(filter((evt): evt is WsEvent<"pane.output"> => evt.event === "pane.output"))
       .subscribe((evt) => this.handleOutputEvent(evt));
 
-    void this.loadInitial();
+    this.viewReady.set(true);
   }
 
   ngOnDestroy(): void {
     window.removeEventListener("resize", this.onWindowResize);
     this.outputEventsSub?.unsubscribe();
-    const host = this.host();
-    if (this.subscriptionId && host) {
-      void this.ws.request(host, "pane.unsubscribe_output", { subscription_id: this.subscriptionId });
-    }
+    this.teardownSubscription();
     this.term?.dispose();
     this.term = null;
   }
 
-  private async loadInitial(): Promise<void> {
-    const host = this.host();
-    const id = this.id();
-    if (!host || !id || !this.term) {
+  private teardownSubscription(): void {
+    if (this.subscriptionId && this.subscriptionHost) {
+      void this.ws.request(this.subscriptionHost, "pane.unsubscribe_output", {
+        subscription_id: this.subscriptionId,
+      });
+    }
+    this.subscriptionId = null;
+    this.subscriptionHost = null;
+  }
+
+  private async loadForPane(host: string, id: string): Promise<void> {
+    if (!this.term) {
       return;
     }
+    this.teardownSubscription();
+    this.term.reset();
     try {
       const result = await this.ws.request(host, "pane.read", {
         pane_id: id,
         format: "ansi",
         source: "recent",
       });
+      if (this.host() !== host || this.id() !== id) {
+        return; // stale: the route moved on again while this request was in flight
+      }
       if (result) {
         this.term.write(result.content);
       }
       const sub = await this.ws.request(host, "pane.subscribe_output", { pane_id: id });
-      this.subscriptionId = sub?.subscription_id ?? null;
+      if (this.host() !== host || this.id() !== id) {
+        if (sub) {
+          void this.ws.request(host, "pane.unsubscribe_output", { subscription_id: sub.subscription_id });
+        }
+        return;
+      }
+      if (sub) {
+        this.subscriptionId = sub.subscription_id;
+        this.subscriptionHost = host;
+      }
     } catch {
       // Bridge unreachable, tier-1 bridge, or connection dropped mid-load —
       // per the runtime/client boundary guardrail this is a client-local
