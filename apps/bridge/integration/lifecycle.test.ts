@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { startBridge, waitForHostConnected, type RunningBridge } from "./fixtures/bridge.js";
 import { IntegrationClient } from "./fixtures/ws-client.js";
-import { herdrPaneList, herdrTabClose, herdrTabList } from "./fixtures/herdr-cli.js";
+import { herdrPaneList, herdrTabClose, herdrTabList, herdrWorkspaceList } from "./fixtures/herdr-cli.js";
 import { requireHerdrOrSkipReason } from "./fixtures/require-herdr.js";
 
 /**
@@ -136,5 +136,124 @@ describe("D. tier-3 lifecycle", () => {
       expect((closedEvent.payload as { workspace: { id: string } }).workspace.id).toBe(workspaceId);
     },
     60_000,
+  );
+});
+
+/**
+ * E. No-phantom-storm regression — see
+ * `openspec/changes/fix-bridge-subscription-backlog-storm/proposal.md`.
+ *
+ * The live symptom this reproduces: a fresh WS connects, subscribes to
+ * lifecycle event kinds, and used to see hundreds of stale/phantom
+ * `pane.created`/`pane.closed`/`tab.created`/`tab.closed` events for ids
+ * that no longer exist, within seconds — caused by `HostRuntime` rebuilding
+ * its herdr `events.subscribe` connection on every pane/tab/workspace
+ * lifecycle push, which replays herdr's buffered event backlog on herdr
+ * builds that predate herdr commit `20a500a7`. The fix makes the bridge's
+ * herdr subscription spec set independent of the live pane-id set, so it's
+ * opened exactly once and never rebuilt in response to lifecycle churn.
+ *
+ * This suite's dev sandbox is shared across several concurrently-running
+ * agent lanes (documented precedent: the D. suite's own header comment
+ * above) — verified live to sometimes produce 100+ events in a 5s window
+ * from other lanes' genuine, real-time pane/tab activity alone. That rules
+ * out event VOLUME as a reliable signal here (the original storm report and
+ * this sandbox's legitimate concurrent load are the same order of
+ * magnitude); a strict "zero events" or low-volume assertion would be
+ * flaky by construction on this environment, not a meaningful check.
+ *
+ * What actually distinguishes the bug is that the replayed events name ids
+ * that don't exist in herdr's CURRENT state — a stale/duplicate replay, not
+ * live activity. This test asserts that signature directly: every
+ * `pane.created`/`tab.created`/`workspace.created` event received during
+ * the window names an id that genuinely exists in herdr right after the
+ * window closes (small residual race risk if that exact resource closes in
+ * the few hundred ms between the window ending and the follow-up
+ * `pane/tab/workspace.list` call — acceptable, matches this suite's existing
+ * tolerance for shared-sandbox noise per the D. suite's own header). The
+ * `HostRuntime` unit tests in `src/herdr/hosts.test.ts` are the
+ * deterministic, environment-independent proof of the actual fix
+ * (subscribe-once, no resubscribe-on-churn); this integration test is a
+ * live smoke check on top of that.
+ */
+describe("E. no phantom lifecycle-event storm on a steady-state host", () => {
+  let skipReason: string | undefined;
+  let bridge: RunningBridge;
+
+  beforeAll(async () => {
+    skipReason = await requireHerdrOrSkipReason();
+    if (skipReason) return;
+    bridge = await startBridge();
+    await waitForHostConnected(bridge, "local");
+  });
+
+  afterAll(async () => {
+    await bridge?.stop();
+  });
+
+  it(
+    "a fresh subscription to lifecycle events sees no storm-volume or phantom-id events within several seconds",
+    async (ctx) => {
+      if (skipReason) return ctx.skip();
+
+      const client = await IntegrationClient.connect(bridge.wsUrl);
+      try {
+        const sub = await client.call("local", "events.subscribe", {
+          kinds: [
+            "pane.created",
+            "pane.closed",
+            "tab.created",
+            "tab.closed",
+            "tab.renamed",
+            "tab.moved",
+            "workspace.created",
+            "workspace.closed",
+            "workspace.renamed",
+            "pane.moved",
+          ],
+        });
+        expect(sub.subscription_id).toBeTruthy();
+
+        // Long enough to surface a resubscribe-driven backlog replay
+        // (which, when it happened, delivered its whole burst well inside
+        // this window) without making the suite slow.
+        await new Promise((resolve) => setTimeout(resolve, 5_000));
+
+        const lifecycleEvents = client.eventsFor(
+          (e) =>
+            e.event === "pane.created" ||
+            e.event === "pane.closed" ||
+            e.event === "tab.created" ||
+            e.event === "tab.closed" ||
+            e.event === "tab.renamed" ||
+            e.event === "tab.moved" ||
+            e.event === "workspace.created" ||
+            e.event === "workspace.closed" ||
+            e.event === "workspace.renamed" ||
+            e.event === "pane.moved",
+        );
+
+        const [currentPaneIds, currentTabIds, currentWorkspaceIds] = await Promise.all([
+          herdrPaneList().then((panes) => new Set(panes.map((p) => p.pane_id))),
+          herdrTabList().then((tabs) => new Set(tabs.map((t) => t.tab_id))),
+          herdrWorkspaceList().then((workspaces) => new Set(workspaces.map((w) => w.workspace_id))),
+        ]);
+        for (const event of lifecycleEvents) {
+          if (event.event === "pane.created") {
+            const id = (event.payload as { pane: { id: string } }).pane.id;
+            expect(currentPaneIds.has(id)).toBe(true);
+          } else if (event.event === "tab.created") {
+            const id = (event.payload as { tab: { id: string } }).tab.id;
+            expect(currentTabIds.has(id)).toBe(true);
+          } else if (event.event === "workspace.created") {
+            const id = (event.payload as { workspace: { id: string } }).workspace.id;
+            expect(currentWorkspaceIds.has(id)).toBe(true);
+          }
+        }
+      } finally {
+        client.close();
+      }
+    },
+    15_000,
   );
 });

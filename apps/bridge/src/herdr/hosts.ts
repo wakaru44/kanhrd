@@ -25,7 +25,6 @@ import type {
 import type { HostConfig } from "../config.js";
 import {
   HerdrClient,
-  HerdrRequestError,
   type HerdrPushedEvent,
   type HerdrSubscription,
   type HerdrSubscriptionSpec,
@@ -38,34 +37,27 @@ const MIN_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30_000;
 
 /**
- * How long to wait after a pane create/close before rebuilding the
- * subscription connection with the updated pane id set. herdr's
- * `pane.agent_status_changed` subscription is per-pane only (see
- * `HerdrSubscriptionSpec`), so covering "all panes" means resubscribing
- * whenever the pane set changes; this coalesces bursts (e.g. several panes
- * opening at once) into one resubscribe instead of one per event.
+ * How often the bridge polls `pane.list` per host to detect
+ * `agent_status` changes and synthesize `pane.agent_status_changed`
+ * events (same synthesis pattern as tier-2's `OutputPoller`). herdr's
+ * `pane.agent_status_changed` subscription requires a `pane_id` per
+ * `Subscription::PaneAgentStatusChanged` (`src/api/schema/events.rs` in
+ * the herdr repo) — there is no wildcard/global form — so covering every
+ * pane via herdr's own push subscription would mean rebuilding the
+ * bridge's one persistent event subscription on every pane
+ * create/close. That resubscribe-on-churn was the root cause of a
+ * phantom-event storm on herdr builds that replay their event backlog
+ * on a new subscription (fixed upstream in herdr commit `20a500a7`, not
+ * yet in every deployed herdr). Polling instead keeps the lifecycle
+ * event subscription connection static and long-lived.
  */
-const RESUBSCRIBE_DEBOUNCE_MS = 250;
+const AGENT_STATUS_POLL_INTERVAL_MS = 5000;
 
 export class HostUnavailableError extends Error {
   readonly code = "host_unavailable";
   constructor(host: string) {
     super(`host "${host}" is not connected`);
   }
-}
-
-/**
- * Extracts the offending `pane_id` from a herdr `pane_not_found` error
- * raised while validating an `events.subscribe` request (message format
- * `"pane <id> not found"`, verified live). Returns `undefined` for anything
- * else — including a `pane_not_found` from some other subscription kind
- * this bridge doesn't build with a `pane_id`, since the regex just won't
- * match a message this parser doesn't expect, which is the safe failure
- * mode (falls through to "not recoverable").
- */
-function stalePaneIdFromError(err: unknown): string | undefined {
-  if (!(err instanceof HerdrRequestError) || err.code !== "pane_not_found") return undefined;
-  return /^pane (\S+) not found$/.exec(err.message)?.[1];
 }
 
 /**
@@ -98,7 +90,8 @@ export class HostRuntime extends EventEmitter {
   private readonly writeQueue = new PaneWriteQueue();
   /** Tier-3: one FIFO per host for pane/tab/workspace lifecycle mutations — see `HostMutationQueue` doc. */
   private readonly mutationQueue = new HostMutationQueue();
-  private readonly paneIds = new Set<string>();
+  /** Known panes' last-seen `agent_status`, used both as general pane bookkeeping (placement cache correctness) and as the diff baseline for `pollAgentStatus()` — see that method's doc. */
+  private readonly paneAgentStatus = new Map<string, HerdrPaneInfo["agent_status"]>();
   private subscription: HerdrSubscription | null = null;
   /** Guards against a superseded subscribe (resubscribe in flight) acting on stale disconnect/settle events. */
   private subscriptionGeneration = 0;
@@ -107,9 +100,14 @@ export class HostRuntime extends EventEmitter {
   private backoffMs = MIN_BACKOFF_MS;
   private stopped = true;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private resubscribeTimer: ReturnType<typeof setTimeout> | null = null;
+  private agentStatusPollTimer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private readonly config: HostConfig) {
+  constructor(
+    private readonly config: HostConfig,
+    // ponytail: test-only override so unit tests don't have to wait out a
+    // real 5s interval; production callers always use the default.
+    private readonly agentStatusPollIntervalMs = AGENT_STATUS_POLL_INTERVAL_MS,
+  ) {
     super();
     this.name = config.name;
     this.client = new HerdrClient(config.socket);
@@ -123,6 +121,9 @@ export class HostRuntime extends EventEmitter {
 
   start(): void {
     this.stopped = false;
+    // Runs for the lifetime of this runtime, not just while connected —
+    // `pollAgentStatus()` itself no-ops while `connected` is false.
+    this.agentStatusPollTimer = setInterval(() => void this.pollAgentStatus(), this.agentStatusPollIntervalMs);
     void this.connectOnce();
   }
 
@@ -130,7 +131,8 @@ export class HostRuntime extends EventEmitter {
     this.stopped = true;
     this.subscriptionGeneration++; // orphan any in-flight/erroring subscribe attempts
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    if (this.resubscribeTimer) clearTimeout(this.resubscribeTimer);
+    if (this.agentStatusPollTimer) clearInterval(this.agentStatusPollTimer);
+    this.agentStatusPollTimer = null;
     this.subscription?.close();
     this.subscription = null;
   }
@@ -369,12 +371,12 @@ export class HostRuntime extends EventEmitter {
   // --- pane/tab/workspace cache bookkeeping -----------------------------
 
   private trackPane(pane: HerdrPaneInfo): void {
-    this.paneIds.add(pane.pane_id);
+    this.paneAgentStatus.set(pane.pane_id, pane.agent_status);
     this.names.setPanePlacement(pane.pane_id, pane.workspace_id, pane.tab_id);
   }
 
   private untrackPane(paneId: string): void {
-    this.paneIds.delete(paneId);
+    this.paneAgentStatus.delete(paneId);
     this.names.removePane(paneId);
   }
 
@@ -386,13 +388,9 @@ export class HostRuntime extends EventEmitter {
     this.names.setWorkspace(workspace.workspace_id, workspace.label);
   }
 
-  /** Drops a batch of pane ids from the subscription-relevant set, resubscribing only if any were actually present. */
+  /** Drops a batch of cascade-closed pane ids from the agent-status baseline (name cache is already purged by the caller). */
   private purgeCascade(paneIds: string[]): void {
-    let changed = false;
-    for (const id of paneIds) {
-      if (this.paneIds.delete(id)) changed = true;
-    }
-    if (changed) this.scheduleResubscribe();
+    for (const id of paneIds) this.paneAgentStatus.delete(id);
   }
 
   private applyPaneMoveCache(move: HerdrPaneMoveResult): void {
@@ -418,7 +416,7 @@ export class HostRuntime extends EventEmitter {
     try {
       await this.names.refresh(this.client);
       const paneList = await this.client.request<{ panes: HerdrPaneInfo[] }>("pane.list");
-      this.paneIds.clear();
+      this.paneAgentStatus.clear();
       for (const pane of paneList.panes) this.trackPane(pane);
 
       await this.establishSubscription();
@@ -431,81 +429,70 @@ export class HostRuntime extends EventEmitter {
   }
 
   /**
-   * herdr's `pane.agent_status_changed` subscription is per-pane, not
-   * global (see `HerdrSubscriptionSpec`), so "subscribe to every pane's
-   * status changes" means listing every currently-known pane id here.
-   * Tier-3's eight lifecycle kinds are all global (`Subscription::X {}`),
-   * so they're added once, unconditionally. `includePaneAgentStatus: false`
-   * builds the degraded fallback used by `subscribeWithPaneRecovery` when
-   * per-pane specs can't be made to validate — see that method's doc.
+   * Tier-1's `pane.created`/`pane.closed` and tier-3's eight lifecycle
+   * kinds are all global (`Subscription::X {}`, no `pane_id`), so this
+   * spec set is fixed — it does NOT depend on the live pane-id set, unlike
+   * the old per-pane `pane.agent_status_changed` specs it used to also
+   * carry (see `AGENT_STATUS_POLL_INTERVAL_MS`'s doc for why those moved
+   * to polling instead). A fixed spec set means `establishSubscription()`
+   * never needs to be rebuilt in response to pane/tab/workspace churn.
    */
-  private buildSubscriptionSpecs(includePaneAgentStatus = true): HerdrSubscriptionSpec[] {
+  private buildSubscriptionSpecs(): HerdrSubscriptionSpec[] {
     const specs: HerdrSubscriptionSpec[] = [{ type: "pane.created" }, { type: "pane.closed" }];
     for (const kind of LIFECYCLE_EVENT_KINDS) specs.push({ type: kind });
-    if (includePaneAgentStatus) {
-      for (const paneId of this.paneIds) {
-        specs.push({ type: "pane.agent_status_changed", pane_id: paneId });
-      }
-    }
     return specs;
   }
 
   /**
-   * `client.subscribe()` validates EVERY entry in the `subscriptions` array
-   * and rejects the WHOLE request if any one is invalid (verified against
-   * live herdr: `{"error":{"code":"pane_not_found","message":"pane <id> not
-   * found"}}`) — so a single pane that closed between our last `pane.list`
-   * and this subscribe attempt landing kills subscribe entirely, even
-   * though every OTHER spec in the batch was fine and the socket itself is
-   * healthy. On a busy shared herdr this happens routinely, not
-   * exceptionally.
-   *
-   * This prunes the offending `pane_id` (from `paneIds` and the name cache)
-   * and retries, up to once per currently-known pane — a real fix, not a
-   * blind retry, since each failure identifies exactly which id to drop.
-   * If pruning doesn't converge (or there's nothing left to prune), it
-   * falls back to subscribing WITHOUT any per-pane
-   * `pane.agent_status_changed` specs at all: agent-status pushes go stale
-   * until the next `pane.created`-triggered debounced resubscribe (already
-   * existing behavior) gets another chance, but the host stays subscribed
-   * and connected instead of cycling.
-   *
-   * Only a non-`pane_not_found` failure (or the degraded attempt itself
-   * failing) propagates to the caller — that's the actual "something is
-   * wrong with this socket/host" signal `establishSubscription` should
-   * treat as fatal.
+   * Polls `pane.list` and emits a synthetic `pane.agent_status_changed`
+   * bridge-event for any pane whose `agent_status` differs from the last
+   * seen value — see `AGENT_STATUS_POLL_INTERVAL_MS`'s doc for why this
+   * replaces herdr's per-pane push subscription. A pane seen for the first
+   * time (no baseline yet) is seeded silently, matching the old push
+   * subscription's semantics: no event for the value already known at
+   * subscribe time. `trackPane` updates the baseline for every pane on
+   * every tick regardless, so this also keeps the name-cache placement
+   * fresh as a side effect.
    */
-  private async subscribeWithPaneRecovery(): Promise<HerdrSubscription> {
-    let attemptsLeft = this.paneIds.size + 1;
-    for (;;) {
-      try {
-        return await this.client.subscribe(this.buildSubscriptionSpecs(), (pushed) =>
-          this.handlePushedEvent(pushed),
-        );
-      } catch (err) {
-        const staleId = stalePaneIdFromError(err);
-        attemptsLeft--;
-        if (staleId && this.paneIds.delete(staleId)) {
-          this.names.removePane(staleId);
-          if (attemptsLeft > 0) continue;
-        }
-        break; // not a recoverable stale-pane_id error, or retries exhausted
+  private async pollAgentStatus(): Promise<void> {
+    if (!this.connected) return;
+    let panes: HerdrPaneInfo[];
+    try {
+      const result = await this.client.request<{ panes: HerdrPaneInfo[] }>("pane.list");
+      panes = result.panes;
+    } catch {
+      return; // ponytail: transient poll failure — next tick retries, same as OutputPoller's pane.read
+    }
+    for (const pane of panes) {
+      const previous = this.paneAgentStatus.get(pane.pane_id);
+      this.trackPane(pane);
+      if (previous !== undefined && previous !== pane.agent_status) {
+        const event: WsEvent<"pane.agent_status_changed"> = {
+          host: this.name,
+          event: "pane.agent_status_changed",
+          payload: { id: pane.pane_id, host: this.name, agent_status: pane.agent_status },
+        };
+        this.emit("bridge-event", event);
       }
     }
-    return this.client.subscribe(this.buildSubscriptionSpecs(false), (pushed) => this.handlePushedEvent(pushed));
   }
 
   /**
-   * Opens a new subscription connection reflecting the current pane id set
-   * and swaps it in for the old one (if any), using `subscriptionGeneration`
+   * Opens the (static, pane-id-independent) subscription connection and
+   * swaps it in for the old one (if any), using `subscriptionGeneration`
    * so a deliberate swap's `disconnect` on the OLD handle doesn't get
    * mistaken for a real outage and trigger a redundant full reconnect.
+   * Only called from `connectOnce()` — never in response to a
+   * pane/tab/workspace lifecycle event, since the spec set no longer
+   * depends on any of that state.
    */
   private async establishSubscription(): Promise<void> {
     const generation = ++this.subscriptionGeneration;
     const previousSubscription = this.subscription;
 
-    const subscription = await this.subscribeWithPaneRecovery();
+    const subscription = await this.client.subscribe(this.buildSubscriptionSpecs(), (pushed) =>
+      this.handlePushedEvent(pushed),
+    );
 
     if (generation !== this.subscriptionGeneration) {
       subscription.close(); // superseded while connecting (e.g. stop() during connect)
@@ -537,20 +524,6 @@ export class HostRuntime extends EventEmitter {
     this.reconnectTimer = setTimeout(() => void this.connectOnce(), delay);
   }
 
-  /** Coalesces pane create/close bursts into one resubscribe instead of one per event. */
-  private scheduleResubscribe(): void {
-    if (this.stopped || this.resubscribeTimer) return;
-    this.resubscribeTimer = setTimeout(() => {
-      this.resubscribeTimer = null;
-      this.establishSubscription().catch((err: unknown) => {
-        this.connected = false;
-        this.lastError = err instanceof Error ? err.message : String(err);
-        this.emit("state", this.state());
-        this.scheduleReconnect();
-      });
-    }, RESUBSCRIBE_DEBOUNCE_MS);
-  }
-
   private handlePushedEvent(pushed: HerdrPushedEvent): void {
     const host = this.name;
     const data = pushed.data as Record<string, unknown> | undefined;
@@ -560,7 +533,6 @@ export class HostRuntime extends EventEmitter {
         const pane = (data as { pane?: HerdrPaneInfo } | undefined)?.pane;
         if (!pane) return;
         this.trackPane(pane);
-        this.scheduleResubscribe(); // pick up this pane's agent_status_changed events
         const event: WsEvent<"pane.created"> = {
           host,
           event: "pane.created",
@@ -573,11 +545,7 @@ export class HostRuntime extends EventEmitter {
         const paneId = (data as { pane_id?: string } | undefined)?.pane_id;
         const workspaceId = (data as { workspace_id?: string } | undefined)?.workspace_id;
         if (!paneId || !workspaceId) return;
-        // Must drop the id before the next resubscribe: a stale pane_id in
-        // the subscription list fails to resolve on herdr's side and breaks
-        // the whole events.subscribe call, same as a missing pane_id does.
         this.untrackPane(paneId);
-        this.scheduleResubscribe();
         const event: WsEvent<"pane.closed"> = {
           host,
           event: "pane.closed",
@@ -586,19 +554,9 @@ export class HostRuntime extends EventEmitter {
         this.emit("bridge-event", event);
         return;
       }
-      case "pane.agent_status_changed": {
-        const info = data as
-          | { pane_id?: string; agent_status?: Pane["agent_status"] }
-          | undefined;
-        if (!info?.pane_id || !info.agent_status) return;
-        const event: WsEvent<"pane.agent_status_changed"> = {
-          host,
-          event: "pane.agent_status_changed",
-          payload: { id: info.pane_id, host, agent_status: info.agent_status },
-        };
-        this.emit("bridge-event", event);
-        return;
-      }
+      // "pane.agent_status_changed" is no longer a subscribed push kind —
+      // `pollAgentStatus()` synthesizes it instead (see that method's doc)
+      // — so it never reaches this switch; no case needed here.
 
       // --- Tier-3 lifecycle events, lane LC3 ---------------------------
       // Cache invalidation per CONTRACT-TIER3.md section 6: renamed/created
