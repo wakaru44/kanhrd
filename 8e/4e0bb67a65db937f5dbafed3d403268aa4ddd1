@@ -1,0 +1,49 @@
+deploy/oauth/docker-compose.oauth.yaml
+  s_0c2ef12b51a130::t_39eddde0585c38 47-52,54
+  s_0c2ef12b51a130::t_cb8652e05950da 56
+  s_0c2ef12b51a130::t_ce9726e728d923 77
+  s_0c2ef12b51a130::t_ffb9da082377a7 14-19
+  s_0c2ef12b51a130::t_b9550f3aa8bcdf 1-13,20-46,53,55,57-76,78-90
+docker-compose.yaml
+  s_0c2ef12b51a130::t_e14cae92439ee4 1-34
+.forgejo/README.md
+  s_0c2ef12b51a130::t_118b581de4b5bd 1-101
+.forgejo/workflows/ci.yml
+  s_0c2ef12b51a130::t_3c9b32a8420932 1-327
+Dockerfile
+  s_0c2ef12b51a130::t_4af64901b46adb 1-8,10-25,27-42
+  s_0c2ef12b51a130::t_ba4e0b71ca82df 9
+  s_0c2ef12b51a130::t_a9194945465287 26
+deploy/docker/README.md
+  s_0c2ef12b51a130::t_b85d726e7d42d8 1-33
+deploy/oauth/oauth2-proxy.cfg
+  s_0c2ef12b51a130::t_03a665fa9bd1ef 1-58
+package.json
+  s_0c2ef12b51a130::t_7914a123a38599 10-12
+  s_0c2ef12b51a130::t_1c1da92df20b1f 9
+  s_0c2ef12b51a130::t_a13521ca46b094 8
+deploy/oauth/nginx.conf
+  s_0c2ef12b51a130::t_fb49efe372bcb9 1-77
+deploy/oauth/README.md
+  s_0c2ef12b51a130::t_442c01332f7e54 1-65
+pnpm-lock.yaml
+  s_0c2ef12b51a130::t_331ae4ffc39344 47-49,99-101,105-107,1405-1409,3008-3017,4746-4749,6456-6461
+pnpm-workspace.yaml
+  s_0c2ef12b51a130::t_dc60a905cd2ac2 2-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "8e4e0bb67a65db937f5dbafed3d403268aa4ddd1",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
