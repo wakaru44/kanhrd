@@ -587,6 +587,16 @@ describe("Card", () => {
     expect(document.activeElement).toBe(el.querySelector(".overflow-trigger"));
   });
 
+  it("maps every action label onto copy.ts, holding no string of its own", () => {
+    // CARD_COPY used to BE the copy for three of these. It is now a mapping.
+    expect(CARD_COPY.splitRight).toBe(COPY.card.splitRight);
+    expect(CARD_COPY.splitDown).toBe(COPY.card.splitDown);
+    expect(CARD_COPY.close).toBe(COPY.confirm.closePaneAction);
+    expect(CARD_COPY.rename).toBe(COPY.card.renameAction);
+    // The overflow trigger is the same control a rail row carries.
+    expect(CARD_COPY.moreActions).toBe(COPY.nav.moreActions);
+  });
+
   it("labels its actions from copy, with the sanctioned close verb", () => {
     expect(CARD_COPY.close).toBe(COPY.confirm.closePaneAction);
     const el = render(pane({ agent: { name: "claude" }, host: "laptop" }), capsWithTerminal("laptop", tier3));

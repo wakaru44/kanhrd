@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "./fixtures/kanhrd";
 import { herdrAvailable, herdrPaneList } from "./fixtures/herdr";
 import { allCards, cardOpenLink } from "./helpers/selectors";
+import { COPY } from "../src/app/shared/copy";
 
 /**
  * Herdr/tmux-style prefix keyboard shortcuts (L-KEYS). Default prefix
@@ -81,7 +82,12 @@ test.fixme("prefix+? opens the help overlay with every shortcut category", async
 
   await expect(helpOverlay(app)).toBeVisible({ timeout: 3_000 });
   const headings = await helpOverlay(app).locator(".shortcut-group h3").allTextContents();
-  expect(headings).toEqual(["Navigation", "Lifecycle", "View", "Help"]);
+  expect(headings).toEqual([
+    COPY.help.categories.Navigation,
+    COPY.help.categories.Lifecycle,
+    COPY.help.categories.View,
+    COPY.help.categories.Help,
+  ]);
 
   await app.keyboard.press("Escape");
   await expect(helpOverlay(app)).toBeHidden({ timeout: 3_000 });

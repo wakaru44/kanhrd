@@ -15,74 +15,6 @@ import { LucideArrowLeft } from "../shared/icons";
 import { COPY } from "../shared/copy";
 
 /**
- * Every string this screen shows that `shared/copy.ts` does not carry yet.
- * The redesign's copy table covers the board, cards, confirms and toasts but
- * not the settings surface, and this lane may not edit `copy.ts` — so the
- * strings live here, in one typed place, and the templates stay free of
- * literals. Lift this block into `copy.ts` under `settings.*` and delete it.
- *
- * Voice follows `docs/BRAND.md`: lowercase, terse, users read *pen* where
- * the wire says host.
- */
-const SETTINGS_COPY = {
-  appearance: "appearance",
-  theme: "theme",
-  toWashi: "switch to washi",
-  toSumi: "switch to sumi",
-  density: "density",
-  comfortable: "comfortable",
-  compact: "compact",
-
-  terminal: "terminal",
-  terminalNote:
-    "one palette for every open terminal — cards are told apart by title, pen seal and status, never by terminal colour.",
-  terminalTheme: "colour theme",
-  terminalFontSize: "text size",
-
-  runtime: "runtime",
-  runtimeNote: "the output poll interval is bridge-owned. each connected pen advertises its own cadence.",
-  noPensConnected: "no pens connected yet.",
-  pollOverride: "requested override (ms)",
-  pollOverrideNote:
-    "not wired up yet — the bridge does not accept a per-subscription poll interval, so this is saved in this browser and changes nothing.",
-
-  pens: "pens",
-  pensNote: "the pen list is bridge-owned. to add, remove or reconfigure a pen, edit",
-  pensNoteFile: "kanhrd.config.yaml",
-  pensNoteTail: "on the bridge host — this screen reads it, it never writes it.",
-  noPens: "no pens configured.",
-  connected: "connected",
-  notConnected: "not connected",
-
-  keyboard: "keyboard",
-  keyboardNote:
-    "herdr-style prefix shortcuts: press the prefix, release, then the action key. rebinding is not available yet — only the prefix resets.",
-  colAction: "action",
-  colDefault: "default",
-  colCurrent: "current",
-  resetDefaults: "reset to defaults",
-
-  data: "data",
-  dataNote: "everything kanhrd keeps in this browser. no pen and no bridge is touched.",
-  clearData: "clear local data",
-  clearTitle: "clear what this browser remembers?",
-  clearBody:
-    "this removes kanhrd's saved settings from this browser and reloads the page. no pen, session or bridge is affected. this cannot be undone.",
-  clearAction: "clear",
-  clearKindSetting: "setting",
-  clearFilters: "board filters",
-  clearAppearance: "theme and density",
-  clearTerminal: "terminal palette",
-  clearTerminalFontSize: "terminal text size",
-  clearKeyboard: "keyboard prefix",
-
-  poll: {
-    unavailable: "n/a",
-    unit: "ms",
-  },
-} as const;
-
-/**
  * `/settings` — appearance (theme + density), terminal palette, runtime
  * (read-only advertised poll cadence per pen plus the inert override),
  * pens (read-only: pen config lives in `kanhrd.config.yaml` on the bridge),
@@ -109,7 +41,8 @@ export class Settings {
   protected readonly terminalFontSizes = TERMINAL_FONT_SIZES;
 
   protected readonly copy = COPY;
-  protected readonly text = SETTINGS_COPY;
+  /** The screen's copy. `themeLabel()` reaches past it for the two shell-shared labels. */
+  protected readonly text = COPY.settings;
 
   protected readonly hosts = this.store.hostsSignal;
   protected readonly capabilities = this.store.capabilitiesSignal;
@@ -118,8 +51,9 @@ export class Settings {
     () => this.settingsService.settings().requestedOutputPollIntervalMs,
   );
 
+  /** Same control, same words, as the shell's theme toggle — one pair of keys, not two. */
   protected themeLabel(): string {
-    return this.themeService.theme() === "dark" ? this.text.toWashi : this.text.toSumi;
+    return this.themeService.theme() === "dark" ? COPY.nav.toWashi : COPY.nav.toSumi;
   }
 
   protected toggleTheme(): void {
@@ -183,11 +117,11 @@ export class Settings {
 
   /** What disappears, one row each — the preview-list pattern, so "cannot be undone" is backed by a list rather than a promise. */
   protected readonly clearPreview: readonly ConfirmPreviewItem[] = [
-    { kind: SETTINGS_COPY.clearKindSetting, name: SETTINGS_COPY.clearFilters },
-    { kind: SETTINGS_COPY.clearKindSetting, name: SETTINGS_COPY.clearAppearance },
-    { kind: SETTINGS_COPY.clearKindSetting, name: SETTINGS_COPY.clearTerminal },
-    { kind: SETTINGS_COPY.clearKindSetting, name: SETTINGS_COPY.clearTerminalFontSize },
-    { kind: SETTINGS_COPY.clearKindSetting, name: SETTINGS_COPY.clearKeyboard },
+    { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearFilters },
+    { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearAppearance },
+    { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminal },
+    { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminalFontSize },
+    { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearKeyboard },
   ];
 
   protected requestClearData(): void {

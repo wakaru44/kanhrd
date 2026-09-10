@@ -10,17 +10,6 @@ import { PenNoticeService } from "./state/pen-notices.service";
 import { KeyboardHelpOverlay } from "./shared/keyboard-help-overlay";
 import { ToastHost } from "./shared/toast-host";
 
-/**
- * Strings the shell needs that `shared/copy.ts` does not carry yet. This lane
- * may not edit `copy.ts`; lift these in as `nav.toWashi` / `nav.toSumi` and
- * delete the block. `kanhrd` itself is the wordmark, not copy — it stays in
- * the template.
- */
-const PENDING_COPY = {
-  toWashi: "switch to washi",
-  toSumi: "switch to sumi",
-} as const;
-
 /** True for a bare key press: no modifier, so it is exactly what a TUI inside a card expects to receive. */
 function isUnmodified(event: KeyboardEvent, key: string): boolean {
   return event.key === key && !event.ctrlKey && !event.metaKey && !event.altKey;
@@ -54,7 +43,6 @@ export class App {
   private readonly penNotices = inject(PenNoticeService);
 
   protected readonly copy = COPY;
-  protected readonly pending = PENDING_COPY;
 
   /** App chrome that an Escape can legitimately dismiss. Escape is forwarded only while one of these is open — it is scoped to open chrome, never a global binding. */
   private readonly chromeOpen = computed(
@@ -66,7 +54,7 @@ export class App {
   );
 
   protected themeLabel(): string {
-    return this.themeService.theme() === "dark" ? this.pending.toWashi : this.pending.toSumi;
+    return this.themeService.theme() === "dark" ? COPY.nav.toWashi : COPY.nav.toSumi;
   }
 
   protected toggleTheme(): void {

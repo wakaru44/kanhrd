@@ -17,6 +17,7 @@ import { PanesStore, paneKey } from "./panes.store";
 import { LayoutService } from "./layout.service";
 import { ThemeService } from "./theme.service";
 import { ToastService } from "./toast.service";
+import { COPY } from "../shared/copy";
 
 function keyEvent(key: string, mods: Partial<{ ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }> = {}): KeyboardEvent {
   return new KeyboardEvent("keydown", { key, cancelable: true, ...mods });
@@ -190,6 +191,33 @@ describe("KeyboardService", () => {
       expect(service.prefix()).toBe("Ctrl+Space");
       expect(service.prefixSource()).toBe("herdr-config");
     });
+  });
+
+  it("sources every description from copy.ts, never a literal typed here", () => {
+    const approved = new Set<string>([
+      COPY.create.pane,
+      ...Object.values(COPY.help.shortcuts),
+    ]);
+    for (const binding of TestBed.inject(KeyboardService).shortcuts().values()) {
+      expect(approved.has(binding.description))
+        .withContext(`${binding.action}: "${binding.description}" is not in copy.ts`)
+        .toBeTrue();
+    }
+  });
+
+  it("describes the new-card chord with the same words as the board's create menu", () => {
+    // `prefix + c` and the `+` menu's first item run the same action; they
+    // must not describe it in two voices.
+    const binding = TestBed.inject(KeyboardService).shortcuts().get("new-pane");
+    expect(binding?.description).toBe(COPY.create.pane);
+  });
+
+  it("speaks the renamed vocabulary in every description the user reads", () => {
+    for (const binding of TestBed.inject(KeyboardService).shortcuts().values()) {
+      expect(binding.description)
+        .withContext(binding.action)
+        .not.toMatch(/\bpane\b|\btab\b|\bworkspace\b|\bhost\b/);
+    }
   });
 
   it("shortcuts() returns every documented action, each with a description", () => {

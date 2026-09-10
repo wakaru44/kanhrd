@@ -25,23 +25,6 @@ interface WorkspaceGroup {
   tabs: TabSummary[];
 }
 
-/**
- * Rail-local copy that `docs/BRAND.md`'s approved-copy table does not yet
- * carry. Kept in one object (never inlined in the template) so promoting it
- * is a copy/paste into the table plus `shared/copy.ts` — a maintainer's edit,
- * not this lane's. Voice matches the table: lowercase, terse, verbs.
- *
- * TODO(brand): promote to `COPY.rail.*` once `docs/BRAND.md` gains the rows.
- */
-const RAIL_COPY = {
-  navigation: "fields and lanes",
-  renameField: "rename field",
-  renameLane: "rename lane",
-  moreActions: "more actions",
-  lastFieldRefusal:
-    "this is the only field open on this pen. closing it would leave nothing to watch. open another field first.",
-} as const;
-
 /** Elements that can hold focus inside the drawer. */
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -85,7 +68,7 @@ export class Rail implements OnDestroy {
   private readonly hostEl = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   protected readonly copy = COPY;
-  protected readonly railCopy = RAIL_COPY;
+  protected readonly railCopy = COPY.rail;
 
   protected readonly hostGroups = computed(() => {
     const workspaces = this.store.workspacesSignal();
@@ -519,7 +502,7 @@ export class Rail implements OnDestroy {
     if (!target) {
       return null;
     }
-    return this.store.workspaceCountForHost(target.host) <= 1 ? RAIL_COPY.lastFieldRefusal : null;
+    return this.store.workspaceCountForHost(target.host) <= 1 ? COPY.rail.lastFieldRefusal : null;
   });
 
   /**

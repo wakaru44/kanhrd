@@ -15,18 +15,18 @@
         <button
           type="button"
           class="close-btn"
-          [title]="pending.close"
-          [attr.aria-label]="pending.close"
+          [title]="copy.help.close"
+          [attr.aria-label]="copy.help.close"
           (click)="close()"
         >
           <svg lucideX class="icon"></svg>
         </button>
       </div>
-      <p class="prefix-note"><kbd>{{ keyboard.prefix() }}</kbd> {{ pending.prefixNote }}</p>
+      <p class="prefix-note"><kbd>{{ keyboard.prefix() }}</kbd> {{ copy.help.prefixNote }}</p>
 
       @for (group of groups(); track group.category) {
         <section class="shortcut-group">
-          <h3>{{ group.category }}</h3>
+          <h3>{{ categoryLabel(group.category) }}</h3>
           <dl>
             @for (binding of group.bindings; track binding.action) {
               <div class="shortcut-row">

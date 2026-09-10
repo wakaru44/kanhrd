@@ -46,6 +46,88 @@ describe('shared/copy', () => {
     }
   });
 
+  // --- one home per string ----------------------------------------------
+  //
+  // Five components used to carry their own `PENDING_COPY` / `CARD_COPY` /
+  // `RAIL_COPY` / `SETTINGS_COPY` block, each written when a lane could not
+  // edit this file. Two of them held the same two strings.
+
+  /** Every leaf string in COPY, with its dotted path. */
+  function strings(node: unknown, path = ''): [string, string][] {
+    if (typeof node === 'string') {
+      return [[path, node]];
+    }
+    if (node && typeof node === 'object') {
+      return Object.entries(node).flatMap(([key, value]) =>
+        strings(value, path ? `${path}.${key}` : key)
+      );
+    }
+    return [];
+  }
+
+  it('is lowercase throughout', () => {
+    for (const [path, value] of strings(COPY)) {
+      expect(value).withContext(path).toBe(value.toLowerCase());
+    }
+  });
+
+  it('carries no exclamation mark anywhere', () => {
+    for (const [path, value] of strings(COPY)) {
+      expect(value).withContext(path).not.toContain('!');
+    }
+  });
+
+  it('says each of the shared labels exactly once', () => {
+    // `switch to washi` was in both the shell and Settings; `more actions`
+    // was in both a card and a rail row. Duplicates drift.
+    const counts = new Map<string, number>();
+    for (const [, value] of strings(COPY)) {
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+    for (const shared of [COPY.nav.toWashi, COPY.nav.toSumi, COPY.nav.moreActions]) {
+      expect(counts.get(shared)).withContext(shared).toBe(1);
+    }
+  });
+
+  it('covers every surface that used to keep its own block', () => {
+    for (const group of [COPY.settings, COPY.rail, COPY.help, COPY.create, COPY.card]) {
+      expect(Object.keys(group).length).toBeGreaterThan(0);
+    }
+    expect(COPY.toast.dismiss).toBeTruthy();
+    expect(COPY.nav.toWashi).toBeTruthy();
+  });
+
+  // --- the keyboard help surface ----------------------------------------
+  //
+  // Every description used to be typed into `state/keyboard.service.ts` in
+  // Title Case, in herdr's vocabulary: "New pane", "Next tab", "Close
+  // current tab (asks for confirmation)".
+
+  it('keeps every shortcut description lowercase', () => {
+    for (const [key, value] of Object.entries(COPY.help.shortcuts)) {
+      expect(value).withContext(key).toBe(value.toLowerCase());
+    }
+  });
+
+  it('labels each help section in lowercase, like the settings sections', () => {
+    for (const [key, value] of Object.entries(COPY.help.categories)) {
+      expect(value).withContext(key).toBe(value.toLowerCase());
+      expect(value).withContext(key).toBe(key.toLowerCase());
+    }
+  });
+
+  it('ends an unshipped shortcut with the one approved phrase for that', () => {
+    expect(COPY.help.shortcuts.closePane.endsWith(COPY.notShipped)).toBeTrue();
+    expect(COPY.help.shortcuts.focusSearch.endsWith(COPY.notShipped)).toBeTrue();
+  });
+
+  it('promises nothing in the shortcut list that the app cannot do', () => {
+    // "coming soon" was the old wording, and it is a promise. `not yet.` is not.
+    for (const value of Object.values(COPY.help.shortcuts)) {
+      expect(value).not.toMatch(/coming soon|soon|planned/);
+    }
+  });
+
   it('speaks the renamed vocabulary in user-facing copy', () => {
     const strings = JSON.stringify(COPY);
     expect(strings).not.toMatch(/\bhost\b|\bworkspace\b|\btab\b/);

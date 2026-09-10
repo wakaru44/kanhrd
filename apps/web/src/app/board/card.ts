@@ -28,22 +28,19 @@ import {
 } from "../shared/icons";
 
 /**
- * PENDING COPY — `docs/BRAND.md`'s approved-copy table has no `card.*`
- * action keys, and `shared/copy.ts` is another lane's file, so the three
- * per-card action labels live here instead of being inlined in the
- * template. They follow the brand voice (lowercase, no exclamation, the
- * care verb `rest` for a lifecycle end) and must move into `copy.ts` as
- * `card.splitRight` / `card.splitDown` / `card.close` the moment the
- * approved-copy table gains those rows. Nothing else in this component
- * carries a user-facing literal.
+ * The card's action labels, gathered from `shared/copy.ts` under the names
+ * the template uses. Not a copy block: there is no string here, only a
+ * mapping, so the words themselves have exactly one home.
+ *
+ * Two of them deliberately come from outside `copy.card`: closing a session
+ * uses the sanctioned care verb from `confirm`, and the overflow trigger is
+ * the same control the rail's rows carry.
  */
 export const CARD_COPY = {
-  splitRight: "split right",
-  splitDown: "split down",
-  /** `confirm.closePaneAction` is the sanctioned verb for ending a session. */
+  splitRight: COPY.card.splitRight,
+  splitDown: COPY.card.splitDown,
   close: COPY.confirm.closePaneAction,
-  moreActions: "more actions",
-  /** Approved copy — lives in `copy.ts`, unlike the three pending keys above. */
+  moreActions: COPY.nav.moreActions,
   rename: COPY.card.renameAction,
 } as const;
 

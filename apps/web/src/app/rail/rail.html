@@ -36,7 +36,7 @@
                   <button
                     type="button"
                     class="row-menu-trigger"
-                    [attr.aria-label]="railCopy.moreActions"
+                    [attr.aria-label]="copy.nav.moreActions"
                     [attr.aria-expanded]="
                       isMenuOpen(rowKey('workspace', group.workspace.host, group.workspace.id))
                     "
@@ -99,7 +99,7 @@
                     <button
                       type="button"
                       class="row-menu-trigger"
-                      [attr.aria-label]="railCopy.moreActions"
+                      [attr.aria-label]="copy.nav.moreActions"
                       [attr.aria-expanded]="isMenuOpen(rowKey('tab', tab.host, tab.id))"
                       aria-haspopup="menu"
                       (click)="toggleMenu(rowKey('tab', tab.host, tab.id), $event)"
