@@ -18,10 +18,10 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
 - [x] 0.4 Q1 (drag) **granted** — user-defined columns are drag drop
       targets; that is the point of the feature. Phase 5 is unblocked
       once task 5.1's doc amendment lands
-- [ ] 0.5 Q5 (browser-local arrangement vs "URL is state") — still
-      open. Does **not** block any phase: the proposal keeps parking
-      out of the URL either way, and a `yes` only adds a sentence to
-      `docs/UX-GUIDELINES.md`
+- [x] 0.5 Q5 (browser-local arrangement vs "URL is state") — **accepted**:
+      parking stays out of the URL, on the precedent of `kanhrd.filters`
+      and density. `docs/UX-GUIDELINES.md` names the browser-local
+      exceptions so it is not re-litigated
 
 ## 1. Park store
 
@@ -102,7 +102,7 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
 
 ## 5. Drag and drop — Q1 granted; gated on the doc amendment only
 
-- [ ] 5.1 Maintainer amends `docs/UX-GUIDELINES.md` (the
+- [x] 5.1 Maintainer amends `docs/UX-GUIDELINES.md` (the
       anti-pattern line, § "Status columns are read-only", and E2E
       assertion 22) and `docs/DESIGN-SYSTEM.md` § "Status column" to
       define which drag affordances the board permits: a status column
