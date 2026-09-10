@@ -11,7 +11,7 @@ import {
   viewChild,
   viewChildren,
 } from "@angular/core";
-import { toSignal } from "@angular/core/rxjs-interop";
+import { takeUntilDestroyed, toSignal } from "@angular/core/rxjs-interop";
 import { ActivatedRoute, Router } from "@angular/router";
 import { map } from "rxjs";
 import type { AgentStatus } from "@kanhrd/schema";
@@ -280,6 +280,15 @@ export class Board implements OnDestroy {
   );
 
   constructor() {
+    // Every emission here happens while this route is the active one, so
+    // `Router.url` is still the board's own URL. `paramMap` emits on
+    // subscribe and again on each in-place scope change (`/` →
+    // `/workspace/:id` reuses this component), which is exactly the set of
+    // moments the remembered URL can change.
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.activeUrl = this.currentUrl();
+    });
+
     // The route is the single source of truth for `scopeSignal` — see the
     // signal's own doc in panes.store.ts. Re-resolves whenever the route
     // params change OR the workspace/tab data needed to resolve them
@@ -363,6 +372,19 @@ export class Board implements OnDestroy {
   private pendingReturn: BoardReturn | null = null;
   private restoreDeadline = 0;
   private restoreTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /**
+   * The board URL as of the last moment this route was actually active.
+   *
+   * `Router.url` must NOT be read in `ngOnDestroy`: by then the router has
+   * already committed the navigation, so it names the route being navigated
+   * TO. Reading it there made every departure remember the pane's own URL,
+   * which is what the pane's "back to the board" control links to — the
+   * link pointed at the page the user was already on, so the first click
+   * did nothing (a reload cleared the record and the link fell back to
+   * `/`, which is why refreshing "fixed" it).
+   */
+  private activeUrl = this.currentUrl();
 
   /** `Router.url`, defensively: a test double (or a router mid-teardown) may not have one. */
   private currentUrl(): string {
@@ -479,7 +501,7 @@ export class Board implements OnDestroy {
       }
     }
     this.boardReturn.rememberBoard({
-      url: this.currentUrl(),
+      url: this.activeUrl,
       scrollLeft: strip?.scrollLeft ?? 0,
       scrollTops,
     });

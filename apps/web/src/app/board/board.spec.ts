@@ -1030,6 +1030,16 @@ describe("Board: returning from a pane", () => {
     expect(boardReturn.boardUrl()).toBe(BOARD_URL);
   });
 
+  it("remembers the board URL it was ON, not the pane URL the router already moved to", () => {
+    openCard(fixture, "local:w6:p2");
+    // The router commits the navigation before the outgoing component is
+    // torn down, so by `ngOnDestroy` `Router.url` already names the pane.
+    currentUrl = "/pane/local/w6:p2";
+    fixture.destroy();
+
+    expect(boardReturn.boardUrl()).toBe(BOARD_URL);
+  });
+
   it("carries the clicked card, its column and its position into that record", () => {
     openCard(fixture, "local:w6:p2");
     fixture.destroy();
