@@ -277,6 +277,14 @@
     scroll-snap-stop: always;
   }
 
+  /* The skeleton is not a pager, so it must not imply one: a grid of
+   * --column-min-width columns clipped by overflow renders a peeking
+   * second column at phone width, which is the exact pattern the board
+   * paging model rejects. One full-width placeholder column instead. */
+  .board-skeleton {
+    grid-auto-columns: 100%;
+  }
+
   .plus-button {
     margin-top: var(--sp-2);
   }
