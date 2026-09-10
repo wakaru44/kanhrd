@@ -1,5 +1,5 @@
 import { test as base, expect, type Page } from "@playwright/test";
-import { allCards, cardHostChip } from "../helpers/selectors";
+import { allCards, cardHostChip, cardOpenLink } from "../helpers/selectors";
 
 export interface PanePickerResult {
   /** Host name shown on the card, e.g. "local". */
@@ -28,11 +28,18 @@ export const test = base.extend<KanhrdFixtures>({
   panePicker: async ({ app }, use) => {
     const cards = allCards(app);
     await expect(cards.first()).toBeVisible({ timeout: 10_000 });
-    const first = cards.first();
-    const href = await first.getAttribute("href");
+    // Only a terminal-capable card renders `<a class="card-open">`; a
+    // `card--static` one renders a `<span>` with no href, so pick the first
+    // card that actually has the link rather than the first card.
+    const first = cards.filter({ has: app.locator("a.card-open") }).first();
+    await expect(first).toBeVisible({ timeout: 10_000 });
+    // The card is a `<div class="card">` grid whose opening control is a
+    // sibling `<a class="card-open">` (see `helpers/selectors.ts`) — the
+    // href lives there, never on `.card` itself.
+    const href = await cardOpenLink(first).getAttribute("href");
     if (!href) {
       throw new Error(
-        "panePicker: first .card has no href — it may be a card--static (tier-1-only host) rather than a terminal-capable card",
+        "panePicker: first .card has no a.card-open href — it may be a card--static (tier-1-only host) rather than a terminal-capable card",
       );
     }
     // href shape: /pane/<host>/<id>  (id itself may contain ':', e.g. "w6:p1")

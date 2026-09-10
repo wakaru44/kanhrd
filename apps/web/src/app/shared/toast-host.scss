@@ -2,72 +2,105 @@
   display: contents;
 }
 
+/*
+ * One stack, two placements (docs/DESIGN-SYSTEM.md § Toast). The class is set
+ * from `matchMedia` in the component rather than by a media query here, so
+ * both placements are assertable without resizing a test browser.
+ *
+ * `pointer-events: none` on the stack with `auto` on each toast keeps the
+ * gaps click-through: an open dialog's buttons stay hittable while a notice
+ * is on screen.
+ */
 .toast-stack {
   position: fixed;
-  top: 0.75rem;
-  right: 0.75rem;
   z-index: 2000;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  max-width: min(24rem, calc(100vw - 1.5rem));
+  gap: var(--sp-2);
+  pointer-events: none;
+}
+
+.at-bottom-right {
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  align-items: flex-end;
+  max-width: min(40ch, calc(100% - var(--sp-8)));
+}
+
+/* Below the header, never over it — the header's controls stay reachable. */
+.at-top {
+  top: calc(var(--app-header-height, var(--touch-target-min)) + var(--sp-2));
+  left: var(--sp-4);
+  right: var(--sp-4);
 }
 
 .toast {
+  pointer-events: auto;
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: 8px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  font-size: 0.85rem;
-  animation: toast-in 0.12s ease-out;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--paper-raised);
+  border: var(--elev-1);
+  border-inline-start: 2px solid var(--status-idle);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  animation: toast-in var(--motion-med) var(--ease-out);
 
-  &.warn {
-    border-color: var(--status-idle);
+  .icon {
+    margin-top: var(--sp-1);
   }
 
+  &.warn,
   &.error {
-    border-color: var(--status-blocked);
+    border-inline-start-color: var(--status-blocked);
+
+    > .icon {
+      color: var(--status-blocked-ink);
+    }
+  }
+
+  &.info > .icon {
+    color: var(--status-idle-ink);
   }
 }
 
 .toast-message {
   flex: 1;
   min-width: 0;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 
 .toast-dismiss {
   flex: none;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.2rem;
-  height: 1.2rem;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  margin: calc(-1 * var(--sp-2)) calc(-1 * var(--sp-1)) calc(-1 * var(--sp-2)) 0;
   padding: 0;
-  border: none;
+  border: 0;
   background: transparent;
-  color: var(--text-dim);
+  color: var(--ink-mute);
   cursor: pointer;
+  transition: color var(--motion-fast) var(--ease-out);
 
-  &:hover {
-    color: var(--text);
-  }
-
-  .icon {
-    width: 0.9rem;
-    height: 0.9rem;
+  &:hover,
+  &:focus-visible {
+    color: var(--ink-soft);
   }
 }
 
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

@@ -1,33 +1,76 @@
 <div class="pane-detail">
   <header class="detail-header">
-    <a routerLink="/" class="back">&larr; Back to board</a>
-    <div class="title-block">
-      <h1>{{ pane()?.agent?.name ?? pane()?.title ?? id() }}</h1>
-      <span class="status-dot" [class]="pane()?.agent_status ?? 'unknown'" [attr.title]="pane()?.agent_status"></span>
-    </div>
-    <span class="host-chip">{{ host() }}</span>
-    <span class="pane-id">{{ id() }}</span>
-    <span class="live-indicator">Live · updates every ~{{ pollIntervalMs() }}ms</span>
-  </header>
+    <a routerLink="/" class="back">
+      <svg lucideArrowLeft class="icon" aria-hidden="true"></svg>
+      <span>{{ copy.nav.backToBoard }}</span>
+    </a>
 
-  <div class="stats-strip">
-    <span>rev {{ revision() ?? "–" }}</span>
-    <span>updated {{ lastPollLabel() }}</span>
-    <span>{{ subscribed() ? "live" : "not subscribed" }}</span>
-  </div>
+    <h1 class="pane-title" [title]="title()">{{ title() }}</h1>
+
+    <span class="host-seal">{{ host() }}</span>
+
+    <div class="meta-strip">
+      <span class="status" [class]="statusKey()">
+        <span class="status-dot" [class]="statusKey()" aria-hidden="true"></span>
+        {{ statusLabel() }}
+      </span>
+      <span class="pane-id">{{ id() }}</span>
+      <span class="revision">{{ revisionLabel() }}</span>
+      <span class="updated">{{ lastPollLabel() }}</span>
+      @if (viewState() === "stale") {
+        <span class="stale-marker">
+          <svg lucideUnplug class="icon" aria-hidden="true"></svg>
+          {{ copy.state.stale }}
+        </span>
+      }
+    </div>
+  </header>
 
   <div class="detail-body">
     <div class="terminal-wrap">
-      <div class="terminal-container" #terminalContainer></div>
-      @if (loading()) {
-        <div class="terminal-loading">Loading…</div>
-      }
-    </div>
+      <div class="terminal-container" #terminalContainer role="group" [attr.aria-label]="title()"></div>
 
-    @if (graphicsAvailable()) {
-      <aside class="graphics-panel">
-        <p>Graphics overlay (coming soon)</p>
-      </aside>
-    }
+      <div class="terminal-status" aria-live="polite">
+        @switch (viewState()) {
+          @case ("loading") {
+            <div class="terminal-state terminal-loading">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              <span>{{ copy.loading.pane }}</span>
+            </div>
+          }
+          @case ("failed") {
+            <div class="terminal-state terminal-failed">
+              <p class="state-line">
+                <svg lucideTriangleAlert class="icon" aria-hidden="true"></svg>
+                {{ failureReason() }}
+              </p>
+              <div class="state-actions">
+                <button type="button" class="retry" (click)="retry()">
+                  <svg lucideRefreshCw class="icon" aria-hidden="true"></svg>
+                  {{ copy.loading.retry }}
+                </button>
+                <a routerLink="/" class="state-back">{{ copy.nav.backToBoard }}</a>
+              </div>
+            </div>
+          }
+          @case ("unavailable") {
+            <div class="terminal-state terminal-unavailable">
+              <p class="state-line">
+                <svg lucideUnplug class="icon" aria-hidden="true"></svg>
+                {{ copy.state.unavailable }}
+              </p>
+              <div class="state-actions">
+                <a routerLink="/" class="state-back">{{ copy.nav.backToBoard }}</a>
+              </div>
+            </div>
+          }
+          @case ("empty") {
+            <div class="terminal-state terminal-empty">
+              <p class="state-line">{{ copy.emptyState.penEmpty }}</p>
+            </div>
+          }
+        }
+      </div>
+    </div>
   </div>
 </div>

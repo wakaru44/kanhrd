@@ -1,6 +1,6 @@
 import { TestBed } from "@angular/core/testing";
 import { provideZonelessChangeDetection } from "@angular/core";
-import { ThemeService, loadTheme } from "./theme.service";
+import { ThemeService, loadTheme, resolveTheme, systemPrefersDark } from "./theme.service";
 
 async function flushMicrotasks(): Promise<void> {
   for (let i = 0; i < 5; i++) {
@@ -30,6 +30,28 @@ describe("loadTheme (pure)", () => {
   });
 });
 
+describe("resolveTheme (pure)", () => {
+  const nothingStored = { getItem: () => null };
+
+  it("uses washi (light) when nothing is stored and the OS does not prefer dark", () => {
+    expect(resolveTheme(nothingStored, false)).toBe("light");
+  });
+
+  it("uses sumi (dark) when nothing is stored and the OS prefers dark", () => {
+    expect(resolveTheme(nothingStored, true)).toBe("dark");
+  });
+
+  it("lets a valid stored preference win over the OS preference", () => {
+    expect(resolveTheme({ getItem: () => "light" }, true)).toBe("light");
+    expect(resolveTheme({ getItem: () => "dark" }, false)).toBe("dark");
+  });
+
+  it("ignores a garbage stored value and falls back to the OS preference", () => {
+    expect(resolveTheme({ getItem: () => "purple" }, true)).toBe("dark");
+    expect(resolveTheme({ getItem: () => "purple" }, false)).toBe("light");
+  });
+});
+
 describe("ThemeService", () => {
   afterEach(() => {
     localStorage.removeItem("kanhrd.theme");
@@ -50,8 +72,8 @@ describe("ThemeService", () => {
   it("falls back to prefers-color-scheme when nothing is stored", () => {
     localStorage.removeItem("kanhrd.theme");
     const service = create();
-    // jsdom/ChromeHeadless default matchMedia reports no light preference, so dark is expected here.
-    expect(["light", "dark"]).toContain(service.theme());
+    // The browser's own preference decides; ChromeHeadless reports light unless asked otherwise.
+    expect(service.theme()).toBe(systemPrefersDark() ? "dark" : "light");
   });
 
   it("toggle() flips dark <-> light", () => {

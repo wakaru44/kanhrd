@@ -1,19 +1,61 @@
-import { Component, computed, effect, inject, input, signal } from "@angular/core";
-import { NgTemplateOutlet } from "@angular/common";
+import {
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  viewChild,
+} from "@angular/core";
 import { RouterLink } from "@angular/router";
-import { LucideArrowRight, LucideX } from "@lucide/angular";
 import type { BridgeCapabilities, Pane, SplitDirection } from "@kanhrd/schema";
 import { PanesStore } from "../state/panes.store";
-import { hostColor } from "../util/host-color";
 import { ConfirmModal } from "../shared/confirm-modal";
 import { ClockTick, formatElapsed } from "../util/clock";
 import { ToastService } from "../state/toast.service";
+import { COPY, fill } from "../shared/copy";
+import {
+  LucideArrowDown,
+  LucideArrowRight,
+  LucideMoreHorizontal,
+  LucideX,
+} from "../shared/icons";
+
+/**
+ * PENDING COPY — `docs/BRAND.md`'s approved-copy table has no `card.*`
+ * action keys, and `shared/copy.ts` is another lane's file, so the three
+ * per-card action labels live here instead of being inlined in the
+ * template. They follow the brand voice (lowercase, no exclamation, the
+ * care verb `rest` for a lifecycle end) and must move into `copy.ts` as
+ * `card.splitRight` / `card.splitDown` / `card.close` the moment the
+ * approved-copy table gains those rows. Nothing else in this component
+ * carries a user-facing literal.
+ */
+export const CARD_COPY = {
+  splitRight: "split right",
+  splitDown: "split down",
+  /** `confirm.closePaneAction` is the sanctioned verb for ending a session. */
+  close: COPY.confirm.closePaneAction,
+  moreActions: "more actions",
+} as const;
 
 @Component({
   selector: "app-card",
-  imports: [RouterLink, NgTemplateOutlet, ConfirmModal, LucideArrowRight, LucideX],
+  imports: [
+    RouterLink,
+    ConfirmModal,
+    LucideArrowRight,
+    LucideArrowDown,
+    LucideX,
+    LucideMoreHorizontal,
+  ],
   templateUrl: "./card.html",
   styleUrl: "./card.scss",
+  host: {
+    "[class.compact]": "compact()",
+    "(document:click)": "onDocumentClick($event)",
+  },
 })
 export class Card {
   private readonly store = inject(PanesStore);
@@ -23,8 +65,17 @@ export class Card {
   readonly pane = input.required<Pane>();
   /** Per-host `bridge.capabilities` results, threaded down from the store via Board/Column. */
   readonly capabilities = input.required<ReadonlyMap<string, BridgeCapabilities>>();
+  /**
+   * Forces the single-row compact variant. The other two compact triggers —
+   * `data-density="compact"` and a viewport under `--breakpoint-mobile` — are
+   * CSS-only and need no input. This one exists for the "> 20 cards in a
+   * status column" rule, which only `Column` can count; it defaults to
+   * `false`, so `Column` can start passing it without a lockstep change here.
+   */
+  readonly compact = input(false);
 
-  protected readonly hostColor = computed(() => hostColor(this.pane().host));
+  protected readonly copy = COPY;
+  protected readonly action = CARD_COPY;
 
   protected readonly displayName = computed(() => {
     const pane = this.pane();
@@ -35,6 +86,11 @@ export class Card {
     const pane = this.pane();
     return `${pane.workspace.name} / ${pane.tab.name}`;
   });
+
+  /** The status word rendered beside the dot — colour is never the only carrier. */
+  protected readonly statusLabel = computed(
+    () => COPY.status[this.pane().agent_status] ?? COPY.status.unknown,
+  );
 
   /** Whether this pane's host bridge supports the tier-2 terminal detail view. */
   protected readonly terminalAvailable = computed(
@@ -50,21 +106,24 @@ export class Card {
     () => this.capabilities().get(this.pane().host)?.paneCreate === true,
   );
 
-  protected readonly showCloseConfirm = signal(false);
-  protected readonly showSplitMenu = signal(false);
-
-  protected readonly closeConfirmBody = computed(
-    () => `Terminate "${this.displayName()}"? This cannot be undone.`,
+  protected readonly hasActions = computed(
+    () => this.paneSplitAvailable() || this.paneCloseAvailable(),
   );
 
-  // --- discreet stats badge ---------------------------------------------
-  // Uses only data already on the `Pane`/`EventKind` surface: the pane's
-  // own `agent_status` plus how long it's held that status (tracked
-  // client-side — herdr/the bridge send no timestamp, so "since when" is
-  // derived from when this client last observed a change, not invented
-  // bridge data), and an optional line count off `last_output_snippet`
-  // (present today only as an optional projected field; the badge simply
-  // omits that segment when a bridge hasn't populated it).
+  protected readonly showCloseConfirm = signal(false);
+  protected readonly menuOpen = signal(false);
+
+  private readonly menuEl = viewChild<ElementRef<HTMLElement>>("menu");
+  private readonly menuTrigger = viewChild<ElementRef<HTMLButtonElement>>("menuTrigger");
+  private readonly actionsEl = viewChild<ElementRef<HTMLElement>>("actions");
+
+  // --- meta row ----------------------------------------------------------
+  // Only data already on the `Pane` surface: the pane's own `agent_status`
+  // plus how long it's held that status. herdr/the bridge send no timestamp,
+  // so "since when" is observed client time — when this client last saw the
+  // status change — never presented as a server-authoritative duration. The
+  // optional line count reads `last_output_snippet` if a bridge populated it;
+  // no card ever fetches terminal output for decoration.
 
   private readonly statusSince = signal(Date.now());
   private lastObservedStatus: Pane["agent_status"] | null = null;
@@ -84,12 +143,82 @@ export class Card {
       }
       this.lastObservedStatus = status;
     });
+
+    // Opening the overflow menu moves focus into it (keyboard-first: the menu
+    // is navigable with arrows and returns focus to its trigger on Escape).
+    effect(() => {
+      const menu = this.menuEl()?.nativeElement;
+      if (this.menuOpen() && menu) {
+        this.menuItems(menu)[0]?.focus();
+      }
+    });
   }
 
-  protected onCloseClick(event: Event): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.showSplitMenu.set(false);
+  /** Distinguishes one card's actions from its neighbours' for a screen reader. */
+  protected actionLabel(label: string): string {
+    return `${label} — ${this.displayName()}`;
+  }
+
+  private menuItems(root: HTMLElement): HTMLButtonElement[] {
+    return Array.from(root.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+  }
+
+  protected toggleMenu(): void {
+    this.menuOpen.update((open) => !open);
+  }
+
+  protected closeMenu(refocus = true): void {
+    if (!this.menuOpen()) {
+      return;
+    }
+    this.menuOpen.set(false);
+    if (refocus) {
+      this.menuTrigger()?.nativeElement.focus();
+    }
+  }
+
+  /** Arrow / Home / End move within the menu; Escape dismisses without opening the card. */
+  protected onMenuKeydown(event: KeyboardEvent): void {
+    const menu = this.menuEl()?.nativeElement;
+    if (!menu) {
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      this.closeMenu();
+      return;
+    }
+    const items = this.menuItems(menu);
+    if (items.length === 0) {
+      return;
+    }
+    const current = items.indexOf(document.activeElement as HTMLButtonElement);
+    let next: number | null = null;
+    if (event.key === "ArrowDown") {
+      next = (current + 1) % items.length;
+    } else if (event.key === "ArrowUp") {
+      next = (current <= 0 ? items.length : current) - 1;
+    } else if (event.key === "Home") {
+      next = 0;
+    } else if (event.key === "End") {
+      next = items.length - 1;
+    }
+    if (next !== null) {
+      event.preventDefault();
+      items[next].focus();
+    }
+  }
+
+  protected onDocumentClick(event: MouseEvent): void {
+    const actions = this.actionsEl()?.nativeElement;
+    if (this.menuOpen() && actions && !actions.contains(event.target as Node)) {
+      this.closeMenu(false);
+    }
+  }
+
+  protected onCloseClick(): void {
+    this.closeMenu(false);
     this.showCloseConfirm.set(true);
   }
 
@@ -100,24 +229,28 @@ export class Card {
     } catch (err) {
       this.toast.push({
         level: "error",
-        message: `Could not close "${this.displayName()}": ${err instanceof Error ? err.message : String(err)}`,
+        message: fill(COPY.toast.closeFailed, {
+          name: this.displayName(),
+          reason: err instanceof Error ? err.message : String(err),
+        }),
       });
     }
   }
 
-  protected onSplitClick(event: Event): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.showSplitMenu.update((open) => !open);
-  }
-
-  protected doSplit(direction: SplitDirection, event: Event): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.showSplitMenu.set(false);
-    void this.store.splitPane(this.pane().host, {
-      target_pane_id: this.pane().id,
-      direction,
-    });
+  protected async doSplit(direction: SplitDirection): Promise<void> {
+    this.closeMenu(false);
+    try {
+      await this.store.splitPane(this.pane().host, {
+        target_pane_id: this.pane().id,
+        direction,
+      });
+    } catch (err) {
+      this.toast.push({
+        level: "error",
+        message: fill(COPY.toast.splitFailed, {
+          reason: err instanceof Error ? err.message : String(err),
+        }),
+      });
+    }
   }
 }

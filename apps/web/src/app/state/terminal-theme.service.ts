@@ -10,33 +10,83 @@ import { ThemeService } from "./theme.service";
  */
 export type TerminalThemeName =
   | "auto"
-  | "standard-dark"
-  | "standard-light"
+  | "washi"
+  | "sumi"
   | "catppuccin-mocha"
   | "monokai"
   | "solarized-dark"
   | "solarized-light";
 
-const STORAGE_KEY = "kanhrd.terminal-theme";
-
-/** Mirrors `[data-theme="dark"]` in styles.scss — xterm.js takes its own theme object, it doesn't read CSS custom properties. */
-export const XTERM_THEME_DARK: ITheme = {
-  background: "#14161c",
-  foreground: "#e6e8ee",
-  cursor: "#e6e8ee",
-  selectionBackground: "#3c4252",
-  black: "#14161c",
-  brightBlack: "#5a6072",
+/**
+ * Pre-redesign palette names, kept readable from storage so an explicit
+ * light/dark choice survives the brand redesign instead of silently
+ * reverting to `auto`.
+ */
+const LEGACY_NAMES: Record<string, TerminalThemeName> = {
+  "standard-light": "washi",
+  "standard-dark": "sumi",
 };
 
-/** Mirrors `[data-theme="light"]` in styles.scss. */
-export const XTERM_THEME_LIGHT: ITheme = {
-  background: "#f4f5f7",
-  foreground: "#1b1e26",
-  cursor: "#1b1e26",
-  selectionBackground: "#d7dae1",
-  black: "#f4f5f7",
-  brightBlack: "#8b91a1",
+const STORAGE_KEY = "kanhrd.terminal-theme";
+
+/**
+ * Washi (light) — the brand light terminal palette from
+ * docs/DESIGN-SYSTEM.md ("Terminal"). Every normal and bright ANSI
+ * foreground is >= 4.5:1 on the default background at 16px (measured);
+ * xterm.js takes its own theme object, it does not read CSS custom
+ * properties, so these values are literal by necessity.
+ */
+export const XTERM_THEME_WASHI: ITheme = {
+  background: "#f4ede0",
+  foreground: "#1a1815",
+  cursor: "#1a1815",
+  selectionBackground: "#ebe2d1",
+  black: "#1a1815",
+  red: "#b6412a",
+  green: "#5e6e41",
+  yellow: "#8f5e1e",
+  blue: "#2f4a6b",
+  magenta: "#8a4a6b",
+  cyan: "#2f6b6b",
+  white: "#4a463f",
+  brightBlack: "#6b6459",
+  brightRed: "#9c3522",
+  brightGreen: "#566a3a",
+  brightYellow: "#8a5b1d",
+  brightBlue: "#25405e",
+  brightMagenta: "#743a5a",
+  brightCyan: "#265c5c",
+  brightWhite: "#1a1815",
+};
+
+/**
+ * Sumi (dark) — the brand dark terminal palette from
+ * docs/DESIGN-SYSTEM.md ("Terminal"). `black` is deliberately lifted to
+ * #8a7f70 rather than sitting near the background, so a program that
+ * prints ANSI black stays readable; that departs from the conventional
+ * dark-theme mapping on purpose.
+ */
+export const XTERM_THEME_SUMI: ITheme = {
+  background: "#161311",
+  foreground: "#ece3d1",
+  cursor: "#ece3d1",
+  selectionBackground: "#2a2521",
+  black: "#8a7f70",
+  red: "#c9634d",
+  green: "#86975f",
+  yellow: "#d69746",
+  blue: "#6684a4",
+  magenta: "#b07a9a",
+  cyan: "#5f9d9d",
+  white: "#b4ab98",
+  brightBlack: "#8f8776",
+  brightRed: "#d9836c",
+  brightGreen: "#9aab72",
+  brightYellow: "#e0a75c",
+  brightBlue: "#7c97b5",
+  brightMagenta: "#c795b1",
+  brightCyan: "#7db5b5",
+  brightWhite: "#ece3d1",
 };
 
 /** Catppuccin Mocha — https://github.com/catppuccin/catppuccin, standard 16-color mapping. */
@@ -121,8 +171,8 @@ export const XTERM_THEME_SOLARIZED_LIGHT: ITheme = {
 };
 
 const PALETTES: Record<Exclude<TerminalThemeName, "auto">, ITheme> = {
-  "standard-dark": XTERM_THEME_DARK,
-  "standard-light": XTERM_THEME_LIGHT,
+  washi: XTERM_THEME_WASHI,
+  sumi: XTERM_THEME_SUMI,
   "catppuccin-mocha": XTERM_THEME_CATPPUCCIN_MOCHA,
   monokai: XTERM_THEME_MONOKAI,
   "solarized-dark": XTERM_THEME_SOLARIZED_DARK,
@@ -131,8 +181,8 @@ const PALETTES: Record<Exclude<TerminalThemeName, "auto">, ITheme> = {
 
 export const TERMINAL_THEME_OPTIONS: readonly { value: TerminalThemeName; label: string }[] = [
   { value: "auto", label: "Auto (follows app theme)" },
-  { value: "standard-dark", label: "Standard Dark" },
-  { value: "standard-light", label: "Standard Light" },
+  { value: "washi", label: "Washi (light)" },
+  { value: "sumi", label: "Sumi (dark)" },
   { value: "catppuccin-mocha", label: "Catppuccin Mocha" },
   { value: "monokai", label: "Monokai" },
   { value: "solarized-dark", label: "Solarized Dark" },
@@ -140,13 +190,14 @@ export const TERMINAL_THEME_OPTIONS: readonly { value: TerminalThemeName; label:
 ];
 
 function isTerminalThemeName(value: string | null): value is TerminalThemeName {
-  return value === "auto" || value !== null && value in PALETTES;
+  return value === "auto" || (value !== null && value in PALETTES);
 }
 
 /** Pure read, unit-testable without DI — mirrors `loadTheme` in theme.service.ts. */
 export function loadTerminalThemeName(storage: Pick<Storage, "getItem"> = localStorage): TerminalThemeName {
   const raw = storage.getItem(STORAGE_KEY);
-  return isTerminalThemeName(raw) ? raw : "auto";
+  if (isTerminalThemeName(raw)) return raw;
+  return (raw !== null && LEGACY_NAMES[raw]) || "auto";
 }
 
 /**
@@ -164,7 +215,7 @@ export class TerminalThemeService {
   readonly theme = computed<ITheme>(() => {
     const name = this.name();
     if (name === "auto") {
-      return this.appTheme.theme() === "light" ? XTERM_THEME_LIGHT : XTERM_THEME_DARK;
+      return this.appTheme.theme() === "light" ? XTERM_THEME_WASHI : XTERM_THEME_SUMI;
     }
     return PALETTES[name];
   });

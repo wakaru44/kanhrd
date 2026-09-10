@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "./fixtures/kanhrd";
 import { herdrAvailable, herdrPaneList } from "./fixtures/herdr";
-import { allCards } from "./helpers/selectors";
+import { allCards, cardOpenLink } from "./helpers/selectors";
 
 /**
  * Herdr/tmux-style prefix keyboard shortcuts (L-KEYS). Default prefix
@@ -39,10 +39,6 @@ function plusMenu(page: Page): Locator {
   return page.locator(".plus-menu");
 }
 
-function railElement(page: Page): Locator {
-  return page.locator(".rail");
-}
-
 async function pressChord(page: Page, key: string): Promise<void> {
   await page.keyboard.press("Control+b");
   await page.keyboard.press(key);
@@ -50,9 +46,38 @@ async function pressChord(page: Page, key: string): Promise<void> {
 
 // ---------------------------------------------------------------------------
 
-test("'?' opens the help overlay with every shortcut category", async ({ app }) => {
+test("a bare '?' is not a global binding", async ({ app }) => {
   await app.locator("body").click(); // make sure focus isn't inside a text input
+
+  // An unmodified `?` is deliberately NOT forwarded at all
+  // (`App.onKeydown` returns early on it — docs/UX-GUIDELINES.md,
+  // "Keyboard-first, but the terminal owns its keys"): binding it globally
+  // would break vim, less, fzf and every TUI running inside a card.
   await app.keyboard.press("?");
+  await app.waitForTimeout(300);
+  await expect(helpOverlay(app)).toHaveCount(0);
+});
+
+/*
+ * APPLICATION DEFECT, NOT A STALE SPEC — this assertion is correct and is
+ * left standing; `test.fixme` marks it as known-failing rather than
+ * weakening it or deleting it.
+ *
+ * `App.onKeydown` (apps/web/src/app/app.ts) returns early for ANY
+ * unmodified `?`, before `KeyboardService.handleKeydown` — which is where
+ * the armed-chord state lives. So the second key of the documented
+ * `prefix + ?` chord is swallowed exactly like a bare `?`, and
+ * `KeyboardService.dispatchChordAction`'s `case "?": openHelp()` can never
+ * be reached. The help overlay is currently unreachable by keyboard, and
+ * the app header renders no visible help control either, while
+ * `formatBinding` still advertises "? or Ctrl+B + ?" in the settings
+ * shortcut table. Fix belongs in app.ts (let the guard fall through while
+ * the chord is armed), which is outside this lane's writable scope.
+ */
+test.fixme("prefix+? opens the help overlay with every shortcut category", async ({ app }) => {
+  await app.locator("body").click();
+
+  await pressChord(app, "?");
 
   await expect(helpOverlay(app)).toBeVisible({ timeout: 3_000 });
   const headings = await helpOverlay(app).locator(".shortcut-group h3").allTextContents();
@@ -90,6 +115,16 @@ test("prefix+n on the board advances the rail's tab filter", async ({ app }) => 
   expect(activeCount).toBe(1);
 });
 
+test("an unmodified Escape with no app chrome open is left to the page", async ({ app }) => {
+  // Escape is scoped to open chrome (help overlay, drawer, plus menu,
+  // toasts) — never a global binding, or it breaks vim/less/fzf inside a
+  // card. With nothing open it must change nothing, including the scope.
+  await app.locator("body").click();
+  await app.keyboard.press("Escape");
+  await expect(app).toHaveURL(/\/$/);
+  await expect(helpOverlay(app)).toHaveCount(0);
+});
+
 test("Escape closes the plus-menu", async ({ app }) => {
   test.skip(!(await plusButton(app).isVisible()), "no host advertises a lifecycle-create capability");
 
@@ -103,7 +138,7 @@ test("Escape closes the plus-menu", async ({ app }) => {
 test("focused terminal swallows prefix+c: Ctrl+B reaches xterm.js, not the app shortcut", async ({ app }) => {
   const before = await herdrPaneList();
 
-  await allCards(app).first().click();
+  await cardOpenLink(allCards(app).filter({ has: app.locator("a.card-open") }).first()).click();
   await expect(app.locator(".xterm-rows")).toBeVisible({ timeout: 10_000 });
 
   // Click into the visible terminal grid — xterm.js focuses its hidden

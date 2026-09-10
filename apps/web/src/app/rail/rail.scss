@@ -1,3 +1,9 @@
+// Rail = navigator, and below 900px the same markup is the mobile overlay
+// drawer. Every value here is a design token (docs/DESIGN-SYSTEM.md); the
+// only literals are structural (0, 100%, 1px hairlines, the 900px
+// breakpoint width). None of the temporary `--bg`/`--surface-*`/`--border*`/
+// `--text*` aliases are referenced.
+
 :host {
   display: block;
 }
@@ -5,119 +11,258 @@
 .rail {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 0.75rem 0.5rem;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-2);
   overflow-y: auto;
   height: 100%;
-  font-size: 0.85rem;
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--ink);
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: calc(-1 * var(--sp-1));
+  }
+}
+
+// The drawer's own surface. Geometry (fixed position, the min(80vw, 20
+// unit) width, full height, z-index) is board.scss's `.rail.open`, which
+// owns the host
+// element; this only paints the panel that sits inside it and keeps its
+// scrolling internal.
+:host(.open) .rail {
+  @media (max-width: 900px) {
+    background: var(--paper-raised);
+    height: 100%;
+    overflow-y: auto;
+    padding: var(--sp-3) var(--sp-3) var(--sp-6);
+    gap: var(--sp-5);
+  }
 }
 
 .host-group {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: var(--sp-1);
 }
 
-.host-name {
-  padding: 0.2rem 0.4rem;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-dim);
+// Host seal (hanko): the single bounded ochre exception to otherwise
+// colour-free chrome — a 1px outline, never a fill. The pen name is read
+// from ink, not from the ochre.
+.host-seal {
+  align-self: flex-start;
+  max-width: 100%;
+  margin-bottom: var(--sp-1);
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--ochre);
+  border-radius: var(--radius-sm);
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  line-height: var(--sp-5);
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workspace-row,
 .tab-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-  padding: 0.3rem 0.4rem;
-  border-radius: 6px;
-  cursor: default;
-
-  &:hover .row-actions {
-    opacity: 1;
-    pointer-events: auto;
-  }
+  gap: var(--sp-2);
+  border-radius: var(--radius-md);
+  transition: background var(--motion-fast) var(--ease-out);
 }
 
 .workspace-row {
-  font-weight: 600;
-  cursor: pointer;
+  font-weight: var(--fw-semi);
 
-  &:hover {
-    background: var(--surface-2);
-  }
-
+  &:hover,
   &.active {
-    background: var(--surface-2);
+    background: var(--paper-raised);
   }
 }
 
 .tab-row {
-  padding-left: 1rem;
-  cursor: pointer;
-  color: var(--text-dim);
+  margin-left: var(--sp-4);
+  color: var(--ink-soft);
 
   &:hover {
-    background: var(--surface-2);
+    background: var(--paper-raised);
   }
 
   &.active {
-    background: var(--surface-2);
-    color: var(--text);
+    background: var(--paper-raised);
+    color: var(--ink);
+    font-weight: var(--fw-medium);
   }
 }
 
+// The row's navigation control. A separate <button> from the overflow
+// trigger: opening a scope and acting on it are distinct semantics.
+.row-nav {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: var(--sp-2);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: calc(-1 * var(--sp-1));
+  }
+}
+
+// Long field and lane names truncate; they never widen the drawer.
 .workspace-name,
 .tab-name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.row-actions {
-  display: flex;
-  gap: 0.2rem;
+// --- overflow menu (no hover-only affordances) --------------------------
+
+.row-menu-wrap {
+  position: relative;
   flex: none;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.1s ease;
 }
 
-.row-action {
+.row-menu-trigger {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.2rem;
-  height: 1.2rem;
-  line-height: 1;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  background: var(--surface-1);
-  color: var(--text-dim);
+  width: var(--sp-6);
+  height: var(--sp-6);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--ink-mute);
   cursor: pointer;
+  transition: color var(--motion-fast) var(--ease-out);
 
-  &:hover {
-    color: var(--text);
-    border-color: var(--border-hover);
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    color: var(--ink-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 0;
   }
 
   .icon {
-    width: 0.7rem;
-    height: 0.7rem;
+    width: var(--icon-md);
+    height: var(--icon-md);
   }
 }
+
+.row-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  min-width: var(--sp-12);
+  margin-top: var(--sp-1);
+  padding: var(--sp-1);
+  border: var(--elev-1);
+  border-radius: var(--radius-lg);
+  background: var(--paper-raised);
+  white-space: nowrap;
+}
+
+.row-menu-item {
+  display: flex;
+  align-items: center;
+  padding: var(--sp-2) var(--sp-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: var(--fw-semi);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--paper-sunk);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: calc(-1 * var(--sp-1));
+  }
+
+  &.danger {
+    color: var(--status-blocked-ink);
+  }
+}
+
+// --- inline rename ------------------------------------------------------
 
 .edit-input {
   flex: 1;
   min-width: 0;
-  padding: 0.15rem 0.35rem;
-  border-radius: 4px;
-  border: 1px solid var(--border-hover);
-  background: var(--bg);
-  color: var(--text);
+  padding: var(--sp-1) var(--sp-2);
+  border: var(--elev-3);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  color: var(--ink);
   font: inherit;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 0;
+  }
+}
+
+// --- touch targets ------------------------------------------------------
+
+// 40 x 40 minimum for every interactive control under a coarse pointer,
+// with at least --sp-2 between adjacent targets so a thumb cannot hit two.
+@media (pointer: coarse) {
+  .workspace-row,
+  .tab-row {
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
+  }
+
+  .row-nav,
+  .row-menu-trigger,
+  .row-menu-item,
+  .edit-input {
+    min-height: var(--touch-target-min);
+  }
+
+  .row-menu-trigger {
+    min-width: var(--touch-target-min);
+    width: var(--touch-target-min);
+    height: var(--touch-target-min);
+  }
+
+  .row-menu-item + .row-menu-item {
+    margin-top: var(--sp-2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-row,
+  .tab-row,
+  .row-menu-trigger {
+    transition: none;
+  }
 }

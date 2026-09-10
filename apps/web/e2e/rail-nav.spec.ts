@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures/kanhrd";
 import { herdrAvailable } from "./fixtures/herdr";
+import { waitForStableCount } from "./helpers/wait";
 import type { Locator, Page } from "@playwright/test";
 
 /**
@@ -33,8 +34,11 @@ function scopePill(page: Page): Locator {
 test("clicking a rail tab navigates to /workspace/:id/tab/:id, shows the scope pill, and scopes the board", async ({
   app,
 }) => {
+  // The rail renders once `pane.list` lands; an instantaneous `.count()`
+  // right after navigation can snapshot an empty rail and skip a test that
+  // should have run.
   const tabRows = rail(app).locator(".tab-row");
-  const count = await tabRows.count();
+  const count = await waitForStableCount(tabRows);
   test.skip(count < 1, "no tabs in the rail to click");
 
   const firstTab = tabRows.first();
@@ -57,7 +61,7 @@ test("clicking a rail tab navigates to /workspace/:id/tab/:id, shows the scope p
 
 test("clicking the active tab again navigates back to /", async ({ app }) => {
   const tabRows = rail(app).locator(".tab-row");
-  test.skip((await tabRows.count()) < 1, "no tabs in the rail to click");
+  test.skip((await waitForStableCount(tabRows)) < 1, "no tabs in the rail to click");
 
   const firstTab = tabRows.first();
   await firstTab.click();
@@ -67,15 +71,26 @@ test("clicking the active tab again navigates back to /", async ({ app }) => {
   await expect(app).toHaveURL(/\/$/, { timeout: 5_000 });
 });
 
-test("Escape clears the scope pill", async ({ app }) => {
+test("an unmodified Escape does NOT clear the scope — the pill's own × does", async ({ app }) => {
   const tabRows = rail(app).locator(".tab-row");
-  test.skip((await tabRows.count()) < 1, "no tabs in the rail to click");
+  test.skip((await waitForStableCount(tabRows)) < 1, "no tabs in the rail to click");
 
   await tabRows.first().click();
   await expect(scopePill(app)).toBeVisible({ timeout: 3_000 });
+  const scopedUrl = app.url();
 
+  // Escape is scoped to open app chrome only (App.onKeydown returns early
+  // on an unmodified Escape with no chrome open — docs/UX-GUIDELINES.md,
+  // "No global unmodified Escape and no global `?`"). A scope pill is not
+  // chrome, so Escape must leave the URL alone; the visible × is the
+  // documented affordance, and it is asserted in the first test above.
+  await app.locator("body").click();
   await app.keyboard.press("Escape");
+  await app.waitForTimeout(300);
 
+  expect(app.url()).toBe(scopedUrl);
+  await expect(scopePill(app)).toBeVisible();
+
+  await scopePill(app).locator(".scope-pill-close").click();
   await expect(app).toHaveURL(/\/$/, { timeout: 5_000 });
-  await expect(scopePill(app)).toBeHidden({ timeout: 3_000 });
 });

@@ -105,6 +105,9 @@ Since the bridge (`apps/bridge`) and web app (`apps/web`) are still being built 
 ## Docs
 
 - [`docs/CONTEXT.md`](docs/CONTEXT.md) — domain glossary: what a card, board, pane, and agent mean in kanhrd.
+- [`docs/BRAND.md`](docs/BRAND.md) — identity, wordmark, voice, and the pen / field / lane / card vocabulary rename.
+- [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) — the authoritative token contract: colour (both themes), typography, spacing, motion, icons, component specs, measured contrast.
+- [`docs/UX-GUIDELINES.md`](docs/UX-GUIDELINES.md) — interaction patterns: density thresholds, reliability states, empty states, motion budget, mobile, anti-patterns.
 - [`docs/adr/`](docs/adr/) — architecture decision records for the load-bearing choices (bridge topology, greenfield vs. forking, auth model).
 - [`docs/OPERATING.md`](docs/OPERATING.md) — deployment recipes: laptop-only, cloud hub, and mixed with a reverse SSH tunnel.
 - [herdr](https://github.com/herdrdev/herdr) — the upstream terminal agent runtime kanhrd is a client for.

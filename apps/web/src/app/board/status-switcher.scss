@@ -1,0 +1,66 @@
+/*
+ * Status switcher — docs/DESIGN-SYSTEM.md "Status switcher (mobile only)".
+ * Selection is weight + a 2px ochre underline; never a fill, never colour
+ * alone. `--switcher-height` is the control's height AND its tap target.
+ */
+
+:host {
+  display: block;
+}
+
+.switcher {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-1);
+  padding: 0 var(--sp-4);
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+}
+
+.segment {
+  flex: 1 1 0;
+  min-width: var(--touch-target-min);
+  height: var(--switcher-height, var(--touch-target-min));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  padding: 0 var(--sp-1);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-mute);
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-regular);
+  cursor: pointer;
+
+  &.selected {
+    /* 1.6 : 1 so the selected label plus its count never truncates. */
+    flex: 1.6 1 0;
+    color: var(--ink);
+    font-weight: var(--fw-semi);
+    border-bottom-color: var(--ochre-line);
+  }
+}
+
+.segment-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.segment.selected .segment-label {
+  /* The selected label is the one label that may not truncate. */
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.segment-count {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
