@@ -270,7 +270,94 @@ describe("HostRuntime — agent-status polling", () => {
 
       panes[0] = { pane_id: "p1", workspace_id: "w1", tab_id: "t1", agent_status: "working", revision: 0 };
       await waitFor(() => statusEvents.length === 1);
-      expect(statusEvents[0]?.payload).toEqual({ id: "p1", host: "test", agent_status: "working" });
+      expect(statusEvents[0]?.payload).toMatchObject({ id: "p1", host: "test", agent_status: "working" });
+    } finally {
+      host.stop();
+    }
+  });
+
+  // --- status_since: the bridge's observation of when a status began ------
+  //
+  // The whole point of the field is what it does NOT claim. herdr reports no
+  // timestamp, so a value exists only where this runtime watched the
+  // transition itself; everywhere else the field is absent, never zeroed and
+  // never stamped "now" to look complete.
+
+  it("gives a pane it found already in its status at connect no status_since at all", async () => {
+    const host = new HostRuntime({ name: "test", socket: socketPath }, 25);
+    host.start();
+    try {
+      await waitFor(() => host.state().connected);
+      const pane = (await host.listPanes())[0]!;
+      expect(pane.status_since).toBeUndefined();
+      expect("status_since" in pane).toBe(false); // omitted, not `undefined`/`0`/`null`
+
+      // Still absent several polls later: a steady status does not become
+      // vouchable just because the bridge kept looking at it.
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      expect((await host.listPanes())[0]?.status_since).toBeUndefined();
+    } finally {
+      host.stop();
+    }
+  });
+
+  it("stamps status_since on a transition it observes, and leaves it alone while the status holds", async () => {
+    const host = new HostRuntime({ name: "test", socket: socketPath }, 25);
+    const statusEvents: WsEvent<"pane.agent_status_changed">[] = [];
+    host.on("bridge-event", (e: WsEvent) => {
+      if (e.event === "pane.agent_status_changed") statusEvents.push(e as WsEvent<"pane.agent_status_changed">);
+    });
+
+    host.start();
+    try {
+      await waitFor(() => host.state().connected);
+      const before = Date.now();
+      panes[0] = { pane_id: "p1", workspace_id: "w1", tab_id: "t1", agent_status: "working", revision: 0 };
+      await waitFor(() => statusEvents.length === 1);
+
+      const stamped = (await host.listPanes())[0]?.status_since;
+      expect(stamped).toBeGreaterThanOrEqual(before);
+      expect(stamped).toBeLessThanOrEqual(Date.now());
+      // The event carries the same observation, so a client patching a
+      // cached pane from it agrees with the next `pane.list`.
+      expect(statusEvents[0]?.payload.status_since).toBe(stamped);
+
+      // Several more polls at the same status must not move it — otherwise
+      // the duration would never grow.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect((await host.listPanes())[0]?.status_since).toBe(stamped);
+
+      // A second transition re-stamps.
+      panes[0] = { pane_id: "p1", workspace_id: "w1", tab_id: "t1", agent_status: "idle", revision: 0 };
+      await waitFor(() => statusEvents.length === 2);
+      const restamped = (await host.listPanes())[0]?.status_since;
+      expect(restamped).toBeGreaterThanOrEqual(stamped as number);
+      expect(statusEvents[1]?.payload.status_since).toBe(restamped);
+    } finally {
+      host.stop();
+    }
+  });
+
+  it("drops the record when a pane leaves pane.list, and stamps a returning id fresh", async () => {
+    const host = new HostRuntime({ name: "test", socket: socketPath }, 25);
+    host.start();
+    try {
+      await waitFor(() => host.state().connected);
+      expect((await host.listPanes())[0]?.status_since).toBeUndefined();
+
+      const removed = panes.splice(0, 1);
+      await new Promise((resolve) => setTimeout(resolve, 80)); // polls prune it
+      expect(await host.listPanes()).toHaveLength(0);
+
+      const returned = Date.now();
+      panes.push(removed[0]!);
+      await new Promise((resolve) => setTimeout(resolve, 80)); // a poll sees it again
+
+      // Seen arriving while this runtime was watching, so the bridge CAN
+      // vouch for it now — and the stamp is from the return, not resumed
+      // from the pane's previous life (which had no stamp at all).
+      const since = (await host.listPanes())[0]?.status_since;
+      expect(since).toBeGreaterThanOrEqual(returned);
     } finally {
       host.stop();
     }

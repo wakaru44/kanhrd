@@ -96,8 +96,20 @@ export class HostRuntime extends EventEmitter {
   private readonly writeQueue = new PaneWriteQueue();
   /** Tier-3: one FIFO per host for pane/tab/workspace lifecycle mutations — see `HostMutationQueue` doc. */
   private readonly mutationQueue = new HostMutationQueue();
-  /** Known panes' last-seen `agent_status`, used both as general pane bookkeeping (placement cache correctness) and as the diff baseline for `pollAgentStatus()` — see that method's doc. */
-  private readonly paneAgentStatus = new Map<string, HerdrPaneInfo["agent_status"]>();
+  /**
+   * Known panes' last-seen `agent_status` plus WHEN this runtime first
+   * observed them holding it. Used as general pane bookkeeping (placement
+   * cache correctness), as the diff baseline for `pollAgentStatus()` — see
+   * that method's doc — and as the source of `Pane.status_since`.
+   *
+   * `since` is deliberately optional: a pane already in its status when this
+   * runtime connected was never observed entering it, and the bridge must
+   * not pretend otherwise (see `trackPane`).
+   */
+  private readonly paneAgentStatus = new Map<
+    string,
+    { status: HerdrPaneInfo["agent_status"]; since?: number }
+  >();
   private subscription: HerdrSubscription | null = null;
   /** Guards against a superseded subscribe (resubscribe in flight) acting on stale disconnect/settle events. */
   private subscriptionGeneration = 0;
@@ -173,7 +185,7 @@ export class HostRuntime extends EventEmitter {
     if (!this.connected) throw new HostUnavailableError(this.name);
     const result = await this.client.request<{ panes: HerdrPaneInfo[] }>("pane.list");
     for (const pane of result.panes) this.trackPane(pane);
-    return result.panes.map((pane) => projectPane(this.name, pane, this.names));
+    return result.panes.map((pane) => this.project(pane));
   }
 
   /** Tier-2: one-shot content fetch, proxied straight to herdr's `pane.read`. */
@@ -253,7 +265,7 @@ export class HostRuntime extends EventEmitter {
       if (params.env !== undefined) requestParams.env = params.env;
       const result = await this.client.request<{ pane: HerdrPaneInfo }>("pane.split", requestParams);
       this.trackPane(result.pane);
-      return { pane: projectPane(this.name, result.pane, this.names) };
+      return { pane: this.project(result.pane) };
     });
   }
 
@@ -286,7 +298,7 @@ export class HostRuntime extends EventEmitter {
       if (params.label !== undefined) requestParams.label = params.label;
       const result = await this.client.request<{ pane: HerdrPaneInfo }>("pane.rename", requestParams);
       this.trackPane(result.pane);
-      return { pane: projectPane(this.name, result.pane, this.names) };
+      return { pane: this.project(result.pane) };
     });
   }
 
@@ -300,7 +312,7 @@ export class HostRuntime extends EventEmitter {
       this.applyPaneMoveCache(move);
       const projected: BridgeMethodResult["pane.move"] = {
         changed: move.changed,
-        pane: projectPane(this.name, move.pane, this.names),
+        pane: this.project(move.pane),
         previous_workspace_id: move.previous_workspace_id,
         previous_tab_id: move.previous_tab_id,
       };
@@ -326,7 +338,7 @@ export class HostRuntime extends EventEmitter {
       const result = await this.client.request<HerdrTabCreateResult>("tab.create", requestParams);
       this.trackTab(result.tab);
       this.trackPane(result.root_pane);
-      return { tab: projectTab(this.name, result.tab), pane: projectPane(this.name, result.root_pane, this.names) };
+      return { tab: projectTab(this.name, result.tab), pane: this.project(result.root_pane) };
     });
   }
 
@@ -382,7 +394,7 @@ export class HostRuntime extends EventEmitter {
       return {
         workspace: projectWorkspace(this.name, result.workspace),
         tab: projectTab(this.name, result.tab),
-        pane: projectPane(this.name, result.root_pane, this.names),
+        pane: this.project(result.root_pane),
       };
     });
   }
@@ -422,9 +434,43 @@ export class HostRuntime extends EventEmitter {
 
   // --- pane/tab/workspace cache bookkeeping -----------------------------
 
-  private trackPane(pane: HerdrPaneInfo): void {
-    this.paneAgentStatus.set(pane.pane_id, pane.agent_status);
+  /**
+   * Updates the status baseline and, with it, the observation time behind
+   * `Pane.status_since`. Three cases, and the distinction between the last
+   * two is the whole point of the field:
+   *
+   *   - status unchanged -> the entry is left alone, so the duration grows.
+   *   - status changed   -> re-stamped to now; this runtime watched the
+   *                         transition happen, within one poll interval.
+   *   - pane unknown     -> stamped to now, EXCEPT while `seeding`. A pane
+   *                         that appears while we are already watching this
+   *                         host (created, split, moved in, or simply new in
+   *                         a poll) entered its status since the previous
+   *                         tick. A pane found in the connect-time
+   *                         `pane.list` may have been sitting there for
+   *                         days, so it gets no value at all: an absent
+   *                         readout is honest, a zero is a fabrication.
+   */
+  private trackPane(pane: HerdrPaneInfo, seeding = false): void {
+    const previous = this.paneAgentStatus.get(pane.pane_id);
+    if (previous === undefined) {
+      this.paneAgentStatus.set(
+        pane.pane_id,
+        seeding ? { status: pane.agent_status } : { status: pane.agent_status, since: Date.now() },
+      );
+    } else if (previous.status !== pane.agent_status) {
+      this.paneAgentStatus.set(pane.pane_id, { status: pane.agent_status, since: Date.now() });
+    }
     this.names.setPanePlacement(pane.pane_id, pane.workspace_id, pane.tab_id);
+  }
+
+  /**
+   * `projectPane` with this host's observation time folded in. Every call
+   * site projects a pane it has just handed to `trackPane`, so the map is
+   * current by the time we read it back.
+   */
+  private project(pane: HerdrPaneInfo): Pane {
+    return projectPane(this.name, pane, this.names, this.paneAgentStatus.get(pane.pane_id)?.since);
   }
 
   private untrackPane(paneId: string): void {
@@ -468,8 +514,12 @@ export class HostRuntime extends EventEmitter {
     try {
       await this.names.refresh(this.client);
       const paneList = await this.client.request<{ panes: HerdrPaneInfo[] }>("pane.list");
+      // `seeding: true` — every pane in this first list was already holding
+      // its status before we connected, so none of them gets a `since`. A
+      // reconnect re-seeds for the same reason: we may have slept through
+      // any number of transitions while the socket was down.
       this.paneAgentStatus.clear();
-      for (const pane of paneList.panes) this.trackPane(pane);
+      for (const pane of paneList.panes) this.trackPane(pane, true);
 
       await this.establishSubscription();
     } catch (err) {
@@ -505,6 +555,11 @@ export class HostRuntime extends EventEmitter {
    * subscribe time. `trackPane` updates the baseline for every pane on
    * every tick regardless, so this also keeps the name-cache placement
    * fresh as a side effect.
+   *
+   * The same diff is the sole source of `Pane.status_since`: `trackPane`
+   * re-stamps the observation time on exactly the transitions this loop
+   * reports, and leaves it alone otherwise. There is deliberately no second
+   * poll and no second clock.
    */
   private async pollAgentStatus(): Promise<void> {
     if (!this.connected) return;
@@ -515,14 +570,32 @@ export class HostRuntime extends EventEmitter {
     } catch {
       return; // ponytail: transient poll failure — next tick retries, same as OutputPoller's pane.read
     }
+    // A pane that left `pane.list` without a `pane.closed` reaching us drops
+    // its observation record here, so an id that comes back later is stamped
+    // fresh rather than resuming a duration from its previous life.
+    const live = new Set(panes.map((pane) => pane.pane_id));
+    for (const id of this.paneAgentStatus.keys()) {
+      if (!live.has(id)) this.paneAgentStatus.delete(id);
+    }
     for (const pane of panes) {
       const previous = this.paneAgentStatus.get(pane.pane_id);
       this.trackPane(pane);
-      if (previous !== undefined && previous !== pane.agent_status) {
+      if (previous !== undefined && previous.status !== pane.agent_status) {
+        const payload: BridgeEventPayload["pane.agent_status_changed"] = {
+          id: pane.pane_id,
+          host: this.name,
+          agent_status: pane.agent_status,
+        };
+        // The stamp `trackPane` just wrote. Present on every transition this
+        // loop watched, which is the only case that reaches here — read back
+        // off the map rather than re-reading the clock, so the event and the
+        // pane's own `status_since` can never disagree.
+        const since = this.paneAgentStatus.get(pane.pane_id)?.since;
+        if (since !== undefined) payload.status_since = since;
         const event: WsEvent<"pane.agent_status_changed"> = {
           host: this.name,
           event: "pane.agent_status_changed",
-          payload: { id: pane.pane_id, host: this.name, agent_status: pane.agent_status },
+          payload,
         };
         this.emit("bridge-event", event);
       }
@@ -588,7 +661,7 @@ export class HostRuntime extends EventEmitter {
         const event: WsEvent<"pane.created"> = {
           host,
           event: "pane.created",
-          payload: { pane: projectPane(host, pane, this.names) },
+          payload: { pane: this.project(pane) },
         };
         this.emit("bridge-event", event);
         return;
@@ -613,7 +686,7 @@ export class HostRuntime extends EventEmitter {
         const event: WsEvent<"pane.updated"> = {
           host,
           event: "pane.updated",
-          payload: { pane: projectPane(host, pane, this.names) },
+          payload: { pane: this.project(pane) },
         };
         this.emit("bridge-event", event);
         return;
@@ -745,7 +818,7 @@ export class HostRuntime extends EventEmitter {
           ...(info.closed_tab_id !== undefined ? { closed_tab_id: info.closed_tab_id } : {}),
         });
         const payload: BridgeEventPayload["pane.moved"] = {
-          pane: projectPane(host, info.pane, this.names),
+          pane: this.project(info.pane),
           previous_workspace_id: info.previous_workspace_id,
           previous_tab_id: info.previous_tab_id,
         };

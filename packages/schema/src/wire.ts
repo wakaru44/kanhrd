@@ -366,7 +366,19 @@ export interface BridgeMethodResult {
 export interface BridgeEventPayload {
   "pane.created": { pane: Pane };
   "pane.closed": { id: string; host: string; workspace: { id: string } };
-  "pane.agent_status_changed": { id: string; host: string; agent_status: Pane["agent_status"] };
+  /**
+   * `status_since` is the bridge's observation time for the NEW status — the
+   * same value the pane now carries in `pane.list`, so a client patching a
+   * cached pane from this event does not leave it showing the elapsed time
+   * of the status it just left. Optional for the same reason it is optional
+   * on `Pane`: an older bridge omits it.
+   */
+  "pane.agent_status_changed": {
+    id: string;
+    host: string;
+    agent_status: Pane["agent_status"];
+    status_since?: number;
+  };
   /**
    * Pushed by the bridge after `pane.subscribe_output` whenever a poll of
    * `pane_id` observes a new `revision`. `content` is a FULL snapshot at the
