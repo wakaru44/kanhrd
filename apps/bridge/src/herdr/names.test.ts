@@ -108,6 +108,53 @@ describe("WorkspaceTabNameCache — tier-3 cache invalidation", () => {
     expect(names.panePlacement("pane-1")).toEqual({ workspace_id: "ws-2", tab_id: "tab-2" });
   });
 
+  // --- git provenance (worktree) ------------------------------------------
+  //
+  // `worktree` already arrives on the same `workspace.list` call `refresh()`
+  // makes; these assert the cache stops discarding it, and — critically —
+  // that a label-only update (`workspace.renamed`, which carries no
+  // worktree) does not wipe it.
+
+  const WORKTREE = {
+    repo_key: "gh:wakaru44/kanhrd",
+    repo_name: "kanhrd",
+    repo_root: "/home/op/src/kanhrd",
+    checkout_path: "/home/op/src/kanhrd",
+    is_linked_worktree: false,
+  };
+
+  it("caches a workspace's worktree alongside its label", () => {
+    const names = new WorkspaceTabNameCache();
+    names.setWorkspace("ws-1", "Inbox", WORKTREE);
+
+    expect(names.workspaceWorktree("ws-1")).toEqual(WORKTREE);
+    expect(names.workspaceName("ws-1")).toBe("Inbox");
+  });
+
+  it("returns undefined for a workspace outside any repository", () => {
+    const names = new WorkspaceTabNameCache();
+    names.setWorkspace("ws-1", "Inbox");
+
+    expect(names.workspaceWorktree("ws-1")).toBeUndefined();
+    expect(names.workspaceName("ws-1")).toBe("Inbox");
+  });
+
+  it("preserves a cached worktree across a label-only update (workspace.renamed)", () => {
+    const names = new WorkspaceTabNameCache();
+    names.setWorkspace("ws-1", "Inbox", WORKTREE);
+
+    names.setWorkspace("ws-1", "Renamed Inbox");
+
+    expect(names.workspaceName("ws-1")).toBe("Renamed Inbox");
+    expect(names.workspaceWorktree("ws-1")).toEqual(WORKTREE);
+  });
+
+  it("returns undefined for a workspace id the cache has never seen", () => {
+    const names = new WorkspaceTabNameCache();
+
+    expect(names.workspaceWorktree("ws-never")).toBeUndefined();
+  });
+
   it("removes a pane from placement tracking on removePane (pane.closed)", () => {
     const names = new WorkspaceTabNameCache();
     names.setPanePlacement("pane-1", "ws-1", "tab-1");

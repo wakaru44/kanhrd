@@ -12,13 +12,17 @@ import { RouterLink } from "@angular/router";
 import type { BridgeCapabilities, Pane, SplitDirection } from "@kanhrd/schema";
 import { PanesStore } from "../state/panes.store";
 import { ConfirmModal } from "../shared/confirm-modal";
+import { RenameModal } from "../shared/rename-modal";
 import { ClockTick, formatElapsed } from "../util/clock";
+import { paneSecondaryIdentity, paneTitle } from "../util/pane-title";
+import { pathTail } from "../util/path-tail";
 import { ToastService } from "../state/toast.service";
 import { COPY, fill } from "../shared/copy";
 import {
   LucideArrowDown,
   LucideArrowRight,
   LucideMoreHorizontal,
+  LucidePencil,
   LucideX,
 } from "../shared/icons";
 
@@ -38,6 +42,8 @@ export const CARD_COPY = {
   /** `confirm.closePaneAction` is the sanctioned verb for ending a session. */
   close: COPY.confirm.closePaneAction,
   moreActions: "more actions",
+  /** Approved copy — lives in `copy.ts`, unlike the three pending keys above. */
+  rename: COPY.card.renameAction,
 } as const;
 
 @Component({
@@ -45,10 +51,12 @@ export const CARD_COPY = {
   imports: [
     RouterLink,
     ConfirmModal,
+    RenameModal,
     LucideArrowRight,
     LucideArrowDown,
     LucideX,
     LucideMoreHorizontal,
+    LucidePencil,
   ],
   templateUrl: "./card.html",
   styleUrl: "./card.scss",
@@ -77,9 +85,29 @@ export class Card {
   protected readonly copy = COPY;
   protected readonly action = CARD_COPY;
 
-  protected readonly displayName = computed(() => {
-    const pane = this.pane();
-    return pane.agent?.name ?? pane.title ?? pane.id.slice(0, 8);
+  /** `label ?? display_agent ?? agent ?? title ?? id prefix` — see `util/pane-title.ts`. */
+  protected readonly displayName = computed(() => paneTitle(this.pane()));
+
+  /**
+   * The agent identity an operator-authored `label` displaced, so neither
+   * name is lost. `null` — and so no second row at all — whenever the title
+   * already IS the agent identity.
+   */
+  protected readonly secondaryIdentity = computed(() => paneSecondaryIdentity(this.pane()));
+
+  /**
+   * Repo name plus the truncated checkout path, or `null` when the pane's
+   * workspace resolves outside any repository — in which case the card
+   * renders no project line at all, not a placeholder.
+   */
+  protected readonly project = computed(() => {
+    const project = this.pane().project;
+    if (!project) return null;
+    return {
+      repo: project.repo_name,
+      tail: pathTail(project.checkout_path),
+      full: project.checkout_path,
+    };
   });
 
   protected readonly path = computed(() => {
@@ -105,12 +133,17 @@ export class Card {
   protected readonly paneSplitAvailable = computed(
     () => this.capabilities().get(this.pane().host)?.paneCreate === true,
   );
+  /** Whether `pane.rename` will succeed on this pane's host — its own flag, not part of the tier-3 bundle. */
+  protected readonly paneRenameAvailable = computed(
+    () => this.capabilities().get(this.pane().host)?.paneRename === true,
+  );
 
   protected readonly hasActions = computed(
-    () => this.paneSplitAvailable() || this.paneCloseAvailable(),
+    () => this.paneSplitAvailable() || this.paneCloseAvailable() || this.paneRenameAvailable(),
   );
 
   protected readonly showCloseConfirm = signal(false);
+  protected readonly showRename = signal(false);
   protected readonly menuOpen = signal(false);
 
   private readonly menuEl = viewChild<ElementRef<HTMLElement>>("menu");
@@ -231,6 +264,31 @@ export class Card {
         level: "error",
         message: fill(COPY.toast.closeFailed, {
           name: this.displayName(),
+          reason: err instanceof Error ? err.message : String(err),
+        }),
+      });
+    }
+  }
+
+  /**
+   * Closing the menu WITH refocus first is deliberate: the modal's focus
+   * trap records whatever is focused when it mounts and restores it on
+   * release, so handing it the overflow trigger is what returns focus there
+   * on both save and cancel — no timer, no second focus call.
+   */
+  protected onRenameClick(): void {
+    this.closeMenu();
+    this.showRename.set(true);
+  }
+
+  protected async onRenameSaved(label: string | null): Promise<void> {
+    this.showRename.set(false);
+    try {
+      await this.store.renamePane(this.pane().host, this.pane().id, label);
+    } catch (err) {
+      this.toast.push({
+        level: "error",
+        message: fill(COPY.toast.renameFailed, {
           reason: err instanceof Error ? err.message : String(err),
         }),
       });

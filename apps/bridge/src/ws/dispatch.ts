@@ -30,6 +30,7 @@ export interface DispatchHost {
   paneSplit(params: BridgeMethodParams["pane.split"]): Promise<BridgeMethodResult["pane.split"]>;
   paneClose(params: { pane_id: string }): Promise<void>;
   paneMove(params: BridgeMethodParams["pane.move"]): Promise<BridgeMethodResult["pane.move"]>;
+  paneRename(params: BridgeMethodParams["pane.rename"]): Promise<BridgeMethodResult["pane.rename"]>;
   tabCreate(params: BridgeMethodParams["tab.create"]): Promise<BridgeMethodResult["tab.create"]>;
   tabRename(params: BridgeMethodParams["tab.rename"]): Promise<BridgeMethodResult["tab.rename"]>;
   tabClose(params: { tab_id: string }): Promise<void>;
@@ -67,6 +68,7 @@ const CAPABILITIES: BridgeCapabilities = {
   paneCreate: true,
   paneClose: true,
   paneMove: true,
+  paneRename: true,
   tabCrud: true,
   workspaceCrud: true,
 };
@@ -209,6 +211,16 @@ export async function dispatch(request: WsRequest, ctx: DispatchContext): Promis
           return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id or destination" } };
         }
         const data = await runtime.paneMove(params);
+        return { id, host, ok: true, data };
+      }
+      case "pane.rename": {
+        const params = request.params as BridgeMethodParams["pane.rename"] | undefined;
+        if (!params?.pane_id) {
+          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id" } };
+        }
+        // `label` is intentionally NOT required: herdr's `PaneRenameParams`
+        // requires only `pane_id`, and `null` is its explicit clear form.
+        const data = await runtime.paneRename(params);
         return { id, host, ok: true, data };
       }
       case "tab.create": {

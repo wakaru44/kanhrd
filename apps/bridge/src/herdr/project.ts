@@ -25,8 +25,25 @@ export function projectPane(host: string, pane: HerdrPaneInfo, names: WorkspaceT
     agent_status: pane.agent_status,
   };
 
+  // `label` is herdr's user-authored pane name. It already arrives on every
+  // `pane.list` response; the field is set only when it is a non-empty
+  // string, so a cleared label (`null`) and an empty one both read as
+  // "absent" downstream rather than as a name that renders as nothing.
+  if (typeof pane.label === "string" && pane.label !== "") projected.label = pane.label;
   if (pane.title !== undefined) projected.title = pane.title;
   if (agentName !== undefined) projected.agent = { name: agentName };
+
+  // Git provenance is a WORKSPACE property in herdr; the join is the same
+  // one that already resolves `workspace.name`, carrying one more value.
+  // `repo_key`/`repo_root` are dropped — nothing renders them.
+  const worktree = names.workspaceWorktree(pane.workspace_id);
+  if (worktree !== undefined) {
+    projected.project = {
+      repo_name: worktree.repo_name,
+      checkout_path: worktree.checkout_path,
+      is_linked_worktree: worktree.is_linked_worktree,
+    };
+  }
 
   return projected;
 }

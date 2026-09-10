@@ -16,6 +16,13 @@
   <span class="host-seal">{{ pane().host }}</span>
 
   <span class="meta">
+    <!--
+      The agent identity an operator-authored name displaced. Its own
+      element, not a bare text node, so it stays separately styleable.
+    -->
+    @if (secondaryIdentity(); as agent) {
+      <span class="identity">{{ agent }}</span>
+    }
     <span class="elapsed">{{ elapsed() }}</span>
     <!-- A data readout, not product copy (see the header of shared/copy.ts):
          a count and its unit, like the `12m` beside it. -->
@@ -26,7 +33,23 @@
 
   <span class="status-label" [class]="pane().agent_status">{{ statusLabel() }}</span>
 
-  <span class="path">{{ path() }}</span>
+  <!--
+    Location row: field / lane, then the project herdr already knows about.
+    The truncated path is computed (util/path-tail.ts), not CSS-elided — the
+    head of a path cannot be ellipsed by `text-overflow`, and faking it with
+    `direction: rtl` is bidi-unsafe. The full path is rendered on keyboard
+    focus and on the detail route; `title` is a pointer convenience only.
+  -->
+  <span class="path">
+    <span class="location">{{ path() }}</span>
+    @if (project(); as p) {
+      <span class="project" [title]="p.full">
+        <span class="repo">{{ p.repo }}</span>
+        <span class="checkout checkout-tail">{{ p.tail }}</span>
+        <span class="checkout checkout-full">{{ p.full }}</span>
+      </span>
+    }
+  </span>
 
   @if (hasActions()) {
     <div class="card-actions" #actions>
@@ -85,6 +108,11 @@
                 <svg lucideArrowDown class="icon"></svg>{{ action.splitDown }}
               </button>
             }
+            @if (paneRenameAvailable()) {
+              <button type="button" role="menuitem" class="rename" (click)="onRenameClick()">
+                <svg lucidePencil class="icon"></svg>{{ action.rename }}
+              </button>
+            }
             @if (paneCloseAvailable()) {
               <button type="button" role="menuitem" class="close" (click)="onCloseClick()">
                 <svg lucideX class="icon"></svg>{{ action.close }}
@@ -96,6 +124,14 @@
     </div>
   }
 </div>
+
+@if (showRename()) {
+  <app-rename-modal
+    [initialValue]="pane().label ?? ''"
+    (saved)="onRenameSaved($event)"
+    (cancelled)="showRename.set(false)"
+  />
+}
 
 @if (showCloseConfirm()) {
   <app-confirm-modal

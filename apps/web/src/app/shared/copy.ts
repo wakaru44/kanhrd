@@ -40,6 +40,19 @@ export const COPY = {
   column: {
     empty: '0',
   },
+  /*
+   * Naming a card is not a lifecycle, empty or error surface, so no care
+   * verb belongs here — these are plain, lowercase and terse. The name has
+   * exactly one home (herdr's own pane label), which is why the clear
+   * action says "clear name" and not "reset" or "forget".
+   */
+  card: {
+    renameAction: 'rename card',
+    renameModalTitle: 'name this card',
+    renameFieldLabel: 'card name',
+    renameSave: 'save',
+    renameClear: 'clear name',
+  },
   confirm: {
     closePane: 'let this one rest?',
     closePaneBody: 'closing ends this session. the terminal and anything running in it stop. this cannot be undone.',

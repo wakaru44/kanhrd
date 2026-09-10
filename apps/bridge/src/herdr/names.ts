@@ -1,4 +1,4 @@
-import type { HerdrTabInfo, HerdrWorkspaceInfo } from "@kanhrd/schema";
+import type { HerdrTabInfo, HerdrWorkspaceDetail, HerdrWorkspaceWorktreeInfo } from "@kanhrd/schema";
 import type { HerdrClient } from "./client.js";
 
 /** A pane's current (workspace, tab) location, tracked so nested cache purges know what to drop. */
@@ -26,27 +26,53 @@ export interface PanePlacement {
  * the rest rather than wait for child `*.closed` events that will never
  * arrive.
  */
+/** What the cache keeps per workspace: the display label, plus herdr's optional git provenance. */
+interface WorkspaceEntry {
+  label: string;
+  worktree?: HerdrWorkspaceWorktreeInfo;
+}
+
 export class WorkspaceTabNameCache {
-  private workspaces = new Map<string, string>();
+  private workspaces = new Map<string, WorkspaceEntry>();
   private tabs = new Map<string, string>();
   private tabWorkspace = new Map<string, string>();
   private panePlacements = new Map<string, PanePlacement>();
 
   async refresh(client: HerdrClient): Promise<void> {
     const [workspaceResult, tabResult] = await Promise.all([
-      client.request<{ workspaces: HerdrWorkspaceInfo[] }>("workspace.list"),
+      // Typed as the RICH `HerdrWorkspaceDetail` — herdr's `workspace.list`
+      // has always returned whole `WorkspaceInfo` objects (`worktree` and
+      // `tokens` included); the trim to `HerdrWorkspaceInfo` was ours, at
+      // the type and at this Map's value. No new request is made.
+      client.request<{ workspaces: HerdrWorkspaceDetail[] }>("workspace.list"),
       client.request<{ tabs: HerdrTabInfo[] }>("tab.list"),
     ]);
-    this.workspaces = new Map(workspaceResult.workspaces.map((w) => [w.workspace_id, w.label]));
+    this.workspaces = new Map(
+      workspaceResult.workspaces.map((w) => [
+        w.workspace_id,
+        w.worktree === undefined ? { label: w.label } : { label: w.label, worktree: w.worktree },
+      ]),
+    );
     this.tabs = new Map(tabResult.tabs.map((t) => [t.tab_id, t.label]));
     this.tabWorkspace = new Map(tabResult.tabs.map((t) => [t.tab_id, t.workspace_id]));
     // Pane placement is seeded separately by the caller (`HostRuntime`) via
     // `setPanePlacement`, from the same `pane.list` call it already makes.
   }
 
-  /** Test/manual seeding hook — also used internally by `refresh` and by tier-3 create/rename handling. */
-  setWorkspace(id: string, name: string): void {
-    this.workspaces.set(id, name);
+  /**
+   * Test/manual seeding hook — also used internally by `refresh` and by
+   * tier-3 create/rename handling.
+   *
+   * `worktree` is only written when supplied: `workspace.renamed` carries
+   * just `{ workspace_id, label }`, so a rename must NOT discard provenance
+   * the cache already holds. Callers with a full `HerdrWorkspaceDetail`
+   * (`workspace.created`, `workspace.create`) pass it and set both.
+   */
+  setWorkspace(id: string, name: string, worktree?: HerdrWorkspaceWorktreeInfo): void {
+    const entry: WorkspaceEntry = { label: name };
+    const stored = worktree ?? this.workspaces.get(id)?.worktree;
+    if (stored !== undefined) entry.worktree = stored;
+    this.workspaces.set(id, entry);
   }
 
   setTab(id: string, name: string, workspaceId?: string): void {
@@ -63,7 +89,12 @@ export class WorkspaceTabNameCache {
   }
 
   workspaceName(id: string): string {
-    return this.workspaces.get(id) ?? id;
+    return this.workspaces.get(id)?.label ?? id;
+  }
+
+  /** herdr's git provenance for a workspace, or `undefined` when it has none (or is unknown). */
+  workspaceWorktree(id: string): HerdrWorkspaceWorktreeInfo | undefined {
+    return this.workspaces.get(id)?.worktree;
   }
 
   tabName(id: string): string {

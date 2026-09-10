@@ -9,6 +9,7 @@ import { PanesStore } from "../state/panes.store";
 class FakePanesStore {
   readonly closePane = jasmine.createSpy("closePane");
   readonly splitPane = jasmine.createSpy("splitPane");
+  readonly renamePane = jasmine.createSpy("renamePane").and.resolveTo({});
 }
 
 function pane(overrides: Partial<Pane> = {}): Pane {
@@ -32,6 +33,7 @@ function capabilities(overrides: Partial<BridgeCapabilities> = {}): BridgeCapabi
     paneCreate: false,
     paneClose: false,
     paneMove: false,
+    paneRename: false,
     tabCrud: false,
     workspaceCrud: false,
     ...overrides,
@@ -104,6 +106,83 @@ describe("Card", () => {
   it("falls back to a short pane id when both agent and title are absent", () => {
     const el = render(pane({ agent: undefined, title: undefined, id: "abcdefgh-1234" }));
     expect(el.querySelector(".card-open")?.textContent).toContain("abcdefgh");
+  });
+
+  // --- title precedence (util/pane-title.ts, rendered) ---------------------
+
+  it("prefers the operator's own label over agent identity and hook title", () => {
+    const el = render(
+      pane({ label: "fix the backlog storm", agent: { name: "claude" }, title: "hook title" }),
+    );
+    expect(el.querySelector(".card-open")?.textContent?.trim()).toBe("fix the backlog storm");
+  });
+
+  it("moves the displaced agent identity into the meta row rather than losing it", () => {
+    const el = render(pane({ label: "fix the backlog storm", agent: { name: "claude" } }));
+    expect(el.querySelector(".meta .identity")?.textContent?.trim()).toBe("claude");
+  });
+
+  it("renders no secondary identity row when the title already is the agent identity", () => {
+    const el = render(pane({ agent: { name: "codex" } }));
+    expect(el.querySelector(".card-open")?.textContent?.trim()).toBe("codex");
+    expect(el.querySelector(".meta .identity")).toBeNull();
+  });
+
+  it("keeps the title stable when herdr renames the agent under a label", () => {
+    const fixture = renderFixture(pane({ label: "fix the backlog storm", agent: { name: "claude" } }));
+    fixture.componentRef.setInput(
+      "pane",
+      pane({ label: "fix the backlog storm", agent: { name: "claude-review" } }),
+    );
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector(".card-open")?.textContent?.trim()).toBe("fix the backlog storm");
+    expect(el.querySelector(".meta .identity")?.textContent?.trim()).toBe("claude-review");
+  });
+
+  // --- project line --------------------------------------------------------
+
+  const PROJECT = {
+    repo_name: "kanhrd",
+    checkout_path: "/home/op/workspace/src/github.com/wakaru44/kanhrd",
+    is_linked_worktree: false,
+  };
+
+  it("renders the repo name and a computed path tail, with the full path as a pointer convenience", () => {
+    const el = render(pane({ project: PROJECT }));
+
+    expect(el.querySelector(".project .repo")?.textContent?.trim()).toBe("kanhrd");
+    expect(el.querySelector(".project .checkout-tail")?.textContent?.trim()).toBe("…/wakaru44/kanhrd");
+    expect(el.querySelector(".project")?.getAttribute("title")).toBe(PROJECT.checkout_path);
+  });
+
+  it("keeps the full path in the DOM so it is reachable without a pointer", () => {
+    const el = render(pane({ project: PROJECT }));
+    expect(el.querySelector(".project .checkout-full")?.textContent?.trim()).toBe(
+      PROJECT.checkout_path,
+    );
+  });
+
+  it("renders a shallow checkout path whole, with no ellipsis prefix", () => {
+    const el = render(pane({ project: { ...PROJECT, checkout_path: "/srv" } }));
+    expect(el.querySelector(".project .checkout-tail")?.textContent?.trim()).toBe("/srv");
+  });
+
+  it("renders no project line at all — no placeholder, no dash — when the pane has none", () => {
+    const el = render(pane());
+    expect(el.querySelector(".project")).toBeNull();
+    expect(el.querySelector(".path")?.textContent?.trim()).toBe("kanhrd / main");
+  });
+
+  it("drops the project line in the compact variant, where the location lives on the detail route", () => {
+    const el = render(pane({ project: PROJECT }), capsWithTerminal("laptop"), true);
+    const path = el.querySelector<HTMLElement>(".path");
+
+    expect(path).not.toBeNull();
+    // The whole location row is hidden in compact, so a long checkout path
+    // cannot widen the card at phone width (where compact is forced).
+    expect(getComputedStyle(path!).display).toBe("none");
   });
 
   it("shows the workspace / tab path", () => {
@@ -347,6 +426,82 @@ describe("Card", () => {
     }
     text = text.replace(/\d+[smh]/, "").replace(/\d+ lines/, "");
     expect(text.trim()).toBe("");
+  });
+
+  // --- rename (herdr's pane.rename, exposed on the card) -------------------
+
+  it("offers rename in the overflow menu only when the pen advertises paneRename", () => {
+    const withRename = renderFixture(pane(), capsWithTerminal("laptop", { paneRename: true }));
+    clickAndSettle(withRename, ".overflow-trigger");
+    expect(
+      (withRename.nativeElement as HTMLElement).querySelector('[role="menuitem"].rename'),
+    ).not.toBeNull();
+
+    const without = renderFixture(pane(), capsWithTerminal("laptop", tier3));
+    clickAndSettle(without, ".overflow-trigger");
+    expect((without.nativeElement as HTMLElement).querySelector('[role="menuitem"].rename')).toBeNull();
+  });
+
+  it("keeps the overflow trigger visible on first render, with no hover simulation", () => {
+    const el = render(pane(), capsWithTerminal("laptop", { paneRename: true }));
+    const trigger = el.querySelector<HTMLElement>(".overflow-trigger");
+
+    expect(trigger).not.toBeNull();
+    expect(getComputedStyle(trigger!.parentElement!).display).not.toBe("none");
+  });
+
+  it("seeds the rename modal with the current label and sends the trimmed value", async () => {
+    const fixture = renderFixture(
+      pane({ label: "old name" }),
+      capsWithTerminal("laptop", { paneRename: true }),
+    );
+    clickAndSettle(fixture, ".overflow-trigger");
+    clickAndSettle(fixture, '[role="menuitem"].rename');
+
+    const el = fixture.nativeElement as HTMLElement;
+    const field = el.querySelector<HTMLInputElement>("app-rename-modal .field");
+    expect(field?.value).toBe("old name");
+
+    field!.value = "  fix the backlog storm  ";
+    field!.dispatchEvent(new Event("input"));
+    fixture.detectChanges();
+    clickAndSettle(fixture, "app-rename-modal .btn.primary");
+
+    expect(store.renamePane).toHaveBeenCalledWith("laptop", "pane-12345678", "fix the backlog storm");
+  });
+
+  it("sends label: null when the submitted name is empty after trimming", async () => {
+    const fixture = renderFixture(
+      pane({ label: "old name" }),
+      capsWithTerminal("laptop", { paneRename: true }),
+    );
+    clickAndSettle(fixture, ".overflow-trigger");
+    clickAndSettle(fixture, '[role="menuitem"].rename');
+
+    const field = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      "app-rename-modal .field",
+    );
+    field!.value = "   ";
+    field!.dispatchEvent(new Event("input"));
+    fixture.detectChanges();
+    clickAndSettle(fixture, "app-rename-modal .btn.primary");
+
+    expect(store.renamePane).toHaveBeenCalledWith("laptop", "pane-12345678", null);
+  });
+
+  it("returns focus to the overflow trigger when the rename modal is cancelled", () => {
+    const fixture = renderFixture(pane(), capsWithTerminal("laptop", { paneRename: true }));
+    clickAndSettle(fixture, ".overflow-trigger");
+    clickAndSettle(fixture, '[role="menuitem"].rename');
+
+    const el = fixture.nativeElement as HTMLElement;
+    el.querySelector<HTMLElement>("app-rename-modal .modal")!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    fixture.detectChanges();
+
+    expect(store.renamePane).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(el.querySelector(".overflow-trigger"));
   });
 
   it("labels its actions from copy, with the sanctioned close verb", () => {

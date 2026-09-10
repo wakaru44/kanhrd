@@ -106,6 +106,21 @@ describe("panes.store reducers", () => {
     });
     expect(panes.size).toBe(0);
   });
+
+  it("applyEvent upserts a renamed pane in place on pane.updated", () => {
+    const p = pane();
+    let panes: PaneMap = new Map();
+    panes = applyEvent(panes, { host: p.host, event: "pane.created", payload: { pane: p } });
+
+    panes = applyEvent(panes, {
+      host: p.host,
+      event: "pane.updated",
+      payload: { pane: { ...p, label: "fix the backlog storm" } },
+    });
+
+    expect(panes.size).toBe(1);
+    expect(panes.get(paneKey(p.host, p.id))?.label).toBe("fix the backlog storm");
+  });
 });
 
 describe("groupByStatus", () => {
@@ -200,6 +215,7 @@ describe("PanesStore capabilities probing", () => {
           paneCreate: false,
           paneClose: false,
           paneMove: false,
+          paneRename: false,
           tabCrud: false,
           workspaceCrud: false,
         });
@@ -228,6 +244,7 @@ describe("PanesStore capabilities probing", () => {
       paneCreate: false,
       paneClose: false,
       paneMove: false,
+      paneRename: false,
       tabCrud: false,
       workspaceCrud: false,
     });
@@ -727,6 +744,34 @@ describe("PanesStore close actions are optimistic (don't wait on the broadcast e
     // No event was ever emitted — purge came from the response alone.
     expect(store.tabsSignal().has(paneKey("laptop", "t1"))).toBe(false);
     expect(store.panesSignal().has(paneKey("laptop", "p1"))).toBe(false);
+  });
+
+  it("renamePane applies the returned label without waiting for the pane.updated broadcast", async () => {
+    const { store, httpMock } = setUp();
+    const seededPane = pane({ id: "p1", host: "laptop" });
+    ws.request.and.callFake((_host: string, method: string, params?: unknown) => {
+      if (method === "pane.list") return Promise.resolve({ panes: [seededPane] });
+      if (method === "events.subscribe") return Promise.resolve({ subscription_id: "s1" });
+      if (method === "pane.rename") {
+        const label = (params as { label: string | null }).label;
+        return Promise.resolve({
+          pane: label === null ? seededPane : { ...seededPane, label },
+        });
+      }
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+    await settle();
+    for (const req of httpMock.match("/api/hosts")) {
+      if (!req.cancelled) req.flush({ hosts: [{ name: "laptop", connected: true }] });
+    }
+    await settle();
+
+    await store.renamePane("laptop", "p1", "fix the backlog storm");
+    expect(store.panesSignal().get(paneKey("laptop", "p1"))?.label).toBe("fix the backlog storm");
+
+    // Clearing round-trips too: herdr answers with a pane that has no label.
+    await store.renamePane("laptop", "p1", null);
+    expect(store.panesSignal().get(paneKey("laptop", "p1"))?.label).toBeUndefined();
   });
 
   it("closePane removes the pane as soon as the request resolves — no pane.closed event fired", async () => {

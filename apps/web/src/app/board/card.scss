@@ -112,15 +112,67 @@ a.card-open::after {
   }
 }
 
+/*
+ * Location row: `field / lane` first, then herdr's own project provenance.
+ * One non-wrapping line that truncates inside the card — `min-width: 0` on
+ * both the row and its children is what keeps a 200-character checkout path
+ * from widening the column and, through it, the page.
+ */
 .path {
   grid-area: path;
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
   min-width: 0;
   font-size: var(--fs-small);
   line-height: var(--lh-small);
   color: var(--ink-mute);
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.location {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The project herdr already knows about: repo name, then where it is checked out. */
+.project {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  color: var(--ink-mute);
+}
+
+.repo,
+.checkout {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+ * The full path is reachable WITHOUT a pointer: focusing the card swaps the
+ * computed tail for the whole path (and the detail route always shows it in
+ * full). `title` is a pointer convenience on top, never the only route.
+ */
+.checkout-full {
+  display: none;
+}
+
+.card:focus-within {
+  .checkout-tail {
+    display: none;
+  }
+
+  .checkout-full {
+    display: block;
+  }
 }
 
 /* Meta row: durations and counts in mono. Elapsed is observed client time. */
@@ -134,6 +186,14 @@ a.card-open::after {
   line-height: var(--lh-caption);
   color: var(--ink-mute);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The agent identity a card name displaced — muted, never louder than the title. */
+.identity {
+  min-width: 0;
+  font-family: var(--font-ui);
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -178,10 +238,15 @@ a.card-open::after {
   gap: var(--sp-1);
 }
 
-/* The overflow trigger replaces the inline row in the compact variant. */
+/*
+ * Visible on first render in BOTH densities — rename lives only in this menu
+ * (docs/UX-GUIDELINES.md § visible affordances: no hover-only pencil), so a
+ * trigger hidden at standard density would hide the action entirely. In the
+ * compact variant it also replaces the inline row.
+ */
 .actions-overflow {
   position: relative;
-  display: none;
+  display: block;
 }
 
 .card-action {
@@ -274,10 +339,6 @@ a.card-open::after {
 
   .actions-inline {
     display: none;
-  }
-
-  .actions-overflow {
-    display: block;
   }
 }
 

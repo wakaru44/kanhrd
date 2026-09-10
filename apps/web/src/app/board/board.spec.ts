@@ -404,6 +404,7 @@ describe("Board: URL scope (rail = navigator, decision locked)", () => {
           paneCreate: false,
           paneClose: false,
           paneMove: false,
+          paneRename: false,
           tabCrud: false,
           workspaceCrud: false,
         });
@@ -585,6 +586,7 @@ describe("Board: filter interaction with the pager", () => {
           paneCreate: false,
           paneClose: false,
           paneMove: false,
+          paneRename: false,
           tabCrud: false,
           workspaceCrud: false,
         });
@@ -707,6 +709,7 @@ describe("Board: an invalid scope is reported, never silently swallowed", () => 
           paneCreate: false,
           paneClose: false,
           paneMove: false,
+          paneRename: false,
           tabCrud: false,
           workspaceCrud: false,
         });

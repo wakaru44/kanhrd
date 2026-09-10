@@ -59,4 +59,69 @@ describe("projectPane", () => {
     const result = projectPane("local", pane({ title: "fix the bug" }), names);
     expect(result.title).toBe("fix the bug");
   });
+
+  // --- herdr's user-authored pane label ------------------------------------
+
+  it("forwards a non-empty label", () => {
+    const names = new WorkspaceTabNameCache();
+    const result = projectPane("local", pane({ label: "fix the backlog storm" }), names);
+    expect(result.label).toBe("fix the backlog storm");
+  });
+
+  it("omits the label entirely when herdr reports null, absent or empty", () => {
+    const names = new WorkspaceTabNameCache();
+
+    // `null` is herdr's cleared form; the projection must not emit `null`.
+    const cleared = projectPane("local", pane({ label: null as unknown as string }), names);
+    expect("label" in cleared).toBe(false);
+
+    const absent = projectPane("local", pane(), names);
+    expect("label" in absent).toBe(false);
+
+    const empty = projectPane("local", pane({ label: "" }), names);
+    expect("label" in empty).toBe(false);
+  });
+
+  // --- git provenance joined from the owning workspace ---------------------
+
+  it("joins project provenance from the owning workspace's worktree, dropping repo_key/repo_root", () => {
+    const names = new WorkspaceTabNameCache();
+    names.setWorkspace("ws-1", "Inbox", {
+      repo_key: "gh:wakaru44/kanhrd",
+      repo_name: "kanhrd",
+      repo_root: "/home/op/src/kanhrd",
+      checkout_path: "/home/op/src/kanhrd",
+      is_linked_worktree: false,
+    });
+
+    const result = projectPane("local", pane(), names);
+
+    expect(result.project).toEqual({
+      repo_name: "kanhrd",
+      checkout_path: "/home/op/src/kanhrd",
+      is_linked_worktree: false,
+    });
+  });
+
+  it("carries is_linked_worktree for a linked worktree", () => {
+    const names = new WorkspaceTabNameCache();
+    names.setWorkspace("ws-1", "Inbox", {
+      repo_key: "gh:wakaru44/kanhrd",
+      repo_name: "kanhrd",
+      repo_root: "/home/op/src/kanhrd",
+      checkout_path: "/home/op/worktrees/lane-a",
+      is_linked_worktree: true,
+    });
+
+    expect(projectPane("local", pane(), names).project?.is_linked_worktree).toBe(true);
+  });
+
+  it("omits project when the owning workspace has no worktree", () => {
+    const names = new WorkspaceTabNameCache();
+    names.setWorkspace("ws-1", "Inbox");
+
+    const result = projectPane("local", pane(), names);
+
+    expect("project" in result).toBe(false);
+  });
 });

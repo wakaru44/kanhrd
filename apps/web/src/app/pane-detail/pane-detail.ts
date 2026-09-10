@@ -24,8 +24,11 @@ import { TerminalFontSizeService } from "../state/terminal-font-size.service";
 import { ToastService } from "../state/toast.service";
 import { ClockTick, formatElapsed } from "../util/clock";
 import { COPY, fill } from "../shared/copy";
+import { RenameModal } from "../shared/rename-modal";
+import { paneTitle } from "../util/pane-title";
 import {
   LucideArrowLeft,
+  LucidePencil,
   LucideRefreshCw,
   LucideTriangleAlert,
   LucideUnplug,
@@ -62,7 +65,15 @@ export type PaneViewState = "loading" | "failed" | "unavailable" | "stale" | "em
  */
 @Component({
   selector: "app-pane-detail",
-  imports: [RouterLink, LucideArrowLeft, LucideRefreshCw, LucideTriangleAlert, LucideUnplug],
+  imports: [
+    RouterLink,
+    RenameModal,
+    LucideArrowLeft,
+    LucidePencil,
+    LucideRefreshCw,
+    LucideTriangleAlert,
+    LucideUnplug,
+  ],
   templateUrl: "./pane-detail.html",
   styleUrl: "./pane-detail.scss",
 })
@@ -100,10 +111,26 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
 
   protected readonly pane = computed(() => this.store.panesSignal().get(paneKey(this.host(), this.id())));
 
-  /** UI-sans title, never the display serif: this is a repeated technical identifier. */
-  protected readonly title = computed(
-    () => this.pane()?.agent?.name ?? this.pane()?.title ?? this.id(),
+  /**
+   * UI-sans title, never the display serif: this is a repeated technical
+   * identifier. Same precedence the board card uses (`util/pane-title.ts`),
+   * with the route's own id as the fallback for a pane the store has not
+   * seen yet.
+   */
+  protected readonly title = computed(() => {
+    const pane = this.pane();
+    return pane ? paneTitle(pane) : this.id();
+  });
+
+  /** herdr's git provenance for this pane's workspace — the FULL path here, never the card's truncated form. */
+  protected readonly project = computed(() => this.pane()?.project ?? null);
+
+  /** Whether `pane.rename` will succeed on this pane's pen. */
+  protected readonly paneRenameAvailable = computed(
+    () => this.store.capabilitiesSignal().get(this.host())?.paneRename === true,
   );
+
+  protected readonly showRename = signal(false);
   protected readonly statusKey = computed(() => this.pane()?.agent_status ?? "unknown");
   protected readonly statusLabel = computed(() => {
     const key = this.statusKey();
@@ -125,6 +152,12 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   private subscriptionId: string | null = null;
   private subscriptionHost: string | null = null;
   private outputEventsSub: Subscription | null = null;
+  /**
+   * The last full snapshot written for the pane in the route, so the next one
+   * can be recognised as an append instead of repainted from scratch. Cleared
+   * on every pane load — a snapshot of one pane is never a prefix of another's.
+   */
+  private lastSnapshot = "";
   /** Flips true once the terminal container exists, so the load effect below has something to write into. */
   private readonly viewReady = signal(false);
 
@@ -419,6 +452,20 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     this.term = null;
   }
 
+  protected async onRenameSaved(label: string | null): Promise<void> {
+    this.showRename.set(false);
+    try {
+      await this.store.renamePane(this.host(), this.id(), label);
+    } catch (err) {
+      this.toast.push({
+        level: "error",
+        message: fill(COPY.toast.renameFailed, {
+          reason: err instanceof Error ? err.message : String(err),
+        }),
+      });
+    }
+  }
+
   /** Failed state's only action: re-run the same load for the pane in the route. */
   protected retry(): void {
     const host = this.host();
@@ -446,6 +493,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     }
     this.teardownSubscription();
     this.term.reset();
+    this.lastSnapshot = "";
     this.frameReceived.set(false);
     this.hasContent.set(false);
     this.failure.set(null);
@@ -460,6 +508,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
         return; // stale: the route moved on again while this request was in flight
       }
       if (result) {
+        this.lastSnapshot = result.content;
         this.term.write(result.content);
         this.revision.set(result.revision);
         this.lastPollAt.set(Date.now());
@@ -470,7 +519,15 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       // it suppresses a one-frame `stale` flash between the read landing
       // and the subscription being confirmed.
       try {
-        const sub = await this.ws.request(host, "pane.subscribe_output", { pane_id: id });
+        const sub = await this.ws.request(host, "pane.subscribe_output", {
+          pane_id: id,
+          // The same request the initial read above makes. `pane.output` is a
+          // full snapshot painted over the whole terminal, so a live stream at
+          // a narrower source than the first paint deletes this pane's
+          // scrollback on the first poll.
+          source: "recent",
+          format: "ansi",
+        });
         if (this.host() !== host || this.id() !== id) {
           if (sub) {
             void this.ws.request(host, "pane.unsubscribe_output", { subscription_id: sub.subscription_id });
@@ -510,12 +567,55 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     if (payload.subscription_id !== this.subscriptionId) {
       return;
     }
-    this.term.reset();
-    this.term.write(payload.content);
+    this.paint(this.term, payload.content);
     this.revision.set(payload.revision);
     this.lastPollAt.set(Date.now());
     this.frameReceived.set(true);
     this.hasContent.set(payload.content.length > 0);
+  }
+
+  /**
+   * Renders a full `pane.output` snapshot without destroying what the reader
+   * is looking at.
+   *
+   * `pane.output.content` is always the pane's whole current content, never a
+   * delta (ADR-0004), and the prescribed handling is `reset(); write()`. That
+   * is correct and it is also the reason a reader cannot hold their place: it
+   * empties the scrollback buffer and drops the viewport to the bottom, up to
+   * once per bridge poll interval.
+   *
+   * Two cases, in order:
+   *
+   * - **Append.** The new snapshot starts with the previous one — a program
+   *   printing more lines, which is nearly every snapshot. Only the suffix is
+   *   written. No reset, no repaint of what is already on screen, and xterm.js
+   *   leaves a scrolled-up viewport where it is when rows arrive at the bottom.
+   * - **Redraw.** Anything else (vim, htop, `clear`, a reflow). `reset()` +
+   *   full write, with the viewport's absolute line offset captured before and
+   *   restored after — except when the reader was already at the bottom, where
+   *   following the tail is the point.
+   */
+  private paint(term: Terminal, content: string): void {
+    const previous = this.lastSnapshot;
+    this.lastSnapshot = content;
+    if (previous.length > 0 && content.length >= previous.length && content.startsWith(previous)) {
+      const appended = content.slice(previous.length);
+      if (appended.length > 0) {
+        term.write(appended);
+      }
+      return;
+    }
+    const buffer = term.buffer.active;
+    // `baseY` is the top line of the last screenful, `viewportY` the top line
+    // actually shown — equal means "pinned to the bottom".
+    const anchoredAt = buffer.viewportY;
+    const wasAtBottom = buffer.viewportY >= buffer.baseY;
+    term.reset();
+    term.write(content, () => {
+      if (!wasAtBottom) {
+        term.scrollToLine(anchoredAt);
+      }
+    });
   }
 
   private handleInput(data: string): void {

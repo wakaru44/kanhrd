@@ -24,6 +24,7 @@ function noopHost(overrides: Partial<DispatchHost> = {}): DispatchHost {
     paneSendText: () => Promise.resolve(),
     paneSplit: () => Promise.resolve({ pane: SAMPLE_PANE }),
     paneClose: () => Promise.resolve(),
+    paneRename: () => Promise.resolve({ pane: SAMPLE_PANE }),
     paneMove: () =>
       Promise.resolve({
         changed: true,
@@ -138,6 +139,7 @@ describe("dispatch", () => {
         paneCreate: true,
         paneClose: true,
         paneMove: true,
+        paneRename: true,
         tabCrud: true,
         workspaceCrud: true,
         hostKeybinds: { prefix: "Ctrl+B", source: "default" },
@@ -397,6 +399,67 @@ describe("dispatch", () => {
 
     expect(tabCreate).toHaveBeenCalledWith({});
     expect(response).toEqual({ id: "21", host: "local", ok: true, data: { tab: SAMPLE_TAB, pane: SAMPLE_PANE } });
+  });
+
+  // --- pane.rename (herdr's user-authored pane label) ---------------------
+
+  it("proxies pane.rename to the host and returns the updated pane", async () => {
+    const renamed: Pane = { ...SAMPLE_PANE, label: "fix the backlog storm" };
+    const paneRename = vi.fn(() => Promise.resolve({ pane: renamed }));
+    const host = noopHost({ paneRename });
+    const request: WsRequest = {
+      id: "22a",
+      host: "local",
+      method: "pane.rename",
+      params: { pane_id: "pane-1", label: "fix the backlog storm" },
+    };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
+
+    expect(paneRename).toHaveBeenCalledWith({ pane_id: "pane-1", label: "fix the backlog storm" });
+    expect(response).toEqual({ id: "22a", host: "local", ok: true, data: { pane: renamed } });
+  });
+
+  it("forwards a null label verbatim — herdr's explicit clear form", async () => {
+    const paneRename = vi.fn(() => Promise.resolve({ pane: SAMPLE_PANE }));
+    const host = noopHost({ paneRename });
+    const request: WsRequest = {
+      id: "22b",
+      host: "local",
+      method: "pane.rename",
+      params: { pane_id: "pane-1", label: null },
+    };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
+
+    expect(paneRename).toHaveBeenCalledWith({ pane_id: "pane-1", label: null });
+    expect(response.ok).toBe(true);
+    if (response.ok) expect((response.data as { pane: Pane }).pane.label).toBeUndefined();
+  });
+
+  it("rejects pane.rename without a pane_id", async () => {
+    const request: WsRequest = { id: "22c", host: "local", method: "pane.rename", params: {} as never };
+    const response = await dispatch(request, baseCtx());
+
+    expect(response.ok).toBe(false);
+    if (!response.ok) expect(response.error.code).toBe("invalid_params");
+  });
+
+  it("surfaces a herdr error from pane.rename instead of pretending it succeeded", async () => {
+    const host = noopHost({
+      paneRename: () => Promise.reject(new HerdrRequestError("pane_not_found", "no such pane")),
+    });
+    const request: WsRequest = {
+      id: "22d",
+      host: "local",
+      method: "pane.rename",
+      params: { pane_id: "gone", label: "x" },
+    };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
+
+    expect(response.ok).toBe(false);
+    if (!response.ok) {
+      expect(response.error.code).toBe("pane_not_found");
+      expect(response.error.message).toContain("no such pane");
+    }
   });
 
   it("proxies tab.rename to the host", async () => {

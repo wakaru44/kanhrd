@@ -35,6 +35,7 @@ class FakePanesStore {
           paneCreate: false,
           paneClose: false,
           paneMove: false,
+          paneRename: false,
           tabCrud: false,
           workspaceCrud: false,
         },
