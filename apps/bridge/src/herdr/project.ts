@@ -7,6 +7,7 @@ import type {
   WorkspaceSummary,
 } from '@kanhrd/schema';
 import type { WorkspaceTabNameCache } from './names.js';
+import { resolveRepo } from './repo.js';
 
 /**
  * Assemble a bridge-projected `Pane` from herdr's raw `PaneInfo`, the
@@ -44,16 +45,31 @@ export function projectPane(
   if (agentName !== undefined) projected.agent = { name: agentName };
   if (statusSince !== undefined) projected.status_since = statusSince;
 
-  // Git provenance is a WORKSPACE property in herdr; the join is the same
-  // one that already resolves `workspace.name`, carrying one more value.
-  // `repo_key`/`repo_root` are dropped — nothing renders them.
-  const worktree = names.workspaceWorktree(pane.workspace_id);
-  if (worktree !== undefined) {
-    projected.project = {
-      repo_name: worktree.repo_name,
-      checkout_path: worktree.checkout_path,
-      is_linked_worktree: worktree.is_linked_worktree,
-    };
+  // Git provenance is derived PER PANE, from the pane's own working
+  // directory. One herdr workspace routinely holds panes in several
+  // repositories, so the workspace grain this used to use could never split
+  // them — every card landed in one band when grouping the board by
+  // repository.
+  //
+  // `cwd`, never `foreground_cwd`: `foreground_cwd` follows whatever the
+  // foreground process cd'd into, so a card derived from it would hop bands
+  // mid-command. `cwd` is the pane's stable home.
+  //
+  // The workspace's own `worktree` stays as a FALLBACK for a herdr that
+  // sends it but no `cwd` (this build sends the opposite). `repo_key` /
+  // `repo_root` are dropped — nothing renders them.
+  const fromCwd = pane.cwd === undefined ? undefined : resolveRepo(pane.cwd);
+  if (fromCwd !== undefined) {
+    projected.project = fromCwd;
+  } else {
+    const worktree = names.workspaceWorktree(pane.workspace_id);
+    if (worktree !== undefined) {
+      projected.project = {
+        repo_name: worktree.repo_name,
+        checkout_path: worktree.checkout_path,
+        is_linked_worktree: worktree.is_linked_worktree,
+      };
+    }
   }
 
   return projected;

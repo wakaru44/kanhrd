@@ -87,16 +87,40 @@ band, which is the correct granularity: a band's column is the scrolling
 region. Bands multiply the scrollers, so verify the count stays sane at
 the documented fixture size before shipping.
 
+## Follow-on — pane-grain provenance, 2026-09-11
+
+The bands shipped and immediately produced feedback: grouping by
+repository split nothing. Every card landed in one band.
+
+The swimlane code was not at fault. `Pane.project` was empty, because
+the bridge read git provenance off `workspace.list`'s `worktree` and
+this herdr sends no such field. And the grain was wrong even when full:
+provenance was documented and derived per WORKSPACE, while the live
+flock runs two repositories inside one workspace, which workspace-grain
+provenance can never tell apart.
+
+So the fix folds into this change rather than starting a new one: the
+bridge now derives `Pane.project` from each pane's own `cwd` by walking
+up for a `.git`. The published `project` shape is unchanged, so the SPA
+— `card.ts` and `bandOf` — is untouched; only the derivation and the
+documented grain move. `design.md` records the decisions; `tasks.md`
+§ 7 is the work and § 8 what is deferred.
+
 ## Impact
 
-- Affected specs: `board-swimlanes` (new); interacts with
+- Affected specs: `board-swimlanes` (new); `pane-workdir-and-task-title`
+  (modified — project provenance moves to pane grain); interacts with
   `tier-1-kanban`'s board layout and with `board-parked-columns`.
 - Affected code: `apps/web/src/app/board/**`,
-  `apps/web/src/app/state/settings.service.ts`, the Settings screen.
-- No bridge, wire, schema or capability change.
+  `apps/web/src/app/state/settings.service.ts`, the Settings screen;
+  and, for the follow-on, `packages/schema/src/herdr.ts` plus
+  `apps/bridge/src/herdr/{project,names,hosts,repo}.ts`.
+- No wire method, capability flag or herdr request is added. The
+  published `Pane` shape is unchanged; `HerdrPaneInfo` gains two
+  optional fields herdr was already sending.
 
 ## Status
 
-**Proposal.** Every gate question is answered, so this is implementable
-whenever it is scheduled. It does not block and is not blocked by
+**Shipped, with the provenance follow-on folded in.** Every gate
+question is answered. It does not block and is not blocked by
 `add-parked-columns`: the two features occupy different axes.
