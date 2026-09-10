@@ -1,0 +1,32 @@
+apps/web/src/app/state/board-return.service.ts
+  s_a62153c2b8328e::t_5556289c760b02 1-113
+apps/web/src/app/pane-detail/pane-detail.spec.ts
+  s_a62153c2b8328e::t_454bc0adf4272d 15,699-732,737-741
+  s_a62153c2b8328e::t_15332ef2bcd220 733-736
+  s_a62153c2b8328e::t_b3f24cdadd1245 742
+apps/web/src/app/pane-detail/pane-detail.html
+  s_a62153c2b8328e::t_e52738b1955c6a 11,84,95
+apps/web/src/app/state/board-return.service.spec.ts
+  s_a62153c2b8328e::t_5556289c760b02 1-117
+apps/web/src/app/pane-detail/pane-detail.ts
+  s_a62153c2b8328e::t_a46654eac54b2e 36
+  s_a62153c2b8328e::t_c6de7cee56103c 89,93-100,105
+  s_a62153c2b8328e::t_e52738b1955c6a 101-104,106
+  s_a62153c2b8328e::t_e530b6b77973d5 107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "29acdc18dbd64e8dd29d981b02ac491e6056f72d",
+  "prompts": {},
+  "sessions": {
+    "s_a62153c2b8328e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fae23786-fdaa-46af-b39c-69a564a2b7c2",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
