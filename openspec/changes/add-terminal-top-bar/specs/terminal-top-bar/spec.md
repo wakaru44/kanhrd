@@ -1,17 +1,17 @@
 ## Purpose
 
 The pane-detail route's header is the operator's whole sense of place
-while a terminal is open: which pen, which field, which lane, which card
+while a terminal is open: which host, which workspace, which tab, which card
 — and which other cards sit beside this one. This capability makes that
-header a herdr-like session bar: it adds a field / lane breadcrumb and a
-switcher over the sibling cards in the same lane, reachable by mouse,
+header a herdr-like session bar: it adds a workspace / tab breadcrumb and a
+switcher over the sibling cards in the same tab, reachable by mouse,
 touch and keyboard, without taking the terminal's keys away.
 
 ## Vocabulary
 
-UI copy says **pen / field / lane / card**; wire, API, schema and code
-say `host` / `workspace` / `tab` / `pane`. A **sibling card** is a pane
-on the same pen with the same `tab.id` as the pane in the route,
+UI copy says **host / workspace / tab / card**; wire, API, schema and
+code say `host` / `workspace` / `tab` / `pane`. A **sibling card** is a pane
+on the same host with the same `tab.id` as the pane in the route,
 including the pane in the route itself. The **top bar** is the pane
 detail view's single header element; the **switcher** is the sibling
 strip inside it.
@@ -48,19 +48,19 @@ duplicated.
 
 #### Scenario: The terminal is refitted when the header grows
 
-- **WHEN** the switcher appears (a second card joins the lane) and the
+- **WHEN** the switcher appears (a second card joins the tab) and the
   header therefore becomes taller
 - **THEN** the terminal refits to the reduced container height and its
   prompt remains visible and reachable
 
-### Requirement: The top bar shows the card's pen, field and lane
+### Requirement: The top bar shows the card's host, workspace and tab
 
-The top bar SHALL show the card's field name and lane name, rendered as
-`field / lane` in `--ink-mute`, derived from the projected pane's
+The top bar SHALL show the card's workspace name and tab name, rendered as
+`workspace / tab` in `--ink-mute`, derived from the projected pane's
 `workspace.name` and `tab.name`.
 
-The pen SHALL continue to be carried by the existing hanko seal already
-in the header; the breadcrumb SHALL NOT repeat the pen name.
+The host SHALL continue to be carried by the existing hanko seal already
+in the header; the breadcrumb SHALL NOT repeat the host name.
 
 Both names SHALL come from the pane already in `PanesStore`. No wire
 method, schema field, capability flag or herdr call SHALL be added to
@@ -69,15 +69,15 @@ obtain them.
 A name that is longer than its slot SHALL truncate with an ellipsis, and
 truncating a name SHALL NOT truncate the card title.
 
-Below `--breakpoint-mobile` the breadcrumb SHALL show the lane name
+Below `--breakpoint-mobile` the breadcrumb SHALL show the tab name
 alone, so the title keeps its row.
 
 #### Scenario: Breadcrumb on the detail route
 
 - **WHEN** the operator opens a card whose pane reports
   `workspace.name = "api"` and `tab.name = "build"`
-- **THEN** the top bar shows `api / build` and the pen seal shows the
-  pen name
+- **THEN** the top bar shows `api / build` and the host seal shows the
+  host name
 
 #### Scenario: No new wire traffic for the breadcrumb
 
@@ -88,13 +88,13 @@ alone, so the title keeps its row.
 #### Scenario: At 390px
 
 - **WHEN** the detail route renders at a 390px-wide viewport
-- **THEN** the breadcrumb shows the lane name only, the title is not
+- **THEN** the breadcrumb shows the tab name only, the title is not
   truncated by the breadcrumb, and the page does not scroll horizontally
 
-### Requirement: The top bar offers a switcher over the sibling cards in this lane
+### Requirement: The top bar offers a switcher over the sibling cards in this tab
 
 When the pane in the route has at least one sibling card, the top bar
-SHALL render a switcher listing every card in that lane, the current one
+SHALL render a switcher listing every card in that tab, the current one
 included.
 
 Siblings SHALL be derived client-side as the panes in
@@ -117,7 +117,7 @@ The current card's entry SHALL be marked as current by text weight
 `aria-current="page"` — never by a colour fill alone, per
 `docs/DESIGN-SYSTEM.md`.
 
-When the lane holds exactly one card the switcher SHALL NOT be rendered
+When the tab holds exactly one card the switcher SHALL NOT be rendered
 at all: no empty strip, no disabled control, no placeholder.
 
 Entries that do not fit SHALL scroll horizontally **inside the
@@ -141,9 +141,9 @@ route-navigator strip: the sentence rules out a multi-pane or split
 view, and each switcher entry is a `routerLink` to `/pane/:host/:id`
 showing one terminal at a time.
 
-#### Scenario: Two cards share a lane
+#### Scenario: Two cards share a tab
 
-- **WHEN** the operator opens a card whose lane holds two panes
+- **WHEN** the operator opens a card whose tab holds two panes
 - **THEN** the top bar shows a switcher with two entries, the current
   card's entry marked current and reporting `aria-current="page"`
 
@@ -154,21 +154,21 @@ showing one terminal at a time.
   terminal loads that pane, and the switcher now marks that entry as
   current
 
-#### Scenario: A lane of one
+#### Scenario: A tab of one
 
-- **WHEN** the operator opens a card that is the only pane in its lane
+- **WHEN** the operator opens a card that is the only pane in its tab
 - **THEN** no switcher is rendered
 
 #### Scenario: A sibling closes
 
-- **WHEN** a sibling pane is closed on the pen and its `pane.closed`
+- **WHEN** a sibling pane is closed on the host and its `pane.closed`
   event reaches the store
-- **THEN** its entry leaves the switcher, and if the lane is left with
+- **THEN** its entry leaves the switcher, and if the tab is left with
   one card the switcher stops rendering
 
-#### Scenario: A sibling on a disconnected pen
+#### Scenario: A sibling on a disconnected host
 
-- **WHEN** the pen goes out of sight while pane detail is open
+- **WHEN** the host goes out of sight while pane detail is open
 - **THEN** the already-listed siblings remain listed and the view shows
   its existing unavailable state — the switcher does not blank
 
@@ -177,12 +177,12 @@ showing one terminal at a time.
 - **WHEN** the switcher renders siblings that were all present at the
   last `pane.list`
 - **THEN** they appear in the order the store holds them, which is
-  herdr's own layout order for that lane, and a card created afterwards
+  herdr's own layout order for that tab, and a card created afterwards
   appears at the end
 
 #### Scenario: At 390px
 
-- **WHEN** the detail route renders at a 390px-wide viewport for a lane
+- **WHEN** the detail route renders at a 390px-wide viewport for a tab
   with several cards
 - **THEN** the switcher renders as a horizontally scrolling strip, the
   back control is visible without scrolling, every entry meets
@@ -196,7 +196,7 @@ This capability adds two actions (maintainer decision D3 follow-up,
 
 **`next-sibling-card`** SHALL be bound to the prefix chord
 **`prefix + o`**. It SHALL navigate directly to the next sibling card in
-the lane, wrapping from the last to the first, without opening the
+the tab, wrapping from the last to the first, without opening the
 switcher. This mirrors tmux and herdr, where `prefix + o` goes to the
 next pane; kanhrd already mirrors their tab movement in
 `keyboard.service.ts` (`prefix + n` / `prefix + p` / `prefix + l` /
@@ -232,7 +232,7 @@ SHALL NOT navigate until the operator activates an entry, so a keyboard
 user does not load four panes on the way to the fifth.
 
 No binding in this capability SHALL fire when the pane is the only card
-in its lane: `prefix + o` SHALL be a no-op there, and the switcher
+in its tab: `prefix + o` SHALL be a no-op there, and the switcher
 bindings SHALL do nothing since no switcher is rendered.
 
 Focus SHALL be visible on every entry; `:focus-visible` SHALL NOT be
@@ -241,7 +241,7 @@ suppressed.
 #### Scenario: Reaching the switcher from a live terminal
 
 - **WHEN** the terminal has focus and the operator presses `Ctrl+Alt+I`
-  in a lane with more than one card
+  in a tab with more than one card
 - **THEN** focus moves to the switcher's current entry and the keystroke
   is not sent to the pane
 
@@ -279,36 +279,36 @@ suppressed.
 
 #### Scenario: Nothing to switch to
 
-- **WHEN** the pane is the only card in its lane and the operator presses
+- **WHEN** the pane is the only card in its tab and the operator presses
   `Ctrl+Alt+I`
 - **THEN** nothing is focused, no error is shown, and the keystroke is
   passed to the terminal unchanged
 
 #### Scenario: `prefix + o` hops to the next sibling
 
-- **WHEN** the terminal does not have focus, the lane holds three cards,
+- **WHEN** the terminal does not have focus, the tab holds three cards,
   and the operator presses the prefix followed by `o`
 - **THEN** the route becomes the next sibling's `/pane/:host/:id`
   without the switcher being opened or focused
 
 #### Scenario: `prefix + o` wraps
 
-- **WHEN** the operator is on the last card of the lane and presses the
+- **WHEN** the operator is on the last card of the tab and presses the
   prefix followed by `o`
-- **THEN** the route becomes the first card of the lane
+- **THEN** the route becomes the first card of the tab
 
-#### Scenario: `prefix + o` in a lane of one
+#### Scenario: `prefix + o` in a tab of one
 
-- **WHEN** the pane is the only card in its lane and the operator presses
+- **WHEN** the pane is the only card in its tab and the operator presses
   the prefix followed by `o`
 - **THEN** the route is unchanged and no request is sent
 
-### Requirement: The bar carries a visible control for hopping to the next card in the lane
+### Requirement: The bar carries a visible control for hopping to the next card in the tab
 
 `prefix + o` needs a pointer affordance, since
 `docs/UX-GUIDELINES.md` requires visible affordances rather than
 keyboard-only paths. The bar SHALL therefore carry a **next-card
-button** whenever the pane shares its lane with at least one other card
+button** whenever the pane shares its tab with at least one other card
 — the same condition under which the switcher renders.
 
 The button SHALL carry `LucideSquareSplitHorizontal`, whose glyph is a
@@ -319,8 +319,8 @@ focus, or scroll the switcher.
 
 The button and the switcher strip are deliberately both present and are
 not redundant: the button is a one-press hop, correct in the common
-two-card lane; the strip is how the operator picks a *specific* card in
-a lane of three or more. In a lane of one, neither renders.
+two-card tab; the strip is how the operator picks a *specific* card in
+a tab of three or more. In a tab of one, neither renders.
 
 The button SHALL meet `--touch-target-min` at every width and SHALL
 carry an accessible name from `copy.ts`; its glyph SHALL NOT be its only
@@ -328,19 +328,19 @@ label to assistive technology.
 
 #### Scenario: The button appears only with a sibling
 
-- **WHEN** the operator opens a card whose lane holds exactly one pane
+- **WHEN** the operator opens a card whose tab holds exactly one pane
 - **THEN** no next-card button is rendered
 
 #### Scenario: The button hops
 
-- **WHEN** the lane holds two cards and the operator activates the
+- **WHEN** the tab holds two cards and the operator activates the
   next-card button
 - **THEN** the route becomes the other card's `/pane/:host/:id`, and the
   switcher is neither opened nor focused
 
 #### Scenario: The button and the chord agree
 
-- **WHEN** the lane holds three cards and the operator activates the
+- **WHEN** the tab holds three cards and the operator activates the
   next-card button twice
 - **THEN** the route lands on the same card two presses of
   `prefix + o` would have reached
@@ -355,7 +355,7 @@ the single home for user-facing strings whether or not
 `docs/BRAND.md`'s table has caught up.
 
 Per maintainer decision D2 (2026-09-10) the switcher's two strings —
-`nav.cardSwitcher` = `cards in this lane` and `nav.cardSwitcherItem` =
+`nav.cardSwitcher` = `cards in this tab` and `nav.cardSwitcherItem` =
 `{name} — {status}` — are approved as written and SHALL be added to
 `copy.ts` under `nav`, beside `nav.statusSwitcher` and
 `nav.statusSwitcherItem` whose shape they mirror. This change SHALL NOT

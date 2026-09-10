@@ -3,7 +3,7 @@
 The token layer that implements [`docs/BRAND.md`](BRAND.md). This document
 is the **authoritative contract**: every custom property below is defined
 with the exact name and exact value given here, and every implementation
-lane consumes it verbatim.
+consumes it verbatim.
 
 Source files:
 
@@ -395,11 +395,11 @@ purpose:
 | ---------------------- | --------------------------- | --------------------------------------------------- |
 | `LucideMenu`           | `svg[lucideMenu]`           | rail / mobile-drawer toggle                         |
 | `LucideX`              | `svg[lucideX]`              | close pane, close dialog, clear scope, clear filter |
-| `LucidePlus`           | `svg[lucidePlus]`           | create menu (pane / lane / field)                   |
+| `LucidePlus`           | `svg[lucidePlus]`           | create menu (pane / tab / workspace)                |
 | `LucideSettings`       | `svg[lucideSettings]`       | settings link                                       |
 | `LucideSun`            | `svg[lucideSun]`            | switch to washi                                     |
 | `LucideMoon`           | `svg[lucideMoon]`           | switch to sumi                                      |
-| `LucidePencil`         | `svg[lucidePencil]`         | rename field / lane                                 |
+| `LucidePencil`         | `svg[lucidePencil]`         | rename workspace / tab                              |
 | `LucideArrowRight`     | `svg[lucideArrowRight]`     | split right                                         |
 | `LucideArrowDown`      | `svg[lucideArrowDown]`      | split down                                          |
 | `LucideArrowLeft`      | `svg[lucideArrowLeft]`      | back to board                                       |
@@ -410,7 +410,7 @@ purpose:
 | `LucideInfo`           | `svg[lucideInfo]`           | info toast                                          |
 | `LucideCopy`           | `svg[lucideCopy]`           | copy config snippet / command                       |
 | `LucideRefreshCw`      | `svg[lucideRefreshCw]`      | retry a failed load                                 |
-| `LucideUnplug`         | `svg[lucideUnplug]`         | disconnected pen, stale marker                      |
+| `LucideUnplug`         | `svg[lucideUnplug]`         | disconnected host, stale marker                     |
 
 Eighteen icons. Adding a nineteenth is a change to this document first.
 
@@ -454,8 +454,8 @@ pulse, static under reduced motion.
 
 ### Status column
 
-The board grouping is a **status column**, never a "lane" (a lane is a
-tab — see `BRAND.md`).
+The vertical grouping by `agent_status` is a **status column**, never a
+"lane" (a lane is a swimlane — see `BRAND.md`).
 
 - No background fill. Header is a `--rule-strong` hairline with the
   status name in `--font-display` `--fs-h3` and a `--font-mono`
@@ -577,14 +577,14 @@ they must never be mistaken for a loading state.
 ### Loading / stale / unavailable
 
 - Initial board: static skeleton columns (header rule + placeholder card
-  outlines). The no-pens empty state never renders before discovery
+  outlines). The no-hosts empty state never renders before discovery
   finishes.
 - Pane detail: the ochre dot pulse plus `keeping watch…` until the first
   frame. On failure the loading state is _replaced_ by a visible retry
   (`LucideRefreshCw`) and a back path — never left spinning.
 - Reconnecting: existing content stays visible, marked stale with a
   `LucideUnplug` marker and `--ink-mute` caption; actions that need the
-  connection are gated. One failed pen never blanks healthy pens.
+  connection are gated. One failed host never blanks healthy hosts.
 - These four states are visually distinct from each other and from
   "empty".
 
@@ -773,7 +773,7 @@ recorded so nobody reintroduces them:
 
 ## Lint gate
 
-The pre-commit lint rule (owned by the `precommit-lint-gate` lane)
+The pre-commit lint rule (owned by the `precommit-lint-gate` change)
 fails a commit when:
 
 - a raw hex literal appears in any `*.scss` outside `tokens.scss`;

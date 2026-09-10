@@ -33,7 +33,7 @@ describe("EmptyState", () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.show()).toBe(true);
     expect(el().querySelector(".empty-state")).not.toBeNull();
-    expect(el().textContent).toContain("no pens yet.");
+    expect(el().textContent).toContain("no hosts yet.");
   });
 
   it("does not render right away when a host is merely disconnected", () => {
@@ -55,7 +55,7 @@ describe("EmptyState", () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.show()).toBe(true);
-    expect(el().textContent).toContain("waiting for a pen…");
+    expect(el().textContent).toContain("waiting for a host…");
   });
 
   it("does not render when at least one host is connected", () => {
@@ -100,7 +100,7 @@ describe("EmptyState: the no-matches variant", () => {
     fixture.detectChanges();
   });
 
-  it("always shows, whatever the pens are doing", () => {
+  it("always shows, whatever the hosts are doing", () => {
     expect(fixture.componentInstance.show()).toBe(true);
   });
 
@@ -119,7 +119,7 @@ describe("EmptyState: the no-matches variant", () => {
   });
 });
 
-describe("EmptyState: the no-pens variant is a tutorial", () => {
+describe("EmptyState: the no-hosts variant is a tutorial", () => {
   let fixture: ComponentFixture<EmptyState>;
 
   beforeEach(() => {
@@ -134,7 +134,7 @@ describe("EmptyState: the no-pens variant is a tutorial", () => {
 
   it("renders the config snippet, a copy action and the operating-guide link", () => {
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector(".empty-state")?.textContent).toContain("no pens yet.");
+    expect(el.querySelector(".empty-state")?.textContent).toContain("no hosts yet.");
     expect(el.querySelector(".config-snippet")?.textContent).toContain("socket:");
     expect(el.querySelector(".copy-action")).not.toBeNull();
     const link = el.querySelector<HTMLAnchorElement>(".guide-link");

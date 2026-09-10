@@ -2,7 +2,7 @@ import { COPY, fill } from './copy';
 
 describe('shared/copy', () => {
   it('substitutes a single slot', () => {
-    expect(fill(COPY.toast.penDisconnected, { pen: 'ada' })).toBe('lost sight of ada. retrying.');
+    expect(fill(COPY.toast.hostDisconnected, { host: 'ada' })).toBe('lost sight of ada. retrying.');
   });
 
   it('substitutes every slot in a multi-slot template', () => {
@@ -23,7 +23,7 @@ describe('shared/copy', () => {
   });
 
   it('leaves a template without slots untouched', () => {
-    expect(fill(COPY.toast.penReconnected, {})).toBe('back in view.');
+    expect(fill(COPY.toast.hostReconnected, {})).toBe('back in view.');
   });
 
   it('rejects a missing or misspelled slot at compile time', () => {
@@ -38,9 +38,9 @@ describe('shared/copy', () => {
     expect(COPY.confirm.closePaneBody).toContain('cannot be undone');
     for (const body of [
       COPY.confirm.closePaneBody,
-      COPY.confirm.closeLaneBody,
-      COPY.confirm.closeFieldBody,
-      COPY.confirm.closeLinkedFieldsBody,
+      COPY.confirm.closeTabBody,
+      COPY.confirm.closeWorkspaceBody,
+      COPY.confirm.closeLinkedWorkspacesBody,
     ]) {
       expect(body).not.toMatch(/pause|suspend|restore|resume/);
     }
@@ -49,7 +49,7 @@ describe('shared/copy', () => {
   // --- one home per string ----------------------------------------------
   //
   // Five components used to carry their own `PENDING_COPY` / `CARD_COPY` /
-  // `RAIL_COPY` / `SETTINGS_COPY` block, each written when a lane could not
+  // `RAIL_COPY` / `SETTINGS_COPY` block, each written when a work lane could not
   // edit this file. Two of them held the same two strings.
 
   /** Every leaf string in COPY, with its dotted path. */
@@ -128,9 +128,15 @@ describe('shared/copy', () => {
     }
   });
 
-  it('speaks the renamed vocabulary in user-facing copy', () => {
+  it("speaks herdr's vocabulary in user-facing copy", () => {
     const strings = JSON.stringify(COPY);
-    expect(strings).not.toMatch(/\bhost\b|\bworkspace\b|\btab\b/);
+    expect(strings).not.toMatch(/\bpen\b|\bpens\b|\bfield\b|\bfields\b/);
     expect(COPY.toast.createPaneFailed).toContain('a card');
+  });
+
+  it('reserves lane for the swimlane, never for a tab', () => {
+    for (const [path, value] of strings(COPY)) {
+      expect(value).withContext(path).not.toMatch(/\blanes?\b/);
+    }
   });
 });

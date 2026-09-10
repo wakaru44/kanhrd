@@ -48,7 +48,7 @@
 }
 
 // Host seal (hanko): the single bounded ochre exception to otherwise
-// colour-free chrome — a 1px outline, never a fill. The pen name is read
+// colour-free chrome — a 1px outline, never a fill. The host name is read
 // from ink, not from the ochre.
 .host-seal {
   align-self: flex-start;
@@ -125,7 +125,7 @@
   }
 }
 
-// Long field and lane names truncate; they never widen the drawer.
+// Long workspace and tab names truncate; they never widen the drawer.
 .workspace-name,
 .tab-name {
   min-width: 0;

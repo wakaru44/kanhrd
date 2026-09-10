@@ -37,7 +37,7 @@ let mobileViewport: Signal<boolean> | null = null;
  * property and cannot be read by a media query, so 900px is written out
  * here exactly as the stylesheets write it.
  *
- * It lives in this file rather than `shared/` because the board lane does
+ * It lives in this file rather than `shared/` because the board work lane does
  * not own `shared/`; `board.ts` imports it from here (it already imports
  * `Column`, so there is no new edge in the module graph).
  */

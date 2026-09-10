@@ -156,7 +156,7 @@ export class Board implements OnDestroy {
   /** Every status hidden: the pager is replaced by the no-matches empty state, not left blank. */
   protected readonly noMatches = computed(() => this.visibleStatuses().length === 0);
 
-  /** Pens that are configured but currently unreachable — content stays, marked stale. */
+  /** Hosts that are configured but currently unreachable — content stays, marked stale. */
   protected readonly staleHosts = computed(() =>
     this.store.hostsSignal().filter((host) => !host.connected),
   );
@@ -260,12 +260,12 @@ export class Board implements OnDestroy {
   /** When the current unresolved workspace id was first seen — the honesty clock. */
   private readonly unresolvedSince = signal<number | null>(null);
 
-  /** A scoped URL whose field hasn't resolved yet: still loading, not yet a verdict. */
+  /** A scoped URL whose workspace hasn't resolved yet: still loading, not yet a verdict. */
   protected readonly scopePending = computed(
     () => !!this.routeWorkspaceId() && !this.resolvedWorkspace(),
   );
 
-  /** A scoped URL whose field never resolved: say so, don't fall back to the previous scope. */
+  /** A scoped URL whose workspace never resolved: say so, don't fall back to the previous scope. */
   protected readonly scopeUnavailable = computed(() => {
     if (!this.scopePending()) {
       return false;
@@ -308,7 +308,7 @@ export class Board implements OnDestroy {
         // Unresolvable *so far*. The board must never keep showing the
         // previous scope's cards under a URL that no longer names them, so
         // the scope is dropped now and the view shows the skeleton until
-        // either the field resolves or `SCOPE_RESOLVE_GRACE_MS` elapses and
+        // either the workspace resolves or `SCOPE_RESOLVE_GRACE_MS` elapses and
         // the unavailable state takes over.
         if (this.unresolvedSince() === null) {
           this.unresolvedSince.set(Date.now());

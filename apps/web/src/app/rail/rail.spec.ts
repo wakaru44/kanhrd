@@ -163,7 +163,7 @@ describe("Rail", () => {
 
   // --- rows -------------------------------------------------------------
 
-  it("renders one row per field and lane with a visible overflow trigger (no hover-only actions)", () => {
+  it("renders one row per workspace and tab with a visible overflow trigger (no hover-only actions)", () => {
     expect(fixture.nativeElement.querySelectorAll(".workspace-row").length).toBe(2);
     expect(fixture.nativeElement.querySelectorAll(".tab-row").length).toBe(2);
     const triggers = fixture.nativeElement.querySelectorAll(".row-menu-trigger");
@@ -182,8 +182,8 @@ describe("Rail", () => {
       fixture.nativeElement.querySelectorAll(".row-menu-item")
     ) as HTMLElement[];
     expect(items.map((i) => i.textContent?.trim())).toEqual([
-      "rename field",
-      COPY.confirm.closeFieldAction,
+      COPY.rail.renameWorkspace,
+      COPY.confirm.closeWorkspaceAction,
     ]);
   });
 
@@ -193,7 +193,7 @@ describe("Rail", () => {
   // and the request went out with `void`, so a rejection was unhandled —
   // no reason, no retry, and the typed value gone.
 
-  /** Opens the first field row's rename field and types `value` into it. */
+  /** Opens the first workspace row's rename field and types `value` into it. */
   async function startRename(value: string): Promise<HTMLInputElement> {
     (fixture.nativeElement.querySelector(".row-menu-trigger") as HTMLElement).click();
     await settle();
@@ -475,43 +475,43 @@ describe("Rail", () => {
     };
   }
 
-  it("close field: soft prompt paired with an honest body naming the ending sessions", async () => {
+  it("close workspace: soft prompt paired with an honest body naming the ending sessions", async () => {
     await clickMenuItem(".workspace-row", 1);
     const { title, body } = modalText();
-    expect(title).toBe(COPY.confirm.closeField);
-    expect(body).toContain(COPY.confirm.closeFieldBody);
+    expect(title).toBe(COPY.confirm.closeWorkspace);
+    expect(body).toContain(COPY.confirm.closeWorkspaceBody);
     expect(body).toContain(WORKSPACE.name);
   });
 
-  it("close lane: honest body, plus the last-lane note when the field goes with it", async () => {
+  it("close tab: honest body, plus the last-tab note when the workspace goes with it", async () => {
     store.tabCount = 1;
     await clickMenuItem(".tab-row", 1);
     const { title, body } = modalText();
-    expect(title).toBe(COPY.confirm.closeLane);
-    expect(body).toContain(COPY.confirm.closeLaneBody);
-    expect(body).toContain(COPY.confirm.lastLaneNote);
+    expect(title).toBe(COPY.confirm.closeTab);
+    expect(body).toContain(COPY.confirm.closeTabBody);
+    expect(body).toContain(COPY.confirm.lastTabNote);
   });
 
-  it("close lane: no last-lane note when other lanes remain", async () => {
+  it("close tab: no last-tab note when other tabs remain", async () => {
     store.tabCount = 2;
     await clickMenuItem(".tab-row", 1);
-    expect(modalText().body).not.toContain(COPY.confirm.lastLaneNote);
+    expect(modalText().body).not.toContain(COPY.confirm.lastTabNote);
   });
 
-  it("linked worktree: the second confirm says plainly that every linked field closes", async () => {
+  it("linked worktree: the second confirm says plainly that every linked workspace closes", async () => {
     store.closeWorkspace.and.rejectWith(new Error("workspace_group_close_required: w1"));
     await clickMenuItem(".workspace-row", 1);
     (fixture.nativeElement.querySelector(".modal-actions .btn.danger") as HTMLElement).click();
     await settle();
 
     const { title, body } = modalText();
-    expect(title).toBe(COPY.confirm.closeLinkedFields);
-    expect(body).toBe(COPY.confirm.closeLinkedFieldsBody);
+    expect(title).toBe(COPY.confirm.closeLinkedWorkspaces);
+    expect(body).toBe(COPY.confirm.closeLinkedWorkspacesBody);
     expect(body).toContain("all of them close");
     expect(body).toContain("cannot be undone");
   });
 
-  it("refuses to close the only field on a pen, with no confirm button at all", async () => {
+  it("refuses to close the only workspace on a host, with no confirm button at all", async () => {
     store.workspaceCount = 1;
     await clickMenuItem(".workspace-row", 1);
     expect(fixture.nativeElement.querySelector(".modal-body.refusal")).not.toBeNull();
@@ -520,7 +520,7 @@ describe("Rail", () => {
 
   // --- host seal ---------------------------------------------------------
 
-  it("renders the pen as an ochre outline seal, never a filled swatch", () => {
+  it("renders the host as an ochre outline seal, never a filled swatch", () => {
     const seal = fixture.nativeElement.querySelector(".host-seal") as HTMLElement;
     expect(seal.textContent?.trim()).toBe("local");
     const style = getComputedStyle(seal);

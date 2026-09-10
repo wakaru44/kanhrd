@@ -16,7 +16,7 @@ const MOBILE_BREAKPOINT = "(max-width: 900px)";
  *
  * Dismissal is automatic (timeout, owned by `ToastService`), manual (the
  * close button here), or by id — persistent connection notices are removed
- * by their pen id on reconnect rather than stacking up.
+ * by their host id on reconnect rather than stacking up.
  */
 @Component({
   selector: "app-toast-host",

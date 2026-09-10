@@ -6,7 +6,7 @@ import { COPY } from "../src/app/shared/copy";
  * Two board empty-state contracts (task 14.5 of
  * `add-l-brand-neo-shepherd-redesign`):
  *
- * - With no pens configured, the board renders the sample kanhrd.config.yaml
+ * - With no hosts configured, the board renders the sample kanhrd.config.yaml
  *   snippet, the "then start the bridge" command, a copy control and the
  *   operating-guide link. `/api/hosts` is stubbed to reach this state
  *   without needing bridge/herdr reconfiguration.
@@ -20,9 +20,9 @@ import { COPY } from "../src/app/shared/copy";
  * `apps/web/src/app/board/empty-state.html` / `board.html`.
  */
 
-// --- no pens configured ---------------------------------------------------
+// --- no hosts configured ---------------------------------------------------
 
-test.describe("board empty state — no pens configured", () => {
+test.describe("board empty state — no hosts configured", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("**/api/hosts", (route) =>
       route.fulfill({
@@ -37,18 +37,17 @@ test.describe("board empty state — no pens configured", () => {
 
   test("renders the sample kanhrd.config.yaml snippet with a copy control", async ({ page }) => {
     const emptyState = page.locator(".empty-state").filter({ hasNot: page.locator(".no-matches") });
-    await expect(emptyState.locator("h2")).toHaveText(COPY.emptyState.noPens);
-    await expect(emptyState).toContainText(COPY.emptyState.noPensBody);
+    await expect(emptyState.locator("h2")).toHaveText(COPY.emptyState.noHosts);
+    await expect(emptyState).toContainText(COPY.emptyState.noHostsBody);
 
-    // A YAML-looking sample config with at least one `pens:`/`socket:`
+    // A YAML-looking sample config with at least one `hosts:`/`socket:`
     // marker is what the operator has to copy into kanhrd.config.yaml.
     const snippets = emptyState.locator(".config-snippet");
     expect(await snippets.count()).toBeGreaterThanOrEqual(2);
     const configText = ((await snippets.first().textContent()) ?? "").trim();
     expect(configText.length, "sample config snippet is empty").toBeGreaterThan(0);
-    // Wire vocabulary keeps herdr's `hosts:` key in the sample config even
-    // though user-facing copy renames the concept to "pen" — see
-    // `apps/web/src/app/shared/copy.ts` rule 1.
+    // The sample config uses herdr's `hosts:` key, the same word the copy
+    // uses — see `apps/web/src/app/shared/copy.ts` rule 1.
     expect(configText).toMatch(/hosts?:/i);
 
     const copyAction = emptyState.locator(".copy-action");
@@ -58,7 +57,7 @@ test.describe("board empty state — no pens configured", () => {
 
   test("renders the start-the-bridge command and the operating-guide link", async ({ page }) => {
     const emptyState = page.locator(".empty-state").filter({ hasNot: page.locator(".no-matches") });
-    await expect(emptyState).toContainText(COPY.emptyState.noPensThen);
+    await expect(emptyState).toContainText(COPY.emptyState.noHostsThen);
 
     // The second `.config-snippet` is the start command — must be a
     // non-empty, non-trivial shell string.
@@ -68,7 +67,7 @@ test.describe("board empty state — no pens configured", () => {
 
     const guide = emptyState.locator(".guide-link");
     await expect(guide).toBeVisible();
-    await expect(guide).toHaveText(COPY.emptyState.noPensDocsLink);
+    await expect(guide).toHaveText(COPY.emptyState.noHostsDocsLink);
     const href = await guide.getAttribute("href");
     expect(href, "operating-guide link has no href").toBeTruthy();
     expect(href!).toMatch(/^https?:\/\//);

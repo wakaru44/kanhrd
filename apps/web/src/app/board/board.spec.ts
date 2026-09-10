@@ -160,10 +160,10 @@ describe("Board + Rail integration: New tab flow (full component tree)", () => {
     fixture.detectChanges();
 
     const newTabButton = Array.from(el.querySelectorAll<HTMLButtonElement>(".plus-menu button")).find(
-      (btn) => btn.textContent?.trim() === COPY.create.lane,
+      (btn) => btn.textContent?.trim() === COPY.create.tab,
     );
     expect(newTabButton)
-      .withContext(`"${COPY.create.lane}" should render once tabCrud capability is true`)
+      .withContext(`"${COPY.create.tab}" should render once tabCrud capability is true`)
       .toBeTruthy();
     newTabButton?.click();
     fixture.detectChanges();
@@ -185,7 +185,7 @@ describe("Board + Rail integration: New tab flow (full component tree)", () => {
   // vocabulary, and invisible to `copy.ts`. `style-lint.spec.ts` guards that
   // no literal came back; these guard what the user actually reads.
 
-  /** Mounts the board against a pen advertising every tier-3 create capability. */
+  /** Mounts the board against a host advertising every tier-3 create capability. */
   async function mountWithCreateCapabilities(): Promise<HTMLElement> {
     ws.request.and.callFake((_host: string, method: string) => {
       if (method === "pane.list") {
@@ -229,7 +229,7 @@ describe("Board + Rail integration: New tab flow (full component tree)", () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it("labels the create menu from copy.ts, in the renamed vocabulary", async () => {
+  it("labels the create menu from copy.ts, in herdr's vocabulary", async () => {
     const el = await mountWithCreateCapabilities();
     el.querySelector<HTMLButtonElement>(".plus-button")?.click();
     fixture.detectChanges();
@@ -237,12 +237,12 @@ describe("Board + Rail integration: New tab flow (full component tree)", () => {
     const labels = Array.from(el.querySelectorAll<HTMLButtonElement>(".plus-menu button")).map(
       (button) => button.textContent?.trim() ?? "",
     );
-    expect(labels).toEqual([COPY.create.pane, COPY.create.lane, COPY.create.field]);
+    expect(labels).toEqual([COPY.create.pane, COPY.create.tab, COPY.create.workspace]);
     for (const label of labels) {
       expect(label).withContext(`"${label}" must be lowercase`).toBe(label.toLowerCase());
       expect(label)
-        .withContext(`"${label}" must speak the renamed vocabulary`)
-        .not.toMatch(/\bpane\b|\btab\b|\bworkspace\b/);
+        .withContext(`"${label}" must speak herdr's vocabulary`)
+        .not.toMatch(/\bpen\b|\bfield\b|\blane\b/);
     }
   });
 
@@ -861,7 +861,7 @@ describe("Board: an invalid scope is reported, never silently swallowed", () => 
     expect(el.querySelector(".scope-pill")).toBeNull();
   });
 
-  it("says the field is no longer here once the id has stayed unresolved", async () => {
+  it("says the workspace is no longer here once the id has stayed unresolved", async () => {
     paramMap$.next(convertToParamMap({ workspaceId: "gone" }));
     await settle(fixture);
 
@@ -870,12 +870,12 @@ describe("Board: an invalid scope is reported, never silently swallowed", () => 
 
     const el = fixture.nativeElement as HTMLElement;
     const state = el.querySelector(".state-unavailable");
-    expect(state?.textContent).toContain("that field is no longer here.");
+    expect(state?.textContent).toContain("that workspace is no longer here.");
     expect(state?.querySelector("button")?.textContent?.trim()).toBe("back to the board");
     expect(el.querySelector(".board-strip")).withContext("no silent fallback board").toBeNull();
   });
 
-  it("recovers without a reload once the scoped field resolves", async () => {
+  it("recovers without a reload once the scoped workspace resolves", async () => {
     paramMap$.next(convertToParamMap({ workspaceId: "gone" }));
     await settle(fixture);
     clock.now.set(Date.now() + SCOPE_RESOLVE_GRACE_MS + 1000);

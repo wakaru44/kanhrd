@@ -21,10 +21,10 @@ these three docs in order:
 
 1. `docs/BRAND.md` — voice (terse, lowercase, verbs of tending; no
    exclamation marks; care verbs only on lifecycle/empty/error),
-   wordmark, and the domain renames used in UI copy (host → **pen**,
-   workspace → **field**, tab → **lane**, pane → **card**).
-   **Wire / API / code keep herdr's terms.** The rename is a UI-copy
-   layer, not a schema change.
+   wordmark, and the domain vocabulary table (**host**, **workspace**,
+   **tab**, **card** for a pane, **status column**, **swimlane**).
+   **UI copy and wire / API / code use the same words for herdr's
+   objects.**
 2. `docs/DESIGN-SYSTEM.md` — colour, type, spacing, radius, elevation,
    motion tokens. Paper cream (`#f4ede0`) primary, ochre (`#c8842a`)
    accent, torii-red vermilion for blocked. Hairlines over shadows.
@@ -159,9 +159,19 @@ touches across > 1 file, it's a lane, not a foreman-inline edit.
 
 ## Domain vocabulary reminder
 
-In wire, API, code, tests, commits: **host / workspace / tab / pane**
-(herdr's terms).
+One rule: **herdr's objects use herdr's words; the board's own furniture
+uses kanban's words.**
 
-In user-facing copy: **pen / field / lane / card** (kanhrd's rename).
+In wire, API, code, tests, commits and user-facing copy alike:
+**host / workspace / tab / pane** (herdr's terms).
 
-The rename applies to what users see, not what code says.
+The board adds three of its own: a **card** is the board's
+representation of a pane, a **status column** is a grouping derived from
+`agent_status`, and a **swimlane** (short form **lane**) is a horizontal
+band grouping cards. `lane` never means tab.
+
+`pen`, `field` and `lane`-as-tab were a copy-only rename that has been
+withdrawn; see `openspec/changes/archive/` for the history.
+
+The foreman workflow's "lane" — a dispatched unit of work — is process
+vocabulary, not product vocabulary. It never appears in user-facing copy.

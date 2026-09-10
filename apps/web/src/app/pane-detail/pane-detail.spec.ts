@@ -536,7 +536,7 @@ describe("PaneDetail", () => {
     await flushMicrotasks();
     fixture.detectChanges();
 
-    expect(stateEl(".terminal-empty")?.textContent).toContain(COPY.emptyState.penEmpty);
+    expect(stateEl(".terminal-empty")?.textContent).toContain(COPY.emptyState.hostEmpty);
     expect(stateEl(".terminal-loading")).toBeNull();
   });
 
@@ -605,7 +605,7 @@ describe("PaneDetail", () => {
     writeSpy.calls.reset();
     resetSpy.calls.reset();
 
-    // One pen/bridge disconnect.
+    // One host/bridge disconnect.
     ws.connected.set(false);
     fixture.detectChanges();
 
@@ -618,7 +618,7 @@ describe("PaneDetail", () => {
     expect(stateEl(".terminal-failed")).toBeNull();
   });
 
-  it("reports a disconnected pen as unavailable, with a back path, without blanking content", async () => {
+  it("reports a disconnected host as unavailable, with a back path, without blanking content", async () => {
     const writeSpy = spyOn(Terminal.prototype, "write");
     const resetSpy = spyOn(Terminal.prototype, "reset");
 
@@ -638,7 +638,7 @@ describe("PaneDetail", () => {
     expect(resetSpy).not.toHaveBeenCalled();
   });
 
-  it("does not claim a pen is unavailable merely because the bridge has not listed it yet", async () => {
+  it("does not claim a host is unavailable merely because the bridge has not listed it yet", async () => {
     hosts.set([]);
 
     fixture = TestBed.createComponent(PaneDetail);

@@ -124,7 +124,7 @@ export class ConfirmModal implements AfterViewInit, OnDestroy {
   readonly cancelLabel = input<string>(COPY.confirm.cancel);
   /** Entities that disappear on confirm. Empty for a single-entity close, which renders no list. */
   readonly previewItems = input<readonly ConfirmPreviewItem[]>([]);
-  /** `--danger-fill` on the confirm button. Reserved for irrecoverable data loss; closing a card/lane/field is accent-filled with honest copy. */
+  /** `--danger-fill` on the confirm button. Reserved for irrecoverable data loss; closing a card/tab/workspace is accent-filled with honest copy. */
   readonly danger = input<boolean>(false);
   /** When set, this is a refusal notice — see class doc. */
   readonly refusalReason = input<string | null>(null);

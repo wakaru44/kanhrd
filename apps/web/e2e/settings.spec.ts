@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures/kanhrd";
 import { herdrAvailable } from "./fixtures/herdr";
+import { COPY } from "../src/app/shared/copy";
 
 /**
  * Settings screen (`/settings`) — reachable from the header gear icon,
@@ -28,13 +29,16 @@ test("header gear icon navigates to /settings", async ({ app }) => {
 test("settings route renders every section", async ({ app }) => {
   await app.goto("/settings");
   // Section headings are lowercase per docs/BRAND.md's voice, and the old
-  // "Servers / hosts" section is now "pens" (the user-facing rename of
-  // host). These strings live in `SETTINGS_COPY` in
-  // `src/app/settings/settings.ts`, not in `shared/copy.ts` — that block
-  // carries a TODO to be lifted into copy.ts; when it is, read them from
-  // there the way the other specs read `COPY`.
+  // "Servers / hosts" section is now "hosts".
   const headings = app.locator(".settings-section h2");
-  await expect(headings).toHaveText(["appearance", "terminal", "runtime", "pens", "keyboard", "data"]);
+  await expect(headings).toHaveText([
+    COPY.settings.appearance,
+    COPY.settings.terminal,
+    COPY.settings.runtime,
+    COPY.settings.hosts,
+    COPY.settings.keyboard,
+    COPY.settings.data,
+  ]);
 });
 
 test("toggling density on the settings screen persists to localStorage", async ({ app }) => {

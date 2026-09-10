@@ -22,7 +22,7 @@ established by investigation rather than assumed:
    of thing as a lifecycle operation. `pane.move` from tier-3 is
    available and is the wrong tool: its destination is a tab or a
    workspace (`openspec/specs/tier-3-lifecycle/spec.md`), and using it
-   would move the operator's file-explorer out of the field it belongs
+   would move the operator's file-explorer out of the workspace it belongs
    to in order to change where kanhrd draws it.
 
 2. **The board's docs currently forbid the interaction the ask names.**
@@ -79,7 +79,7 @@ established by investigation rather than assumed:
 - **Lifecycle**: a membership entry is dropped on `pane.closed` and on
   the local purge that follows `tab.closed` / `workspace.closed`
   (tier-3's "clients purge cascaded children locally"). A **disconnected
-  pen does not unpark anything** — its cards stay parked and stale, per
+  host does not unpark anything** — its cards stay parked and stale, per
   the reliability-states table.
 - **Settings** gains a `clear parked columns` row, so browser-local state
   has a visible way out.
@@ -169,7 +169,7 @@ card overflow menu. They do not contradict, and neither blocks the other:
 - **No auto-parking.** No heuristic that parks a card because it has no
   agent, or because it is idle, or because of its command. The operator
   parks; kanhrd never does.
-- **No nesting, no per-parked-column filters, no cross-pen grouping
+- **No nesting, no per-parked-column filters, no cross-host grouping
   rules.**
 
 ## Maintainer decisions — resolved 2026-09-10
@@ -212,7 +212,7 @@ a maintainer lands the doc amendment:
 - E2E assertion 22 — scope to drop targets, and to boards with no
   user-defined columns.
 
-Lane's reading of the condition, absent a maintainer word against it: a
+This change's reading of the condition, absent a maintainer word against it: a
 card is a drag source **only when at least one user-defined column
 exists**, so a board with none is byte-for-byte the board the docs
 describe today.
@@ -237,7 +237,7 @@ legible without opening anything. Hover-only affordances stay forbidden.
 `park.rule.never` = `never`, `park.rule.agentActivity` =
 `on agent activity`, `park.removeColumn` = `remove column`,
 `park.removeColumnBody` = `the cards go back to their status columns.
-nothing on the pen changes.`, `settings.clearParked` =
+nothing on the host changes.`, `settings.clearParked` =
 `clear parked columns`. They go into `shared/copy.ts` directly; a
 maintainer separately adds the rows to `docs/BRAND.md`'s approved-copy
 table. **Not** a component-local copy constant: commit `f173992` ("give

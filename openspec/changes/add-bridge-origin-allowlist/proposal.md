@@ -74,7 +74,7 @@ Deliberately **not** in this change:
   two read-only `GET`s versus `/ws`'s nineteen verbs including keystroke
   injection. Deferred to a named follow-up — see `design.md` decision 8.
 - **No implementation in this change.** Proposal-first, per
-  `openspec/README.md`; `tasks.md` describes work for a later lane.
+  `openspec/README.md`; `tasks.md` describes work for a later change.
 
 ## Impact
 

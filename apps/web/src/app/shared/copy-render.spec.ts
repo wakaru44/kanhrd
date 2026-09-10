@@ -77,11 +77,11 @@ describe("rendered copy: user names and wire errors survive the template", () =>
 
   it("renders a lifecycle preview list with each entity's name verbatim", () => {
     const fixture = TestBed.createComponent(ConfirmModal);
-    fixture.componentRef.setInput("title", COPY.confirm.closeField);
-    fixture.componentRef.setInput("body", COPY.confirm.closeFieldBody);
+    fixture.componentRef.setInput("title", COPY.confirm.closeWorkspace);
+    fixture.componentRef.setInput("body", COPY.confirm.closeWorkspaceBody);
     fixture.componentRef.setInput("previewItems", [
-      { kind: "lane", name: USER_NAME, detail: "2 cards" },
-      { kind: "lane", name: "MiXeD Case / path", detail: "1 card" },
+      { kind: "tab", name: USER_NAME, detail: "2 cards" },
+      { kind: "tab", name: "MiXeD Case / path", detail: "1 card" },
     ]);
     fixture.detectChanges();
     const rows = (fixture.nativeElement as HTMLElement).querySelectorAll(".preview-name");

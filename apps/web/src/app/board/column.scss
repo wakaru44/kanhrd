@@ -51,6 +51,11 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* This scroll would clip anything a card renders outside its own box; the
+   * card's overflow menu is portalled into the CDK overlay container to
+   * escape it (openspec fix-card-menu-stacking). Do not try to solve a
+   * clipped popup here with `overflow: visible` — the column IS the
+   * board's scroller. */
   /* The card list is the board's vertical scroller; a swipe past either
    * end stays with it rather than becoming page overscroll (which a phone
    * browser reads as pull-to-refresh). */

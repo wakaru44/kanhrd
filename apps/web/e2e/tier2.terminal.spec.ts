@@ -23,8 +23,8 @@ import type { Page } from "@playwright/test";
  * traffic: zero requests fire on a cold deep-link load, vs. the expected
  * `pane.read` + `pane.subscribe_output` pair firing right after an
  * SPA-internal card click). That's a real behavior gap in the app's
- * routing, out of this lane's scope to fix (apps/web/src is L3B/L3C's
- * lane) — this suite works around it by testing the flow the brief
+ * routing, out of this suite's scope to fix (apps/web/src is L3B/L3C's
+ * work lane) — this suite works around it by testing the flow the brief
  * actually describes and real users actually take: click card -> terminal.
  */
 

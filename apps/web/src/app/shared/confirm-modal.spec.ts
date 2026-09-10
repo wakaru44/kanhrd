@@ -66,11 +66,11 @@ describe("ConfirmModal", () => {
 
   it("renders one preview row per entity for a cascading close", () => {
     const { el } = render({
-      title: COPY.confirm.closeField,
-      body: COPY.confirm.closeFieldBody,
+      title: COPY.confirm.closeWorkspace,
+      body: COPY.confirm.closeWorkspaceBody,
       previewItems: [
-        { kind: "lane", name: "build", detail: "2 cards" },
-        { kind: "lane", name: "deploy", detail: "1 card" },
+        { kind: "tab", name: "build", detail: "2 cards" },
+        { kind: "tab", name: "deploy", detail: "1 card" },
       ],
     });
     expect(el.querySelector(".preview-heading")?.textContent).toContain(COPY.confirm.previewHeading);
@@ -86,8 +86,8 @@ describe("ConfirmModal", () => {
   });
 
   it("applies the danger class to the confirm button only when danger is true", () => {
-    expect(render({ title: COPY.confirm.closeLane, danger: true }).el.querySelector(".btn.danger")).toBeTruthy();
-    expect(render({ title: COPY.confirm.closeLane, danger: false }).el.querySelector(".btn.danger")).toBeFalsy();
+    expect(render({ title: COPY.confirm.closeTab, danger: true }).el.querySelector(".btn.danger")).toBeTruthy();
+    expect(render({ title: COPY.confirm.closeTab, danger: false }).el.querySelector(".btn.danger")).toBeFalsy();
   });
 
   it("emits confirmed when the confirm button is clicked", () => {
@@ -138,14 +138,14 @@ describe("ConfirmModal", () => {
   it("renders a refusal notice with a single dismiss action", () => {
     const { fixture, el } = render({
       title: COPY.confirm.refusalHeading,
-      refusalReason: "closing this would leave you with zero open fields.",
+      refusalReason: "closing this would leave you with zero open workspaces.",
     });
     const confirmed = jasmine.createSpy("confirmed");
     const cancelled = jasmine.createSpy("cancelled");
     fixture.componentInstance.confirmed.subscribe(confirmed);
     fixture.componentInstance.cancelled.subscribe(cancelled);
 
-    expect(el.querySelector(".refusal")?.textContent).toContain("zero open fields");
+    expect(el.querySelector(".refusal")?.textContent).toContain("zero open workspaces");
     const buttons = el.querySelectorAll<HTMLButtonElement>(".modal-actions .btn");
     expect(buttons.length).toBe(1);
     expect(buttons[0].textContent).toContain(COPY.confirm.cancel);

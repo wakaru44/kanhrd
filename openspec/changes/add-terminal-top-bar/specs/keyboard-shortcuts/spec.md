@@ -56,7 +56,7 @@ rather than folklore.
 
 #### Scenario: A listed chord whose action is unavailable is passed through
 - **WHEN** a user has a pane-detail terminal focused on a card that is
-  the only pane in its lane, and presses `Ctrl+Alt+I`
+  the only pane in its tab, and presses `Ctrl+Alt+I`
 - **THEN** the keystroke is sent to the terminal, and neither
   `preventDefault()` nor `stopPropagation()` is called
 

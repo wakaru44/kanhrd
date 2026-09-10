@@ -111,7 +111,7 @@ this change keeps it that way.
 ### browser-side
 
 Accepted. `apps/web/src/app/state/panes.store.ts:67-91` already persists
-board **view state** (`Filters`: excluded pens, hidden statuses) to
+board **view state** (`Filters`: excluded hosts, hidden statuses) to
 `localStorage` as `kanhrd.filters`, with a `loadFilters` /`saveFilters`
 pair injected with a `Pick<Storage, …>` seam so it unit-tests without a
 browser. `keyboard.service.ts:139-157` does the same for the prefix
@@ -233,7 +233,7 @@ If it is also pinned at 0, `on any activity` cannot be built without
 either a herdr fix or a doc amendment permitting board-wide output
 polling — and the second of those should be refused.
 
-## Pane lifecycle and pen disconnect
+## Pane lifecycle and host disconnect
 
 - **Pane closed.** `pane.closed` arrives and `applyPaneClosed` drops the
   pane; the park store drops the membership entry keyed by the same
@@ -244,20 +244,20 @@ polling — and the second of those should be refused.
   panes inside, and that "clients purge cascaded children locally". The
   park store purges on the same pass the pane map already does, keyed on
   the panes it is dropping — not by re-deriving the tree.
-- **Pen disconnected.** Nothing is unparked. `docs/UX-GUIDELINES.md`'s
+- **Host disconnected.** Nothing is unparked. `docs/UX-GUIDELINES.md`'s
   reliability table is binding: "existing content stays visible, marked
   with `LucideUnplug` and `stale — reconnecting`". A parked card of a
-  disconnected pen keeps its slot and is marked stale like any other
+  disconnected host keeps its slot and is marked stale like any other
   card. Unparking on disconnect would silently lose the arrangement on
   every reconnect flap, which is the failure mode the table exists to
   prevent.
 - **Pane reappears with the same id.** It re-enters its parked column,
   because the membership entry was never removed. This is the desired
-  behaviour for a flapping pen and the reason GC is event-driven rather
+  behaviour for a flapping host and the reason GC is event-driven rather
   than "prune anything not currently seen".
 - **Membership for a pane that never returns** stays in `localStorage`
   as an inert entry. No heuristic prunes it: any "not seen for N" rule
-  would eventually delete the parking of a pen that was merely offline.
+  would eventually delete the parking of a host that was merely offline.
   The bound is the operator's `clear parked columns` action.
 - **Exit fires while the pane is gone** — impossible by construction:
   the rule is evaluated on a `pane.agent_status_changed` event, which
@@ -273,11 +273,11 @@ board is read left to right by urgency, and a parked card is by
 definition the one the operator has decided not to look at.
 
 **Filters.** Parked columns honour the same `Filters` as status columns
-— an excluded pen and a hidden status remove their cards from parked
+— an excluded host and a hidden status remove their cards from parked
 columns too, and the column's count reflects the filtered collection, as
 `docs/UX-GUIDELINES.md` requires ("Counts always represent the complete
 filtered collection"). The alternative — parked columns ignoring
-filters — makes the pen chips lie.
+filters — makes the host chips lie.
 
 **Scope.** A `/workspace/:id` or `/workspace/:id/tab/:id` scope applies
 to parked columns identically. A parked column can therefore be empty
@@ -296,7 +296,7 @@ be kanhrd creating the operator's columns for them.
 The honest cost is that a shared link renders differently for the
 recipient. That is Q5 in the proposal, and the precedent (filters,
 density) argues for accepting it — but it is a doc-authority call, not
-this lane's.
+this change's.
 
 ## The "small tooltip UI", reconciled
 
@@ -330,7 +330,7 @@ Proposed, and built out of pieces the doc already sanctions:
 
 No new interaction pattern is invented. If a maintainer wants a genuine
 tooltip/popover primitive in the design system, that is a doc extension
-they make, not one this lane writes.
+they make, not one this change writes.
 
 ## Keyboard
 
@@ -354,9 +354,9 @@ records that `prefix+x` ("close current pane") is unimplemented because
 "the board has no focused-pane model to act on". A `prefix+k` park
 chord would hit the identical blocker, so adding one now would mean
 either shipping a dead binding in the help overlay or building a
-focused-pane model inside this lane. `k` is free (bound keys today:
+focused-pane model inside this change. `k` is free (bound keys today:
 `c n p l w & x , 0-9 ? t /` and `Escape`) and is the natural reservation
-if a later lane adds that model.
+if a later change adds that model.
 
 **No global unmodified key**, per the doc's hard rule — a parked
 file-explorer card is precisely the case where a bare key would be
@@ -367,7 +367,7 @@ stolen from a TUI.
 ### Reuse `pane.move` to a dedicated "parked" workspace
 
 Rejected. It changes herdr state to change a drawing, moves the pane out
-of the field it belongs to, is destructive-adjacent (`pane.move` can
+of the workspace it belongs to, is destructive-adjacent (`pane.move` can
 cascade a tab or workspace closed — tier-3 spec), and cannot express
 three parked columns without three workspaces. The operator asked to
 tidy their board, not to reorganise their herdr.

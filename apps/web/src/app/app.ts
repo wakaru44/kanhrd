@@ -6,7 +6,7 @@ import { ThemeService } from "./state/theme.service";
 import { LayoutService } from "./state/layout.service";
 import { KeyboardService } from "./state/keyboard.service";
 import { ToastService } from "./state/toast.service";
-import { PenNoticeService } from "./state/pen-notices.service";
+import { HostNoticeService } from "./state/host-notices.service";
 import { KeyboardHelpOverlay } from "./shared/keyboard-help-overlay";
 import { ToastHost } from "./shared/toast-host";
 
@@ -36,11 +36,11 @@ export class App {
   protected readonly keyboard = inject(KeyboardService);
   private readonly toasts = inject(ToastService);
   /**
-   * Injected for its constructor effect, not for an API: per-pen connection
+   * Injected for its constructor effect, not for an API: per-host connection
    * notices need to be watching from the moment the shell exists, and a root
    * service nobody injects is a root service that never runs.
    */
-  private readonly penNotices = inject(PenNoticeService);
+  private readonly penNotices = inject(HostNoticeService);
 
   protected readonly copy = COPY;
 

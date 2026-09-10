@@ -5,7 +5,7 @@ const ID_PREFIX_LENGTH = 8;
 
 /**
  * The one title-precedence rule for a pane, shared by every surface that
- * names a card: the board card, and (lane L-TERMINAL-TOP-BAR) the detail
+ * names a card: the board card, and (L-TERMINAL-TOP-BAR) the detail
  * route's switcher entries. Kept here rather than in a component so the two
  * can never disagree about what a card is called.
  *

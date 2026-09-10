@@ -31,7 +31,7 @@ half the picture: `tab.id` is right beside it.
 
 `PanesStore.panesSignal` (`apps/web/src/app/state/panes.store.ts:445`) is
 a `Map<paneKey(host, id), Pane>` holding every pane of every connected
-pen — the board's own source. So:
+host — the board's own source. So:
 
 ```ts
 siblings = [...store.panesSignal().values()]
@@ -74,23 +74,23 @@ a *single* `PaneInfo` with no surrounding list, so every event-delivered
 pane would carry an unknown or stale index — a field that is right on
 first load and wrong afterwards is worse than no field. If layout order
 must be exact, the honest fix is a `tab.layout`-shaped read, which is a
-new herdr method and a different lane.
+new herdr method and a different change.
 
 ## Finding 2 — what a real herdr top bar actually shows
 
 **Verified against herdr's source**, not inferred.
 `render_tab_bar` (`src/client/shell/tabs.rs:7-248`) draws, left to right:
 
-| Element             | Behaviour (source)                                                                                     |
-| ------------------- | ------------------------------------------------------------------------------------------------------ |
-| Scroll-left `" < "` | 3 columns, only when the row overflows and mouse chrome is on (`TAB_SCROLL_BUTTON_WIDTH`, `tabs.rs:63`) |
-| Tab entries         | One per tab **of the focused workspace only** (`tabs.rs:20-23`); label centred inside the cell           |
-| Focused tab         | `palette.accent` background, panel-contrast foreground (`tabs.rs:100-104`)                              |
-| Custom-labelled tab | Bold when focused, `overlay1` when not; auto-labelled tabs render `DIM` (`tabs.rs:104-116`)              |
-| Zoom marker         | `format!("{} Z", tab.label)` when the tab is zoomed (`tab_label`, `tabs.rs:380-386`)                     |
-| Scroll-right `" > "`| Mirror of the left control                                                                              |
-| `+` new tab         | 3 columns (`NEW_TAB_WIDTH`, `state.rs:4`), mouse chrome only                                            |
-| Right status area   | Ordered `tab_bar_right` segments, separator between visible entries only (`tabs.rs:260-300`)             |
+| Element              | Behaviour (source)                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------------- |
+| Scroll-left `" < "`  | 3 columns, only when the row overflows and mouse chrome is on (`TAB_SCROLL_BUTTON_WIDTH`, `tabs.rs:63`) |
+| Tab entries          | One per tab **of the focused workspace only** (`tabs.rs:20-23`); label centred inside the cell          |
+| Focused tab          | `palette.accent` background, panel-contrast foreground (`tabs.rs:100-104`)                              |
+| Custom-labelled tab  | Bold when focused, `overlay1` when not; auto-labelled tabs render `DIM` (`tabs.rs:104-116`)             |
+| Zoom marker          | `format!("{} Z", tab.label)` when the tab is zoomed (`tab_label`, `tabs.rs:380-386`)                    |
+| Scroll-right `" > "` | Mirror of the left control                                                                              |
+| `+` new tab          | 3 columns (`NEW_TAB_WIDTH`, `state.rs:4`), mouse chrome only                                            |
+| Right status area    | Ordered `tab_bar_right` segments, separator between visible entries only (`tabs.rs:260-300`)            |
 
 Configuration (`docs/versions/0.8.2/.../configuration.mdx:284-304`):
 `ui.tab_bar_position = "top" | "bottom"`; `ui.tab_bar_right` accepts
@@ -101,32 +101,32 @@ temporarily replace the bottom row.
 
 ### What translates, and what does not
 
-| herdr element                | kanhrd top bar                                     | Why                                                                                     |
-| ---------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| A strip of peers             | **Adopted** — but over *cards in this lane*         | The detail route shows one pane, herdr's zoomed state. Peers here are siblings, not tabs. |
-| Selection marked distinctly  | **Adopted, retuned**                                | `--fw-semi` + 2px `--ochre-line` underline. `docs/DESIGN-SYSTEM.md` forbids a colour fill for selection; the mobile status switcher already sets this precedent. |
-| Custom label emphasised      | **Adopted implicitly**                              | The title precedence `add-pane-workdir-and-task-title` defines already puts a user-authored `label` first. |
-| Horizontal overflow          | **Adopted, retuned**                                | `overflow-x: auto` inside the strip instead of `<` / `>` cells — a browser has a scroller, a TUI does not. |
-| Zoom marker `Z`              | **Dropped**                                         | kanhrd has no zoom state.                                                                |
-| `+` new tab                  | **Dropped**                                         | The board's `+` menu owns creation; `docs/UX-GUIDELINES.md` has one create surface.       |
-| `tab_bar_right` hostname     | **Already present** as the hanko pen seal           | Duplicating it would be a second host readout on one bar.                                |
-| `tab_bar_right` datetime     | **Dropped**                                         | A clock in a browser tab is the browser's job.                                           |
-| `tab_bar_right` command      | **Dropped**                                         | Runs shell on the herdr server; no path from a browser client, no wire method.            |
-| `tab_bar_position`           | **Dropped**                                         | One position. A configurable bar position is a preference with no evidence behind it.     |
-| Mode bars (prefix/copy/…)    | **Dropped**                                         | kanhrd has no copy or resize mode; the prefix chord has no indicator today (`chordActive` is exposed but unrendered) and this lane does not add one. |
+| herdr element               | kanhrd top bar                             | Why                                                                                                                                                              |
+| --------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A strip of peers            | **Adopted** — but over *cards in this tab* | The detail route shows one pane, herdr's zoomed state. Peers here are siblings, not tabs.                                                                        |
+| Selection marked distinctly | **Adopted, retuned**                       | `--fw-semi` + 2px `--ochre-line` underline. `docs/DESIGN-SYSTEM.md` forbids a colour fill for selection; the mobile status switcher already sets this precedent. |
+| Custom label emphasised     | **Adopted implicitly**                     | The title precedence `add-pane-workdir-and-task-title` defines already puts a user-authored `label` first.                                                       |
+| Horizontal overflow         | **Adopted, retuned**                       | `overflow-x: auto` inside the strip instead of `<` / `>` cells — a browser has a scroller, a TUI does not.                                                       |
+| Zoom marker `Z`             | **Dropped**                                | kanhrd has no zoom state.                                                                                                                                        |
+| `+` new tab                 | **Dropped**                                | The board's `+` menu owns creation; `docs/UX-GUIDELINES.md` has one create surface.                                                                              |
+| `tab_bar_right` hostname    | **Already present** as the hanko host seal | Duplicating it would be a second host readout on one bar.                                                                                                        |
+| `tab_bar_right` datetime    | **Dropped**                                | A clock in a browser tab is the browser's job.                                                                                                                   |
+| `tab_bar_right` command     | **Dropped**                                | Runs shell on the herdr server; no path from a browser client, no wire method.                                                                                   |
+| `tab_bar_position`          | **Dropped**                                | One position. A configurable bar position is a preference with no evidence behind it.                                                                            |
+| Mode bars (prefix/copy/…)   | **Dropped**                                | kanhrd has no copy or resize mode; the prefix chord has no indicator today (`chordActive` is exposed but unrendered) and this change does not add one.           |
 
 ## Finding 3 — what belongs on the bar, and what would be duplicated
 
-| Candidate                    | Verdict  | Where it already lives                                                                  |
-| ---------------------------- | -------- | --------------------------------------------------------------------------------------- |
-| pen                          | present  | `.host-seal` in `pane-detail.html` — keep as-is                                          |
-| field / lane breadcrumb      | **add**  | Only on the board card (`card.ts:85-88`, `path()`); the detail route has never shown it   |
-| sibling-card switcher        | **add**  | Nowhere                                                                                  |
-| status + pane id + rev + age | present  | `.meta-strip` — untouched                                                                |
-| split / close                | skip     | `board/card.html` inline actions + overflow menu                                         |
-| terminal theme               | skip     | Settings → Terminal (`l-ux2-…-terminal-themes`)                                          |
-| terminal font size           | skip     | Settings → Terminal (`add-terminal-font-size`)                                           |
-| back to the board            | present  | `.back` — stays the **first focusable element** (`docs/UX-GUIDELINES.md`, Pane detail)    |
+| Candidate                    | Verdict | Where it already lives                                                                  |
+| ---------------------------- | ------- | --------------------------------------------------------------------------------------- |
+| host                         | present | `.host-seal` in `pane-detail.html` — keep as-is                                         |
+| workspace / tab breadcrumb   | **add** | Only on the board card (`card.ts:85-88`, `path()`); the detail route has never shown it |
+| sibling-card switcher        | **add** | Nowhere                                                                                 |
+| status + pane id + rev + age | present | `.meta-strip` — untouched                                                               |
+| split / close                | skip    | `board/card.html` inline actions + overflow menu                                        |
+| terminal theme               | skip    | Settings → Terminal (`l-ux2-…-terminal-themes`)                                         |
+| terminal font size           | skip    | Settings → Terminal (`add-terminal-font-size`)                                          |
+| back to the board            | present | `.back` — stays the **first focusable element** (`docs/UX-GUIDELINES.md`, Pane detail)  |
 
 ## Finding 4 — keyboard, the sharp edge
 
@@ -229,7 +229,7 @@ multi-pane or split view the paragraph rules out.
 
 **This change therefore ships the switcher at every width.** Below
 `--breakpoint-mobile` it is the same horizontally scrolling strip; only
-the breadcrumb collapses to the lane name alone, so the title keeps its
+the breadcrumb collapses to the tab name alone, so the title keeps its
 row. `Ctrl+Alt+I`, `prefix + i` and `prefix + o` work there too.
 
 The mobile constraints are satisfiable and are written into the spec:
@@ -239,7 +239,7 @@ the bar keeps the back control first and visible without scrolling,
 and every switcher entry meets `--touch-target-min` with `--sp-2`
 separation.
 
-A maintainer lands the `docs/UX-GUIDELINES.md` edit; this lane does not
+A maintainer lands the `docs/UX-GUIDELINES.md` edit; this change does not
 edit that doc itself.
 
 ## Finding 6 — copy and icons the design docs do not yet cover
@@ -250,7 +250,7 @@ Flagged, not invented.
   per entry. `docs/BRAND.md`'s approved-copy table has no row for
   either. Precedent for the interim exists in this codebase:
   `CARD_COPY` (`board/card.ts:35-41`) holds three per-card action labels
-  **Correction, 2026-09-10.** This lane originally cited `CARD_COPY` in
+  **Correction, 2026-09-10.** This change originally cited `CARD_COPY` in
   `board/card.ts` as the precedent for a component-local pending-copy
   constant. That precedent no longer exists: commit `f173992` ("give
   every user-facing string one home in copy.ts") folded `CARD_COPY` and
@@ -263,7 +263,7 @@ Flagged, not invented.
 
   | Key                          | Candidate string          |
   | ---------------------------- | ------------------------- |
-  | `nav.cardSwitcher`           | `cards in this lane`      |
+  | `nav.cardSwitcher`           | `cards in this tab`      |
   | `nav.cardSwitcherItem`       | `{name} — {status}`       |
 
   Both are lowercase, clinical (this is a navigator, not a lifecycle or
@@ -274,13 +274,13 @@ Flagged, not invented.
 
 - **Icons.** `docs/DESIGN-SYSTEM.md` pins a set of eighteen lucide icons
   and `shared/icons.ts` re-exports exactly those. Nothing in the set
-  read as "panes in a lane", so D4 asked whether to extend it.
+  read as "panes in a tab", so D4 asked whether to extend it.
   **Resolved: yes — `LucideGalleryHorizontal` joins the set**, as the
   leading marker on the switcher strip. Switcher entries still carry no
   icon (the existing CSS status dot plus the card name), and the
   breadcrumb separator stays the textual `/` the board card's `path()`
   already uses. The pinned-table row in `docs/DESIGN-SYSTEM.md` is the
-  maintainer's edit; this lane adds the `shared/icons.ts` re-export.
+  maintainer's edit; this change adds the `shared/icons.ts` re-export.
 
 ## Composition with `add-pane-workdir-and-task-title`
 
@@ -314,7 +314,7 @@ first.
 
 ## Concurrent edit to `pane-detail.scss`
 
-Another lane is editing `apps/web/src/app/pane-detail/*.scss` for edge
+Another change is editing `apps/web/src/app/pane-detail/*.scss` for edge
 padding. This change also edits `pane-detail.scss`, so the two will
 conflict textually.
 
@@ -322,11 +322,11 @@ Containment: this change's SCSS is confined to `.detail-header` and a new
 `.card-switcher` block, and the new switcher lives in its **own**
 component with its own `card-switcher.scss` — so the only shared file is
 `pane-detail.scss`, and within it only the header rules and the addition
-of the switcher's slot. The edge-padding lane's own target
+of the switcher's slot. The edge-padding change's own target
 (`padding` on `.pane-detail` / `.terminal-container` and the page
 gutters) does not overlap those rules. Whichever lands second rebases;
-the conflict is a few adjacent hunks, not a semantic clash. If the
-edge-padding lane changes `.detail-header`'s `padding` specifically, that
+the conflict is a few adjacent hunks, not a semantic clash. If that
+change touches `.detail-header`'s `padding` specifically, that
 one declaration is the single line to reconcile, and this change should
 take theirs.
 
@@ -334,14 +334,14 @@ take theirs.
 
 - **Stale / unavailable.** `viewState()` already outranks everything on
   `penInSight()`. The switcher reads `panesSignal`, which is not cleared
-  by a disconnect, so siblings stay listed and navigable while a pen is
-  out of sight — consistent with "a single pen disconnect never destroys
+  by a disconnect, so siblings stay listed and navigable while a host is
+  out of sight — consistent with "a single host disconnect never destroys
   already-rendered content." No new state is introduced.
 - **A sibling that disappears.** `pane.closed` removes it from
   `panesSignal` and the entry leaves the strip. If the *current* pane is
   the one closed, the existing detail-route behaviour is unchanged by
-  this lane.
-- **Scale.** A lane holds a handful of panes, not hundreds; the strip
+  this change.
+- **Scale.** A tab holds a handful of panes, not hundreds; the strip
   needs no virtualization and adds no per-card subscription. It renders
   from the store only — "a card never fetches terminal output for
   decoration" holds trivially.
@@ -356,26 +356,26 @@ take theirs.
   judged the "no pane switcher" sentence overblown early-MVP feedback
   rather than an MLP rule, and expects to want a pane switcher in the
   web terminal view too, for panels in the same view. A maintainer lands
-  the `docs/UX-GUIDELINES.md` edit; no follow-up width-gate lane is
+  the `docs/UX-GUIDELINES.md` edit; no follow-up width-gate change is
   needed. See Finding 5.
 - **D2 — copy. RESOLVED 2026-09-10: approved as written, table row
-  deferred.** `nav.cardSwitcher` = `cards in this lane` and
+  deferred.** `nav.cardSwitcher` = `cards in this tab` and
   `nav.cardSwitcherItem` = `{name} — {status}` are the strings to use,
   and they go straight into `shared/copy.ts` under `nav`, beside
   `nav.statusSwitcher` / `nav.statusSwitcherItem` (`copy.ts:125-126`).
   They are **not** added to `docs/BRAND.md`'s approved-copy table now;
-  a maintainer promotes them if the table grows, and this lane does not
+  a maintainer promotes them if the table grows, and this change does not
   edit `docs/BRAND.md`.
 - **D3 — a second and third chord. RESOLVED 2026-09-10: postponed, not
-  in this lane.** The maintainer's reasoning is a principle, not just a
+  in this change.** The maintainer's reasoning is a principle, not just a
   no: *the keyboard experience should be familiar and equivalent to
   herdr; herdr's hierarchy and structure triumph, especially for
   keyboard navigation.* A chord pair whose only job is "jump to the next
   busy thing" is of dubious value once the herdr-equivalent tab and pane
-  movements work. Two things this raised, neither of them this lane's to
+  movements work. Two things this raised, neither of them this change's to
   answer:
 
-  **Both were then decided by the maintainer, and this lane carries
+  **Both were then decided by the maintainer, and this change carries
   them:** `prefix + o` is rebound to **next sibling card** (herdr's
   meaning on herdr's key), and the switcher moves to `prefix + i` with
   the direct chord `Ctrl+Alt+I`. `i` was picked from the maintainer's
@@ -387,7 +387,7 @@ take theirs.
   mnemonic. `i` is free in kanhrd's chord table and on none of herdr's
   exception lists. One cost is worth naming: a
   card hop loads a pane, so holding `prefix + o` through a five-card
-  lane issues five `pane.read` calls, where tmux pays nothing. That is
+  tab issues five `pane.read` calls, where tmux pays nothing. That is
   the price of herdr parity and the switcher's arrow keys remain the
   zero-cost path — they move focus without navigating.
 
@@ -406,7 +406,7 @@ take theirs.
      tmux and herdr, `prefix + o` **goes to the next pane**; this
      change binds it to *focus the switcher strip* instead. Under the
      maintainer's parity principle that may be the wrong verb on the
-     right key. A separate lane owns the question of full herdr
+     right key. A separate change owns the question of full herdr
      keyboard parity for pane-level movement; this change does not
      rebind anything on its own authority.*
 - **D4 — an icon. RESOLVED 2026-09-10: yes, extend the pinned set with
@@ -422,10 +422,10 @@ take theirs.
   `LucideSquareSplitHorizontal` was rejected *for the strip*, above, and
   then claimed by the maintainer for a different control: the
   **next-card button** (see § "The next-card button"). Its glyph is a
-  window divided into two panes, which is what a lane of two cards is,
+  window divided into two panes, which is what a tab of two cards is,
   and it sits on a hop action rather than a chooser. Switcher
   **entries** still carry no icon — the CSS status dot plus the card
   name — and the breadcrumb separator stays the textual `/` the board
   card's `path()` already uses. The pinned set goes from eighteen to
   twenty; the `docs/DESIGN-SYSTEM.md` table rows are a maintainer edit,
-  and this lane adds only the `shared/icons.ts` re-exports.
+  and this change adds only the `shared/icons.ts` re-exports.

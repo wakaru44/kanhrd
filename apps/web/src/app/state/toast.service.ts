@@ -23,7 +23,7 @@ export interface PushToastOptions {
   timeoutMs?: number;
   /** Stays until explicitly dismissed (e.g. "connection lost", dismissed on reconnect) instead of timing out. */
   persistent?: boolean;
-  /** Dedup identity — see `Toast.key`. Give one when the message varies but the notice does not (a pen name in a disconnect notice). */
+  /** Dedup identity — see `Toast.key`. Give one when the message varies but the notice does not (a host name in a disconnect notice). */
   key?: string;
 }
 
@@ -54,7 +54,7 @@ export const PROGRESS_DELAY_MS = 300;
  * Deduplication is the default, not an opt-in. Every toast has a `key` —
  * `${level}:${message}` unless the caller names one — and a push onto an
  * existing key updates that notice in place and restarts its timer. This is
- * what keeps repeated failures (a bridge retry loop, five pens dropping at
+ * what keeps repeated failures (a bridge retry loop, five hosts dropping at
  * once) from stacking into a wall the user has to dismiss one at a time.
  */
 @Injectable({ providedIn: "root" })

@@ -9,15 +9,15 @@ const ALL_DISCONNECTED_GRACE_MS = 5000;
 /** Where `docs/OPERATING.md` lives for a user who is not reading the checkout. */
 const OPERATING_GUIDE_URL = "https://github.com/wakaru44/kanhrd/blob/main/docs/OPERATING.md";
 
-export type EmptyStateVariant = "pens" | "noMatches";
+export type EmptyStateVariant = "hosts" | "noMatches";
 
 /**
  * Page-level board empty states — a next step, never a message
  * (docs/UX-GUIDELINES.md, "Empty states as tutorials").
  *
- * - `pens` (default): no pen configured, or every configured pen has been
+ * - `hosts` (default): no host configured, or every configured host has been
  *   unreachable for more than `ALL_DISCONNECTED_GRACE_MS`. The grace period
- *   avoids flashing setup instructions on a normal cold load, where pens
+ *   avoids flashing setup instructions on a normal cold load, where hosts
  *   briefly report `connected: false` before the first handshake.
  * - `noMatches`: the filters (or every status column being hidden) match
  *   nothing. Always shown when asked for — the caller already knows.
@@ -35,7 +35,7 @@ export class EmptyState {
   private readonly clock = inject(ClockTick);
 
   readonly hosts = input<readonly HostSummary[]>([]);
-  readonly variant = input<EmptyStateVariant>("pens");
+  readonly variant = input<EmptyStateVariant>("hosts");
 
   readonly clearFilters = output<void>();
 

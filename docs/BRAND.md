@@ -2,7 +2,7 @@
 
 **Codename: neo-shepherd.**
 
-kanhrd is the paper lantern above the pen. You glance, you know, you tend.
+kanhrd is the paper lantern above the flock. You glance, you know, you tend.
 
 Companion documents: [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) owns visual
 primitives, [`UX-GUIDELINES.md`](UX-GUIDELINES.md) owns interactions.
@@ -12,7 +12,7 @@ This file owns identity and voice.
 
 kanhrd is a client for [herdr](https://github.com/herdrdev/herdr). herdr is
 the terminal that runs the flock; kanhrd is the board where a shepherd
-watches every animal at once, across every field.
+watches every animal at once, across every workspace.
 
 - Not a Jira. Not a Grafana. Not a mobile-first novelty.
 - A calm, precise devtool that treats _watching_ as a first-class action.
@@ -71,7 +71,7 @@ slows scanning; the serif earns its weight by being rare. See
 
 - **README / OG**: _watch the flock, tend the ones that stop._
 - **App shell**: _a shepherd's console._
-- **Empty state**: _no pens yet._
+- **Empty state**: _no hosts yet._
 
 Never all three at once.
 
@@ -94,72 +94,134 @@ referenced from templates by name. Templates never inline them. Data
 readouts (durations, byte counts, revision ids, pane ids) are not
 product copy and stay in the template.
 
-| Key                               | String                                                                                                                        |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `emptyState.noPens`               | `no pens yet.`                                                                                                                |
-| `emptyState.noPensBody`           | `point kanhrd at a herdr socket. add a pen to kanhrd.config.yaml:`                                                            |
-| `emptyState.noPensThen`           | `then start the bridge:`                                                                                                      |
-| `emptyState.noPensDocsLink`       | `read the operating guide`                                                                                                    |
-| `emptyState.waitingForPen`        | `waiting for a pen…`                                                                                                          |
-| `emptyState.penEmpty`             | `this pen is quiet. nothing running here yet.`                                                                                |
-| `emptyState.noMatches`            | `nothing matches these filters.`                                                                                              |
-| `emptyState.noMatchesAction`      | `clear filters`                                                                                                               |
-| `emptyState.scopeEmpty`           | `nothing in this scope.`                                                                                                      |
-| `emptyState.scopeEmptyAction`     | `clear scope`                                                                                                                 |
-| `emptyState.notFound`             | `off the map.`                                                                                                                |
-| `emptyState.notFoundAction`       | `back to the board`                                                                                                           |
-| `emptyState.scopeUnavailable`     | `that field is no longer here.`                                                                                               |
-| `column.empty`                    | `0`                                                                                                                           |
-| `confirm.closePane`               | `let this one rest?`                                                                                                          |
-| `confirm.closePaneBody`           | `closing ends this session. the terminal and anything running in it stop. this cannot be undone.`                             |
-| `confirm.closePaneAction`         | `rest`                                                                                                                        |
-| `confirm.keep`                    | `keep`                                                                                                                        |
-| `confirm.cancel`                  | `cancel`                                                                                                                      |
-| `confirm.closeLane`               | `let this lane rest?`                                                                                                         |
-| `confirm.closeLaneBody`           | `these sessions end and cannot be recovered:`                                                                                 |
-| `confirm.closeLaneAction`         | `close lane`                                                                                                                  |
-| `confirm.closeField`              | `let this field rest?`                                                                                                        |
-| `confirm.closeFieldBody`          | `these sessions end and cannot be recovered:`                                                                                 |
-| `confirm.closeFieldAction`        | `close field`                                                                                                                 |
-| `confirm.closeLinkedFields`       | `close every linked field?`                                                                                                   |
-| `confirm.closeLinkedFieldsBody`   | `this field shares a git worktree with others. all of them close, and every session inside them ends. this cannot be undone.` |
-| `confirm.closeLinkedFieldsAction` | `close all`                                                                                                                   |
-| `confirm.lastLaneNote`            | `this is the last lane in its field. the field closes too.`                                                                   |
-| `confirm.previewHeading`          | `this closes:`                                                                                                                |
-| `confirm.refusalHeading`          | `herdr won't do that.`                                                                                                        |
-| `toast.penDisconnected`           | `lost sight of {pen}. retrying.`                                                                                              |
-| `toast.penReconnected`            | `back in view.`                                                                                                               |
-| `toast.bridgeDisconnected`        | `lost the bridge. retrying.`                                                                                                  |
-| `toast.bridgeReconnected`         | `bridge back.`                                                                                                                |
-| `toast.splitFailed`               | `couldn't split. herdr said: {reason}`                                                                                        |
-| `toast.closeFailed`               | `couldn't close {name}. herdr said: {reason}`                                                                                 |
-| `toast.createPaneFailed`          | `couldn't open a card. herdr said: {reason}`                                                                                  |
-| `toast.createLaneFailed`          | `couldn't open a lane. herdr said: {reason}`                                                                                  |
-| `toast.createFieldFailed`         | `couldn't open a field. herdr said: {reason}`                                                                                 |
-| `toast.renameFailed`              | `couldn't rename. herdr said: {reason}`                                                                                       |
-| `toast.liveUpdatesUnavailable`    | `no live updates for this card. herdr said: {reason}`                                                                         |
-| `toast.working`                   | `working…`                                                                                                                    |
-| `status.working`                  | `working`                                                                                                                     |
-| `status.blocked`                  | `blocked`                                                                                                                     |
-| `status.done`                     | `done`                                                                                                                        |
-| `status.idle`                     | `idle`                                                                                                                        |
-| `status.unknown`                  | `unknown`                                                                                                                     |
-| `loading.board`                   | `finding pens…`                                                                                                               |
-| `loading.pane`                    | `keeping watch…`                                                                                                              |
-| `loading.retry`                   | `try again`                                                                                                                   |
-| `state.stale`                     | `stale — reconnecting`                                                                                                        |
-| `state.unavailable`               | `this pen is out of sight.`                                                                                                   |
-| `nav.backToBoard`                 | `back to the board`                                                                                                           |
-| `nav.settings`                    | `settings`                                                                                                                    |
-| `nav.toggleNav`                   | `toggle navigation`                                                                                                           |
-| `nav.help`                        | `keyboard shortcuts`                                                                                                          |
-| `nav.statusSwitcher`              | `status columns`                                                                                                              |
-| `nav.statusSwitcherItem`          | `{status} — {count} cards`                                                                                                    |
-| `notShipped`                      | `not yet.`                                                                                                                    |
+| Key                                   | String                                                                                                                                        |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `emptyState.noHosts`                  | `no hosts yet.`                                                                                                                               |
+| `emptyState.noHostsBody`              | `point kanhrd at a herdr socket. add a host to kanhrd.config.yaml:`                                                                           |
+| `emptyState.noHostsThen`              | `then start the bridge:`                                                                                                                      |
+| `emptyState.noHostsDocsLink`          | `read the operating guide`                                                                                                                    |
+| `emptyState.waitingForHost`           | `waiting for a host…`                                                                                                                         |
+| `emptyState.hostEmpty`                | `this host is quiet. nothing running here yet.`                                                                                               |
+| `emptyState.noMatches`                | `nothing matches these filters.`                                                                                                              |
+| `emptyState.noMatchesAction`          | `clear filters`                                                                                                                               |
+| `emptyState.scopeEmpty`               | `nothing in this scope.`                                                                                                                      |
+| `emptyState.scopeEmptyAction`         | `clear scope`                                                                                                                                 |
+| `emptyState.notFound`                 | `off the map.`                                                                                                                                |
+| `emptyState.notFoundAction`           | `back to the board`                                                                                                                           |
+| `emptyState.scopeUnavailable`         | `that workspace is no longer here.`                                                                                                           |
+| `column.empty`                        | `0`                                                                                                                                           |
+| `confirm.closePane`                   | `let this one rest?`                                                                                                                          |
+| `confirm.closePaneBody`               | `closing ends this session. the terminal and anything running in it stop. this cannot be undone.`                                             |
+| `confirm.closePaneAction`             | `rest`                                                                                                                                        |
+| `confirm.keep`                        | `keep`                                                                                                                                        |
+| `confirm.cancel`                      | `cancel`                                                                                                                                      |
+| `confirm.closeTab`                    | `let this tab rest?`                                                                                                                          |
+| `confirm.closeTabBody`                | `these sessions end and cannot be recovered:`                                                                                                 |
+| `confirm.closeTabAction`              | `close tab`                                                                                                                                   |
+| `confirm.closeWorkspace`              | `let this workspace rest?`                                                                                                                    |
+| `confirm.closeWorkspaceBody`          | `these sessions end and cannot be recovered:`                                                                                                 |
+| `confirm.closeWorkspaceAction`        | `close workspace`                                                                                                                             |
+| `confirm.closeLinkedWorkspaces`       | `close every linked workspace?`                                                                                                               |
+| `confirm.closeLinkedWorkspacesBody`   | `this workspace shares a git worktree with others. all of them close, and every session inside them ends. this cannot be undone.`             |
+| `confirm.closeLinkedWorkspacesAction` | `close all`                                                                                                                                   |
+| `confirm.lastTabNote`                 | `this is the last tab in its workspace. the workspace closes too.`                                                                            |
+| `confirm.previewHeading`              | `this closes:`                                                                                                                                |
+| `confirm.refusalHeading`              | `herdr won't do that.`                                                                                                                        |
+| `toast.hostDisconnected`              | `lost sight of {host}. retrying.`                                                                                                             |
+| `toast.hostReconnected`               | `back in view.`                                                                                                                               |
+| `toast.bridgeDisconnected`            | `lost the bridge. retrying.`                                                                                                                  |
+| `toast.bridgeReconnected`             | `bridge back.`                                                                                                                                |
+| `toast.splitFailed`                   | `couldn't split. herdr said: {reason}`                                                                                                        |
+| `toast.closeFailed`                   | `couldn't close {name}. herdr said: {reason}`                                                                                                 |
+| `toast.createPaneFailed`              | `couldn't open a card. herdr said: {reason}`                                                                                                  |
+| `toast.createTabFailed`               | `couldn't open a tab. herdr said: {reason}`                                                                                                   |
+| `toast.createWorkspaceFailed`         | `couldn't open a workspace. herdr said: {reason}`                                                                                             |
+| `toast.renameFailed`                  | `couldn't rename. herdr said: {reason}`                                                                                                       |
+| `toast.liveUpdatesUnavailable`        | `no live updates for this card. herdr said: {reason}`                                                                                         |
+| `toast.working`                       | `working…`                                                                                                                                    |
+| `status.working`                      | `working`                                                                                                                                     |
+| `status.blocked`                      | `blocked`                                                                                                                                     |
+| `status.done`                         | `done`                                                                                                                                        |
+| `status.idle`                         | `idle`                                                                                                                                        |
+| `status.unknown`                      | `unknown`                                                                                                                                     |
+| `loading.board`                       | `finding hosts…`                                                                                                                              |
+| `loading.pane`                        | `keeping watch…`                                                                                                                              |
+| `loading.retry`                       | `try again`                                                                                                                                   |
+| `state.stale`                         | `stale — reconnecting`                                                                                                                        |
+| `state.unavailable`                   | `this host is out of sight.`                                                                                                                  |
+| `nav.backToBoard`                     | `back to the board`                                                                                                                           |
+| `nav.settings`                        | `settings`                                                                                                                                    |
+| `nav.toggleNav`                       | `toggle navigation`                                                                                                                           |
+| `nav.help`                            | `keyboard shortcuts`                                                                                                                          |
+| `nav.statusSwitcher`                  | `status columns`                                                                                                                              |
+| `nav.statusSwitcherItem`              | `{status} — {count} cards`                                                                                                                    |
+| `create.menu`                         | `open`                                                                                                                                        |
+| `create.pane`                         | `open a card`                                                                                                                                 |
+| `create.tab`                          | `open a tab`                                                                                                                                  |
+| `create.workspace`                    | `open a workspace`                                                                                                                            |
+| `help.close`                          | `close`                                                                                                                                       |
+| `help.prefixNote`                     | `prefix — press it, release, then the action key within 2 seconds.`                                                                           |
+| `help.categories.Navigation`          | `navigation`                                                                                                                                  |
+| `help.categories.Lifecycle`           | `lifecycle`                                                                                                                                   |
+| `help.categories.View`                | `view`                                                                                                                                        |
+| `help.categories.Help`                | `help`                                                                                                                                        |
+| `help.shortcuts.nextTab`              | `next tab`                                                                                                                                    |
+| `help.shortcuts.prevTab`              | `previous tab`                                                                                                                                |
+| `help.shortcuts.lastTab`              | `last tab — jump back to the one before`                                                                                                      |
+| `help.shortcuts.openRail`             | `open and focus the navigator`                                                                                                                |
+| `help.shortcuts.closeTab`             | `close the current tab — asks first`                                                                                                          |
+| `help.shortcuts.closePane`            | `close the current card — not yet.`                                                                                                           |
+| `help.shortcuts.renameTab`            | `rename the current tab`                                                                                                                      |
+| `help.shortcuts.jumpTab`              | `jump to tab 0-9 in the current workspace`                                                                                                    |
+| `help.shortcuts.help`                 | `open this help`                                                                                                                              |
+| `help.shortcuts.toggleTheme`          | `switch between washi and sumi`                                                                                                               |
+| `help.shortcuts.focusSearch`          | `focus search — not yet.`                                                                                                                     |
+| `help.shortcuts.closeOverlay`         | `close the open dialog, help, create menu or drawer`                                                                                          |
+| `settings.appearance`                 | `appearance`                                                                                                                                  |
+| `settings.theme`                      | `theme`                                                                                                                                       |
+| `settings.density`                    | `density`                                                                                                                                     |
+| `settings.comfortable`                | `comfortable`                                                                                                                                 |
+| `settings.compact`                    | `compact`                                                                                                                                     |
+| `settings.terminal`                   | `terminal`                                                                                                                                    |
+| `settings.terminalNote`               | `one palette for every open terminal — cards are told apart by title, host seal and status, never by terminal colour.`                        |
+| `settings.terminalTheme`              | `colour theme`                                                                                                                                |
+| `settings.terminalFontSize`           | `text size`                                                                                                                                   |
+| `settings.runtime`                    | `runtime`                                                                                                                                     |
+| `settings.runtimeNote`                | `the output poll interval is bridge-owned. each connected host advertises its own cadence.`                                                   |
+| `settings.noHostsConnected`           | `no hosts connected yet.`                                                                                                                     |
+| `settings.pollOverride`               | `requested override (ms)`                                                                                                                     |
+| `settings.pollOverrideNote`           | `not wired up yet — the bridge does not accept a per-subscription poll interval, so this is saved in this browser and changes nothing.`       |
+| `settings.hosts`                      | `hosts`                                                                                                                                       |
+| `settings.hostsNote`                  | `the host list is bridge-owned. to add, remove or reconfigure a host, edit`                                                                   |
+| `settings.hostsNoteFile`              | `kanhrd.config.yaml`                                                                                                                          |
+| `settings.hostsNoteTail`              | `on the machine running the bridge — this screen reads it, it never writes it.`                                                               |
+| `settings.noHosts`                    | `no hosts configured.`                                                                                                                        |
+| `settings.connected`                  | `connected`                                                                                                                                   |
+| `settings.notConnected`               | `not connected`                                                                                                                               |
+| `settings.keyboard`                   | `keyboard`                                                                                                                                    |
+| `settings.keyboardNote`               | `herdr-style prefix shortcuts: press the prefix, release, then the action key. rebinding is not available yet — only the prefix resets.`      |
+| `settings.colAction`                  | `action`                                                                                                                                      |
+| `settings.colDefault`                 | `default`                                                                                                                                     |
+| `settings.colCurrent`                 | `current`                                                                                                                                     |
+| `settings.resetDefaults`              | `reset to defaults`                                                                                                                           |
+| `settings.data`                       | `data`                                                                                                                                        |
+| `settings.dataNote`                   | `everything kanhrd keeps in this browser. no host and no bridge is touched.`                                                                  |
+| `settings.clearData`                  | `clear local data`                                                                                                                            |
+| `settings.clearTitle`                 | `clear what this browser remembers?`                                                                                                          |
+| `settings.clearBody`                  | `this removes kanhrd's saved settings from this browser and reloads the page. no host, session or bridge is affected. this cannot be undone.` |
+| `settings.clearAction`                | `clear`                                                                                                                                       |
+| `settings.clearKindSetting`           | `setting`                                                                                                                                     |
+| `settings.clearFilters`               | `board filters`                                                                                                                               |
+| `settings.clearAppearance`            | `theme and density`                                                                                                                           |
+| `settings.clearTerminal`              | `terminal palette`                                                                                                                            |
+| `settings.clearTerminalFontSize`      | `terminal text size`                                                                                                                          |
+| `settings.clearKeyboard`              | `keyboard prefix`                                                                                                                             |
+| `notShipped`                          | `not yet.`                                                                                                                                    |
 
-`{pen}`, `{name}` and `{reason}` are interpolation slots. A `{reason}`
-quotes herdr's wire response verbatim — including herdr's own vocabulary
-(`host`, `workspace`, `tab`, `pane`) and its original case.
+`{host}`, `{name}` and `{reason}` are interpolation slots. A `{reason}`
+quotes herdr's wire response verbatim, including its original case. The
+framing copy and the quoted portion use the same word for the same
+object.
 
 ### Voice rules
 
@@ -204,8 +266,8 @@ Do not ship v1 with the mascot. Wordmark + crook first; earn the dog.
 - **Torii-gate framing** on modals — top and bottom rules, no side
   borders, no radius — so a modal reads as a gate you pass through, not
   a floating card.
-- **Hanko (印) seals** for pen names — a compact rectangle, ochre
-  hairline outline, monospace glyph inside, never filled. A pen is a
+- **Hanko (印) seals** for host names — a compact rectangle, ochre
+  hairline outline, monospace glyph inside, never filled. A host is a
   seal, not a pill. This ochre outline is the one bounded exception to
   otherwise colour-free chrome; the name itself is read in ink.
 - **Signboard columns.** Status columns are hung, not floated: title
@@ -214,29 +276,38 @@ Do not ship v1 with the mascot. Wordmark + crook first; earn the dog.
 
 ## Domain vocabulary
 
-kanhrd renames a small handful of herdr concepts inside its own
-surfaces. This is a **copy-only** rename: the wire protocol, TypeScript
-identifiers, capability names, API method names, and any error text that
-quotes a wire response keep herdr's terms.
+One rule, not a translation table: **herdr's objects use herdr's words;
+the board's own furniture uses kanban's words.** kanhrd's users are
+herdr's users, so an object herdr already names keeps that name in the
+UI, in the wire protocol, in TypeScript identifiers, in capability
+names, and in any error text that quotes a wire response.
 
-| herdr / wire | kanhrd UI copy            | Why                                               |
-| ------------ | ------------------------- | ------------------------------------------------- |
-| host         | **pen**                   | the enclosure; each machine is one                |
-| workspace    | **field**                 | a working area inside a pen                       |
-| tab          | **lane**                  | a track through a field (kanban lineage)          |
-| pane         | **card** (on the board)   | a single agent's card                             |
-| pane         | **pane** (in detail view) | the technical view keeps the engineering register |
-| agent status | **status** (kept)         | —                                                 |
+| kanhrd UI copy            | herdr concept | Why                                               |
+| ------------------------- | ------------- | ------------------------------------------------- |
+| **host**                  | host          | one machine running herdr                         |
+| **workspace**             | workspace     | a working area on a host                          |
+| **tab**                   | tab           | a track through a workspace                       |
+| **card** (on the board)   | pane          | the board's representation of a pane              |
+| **pane** (in detail view) | pane          | the technical view keeps the engineering register |
+| **status column**         | agent status  | a board grouping derived from `agent_status`      |
+| **swimlane** (**lane**)   | —             | a horizontal band grouping cards by a dimension   |
+
+A card is a pane. The last two rows name things herdr has no concept of;
+they are the board's own furniture and take kanban's words.
 
 ### "lane" means one thing
 
-A **lane is a tab.** A board grouping is a **status column** — in copy,
-in help text, in the keyboard overlay, and in code comments. The two are
-never both called lanes; there is no second metaphor. Status column
-headings are simply the status name (`working`, `blocked`, …).
+A **lane is a swimlane** — a horizontal band grouping cards by a chosen
+dimension. It is never a tab: in copy, in help text, in the keyboard
+overlay, in specs, or in code comments. A vertical grouping by
+`agent_status` is a **status column**, and its heading is simply the
+status name (`working`, `blocked`, …).
 
-Any inherited text that calls a board grouping a "lane" is a bug against
-this document.
+For a reader of older commits: `lane` briefly meant _tab_, under the
+copy-only rename this document used to carry. It does not any more.
+
+Any inherited text that calls a tab a "lane" is a bug against this
+document.
 
 ## Palette
 

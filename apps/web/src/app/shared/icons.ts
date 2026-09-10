@@ -37,7 +37,7 @@ export {
   LucideMenu,
   /** close pane, close dialog, clear scope, clear filter — `svg[lucideX]` */
   LucideX,
-  /** create menu (pane / lane / field) — `svg[lucidePlus]` */
+  /** create menu (pane / tab / workspace) — `svg[lucidePlus]` */
   LucidePlus,
   /** settings link — `svg[lucideSettings]` */
   LucideSettings,
@@ -45,7 +45,7 @@ export {
   LucideSun,
   /** switch to sumi — `svg[lucideMoon]` */
   LucideMoon,
-  /** rename field / lane — `svg[lucidePencil]` */
+  /** rename workspace / tab — `svg[lucidePencil]` */
   LucidePencil,
   /** split right — `svg[lucideArrowRight]` */
   LucideArrowRight,
@@ -67,7 +67,7 @@ export {
   LucideCopy,
   /** retry a failed load — `svg[lucideRefreshCw]` */
   LucideRefreshCw,
-  /** disconnected pen, stale marker — `svg[lucideUnplug]` */
+  /** disconnected host, stale marker — `svg[lucideUnplug]` */
   LucideUnplug,
 };
 

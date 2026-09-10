@@ -16,8 +16,8 @@ import { COPY } from "../shared/copy";
 
 /**
  * `/settings` — appearance (theme + density), terminal palette, runtime
- * (read-only advertised poll cadence per pen plus the inert override),
- * pens (read-only: pen config lives in `kanhrd.config.yaml` on the bridge),
+ * (read-only advertised poll cadence per host plus the inert override),
+ * hosts (read-only: host config lives in `kanhrd.config.yaml` on the bridge),
  * keyboard, and data (clear local client state).
  *
  * Single column capped at `--content-max-width`; every row stacks
@@ -77,7 +77,7 @@ export class Settings {
     this.settingsService.setRequestedPollIntervalMs(parsed !== null && Number.isFinite(parsed) ? parsed : null);
   }
 
-  /** Data readout, not copy: the advertised cadence in ms, or `n/a` when the pen advertises none. */
+  /** Data readout, not copy: the advertised cadence in ms, or `n/a` when the host advertises none. */
   protected advertisedPollLabel(host: string): string {
     const ms = this.capabilities().get(host)?.outputPollIntervalMs ?? null;
     return ms === null ? this.text.poll.unavailable : `${ms}${this.text.poll.unit}`;

@@ -73,7 +73,7 @@ export function loadTerminalFontSize(storage: Pick<Storage, "getItem"> = localSt
  *
  * App-wide, not per-pane — the same model docs/DESIGN-SYSTEM.md
  * § Terminal fixes for palettes, for the same reason (cards are told
- * apart by title, pen seal and status, never by terminal appearance) plus
+ * apart by title, host seal and status, never by terminal appearance) plus
  * one specific to size: it is an accessibility preference, so an operator
  * who needs 17px needs it in every pane, not one at a time.
  *

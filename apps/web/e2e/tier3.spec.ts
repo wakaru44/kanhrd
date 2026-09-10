@@ -10,13 +10,13 @@ import type { Locator, Page } from "@playwright/test";
  * workspace CRUD, workspace rail, cascade purge, destructive-op
  * confirmation, capability gating, cold-load pane-detail routing).
  * Mirrors CONTRACT-TIER3.md and L3C's UX notes (tmp/foreman/kanhrd.md):
- * header "+" acts on a single "primary host"; the create menu's lane/field
+ * header "+" acts on a single "primary host"; the create menu's tab/workspace
  * create-then-rename via an inline edit field; the tier-2 cold-load gap
  * (apps/web/e2e/README.md) is fixed, so this suite is the first to exercise
  * `page.goto('/pane/:host/:id')` directly instead of working around it.
  *
  * Semantic selectors for tier-3 markup are kept local to this file (rather
- * than added to `helpers/selectors.ts`, which is out of this lane's writable
+ * than added to `helpers/selectors.ts`, which is out of this suite's writable
  * scope) — see apps/web/src/app/{rail,board,shared}/*.html for the source
  * markup these are read off.
  *
@@ -69,7 +69,7 @@ function modalTitle(page: Page): Locator {
  * The modal's confirm button. `--danger-fill` is reserved for irrecoverable
  * local-data loss (docs/UX-GUIDELINES.md, "Destructive confirmations"), so a
  * pane close is `.btn.primary` without `.danger` while the rail's
- * lane/field closes still pass `[danger]="true"` — match on `.primary`,
+ * tab/workspace closes still pass `[danger]="true"` — match on `.primary`,
  * which both carry.
  */
 function modalConfirm(page: Page): Locator {
@@ -223,10 +223,10 @@ test.describe("tab CRUD lifecycle", () => {
     const beforeCount = await waitForStableCount(rail(app).locator(".tab-row"));
 
     await plusButton(app).click();
-    await expect(plusMenuItem(app, COPY.create.lane)).toBeVisible();
-    await plusMenuItem(app, COPY.create.lane).click();
+    await expect(plusMenuItem(app, COPY.create.tab)).toBeVisible();
+    await plusMenuItem(app, COPY.create.tab).click();
 
-    // The new lane shows up in the rail within 2s.
+    // The new tab shows up in the rail within 2s.
     await expect(rail(app).locator(".tab-row")).toHaveCount(beforeCount + 1, { timeout: 2_000 });
 
     // Immediately in inline-rename mode (create-then-rename UX, per L3C's notes).
@@ -253,9 +253,9 @@ test.describe("tab CRUD lifecycle", () => {
 
     // Close it via the rail: visible overflow trigger -> menu item -> confirm.
     const row = tabRowByName(app, name);
-    await openRowMenuAndClick(row, COPY.confirm.closeLaneAction);
+    await openRowMenuAndClick(row, COPY.confirm.closeTabAction);
 
-    await expect(modalTitle(app)).toHaveText(COPY.confirm.closeLane);
+    await expect(modalTitle(app)).toHaveText(COPY.confirm.closeTab);
     await modalConfirm(app).click();
 
     await expect(tabRowByName(app, name)).toHaveCount(0, { timeout: 2_000 });
@@ -284,9 +284,9 @@ test("closing the only open workspace shows a refusal with no confirm button (do
 
   const row = workspaceRowByName(app, target.label);
   await expect(row).toBeVisible({ timeout: 5_000 });
-  await openRowMenuAndClick(row, COPY.confirm.closeFieldAction);
+  await openRowMenuAndClick(row, COPY.confirm.closeWorkspaceAction);
 
-  await expect(modalTitle(app)).toHaveText(COPY.confirm.closeField);
+  await expect(modalTitle(app)).toHaveText(COPY.confirm.closeWorkspace);
   await expect(modalRefusalBody(app)).toBeVisible();
   // Refusal mode renders no confirm button at all — only a dismiss action.
   await expect(modalConfirm(app)).toHaveCount(0);
@@ -309,7 +309,7 @@ test("closing a pane's card shows a danger-styled confirmation; cancel keeps it,
   try {
     const before = await herdrTabList();
     await plusButton(app).click();
-    await plusMenuItem(app, COPY.create.lane).click();
+    await plusMenuItem(app, COPY.create.tab).click();
     const editInput = tabRowInEditMode(app).locator(".edit-input");
     await expect(editInput).toBeVisible({ timeout: 2_000 });
     const name = `kanhrd-e2e-${Date.now()}`;
@@ -372,7 +372,7 @@ test("closing a tab cascades to purge its pane from the board client-side, even 
   try {
     const before = await herdrTabList();
     await plusButton(app).click();
-    await plusMenuItem(app, COPY.create.lane).click();
+    await plusMenuItem(app, COPY.create.tab).click();
     const editInput = tabRowInEditMode(app).locator(".edit-input");
     await expect(editInput).toBeVisible({ timeout: 2_000 });
     const name = `kanhrd-e2e-${Date.now()}`;
@@ -397,8 +397,8 @@ test("closing a tab cascades to purge its pane from the board client-side, even 
     // (panes.store.ts's `tab.closed` handler) were missing, the card would
     // be left behind as a zombie.
     const row = tabRowByName(app, name);
-    await openRowMenuAndClick(row, COPY.confirm.closeLaneAction);
-    await expect(modalTitle(app)).toHaveText(COPY.confirm.closeLane);
+    await openRowMenuAndClick(row, COPY.confirm.closeTabAction);
+    await expect(modalTitle(app)).toHaveText(COPY.confirm.closeTab);
     await modalConfirm(app).click();
 
     await expect(tabRowByName(app, name)).toHaveCount(0, { timeout: 2_000 });

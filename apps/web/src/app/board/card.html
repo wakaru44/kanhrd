@@ -39,7 +39,7 @@
   <span class="status-label" [class]="pane().agent_status">{{ statusLabel() }}</span>
 
   <!--
-    Location row: field / lane, then the project herdr already knows about.
+    Location row: workspace / tab, then the project herdr already knows about.
     The truncated path is computed (util/path-tail.ts), not CSS-elided — the
     head of a path cannot be ellipsed by `text-overflow`, and faking it with
     `direction: rtl` is bidi-unsafe. The full path is rendered on keyboard
@@ -90,21 +90,48 @@
         }
       </div>
 
-      <!-- Compact / touch: the same actions behind one visible trigger. -->
+      <!--
+        Compact / touch: the same actions behind one visible trigger.
+
+        The menu itself is portalled into the CDK overlay container rather
+        than rendered here: `.card-actions` is a stacking context (so an
+        in-flow menu loses to the next card's, on document order) and
+        `.column-body` scrolls (so an in-flow menu is clipped at the
+        column's edge). Neither is fixable with a z-index. The trigger and
+        the menu are tied together by `aria-controls`, and the keydown
+        handler is bound on both sides of the portal — focus can be on the
+        trigger or inside the menu.
+      -->
       <div class="actions-overflow" (keydown)="onMenuKeydown($event)">
         <button
           type="button"
           class="card-action overflow-trigger"
           #menuTrigger
+          cdkOverlayOrigin
+          #menuOrigin="cdkOverlayOrigin"
           aria-haspopup="menu"
           [attr.aria-expanded]="menuOpen()"
+          [attr.aria-controls]="menuOpen() ? menuId : null"
           [attr.aria-label]="actionLabel(action.moreActions)"
           (click)="toggleMenu()"
         >
           <svg lucideMoreHorizontal class="icon"></svg>
         </button>
-        @if (menuOpen()) {
-          <div class="overflow-menu" role="menu" #menu [attr.aria-label]="actionLabel(action.moreActions)">
+        <ng-template
+          cdkConnectedOverlay
+          [cdkConnectedOverlayOrigin]="menuOrigin"
+          [cdkConnectedOverlayOpen]="menuOpen()"
+          [cdkConnectedOverlayPositions]="menuPositions"
+          [cdkConnectedOverlayPush]="true"
+        >
+          <div
+            class="overflow-menu"
+            role="menu"
+            #menu
+            [id]="menuId"
+            (keydown)="onMenuKeydown($event)"
+            [attr.aria-label]="actionLabel(action.moreActions)"
+          >
             @if (paneSplitAvailable()) {
               <button type="button" role="menuitem" (click)="doSplit('right')">
                 <svg lucideArrowRight class="icon"></svg>{{ action.splitRight }}
@@ -124,7 +151,7 @@
               </button>
             }
           </div>
-        }
+        </ng-template>
       </div>
     </div>
   }

@@ -4,8 +4,10 @@ Reads on top of [`BRAND.md`](BRAND.md) and [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md
 When those two contradict this file, they win — this file is _how we
 use them_, not the source of truth for tokens or voice.
 
-Vocabulary reminder from `BRAND.md`: a **lane** is a tab. A board
-grouping is a **status column**. Never both.
+Vocabulary reminder from `BRAND.md`: herdr's objects use herdr's words —
+**host**, **workspace**, **tab**. The board's own furniture uses
+kanban's — **card**, **status column**, **swimlane** (short form
+**lane**). A lane is never a tab.
 
 ## The core loop
 
@@ -28,7 +30,7 @@ Settings.
 
 ## Density and cardinality
 
-kanhrd must stay useful at 1 pen and at 15 pens with 40 panes each.
+kanhrd must stay useful at 1 host and at 15 hosts with 40 panes each.
 The two density thresholds are **distinct** and are not the same number:
 
 | Threshold                           | Behaviour                                       |
@@ -97,7 +99,7 @@ Actions never live on hover alone. Two patterns are permitted:
    on first render, opens a menu with the same actions. Required for
    compact cards and all touch targets.
 
-Rail rows (field / lane) use the overflow menu; the pencil-on-hover
+Rail rows (workspace / tab) use the overflow menu; the pencil-on-hover
 pattern is removed.
 
 Card opening and card actions are separate semantic controls. A
@@ -119,7 +121,7 @@ colour-filled.
 Status membership is herdr's fact, not the user's. The board exposes
 **no** drag handle, grab cursor, or drop target on a status column, and
 never calls `pane.move` to change a status — `pane.move`'s destination
-is a tab or workspace. Relocating a pane between lanes or fields is a
+is a tab or workspace. Relocating a pane between tabs or workspaces is a
 separate feature with its own destination, capability, keyboard, error
 and reconciliation requirements; it is not part of this redesign, and
 the UI must not hint that it exists.
@@ -131,13 +133,13 @@ the UI must not hint that it exists.
   one.
 - One toast stack: bottom-right on desktop, top on mobile. There is no
   second stack.
-- Persistent connection notices carry a pen id, are deduplicated by it,
+- Persistent connection notices carry a host id, are deduplicated by it,
   and are removed by id on reconnect. Repeated failures update the
   existing notice — never a toast storm.
 - A long action posts one updatable notice after 300ms, resolved on
   completion or failure. Never a modal spinner.
 - Success toasts are used sparingly — only when the result is not
-  already visible on the board (e.g. a field rename while the rail is
+  already visible on the board (e.g. a workspace rename while the rail is
   collapsed).
 - Any form or editable field that can fail synchronously shows an inline
   error underneath it **and keeps the value the user typed**.
@@ -146,17 +148,17 @@ the UI must not hint that it exists.
 
 Five states are distinct and none of them may be faked:
 
-| State                                  | What the user sees                                                                                                            |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Loading                                | static skeleton columns; `finding pens…`. The no-pens state never renders before discovery finishes.                          |
-| Empty (no pens configured)             | setup instructions: `kanhrd.config.yaml` snippet, bridge command, operating-guide link                                        |
-| Empty (pen connected, nothing running) | `this pen is quiet…`, plus a create action **only if** the capability is advertised                                           |
-| Empty (filters/scope match nothing)    | `nothing matches these filters.` + a clear action. Never setup instructions.                                                  |
-| Stale / disconnected                   | existing content stays visible, marked with `LucideUnplug` and `stale — reconnecting`; connection-dependent actions are gated |
-| Failed                                 | loading is replaced by a visible retry (`LucideRefreshCw`) and a back path                                                    |
-| Unavailable / not found                | `that field is no longer here.` + recovery. Never silently falling back to a previous scope.                                  |
+| State                                   | What the user sees                                                                                                            |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Loading                                 | static skeleton columns; `finding hosts…`. The no-hosts state never renders before discovery finishes.                        |
+| Empty (no hosts configured)             | setup instructions: `kanhrd.config.yaml` snippet, bridge command, operating-guide link                                        |
+| Empty (host connected, nothing running) | `this host is quiet…`, plus a create action **only if** the capability is advertised                                          |
+| Empty (filters/scope match nothing)     | `nothing matches these filters.` + a clear action. Never setup instructions.                                                  |
+| Stale / disconnected                    | existing content stays visible, marked with `LucideUnplug` and `stale — reconnecting`; connection-dependent actions are gated |
+| Failed                                  | loading is replaced by a visible retry (`LucideRefreshCw`) and a back path                                                    |
+| Unavailable / not found                 | `that workspace is no longer here.` + recovery. Never silently falling back to a previous scope.                              |
 
-One failed pen never blanks healthy pens. A single pen disconnect never
+One failed host never blanks healthy hosts. A single host disconnect never
 destroys already-rendered content.
 
 Pane detail shows `keeping watch…` until its first frame, then the
@@ -165,24 +167,24 @@ pulse.
 
 ### Destructive confirmations
 
-Cascading closes (a field that closes N lanes, a linked-worktree group
-that closes M fields) render a **preview list** of what will disappear —
+Cascading closes (a workspace that closes N tabs, a linked-worktree group
+that closes M workspaces) render a **preview list** of what will disappear —
 kind, name, cardinality, one per row — instead of a prose summary. A
 single-entity close renders no list.
 
 ```text
-let field-a rest?
+let workspace-a rest?
 this closes:
-  · lane build      (2 cards)
-  · lane deploy     (1 card)
+  · tab build      (2 cards)
+  · tab deploy     (1 card)
 these sessions end and cannot be recovered.
-[ keep ]   [ close field ]
+[ keep ]   [ close workspace ]
 ```
 
 - The dialog initially focuses `keep` / `cancel`, not the destructive
   action.
 - The primary label is a verb from the care vocabulary
-  (`rest` / `close field`); the secondary is `keep` / `cancel`.
+  (`rest` / `close workspace`); the secondary is `keep` / `cancel`.
 - Primary uses the accent fill. `--danger-fill` is reserved for
   irrecoverable data loss (clear local data) — closing a pane is not
   danger-filled, it is honestly worded.
@@ -218,9 +220,9 @@ from a visible control — never from a bare `?`.
 The rail is a **navigator**, not a filter. Every scoping decision is in
 the URL:
 
-- `/` — all pens, all fields, all lanes.
-- `/workspace/:id` — scoped to a field.
-- `/workspace/:id/tab/:id` — scoped to a lane.
+- `/` — all hosts, all workspaces, all tabs.
+- `/workspace/:id` — scoped to a workspace.
+- `/workspace/:id/tab/:id` — scoped to a tab.
 - `/pane/:host/:id` — detail view.
 
 A scope pill above the board mirrors the URL and offers `clear`. If a
@@ -232,10 +234,10 @@ resolve to something else.
 
 Every **page-level** empty state is a next step, not a message.
 
-- **No pens**: `kanhrd.config.yaml` snippet with a `LucideCopy` action,
+- **No hosts**: `kanhrd.config.yaml` snippet with a `LucideCopy` action,
   the `pnpm --filter @kanhrd/bridge dev` command, a link to
-  `docs/OPERATING.md`, and the ochre dot pulse with `waiting for a pen…`.
-- **Pen connected, no cards**: an open-a-card action, offered **only if**
+  `docs/OPERATING.md`, and the ochre dot pulse with `waiting for a host…`.
+- **Host connected, no cards**: an open-a-card action, offered **only if**
   the capability is advertised.
 - **Filters match nothing**: `clear filters`.
 - **404**: single crook, `off the map.`, and a working link to `/`.
@@ -445,9 +447,9 @@ What this model does not do:
   height, `--paper-raised` fill, scrolls vertically inside itself.
 - Backdrop covers the full viewport at `--paper-scrim`, sits below the
   drawer and above everything else.
-- Field / lane rows meet the touch-target minimum, and their actions are
+- Workspace / tab rows meet the touch-target minimum, and their actions are
   in an overflow menu, never inline hover icons.
-- Long field and lane names truncate inside the drawer; they never widen
+- Long workspace and tab names truncate inside the drawer; they never widen
   it.
 
 ### Touch targets
@@ -501,7 +503,7 @@ cannot hit two at once.
   header, offset by the header height, not over it.
 - When a dialog is open, toasts never obscure the dialog's buttons —
   the dialog's controls remain hittable while notices are visible.
-- Persistent connection notices behave the same as desktop: one per pen,
+- Persistent connection notices behave the same as desktop: one per host,
   deduplicated by id, removed by id on reconnect.
 
 ### Horizontal overflow rule
@@ -520,7 +522,7 @@ a time (see _Board paging model_). Everything else fits.
 
 The following are written to be turned directly into Playwright
 assertions in `apps/web/e2e/mobile.spec.ts` under the existing `mobile`
-project. They are the acceptance criteria for the mobile test lane.
+project. They are the acceptance criteria for the mobile test suite.
 
 #### Assertions — board, populated
 
@@ -581,7 +583,7 @@ width` (already asserted).
 
 #### Assertions — board, empty
 
-- **23.** With no pens configured, the config snippet block's own
+- **23.** With no hosts configured, the config snippet block's own
   `scrollWidth > clientWidth` is permitted, while the document's is
   not.
 - **24.** The copy button and the operating-guide link are both visible and
@@ -642,7 +644,7 @@ width` (already asserted).
 - Custom icon glyph via HTML entity or emoji when lucide has one; a
   second icon package alongside `@lucide/angular`.
 - A traffic-light bar of five status counts at equal weight.
-- Calling a board grouping a "lane".
+- Calling a tab a "lane" — a lane is a swimlane.
 - The display serif on a repeated identifier.
 - Any drag affordance on a status column.
 - A global unmodified `Escape` or `?` binding.

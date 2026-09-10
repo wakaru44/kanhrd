@@ -35,12 +35,12 @@ const DESKTOP_QUERY = "(min-width: 900px)";
 type RowKind = "workspace" | "tab";
 
 /**
- * Rail = navigator (decision locked): per pen, a field list, each field
- * listing its lanes. Row actions live in a visible overflow menu (never
- * hover-only). Clicking a field or lane NAVIGATES to `/workspace/:workspaceId`
+ * Rail = navigator (decision locked): per host, a workspace list, each
+ * workspace listing its tabs. Row actions live in a visible overflow menu (never
+ * hover-only). Clicking a workspace or tab NAVIGATES to `/workspace/:workspaceId`
  * or `/workspace/:workspaceId/tab/:tabId` — it does not write
  * `PanesStore.scopeSignal` directly; `Board`'s route-sync effect derives that
- * from the URL. Clicking the already-active field/lane navigates back to `/`.
+ * from the URL. Clicking the already-active workspace/tab navigates back to `/`.
  *
  * Below 900px the same component is the mobile **overlay drawer**: `.rail` is
  * `display:none` (board.scss), the header hamburger flips
@@ -492,7 +492,7 @@ export class Rail implements OnDestroy {
     }
   }
 
-  // --- close: field (workspace) ------------------------------------------
+  // --- close: workspace ---------------------------------------------------
 
   protected readonly closeWorkspaceTarget = signal<WorkspaceSummary | null>(null);
   protected readonly closeWorkspaceGroupRequired = signal(false);
@@ -502,15 +502,15 @@ export class Rail implements OnDestroy {
     if (!target) {
       return null;
     }
-    return this.store.workspaceCountForHost(target.host) <= 1 ? COPY.rail.lastFieldRefusal : null;
+    return this.store.workspaceCountForHost(target.host) <= 1 ? COPY.rail.lastWorkspaceRefusal : null;
   });
 
   /**
    * Care softens the prompt, never the fact: the honest body names the
-   * sessions as ending and unrecoverable, and the field being closed.
+   * sessions as ending and unrecoverable, and the workspace being closed.
    */
   protected closeWorkspaceBody(target: WorkspaceSummary): string {
-    return `${COPY.confirm.closeFieldBody} ${target.name}`;
+    return `${COPY.confirm.closeWorkspaceBody} ${target.name}`;
   }
 
   protected requestCloseWorkspace(workspace: WorkspaceSummary, event: Event): void {
@@ -548,7 +548,7 @@ export class Rail implements OnDestroy {
     }
   }
 
-  // --- close: lane (tab) --------------------------------------------------
+  // --- close: tab ---------------------------------------------------------
 
   protected readonly closeTabTarget = signal<TabSummary | null>(null);
 
@@ -561,8 +561,8 @@ export class Rail implements OnDestroy {
   });
 
   protected closeTabBody(target: TabSummary): string {
-    const body = `${COPY.confirm.closeLaneBody} ${target.name}`;
-    return this.closeTabIsLastInWorkspace() ? `${body} ${COPY.confirm.lastLaneNote}` : body;
+    const body = `${COPY.confirm.closeTabBody} ${target.name}`;
+    return this.closeTabIsLastInWorkspace() ? `${body} ${COPY.confirm.lastTabNote}` : body;
   }
 
   protected requestCloseTab(tab: TabSummary, event?: Event): void {

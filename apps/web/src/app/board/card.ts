@@ -9,6 +9,7 @@ import {
   viewChild,
 } from "@angular/core";
 import { RouterLink } from "@angular/router";
+import { OverlayModule, type ConnectedPosition } from "@angular/cdk/overlay";
 import type { BridgeCapabilities, Pane, SplitDirection } from "@kanhrd/schema";
 import { PanesStore } from "../state/panes.store";
 import { ConfirmModal } from "../shared/confirm-modal";
@@ -44,10 +45,14 @@ export const CARD_COPY = {
   rename: COPY.card.renameAction,
 } as const;
 
+/** Ids for `aria-controls`, unique per card instance for the life of the page. */
+let nextMenuId = 0;
+
 @Component({
   selector: "app-card",
   imports: [
     RouterLink,
+    OverlayModule,
     ConfirmModal,
     RenameModal,
     LucideArrowRight,
@@ -154,6 +159,23 @@ export class Card {
   protected readonly renameError = signal<string | null>(null);
   protected readonly showRename = signal(false);
   protected readonly menuOpen = signal(false);
+  /**
+   * The menu is portalled into the CDK overlay container, so it is no longer
+   * a DOM descendant of its trigger's parent. `aria-controls` is what still
+   * ties the two together for a screen reader — and it needs an id that is
+   * unique across every card on the board.
+   */
+  protected readonly menuId = `card-menu-${nextMenuId++}`;
+
+  /**
+   * Below the trigger, right edges aligned — the position the menu has
+   * always had — falling back to above it when the viewport has no room.
+   * The gap is `.overflow-menu`'s own margin, so it stays a token.
+   */
+  protected readonly menuPositions: ConnectedPosition[] = [
+    { originX: "end", originY: "bottom", overlayX: "end", overlayY: "top" },
+    { originX: "end", originY: "top", overlayX: "end", overlayY: "bottom" },
+  ];
 
   private readonly menuEl = viewChild<ElementRef<HTMLElement>>("menu");
   private readonly menuTrigger = viewChild<ElementRef<HTMLButtonElement>>("menuTrigger");
@@ -188,11 +210,27 @@ export class Card {
 
     // Opening the overflow menu moves focus into it (keyboard-first: the menu
     // is navigable with arrows and returns focus to its trigger on Escape).
+    // `preventScroll`: the menu is an overlay over the board, so focusing it
+    // must not scroll the column under it — which would also trip the
+    // close-on-scroll below.
     effect(() => {
       const menu = this.menuEl()?.nativeElement;
       if (this.menuOpen() && menu) {
-        this.menuItems(menu)[0]?.focus();
+        this.menuItems(menu)[0]?.focus({ preventScroll: true });
       }
+    });
+
+    // An overlay is anchored at the moment it opens; once the column scrolls
+    // under it, a menu left floating over unrelated cards is worse than the
+    // clipping it replaced, so it closes. Capture phase because a scroll
+    // inside `.column-body` (or the virtual viewport) never bubbles.
+    effect((onCleanup) => {
+      if (!this.menuOpen()) {
+        return;
+      }
+      const close = () => this.closeMenu(false);
+      document.addEventListener("scroll", close, true);
+      onCleanup(() => document.removeEventListener("scroll", close, true));
     });
   }
 
@@ -266,11 +304,22 @@ export class Card {
     }
   }
 
+  /**
+   * Click-outside dismissal. The menu is no longer inside `.card-actions` —
+   * it lives in the overlay container — so containment is tested against
+   * both, or every click on a menu item would read as a click outside.
+   */
   protected onDocumentClick(event: MouseEvent): void {
-    const actions = this.actionsEl()?.nativeElement;
-    if (this.menuOpen() && actions && !actions.contains(event.target as Node)) {
-      this.closeMenu(false);
+    if (!this.menuOpen()) {
+      return;
     }
+    const target = event.target as Node;
+    const actions = this.actionsEl()?.nativeElement;
+    const menu = this.menuEl()?.nativeElement;
+    if (actions?.contains(target) || menu?.contains(target)) {
+      return;
+    }
+    this.closeMenu(false);
   }
 
   protected onCloseClick(): void {

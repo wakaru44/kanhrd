@@ -7,9 +7,9 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
       `shared/copy.ts`; a maintainer separately adds the rows to
       `docs/BRAND.md`'s approved-copy table, and `copy.ts` does not wait
       on it. **No component-local copy constant** — the `CARD_COPY`
-      pending-copy precedent this lane originally cited was removed in
+      pending-copy precedent this change originally cited was removed in
       commit `f173992` ("give every user-facing string one home in
-      copy.ts"). This lane does **not** edit `docs/BRAND.md`
+      copy.ts"). This change does **not** edit `docs/BRAND.md`
 - [x] 0.2 Q3 (column-header overflow menu) and Q6 (mobile switcher
       widening from "one segment per status" to "one segment per
       column") confirmed
@@ -46,14 +46,14 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
 - [ ] 2.1 `apps/web/src/app/state/panes.store.ts` — `columnsSignal`
       partitions panes with a membership entry out of `groupByStatus`
       into a parked map; status grouping is otherwise unchanged
-- [ ] 2.2 Parked columns honour `Filters` (excluded pens, hidden
+- [ ] 2.2 Parked columns honour `Filters` (excluded hosts, hidden
       statuses) and the URL scope identically to status columns; counts
       reflect the filtered collection
 - [ ] 2.3 Release membership on `pane.closed`, and on the local purge of
       cascaded children after `tab.closed` / `workspace.closed` — reuse
       the pane keys the existing purge already computes, do not
       re-derive the tree
-- [ ] 2.4 **Do not** release on pen disconnect, on a pane's absence from
+- [ ] 2.4 **Do not** release on host disconnect, on a pane's absence from
       a `pane.list` snapshot, or on any last-seen heuristic
 - [ ] 2.5 `panes.store.spec.ts` — a parked pane appears exactly once;
       counts; cascade purge; a disconnect/reconnect cycle leaves
@@ -90,7 +90,7 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
       paging strip and the status switcher (per 0.2)
 - [ ] 4.5 Empty parked column: slot kept, header plus mono `0`, no prose
 - [ ] 4.6 `remove column` confirmation states plainly that the cards
-      return to their status columns and nothing on the pen changes — no
+      return to their status columns and nothing on the host changes — no
       care verb (parking is not a lifecycle end), no implied undo
 - [ ] 4.7 Settings — `clear parked columns` row stating that parked
       columns live in this browser only

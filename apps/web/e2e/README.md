@@ -109,7 +109,7 @@ component's `pane.read`/`pane.subscribe_output` calls — confirmed by
 inspecting WS traffic, where a cold deep-link load sends zero pane-detail
 requests, while an SPA-internal card click sends the expected
 `pane.read` + `pane.subscribe_output` pair immediately. That's a real gap in
-the app's routing (out of this lane's file scope — `apps/web/src/**` belongs
+the app's routing (out of this suite's file scope — `apps/web/src/**` belongs
 to L3B/L3C), not an E2E suite bug; this suite documents it here and tests the
 flow the brief actually describes and real users actually take.
 
@@ -176,7 +176,7 @@ carries that reason inline.
 
 Layout facts at this width (intentional, not bugs):
 
-- `.rail` (field/lane nav) is `display: none` below 900px; the header
+- `.rail` (workspace/tab nav) is `display: none` below 900px; the header
   hamburger (`LucideMenu`) opens it as an overlay drawer with a backdrop.
 - The board becomes a one-column-per-screen pager: `.board-strip` with
   `scroll-snap-type: x mandatory` and `flex: 0 0 100%` columns, driven by

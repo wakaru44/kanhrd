@@ -49,6 +49,14 @@ function capsWithTerminal(
 
 describe("Card", () => {
   let store: FakePanesStore;
+  /** Containers a test attached to the document itself; torn down after it. */
+  const strays: HTMLElement[] = [];
+
+  afterEach(() => {
+    while (strays.length) {
+      strays.pop()!.remove();
+    }
+  });
 
   beforeEach(async () => {
     store = new FakePanesStore();
@@ -83,9 +91,31 @@ describe("Card", () => {
     return renderFixture(p, capabilities, compact).nativeElement as HTMLElement;
   }
 
+  /**
+   * This card's open overflow menu, or `null`. The menu is portalled into
+   * the CDK overlay container, so it is reached through the trigger's
+   * `aria-controls` rather than by descending from the card. A query
+   * change only: what the tests assert about it is unchanged.
+   */
+  function menuOf(fixture: ReturnType<typeof renderFixture>): HTMLElement | null {
+    const id = (fixture.nativeElement as HTMLElement)
+      .querySelector(".overflow-trigger")
+      ?.getAttribute("aria-controls");
+    return id ? document.getElementById(id) : null;
+  }
+
+  /** `selector` inside the card, or inside the menu the card has open. */
+  function queryOf<T extends Element>(
+    fixture: ReturnType<typeof renderFixture>,
+    selector: string,
+  ): T | null {
+    const el = fixture.nativeElement as HTMLElement;
+    return el.querySelector<T>(selector) ?? menuOf(fixture)?.querySelector<T>(selector) ?? null;
+  }
+
   /** Clicks `selector` inside `fixture` and flushes a change-detection pass so signal-driven `@if`s re-render. */
   function clickAndSettle(fixture: ReturnType<typeof renderFixture>, selector: string): void {
-    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(selector)?.click();
+    queryOf<HTMLButtonElement>(fixture, selector)?.click();
     fixture.detectChanges();
   }
 
@@ -324,7 +354,8 @@ describe("Card", () => {
     expect(trigger?.getAttribute("aria-expanded")).toBe("false");
     clickAndSettle(fixture, ".card-action.overflow-trigger");
 
-    const items = Array.from(el.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+    const menu = menuOf(fixture);
+    const items = Array.from(menu!.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
     expect(items.map((i) => i.textContent?.trim())).toEqual([
       CARD_COPY.splitRight,
       CARD_COPY.splitDown,
@@ -333,13 +364,142 @@ describe("Card", () => {
     expect(trigger?.getAttribute("aria-expanded")).toBe("true");
 
     items[0].focus();
-    el.querySelector(".actions-overflow")?.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-    );
+    menu!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     fixture.detectChanges();
 
-    expect(el.querySelector('[role="menu"]')).toBeFalsy();
+    expect(menuOf(fixture)).toBeFalsy();
     expect(document.activeElement).toBe(trigger as HTMLButtonElement);
+  });
+
+  // --- stacking and clipping (openspec fix-card-menu-stacking) -------------
+  //
+  // Both tests hit-test with `document.elementFromPoint`. A rectangle that
+  // merely *looks* right is what shipped the bug: the menu's box was where
+  // it should be and the next card's buttons were taking the clicks inside
+  // it. Only the hit test says who owns the pixel.
+
+  /** Opens this card's menu and hands back the element, wherever it now lives. */
+  function openMenu(fixture: ReturnType<typeof renderFixture>): HTMLElement {
+    clickAndSettle(fixture, ".card-action.overflow-trigger");
+    const menu = menuOf(fixture);
+    expect(menu).withContext("the menu opened").not.toBeNull();
+    return menu!;
+  }
+
+  /** Centre of the horizontal overlap between two boxes, or `null` when they miss. */
+  function overlapCentre(a: DOMRect, b: DOMRect): number | null {
+    const left = Math.max(a.left, b.left);
+    const right = Math.min(a.right, b.right);
+    return right > left ? (left + right) / 2 : null;
+  }
+
+  it("keeps an open menu above the next card's action controls", () => {
+    const first = renderFixture(pane({ id: "pane-a" }), capsWithTerminal("laptop", tier3));
+    const next = renderFixture(pane({ id: "pane-b" }), capsWithTerminal("laptop", tier3));
+    // TestBed's DOM renderer detaches the previous fixture's root element on
+    // every `createComponent`, so the two cards are re-attached here, in
+    // board order: the bug is the LATER card winning on document order.
+    const board = document.createElement("div");
+    document.body.appendChild(board);
+    strays.push(board);
+    board.append(first.nativeElement as HTMLElement, next.nativeElement as HTMLElement);
+
+    const menu = openMenu(first);
+    // The neighbour's overflow trigger, not its `.actions-inline` row: at
+    // karma's narrow viewport the card renders its compact variant, where
+    // the inline row folds into this same trigger. Either way the control
+    // sits in the neighbour's `.card-actions` — the stacking context that
+    // used to win on document order.
+    const neighbour = (next.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      ".card-action.overflow-trigger",
+    )!;
+
+    // Reproduce the measured collision: the next card's action control sits
+    // inside the open menu's box, over its last (destructive) row. Offset
+    // with `position: relative` — a transform would create a stacking
+    // context on the neighbour and rig the result.
+    const menuBox = menu.getBoundingClientRect();
+    const y = menuBox.bottom - menuBox.height / 4;
+    const host = next.nativeElement as HTMLElement;
+    host.style.position = "relative";
+    host.style.top = `${y - neighbour.getBoundingClientRect().top - neighbour.offsetHeight / 2}px`;
+
+    const box = neighbour.getBoundingClientRect();
+    expect(box.top).withContext("the neighbour's button overlaps the menu").toBeLessThan(y);
+    expect(box.bottom).withContext("the neighbour's button overlaps the menu").toBeGreaterThan(y);
+    const x = overlapCentre(menuBox, box);
+    expect(x).withContext("the boxes overlap horizontally").not.toBeNull();
+
+    expect(menu.contains(document.elementFromPoint(x!, y))).toBe(true);
+  });
+
+  it("shows the whole menu when its card is at the end of a scrolling column", () => {
+    // `.column-body { overflow-y: auto }` — the column's own scroller, which
+    // used to clip the last card's menu at the column's bottom edge.
+    const scroller = document.createElement("div");
+    scroller.style.height = "140px";
+    scroller.style.overflowY = "auto";
+    const spacer = document.createElement("div");
+    spacer.style.height = "300px";
+    scroller.appendChild(spacer);
+    document.body.appendChild(scroller);
+    strays.push(scroller);
+
+    const fixture = renderFixture(pane({ host: "laptop" }), capsWithTerminal("laptop", tier3));
+    scroller.appendChild(fixture.nativeElement as HTMLElement);
+    scroller.scrollTop = scroller.scrollHeight;
+
+    const menu = openMenu(fixture);
+    const box = menu.getBoundingClientRect();
+    expect(box.bottom).withContext("not cut off below the viewport").toBeLessThanOrEqual(
+      window.innerHeight,
+    );
+    expect(box.top).withContext("not cut off above the viewport").toBeGreaterThanOrEqual(0);
+
+    for (const item of Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'))) {
+      const rect = item.getBoundingClientRect();
+      const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      expect(item.contains(hit))
+        .withContext(`"${item.textContent?.trim()}" is hit-testable`)
+        .toBe(true);
+    }
+  });
+
+  it("dismisses on a click outside, and counts a click in the portalled menu as inside", () => {
+    const fixture = renderFixture(pane({ host: "laptop" }), capsWithTerminal("laptop", tier3));
+    const menu = openMenu(fixture);
+
+    // The menu is no longer inside `.card-actions`, so containment has to
+    // be tested against it too — otherwise every menu click reads as a
+    // click outside and dismisses the menu under the pointer.
+    menu.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    fixture.detectChanges();
+    expect(menuOf(fixture)).withContext("a click on the menu keeps it open").not.toBeNull();
+
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    fixture.detectChanges();
+    expect(menuOf(fixture)).withContext("a click elsewhere dismisses it").toBeNull();
+  });
+
+  it("closes the menu when the column under it scrolls", () => {
+    const scroller = document.createElement("div");
+    scroller.style.height = "140px";
+    scroller.style.overflowY = "auto";
+    const spacer = document.createElement("div");
+    spacer.style.height = "300px";
+    scroller.appendChild(spacer);
+    document.body.appendChild(scroller);
+    strays.push(scroller);
+
+    const fixture = renderFixture(pane({ host: "laptop" }), capsWithTerminal("laptop", tier3));
+    scroller.appendChild(fixture.nativeElement as HTMLElement);
+    openMenu(fixture);
+
+    scroller.scrollTop = 40;
+    scroller.dispatchEvent(new Event("scroll"));
+    fixture.detectChanges();
+
+    expect(menuOf(fixture)).withContext("no menu left floating over the board").toBeNull();
   });
 
   it("splits through the overflow menu", () => {
@@ -430,16 +590,14 @@ describe("Card", () => {
 
   // --- rename (herdr's pane.rename, exposed on the card) -------------------
 
-  it("offers rename in the overflow menu only when the pen advertises paneRename", () => {
+  it("offers rename in the overflow menu only when the host advertises paneRename", () => {
     const withRename = renderFixture(pane(), capsWithTerminal("laptop", { paneRename: true }));
     clickAndSettle(withRename, ".overflow-trigger");
-    expect(
-      (withRename.nativeElement as HTMLElement).querySelector('[role="menuitem"].rename'),
-    ).not.toBeNull();
+    expect(queryOf(withRename, '[role="menuitem"].rename')).not.toBeNull();
 
     const without = renderFixture(pane(), capsWithTerminal("laptop", tier3));
     clickAndSettle(without, ".overflow-trigger");
-    expect((without.nativeElement as HTMLElement).querySelector('[role="menuitem"].rename')).toBeNull();
+    expect(queryOf(without, '[role="menuitem"].rename')).toBeNull();
   });
 
   it("keeps the overflow trigger visible on first render, with no hover simulation", () => {

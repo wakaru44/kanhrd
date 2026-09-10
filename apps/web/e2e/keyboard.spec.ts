@@ -9,7 +9,7 @@ import { COPY } from "../src/app/shared/copy";
  * `Ctrl+B`, two-stage chord (press prefix, release, then the action key
  * within 2s) — see `src/app/state/keyboard.service.ts`. Semantic selectors
  * are kept local to this file rather than added to `helpers/selectors.ts`,
- * following `tier3.spec.ts`'s precedent for markup this lane doesn't own —
+ * following `tier3.spec.ts`'s precedent for markup this suite doesn't own —
  * see `src/app/{shared/keyboard-help-overlay,rail,board}.html` for source.
  */
 
@@ -73,7 +73,7 @@ test("a bare '?' is not a global binding", async ({ app }) => {
  * the app header renders no visible help control either, while
  * `formatBinding` still advertises "? or Ctrl+B + ?" in the settings
  * shortcut table. Fix belongs in app.ts (let the guard fall through while
- * the chord is armed), which is outside this lane's writable scope.
+ * the chord is armed), which is outside this suite's writable scope.
  */
 test.fixme("prefix+? opens the help overlay with every shortcut category", async ({ app }) => {
   await app.locator("body").click();

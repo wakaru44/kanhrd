@@ -10,30 +10,20 @@ Glossary for **kanhrd** — a web UI for herdr with a kanban view as its distinc
 
 **Presentation layer**: this glossary covers the domain. The brand,
 design tokens and interaction rules built on top of it live in
-[`BRAND.md`](BRAND.md) (identity, voice, and the user-facing
-pen / field / lane / card rename of these same terms),
+[`BRAND.md`](BRAND.md) (identity, voice, and the vocabulary table),
 [`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) (the authoritative token
 contract), and [`UX-GUIDELINES.md`](UX-GUIDELINES.md) (interaction
-patterns). The renames there are copy-only — the terms in this glossary
-remain the wire and code vocabulary.
+patterns).
 
-## Copy-layer rename
+## Vocabulary
 
-The user-facing brand (see [`BRAND.md`](BRAND.md)) renames these domain
-terms in every string, label, and doc aimed at people. Code, wire, API
-surfaces, event names, and this glossary keep the herdr terms.
+herdr's objects use herdr's words; the board's own furniture uses
+kanban's words. [`BRAND.md`](BRAND.md) § Domain vocabulary carries the
+table — what the UI says for each object, and the herdr concept behind
+it. It is not restated here.
 
-| wire / code (this glossary) | user-facing copy |
-| --- | --- |
-| host                        | pen              |
-| workspace                   | field            |
-| tab                         | lane             |
-| pane                        | card             |
-
-Rule: never mix the two vocabularies in the same surface. Rust, TypeScript,
-JSON schemas, socket messages, logs, and this file stay on host / workspace
-/ tab / pane. UI copy, empty states, toasts, confirms, and marketing stay on
-pen / field / lane / card. Board groupings are `status column`, not `lane`.
+The terms in this glossary are those same words: host, workspace, tab,
+pane. `lane` names a swimlane and nothing else.
 
 ## Terms
 

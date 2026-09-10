@@ -55,7 +55,7 @@
                         class="row-menu-item"
                         (click)="startRenameWorkspace(group.workspace, $event)"
                       >
-                        {{ railCopy.renameField }}
+                        {{ railCopy.renameWorkspace }}
                       </button>
                       <button
                         type="button"
@@ -63,7 +63,7 @@
                         class="row-menu-item danger"
                         (click)="requestCloseWorkspace(group.workspace, $event)"
                       >
-                        {{ copy.confirm.closeFieldAction }}
+                        {{ copy.confirm.closeWorkspaceAction }}
                       </button>
                     </div>
                   }
@@ -114,7 +114,7 @@
                           class="row-menu-item"
                           (click)="startRenameTab(tab, $event)"
                         >
-                          {{ railCopy.renameLane }}
+                          {{ railCopy.renameTab }}
                         </button>
                         <button
                           type="button"
@@ -122,7 +122,7 @@
                           class="row-menu-item danger"
                           (click)="requestCloseTab(tab, $event)"
                         >
-                          {{ copy.confirm.closeLaneAction }}
+                          {{ copy.confirm.closeTabAction }}
                         </button>
                       </div>
                     }
@@ -140,9 +140,9 @@
 @if (closeWorkspaceTarget(); as target) {
   @if (!closeWorkspaceGroupRequired()) {
     <app-confirm-modal
-      [title]="copy.confirm.closeField"
+      [title]="copy.confirm.closeWorkspace"
       [body]="closeWorkspaceBody(target)"
-      [confirmLabel]="copy.confirm.closeFieldAction"
+      [confirmLabel]="copy.confirm.closeWorkspaceAction"
       [cancelLabel]="copy.confirm.keep"
       [danger]="true"
       [refusalReason]="closeWorkspaceRefusalReason()"
@@ -154,9 +154,9 @@
 
 @if (closeWorkspaceGroupRequired()) {
   <app-confirm-modal
-    [title]="copy.confirm.closeLinkedFields"
-    [body]="copy.confirm.closeLinkedFieldsBody"
-    [confirmLabel]="copy.confirm.closeLinkedFieldsAction"
+    [title]="copy.confirm.closeLinkedWorkspaces"
+    [body]="copy.confirm.closeLinkedWorkspacesBody"
+    [confirmLabel]="copy.confirm.closeLinkedWorkspacesAction"
     [cancelLabel]="copy.confirm.keep"
     [danger]="true"
     (confirmed)="confirmCloseWorkspace()"
@@ -166,9 +166,9 @@
 
 @if (closeTabTarget(); as target) {
   <app-confirm-modal
-    [title]="copy.confirm.closeLane"
+    [title]="copy.confirm.closeTab"
     [body]="closeTabBody(target)"
-    [confirmLabel]="copy.confirm.closeLaneAction"
+    [confirmLabel]="copy.confirm.closeTabAction"
     [cancelLabel]="copy.confirm.keep"
     [danger]="true"
     (confirmed)="confirmCloseTab()"

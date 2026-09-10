@@ -102,27 +102,27 @@ describe("ToastService", () => {
   });
 
   it("dedups by an explicit key even when the message changes", () => {
-    // A per-pen connection notice: the pen is the identity, not the wording.
-    service.push({ level: "warn", message: "lost sight of ada. retrying.", key: "pen:ada", persistent: true });
-    service.push({ level: "warn", message: "lost sight of ada. still retrying.", key: "pen:ada", persistent: true });
+    // A per-host connection notice: the host is the identity, not the wording.
+    service.push({ level: "warn", message: "lost sight of ada. retrying.", key: "host:ada", persistent: true });
+    service.push({ level: "warn", message: "lost sight of ada. still retrying.", key: "host:ada", persistent: true });
 
     expect(service.toasts().length).toBe(1);
     expect(service.toasts()[0].message).toBe("lost sight of ada. still retrying.");
   });
 
-  it("keeps one notice per pen when several drop together", () => {
-    for (const pen of ["ada", "grace", "ada", "grace", "ada"]) {
-      service.push({ level: "warn", message: `lost sight of ${pen}. retrying.`, key: `pen:${pen}`, persistent: true });
+  it("keeps one notice per host when several drop together", () => {
+    for (const host of ["ada", "grace", "ada", "grace", "ada"]) {
+      service.push({ level: "warn", message: `lost sight of ${host}. retrying.`, key: `host:${host}`, persistent: true });
     }
-    expect(service.toasts().map((t) => t.key)).toEqual(["pen:ada", "pen:grace"]);
+    expect(service.toasts().map((t) => t.key)).toEqual(["host:ada", "host:grace"]);
   });
 
   it("removes a notice by key, and shrugs at an unknown one", () => {
-    service.push({ level: "warn", message: "lost sight of ada. retrying.", key: "pen:ada", persistent: true });
-    service.dismissByKey("pen:ada");
+    service.push({ level: "warn", message: "lost sight of ada. retrying.", key: "host:ada", persistent: true });
+    service.dismissByKey("host:ada");
     expect(service.toasts().length).toBe(0);
 
-    expect(() => service.dismissByKey("pen:nobody")).not.toThrow();
+    expect(() => service.dismissByKey("host:nobody")).not.toThrow();
   });
 
   it("keeps a replaced notice in its original position in the stack", () => {

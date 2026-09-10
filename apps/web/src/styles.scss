@@ -12,6 +12,15 @@
  * renders paper — light is the reference theme.
  */
 @use '@xterm/xterm/css/xterm.css';
+/*
+ * The CDK overlay container's own positioning (fixed, above the page, one
+ * container for every overlay). The card's overflow menu is portalled into
+ * it so a column's `overflow-y: auto` cannot clip it and no card's
+ * `.card-actions` stacking context can bury it — see the openspec change
+ * fix-card-menu-stacking. Structure only: no colour, size or motion value
+ * comes from here.
+ */
+@use '@angular/cdk/overlay-prebuilt.css';
 @use './app/shared/tokens';
 @use './app/shared/typography';
 

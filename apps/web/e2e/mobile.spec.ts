@@ -234,8 +234,11 @@ test("[5][6] the overflow menu is reachable by role without hover and its items 
   await trigger.click();
   // The menu renders on a signal effect, so wait for it rather than taking
   // an instantaneous `.count()` snapshot.
-  await expect(card!.locator(".overflow-menu")).toBeVisible();
-  const items = card!.locator('.overflow-menu [role="menuitem"]');
+  // Page-scoped, not card-scoped: the menu is portalled into the CDK
+  // overlay container, so it is no longer a descendant of its card
+  // (openspec fix-card-menu-stacking). One menu is open at a time.
+  await expect(app.locator(".overflow-menu")).toBeVisible();
+  const items = app.locator('.overflow-menu [role="menuitem"]');
   await expect(items).not.toHaveCount(0);
   const count = await items.count();
   for (let i = 0; i < count; i++) {
@@ -243,7 +246,7 @@ test("[5][6] the overflow menu is reachable by role without hover and its items 
   }
 
   await app.keyboard.press("Escape");
-  await expect(card!.locator(".overflow-menu")).toHaveCount(0);
+  await expect(app.locator(".overflow-menu")).toHaveCount(0);
 });
 
 test("[7] filter chips meet the 40x40px touch-target minimum and are tappable", async ({ app }) => {
@@ -499,10 +502,10 @@ test("[22] the board exposes no drag affordance on a status column", async ({ ap
 
 // --- board, empty (criteria 23-24) ----------------------------------------
 
-test.describe("board — no pens configured", () => {
+test.describe("board — no hosts configured", () => {
   test.beforeEach(async ({ page }) => {
-    // The board's pen list is an HTTP resource (`/api/hosts`,
-    // `PanesStore.hostsResource`), so the no-pens state is reachable by
+    // The board's host list is an HTTP resource (`/api/hosts`,
+    // `PanesStore.hostsResource`), so the no-hosts state is reachable by
     // stubbing that one response — no herdr reconfiguration, and every
     // other path stays real.
     await page.route("**/api/hosts", (route) =>
@@ -529,7 +532,7 @@ test.describe("board — no pens configured", () => {
 
     const guideLink = page.locator(".guide-link");
     await expect(guideLink).toBeVisible();
-    await expect(guideLink).toHaveText(COPY.emptyState.noPensDocsLink);
+    await expect(guideLink).toHaveText(COPY.emptyState.noHostsDocsLink);
     await expectTouchTarget(guideLink, "operating-guide link");
   });
 });
@@ -746,7 +749,8 @@ test.describe("toasts at 390px", () => {
     const card = allCards(page).filter({ has: page.locator(".card-actions") }).first();
     await expect(card).toBeVisible({ timeout: 10_000 });
     await card.getByRole("button", { name: /more actions/i }).click();
-    const close = card.locator('.overflow-menu [role="menuitem"].close');
+    // The menu lives in the overlay container, not under the card.
+    const close = page.locator('.overflow-menu [role="menuitem"].close');
     await expect(close).toBeVisible();
     await close.click();
   }

@@ -6,13 +6,15 @@
  *
  * Three rules travel with the strings:
  *
- * 1. **Vocabulary rename is copy-only.** Users read *card*, *pen*, *field*
- *    and *lane*; the wire protocol, TypeScript identifiers and capability
- *    names keep herdr's `pane`, `host`, `workspace` and `tab`. A `{reason}`
- *    slot quotes herdr's response verbatim — including herdr's own
- *    vocabulary and its original case. Never rewrite herdr's error text.
- * 2. **A lane is a tab.** A board grouping is a *status column*, never a
- *    lane — in copy, in help text, and in comments.
+ * 1. **herdr's objects use herdr's words.** Users read *host*, *workspace*
+ *    and *tab*, the same words the wire protocol, TypeScript identifiers and
+ *    capability names use. A `{reason}` slot quotes herdr's response
+ *    verbatim — including its original case. Never rewrite herdr's error
+ *    text.
+ * 2. **The board's own furniture uses kanban's words.** A *card* is the
+ *    board's representation of a pane, a *status column* is a grouping
+ *    derived from `agent_status`, and a *lane* is a swimlane — never a tab,
+ *    in copy, in help text, or in comments.
  * 3. **Care softens the prompt, never the fact.** `let this one rest?` is
  *    always paired with a body stating that the session terminates and
  *    cannot be undone. Nothing here may imply a pause, a recovery or an
@@ -23,19 +25,19 @@
  */
 export const COPY = {
   emptyState: {
-    noPens: 'no pens yet.',
-    noPensBody: 'point kanhrd at a herdr socket. add a pen to kanhrd.config.yaml:',
-    noPensThen: 'then start the bridge:',
-    noPensDocsLink: 'read the operating guide',
-    waitingForPen: 'waiting for a pen…',
-    penEmpty: 'this pen is quiet. nothing running here yet.',
+    noHosts: 'no hosts yet.',
+    noHostsBody: 'point kanhrd at a herdr socket. add a host to kanhrd.config.yaml:',
+    noHostsThen: 'then start the bridge:',
+    noHostsDocsLink: 'read the operating guide',
+    waitingForHost: 'waiting for a host…',
+    hostEmpty: 'this host is quiet. nothing running here yet.',
     noMatches: 'nothing matches these filters.',
     noMatchesAction: 'clear filters',
     scopeEmpty: 'nothing in this scope.',
     scopeEmptyAction: 'clear scope',
     notFound: 'off the map.',
     notFoundAction: 'back to the board',
-    scopeUnavailable: 'that field is no longer here.',
+    scopeUnavailable: 'that workspace is no longer here.',
   },
   column: {
     empty: '0',
@@ -57,14 +59,14 @@ export const COPY = {
   },
   /**
    * The navigator. `navigation` is the rail's accessible name — it says what
-   * the rail lists, in the renamed vocabulary.
+   * the rail lists.
    */
   rail: {
-    navigation: 'fields and lanes',
-    renameField: 'rename field',
-    renameLane: 'rename lane',
-    lastFieldRefusal:
-      'this is the only field open on this pen. closing it would leave nothing to watch. open another field first.',
+    navigation: 'workspaces and tabs',
+    renameWorkspace: 'rename workspace',
+    renameTab: 'rename tab',
+    lastWorkspaceRefusal:
+      'this is the only workspace open on this host. closing it would leave nothing to watch. open another workspace first.',
   },
   confirm: {
     closePane: 'let this one rest?',
@@ -72,29 +74,29 @@ export const COPY = {
     closePaneAction: 'rest',
     keep: 'keep',
     cancel: 'cancel',
-    closeLane: 'let this lane rest?',
-    closeLaneBody: 'these sessions end and cannot be recovered:',
-    closeLaneAction: 'close lane',
-    closeField: 'let this field rest?',
-    closeFieldBody: 'these sessions end and cannot be recovered:',
-    closeFieldAction: 'close field',
-    closeLinkedFields: 'close every linked field?',
-    closeLinkedFieldsBody: 'this field shares a git worktree with others. all of them close, and every session inside them ends. this cannot be undone.',
-    closeLinkedFieldsAction: 'close all',
-    lastLaneNote: 'this is the last lane in its field. the field closes too.',
+    closeTab: 'let this tab rest?',
+    closeTabBody: 'these sessions end and cannot be recovered:',
+    closeTabAction: 'close tab',
+    closeWorkspace: 'let this workspace rest?',
+    closeWorkspaceBody: 'these sessions end and cannot be recovered:',
+    closeWorkspaceAction: 'close workspace',
+    closeLinkedWorkspaces: 'close every linked workspace?',
+    closeLinkedWorkspacesBody: 'this workspace shares a git worktree with others. all of them close, and every session inside them ends. this cannot be undone.',
+    closeLinkedWorkspacesAction: 'close all',
+    lastTabNote: 'this is the last tab in its workspace. the workspace closes too.',
     previewHeading: 'this closes:',
     refusalHeading: "herdr won't do that.",
   },
   toast: {
-    penDisconnected: 'lost sight of {pen}. retrying.',
-    penReconnected: 'back in view.',
+    hostDisconnected: 'lost sight of {host}. retrying.',
+    hostReconnected: 'back in view.',
     bridgeDisconnected: 'lost the bridge. retrying.',
     bridgeReconnected: 'bridge back.',
     splitFailed: "couldn't split. herdr said: {reason}",
     closeFailed: "couldn't close {name}. herdr said: {reason}",
     createPaneFailed: "couldn't open a card. herdr said: {reason}",
-    createLaneFailed: "couldn't open a lane. herdr said: {reason}",
-    createFieldFailed: "couldn't open a field. herdr said: {reason}",
+    createTabFailed: "couldn't open a tab. herdr said: {reason}",
+    createWorkspaceFailed: "couldn't open a workspace. herdr said: {reason}",
     renameFailed: "couldn't rename. herdr said: {reason}",
     liveUpdatesUnavailable: 'no live updates for this card. herdr said: {reason}',
     working: 'working…',
@@ -109,13 +111,13 @@ export const COPY = {
     unknown: 'unknown',
   },
   loading: {
-    board: 'finding pens…',
+    board: 'finding hosts…',
     pane: 'keeping watch…',
     retry: 'try again',
   },
   state: {
     stale: 'stale — reconnecting',
-    unavailable: 'this pen is out of sight.',
+    unavailable: 'this host is out of sight.',
   },
   nav: {
     backToBoard: 'back to the board',
@@ -135,19 +137,13 @@ export const COPY = {
    * table already calls this action *open* (`toast.createPaneFailed` reads
    * `couldn't open a card`), so the control that performs it says the same
    * word as the notice that reports it failing.
-   *
-   * PENDING BRAND TABLE: `docs/BRAND.md`'s approved-copy table has no rows
-   * for creation affordances yet. These five are derived from the rows it
-   * does have — the `create*Failed` verb plus the pen/field/lane/card
-   * rename — rather than introduced, but a maintainer still owns the final
-   * wording and should add them to the table.
    */
   create: {
     /** Accessible name of the `+` trigger. */
     menu: 'open',
     pane: 'open a card',
-    lane: 'open a lane',
-    field: 'open a field',
+    tab: 'open a tab',
+    workspace: 'open a workspace',
   },
   /**
    * The keyboard-shortcut overlay.
@@ -164,12 +160,6 @@ export const COPY = {
    *
    * Key names themselves (`Ctrl+B`, `Escape`, `0-9`) are data readouts, not
    * product copy, and stay in `formatBinding`.
-   *
-   * PENDING BRAND TABLE: `docs/BRAND.md`'s approved-copy table has no rows
-   * for this surface yet. These are derived from the rules it does state —
-   * lowercase, terse, the pen/field/lane/card rename, `notShipped` for what
-   * has not landed — rather than introduced, but a maintainer owns the
-   * final wording and should add them to the table.
    */
   help: {
     close: 'close',
@@ -181,15 +171,15 @@ export const COPY = {
       Help: 'help',
     },
     shortcuts: {
-      nextTab: 'next lane',
-      prevTab: 'previous lane',
-      lastTab: 'last lane — jump back to the one before',
+      nextTab: 'next tab',
+      prevTab: 'previous tab',
+      lastTab: 'last tab — jump back to the one before',
       openRail: 'open and focus the navigator',
-      closeTab: 'close the current lane — asks first',
+      closeTab: 'close the current tab — asks first',
       /** Tail is `notShipped`; the board has no focused-card model to act on. */
       closePane: 'close the current card — not yet.',
-      renameTab: 'rename the current lane',
-      jumpTab: 'jump to lane 0-9 in the current field',
+      renameTab: 'rename the current tab',
+      jumpTab: 'jump to tab 0-9 in the current workspace',
       help: 'open this help',
       toggleTheme: 'switch between washi and sumi',
       /** Tail is `notShipped`. */
@@ -199,16 +189,13 @@ export const COPY = {
   },
   /**
    * The `/settings` screen. Lifted verbatim from the screen's own
-   * `SETTINGS_COPY` block, which existed only because a lane could not edit
-   * this file.
+   * `SETTINGS_COPY` block, which existed only because a work lane could not
+   * edit this file.
    *
    * `poll.unavailable` / `poll.unit` are data readouts rather than product
    * copy; they live here because the rest of the screen's row does, and a
    * unit label with nowhere else to go is worse than one slightly out of
    * place.
-   *
-   * PENDING BRAND TABLE: `docs/BRAND.md`'s approved-copy table covers the
-   * board, cards, confirms and toasts, but not this surface.
    */
   settings: {
     appearance: "appearance",
@@ -219,22 +206,22 @@ export const COPY = {
   
     terminal: "terminal",
     terminalNote:
-      "one palette for every open terminal — cards are told apart by title, pen seal and status, never by terminal colour.",
+      "one palette for every open terminal — cards are told apart by title, host seal and status, never by terminal colour.",
     terminalTheme: "colour theme",
     terminalFontSize: "text size",
   
     runtime: "runtime",
-    runtimeNote: "the output poll interval is bridge-owned. each connected pen advertises its own cadence.",
-    noPensConnected: "no pens connected yet.",
+    runtimeNote: "the output poll interval is bridge-owned. each connected host advertises its own cadence.",
+    noHostsConnected: "no hosts connected yet.",
     pollOverride: "requested override (ms)",
     pollOverrideNote:
       "not wired up yet — the bridge does not accept a per-subscription poll interval, so this is saved in this browser and changes nothing.",
   
-    pens: "pens",
-    pensNote: "the pen list is bridge-owned. to add, remove or reconfigure a pen, edit",
-    pensNoteFile: "kanhrd.config.yaml",
-    pensNoteTail: "on the machine running the bridge — this screen reads it, it never writes it.",
-    noPens: "no pens configured.",
+    hosts: "hosts",
+    hostsNote: "the host list is bridge-owned. to add, remove or reconfigure a host, edit",
+    hostsNoteFile: "kanhrd.config.yaml",
+    hostsNoteTail: "on the machine running the bridge — this screen reads it, it never writes it.",
+    noHosts: "no hosts configured.",
     connected: "connected",
     notConnected: "not connected",
   
@@ -247,11 +234,11 @@ export const COPY = {
     resetDefaults: "reset to defaults",
   
     data: "data",
-    dataNote: "everything kanhrd keeps in this browser. no pen and no bridge is touched.",
+    dataNote: "everything kanhrd keeps in this browser. no host and no bridge is touched.",
     clearData: "clear local data",
     clearTitle: "clear what this browser remembers?",
     clearBody:
-      "this removes kanhrd's saved settings from this browser and reloads the page. no pen, session or bridge is affected. this cannot be undone.",
+      "this removes kanhrd's saved settings from this browser and reloads the page. no host, session or bridge is affected. this cannot be undone.",
     clearAction: "clear",
     clearKindSetting: "setting",
     clearFilters: "board filters",
@@ -270,7 +257,7 @@ export const COPY = {
 
 /**
  * The placeholder names inside a copy template, as a union of string
- * literals — `Slots<'lost sight of {pen}. retrying.'>` is `'pen'`.
+ * literals — `Slots<'lost sight of {host}. retrying.'>` is `'host'`.
  */
 export type Slots<S extends string> = S extends `${string}{${infer Name}}${infer Rest}`
   ? Name | Slots<Rest>

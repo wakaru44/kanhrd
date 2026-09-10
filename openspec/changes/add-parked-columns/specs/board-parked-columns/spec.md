@@ -7,10 +7,10 @@ adds no wire method, and never alters a pane's workspace, tab or status.
 
 ## Vocabulary
 
-User-facing copy says **card** (pane), **pen** (host), **field**
-(workspace), **lane** (tab). A herdr-derived board grouping is a
-**status column**; a user-created one is a **parked column**. Wire, API,
-schema and code keep herdr's terms.
+User-facing copy says **host**, **workspace**, **tab** and **card** (the
+board's representation of a pane) — the same words the wire, API, schema
+and code use. A herdr-derived board grouping is a **status column**; a
+user-created one is a **parked column**.
 
 ## ADDED Requirements
 
@@ -84,7 +84,7 @@ Parked columns SHALL render to the right of the status columns, after
 `unknown`, ordered by their `order` field. `STATUS_COLUMN_ORDER` and the
 status columns' own rendering SHALL be unchanged.
 
-Parked columns SHALL honour the board's active `Filters` (excluded pens,
+Parked columns SHALL honour the board's active `Filters` (excluded hosts,
 hidden statuses) and the active URL scope identically to status columns,
 and their card count SHALL reflect the filtered collection.
 
@@ -97,9 +97,9 @@ an empty status column receives.
 - **WHEN** a pane with `agent_status: "idle"` is parked
 - **THEN** it renders in its parked column and no longer renders in the `idle` column, and the `idle` column's count decreases by one
 
-#### Scenario: Parked columns respect the pen filter
+#### Scenario: Parked columns respect the host filter
 
-- **WHEN** the operator excludes a pen whose cards include a parked card
+- **WHEN** the operator excludes a host whose cards include a parked card
 - **THEN** that card is removed from its parked column and the parked column's count decreases accordingly
 
 #### Scenario: An empty parked column keeps its slot
@@ -153,10 +153,10 @@ A membership entry SHALL be removed when its pane is closed — on
 `tab.closed` or `workspace.closed`, which tier-3 does not emit
 `pane.closed` frames for.
 
-A membership entry SHALL NOT be removed because its pen disconnected,
+A membership entry SHALL NOT be removed because its host disconnected,
 because its pane is temporarily absent from a `pane.list` snapshot, or
 on any elapsed-time or last-seen heuristic. A parked card belonging to a
-disconnected pen SHALL keep its slot in its parked column and be marked
+disconnected host SHALL keep its slot in its parked column and be marked
 stale in the same way a card in a status column is.
 
 Removing a parked column SHALL return its cards to their status columns
@@ -167,15 +167,15 @@ and SHALL NOT close, move or otherwise affect any pane.
 - **WHEN** a parked pane is closed and `pane.closed` arrives
 - **THEN** its membership entry is removed, the card disappears, and the parked column remains
 
-#### Scenario: A cascading field close releases its parked panes
+#### Scenario: A cascading workspace close releases its parked panes
 
-- **WHEN** a `workspace.closed` event arrives for a field containing parked panes, with no `pane.closed` frames for them
+- **WHEN** a `workspace.closed` event arrives for a workspace containing parked panes, with no `pane.closed` frames for them
 - **THEN** the membership entries for every pane the SPA had associated with that workspace are purged locally
 
-#### Scenario: A disconnected pen does not unpark anything
+#### Scenario: A disconnected host does not unpark anything
 
-- **WHEN** a pen holding parked cards disconnects and later reconnects
-- **THEN** those cards stay in their parked columns throughout, marked stale while the pen is unreachable
+- **WHEN** a host holding parked cards disconnects and later reconnects
+- **THEN** those cards stay in their parked columns throughout, marked stale while the host is unreachable
 
 #### Scenario: Removing a column returns its cards
 
@@ -268,5 +268,5 @@ or a real terminal.
 
 #### Scenario: An "any activity" rule requires evidence first
 
-- **WHEN** a later lane proposes an "on any activity" rule
+- **WHEN** a later change proposes an "on any activity" rule
 - **THEN** it first establishes, against a live herdr, that `PaneInfo.revision` advances on pane output across successive `pane.list` responses, and implements the rule by diffing that value on the bridge's existing agent-status poll rather than by adding any per-card output subscription

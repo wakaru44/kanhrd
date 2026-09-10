@@ -212,11 +212,11 @@ describe("KeyboardService", () => {
     expect(binding?.description).toBe(COPY.create.pane);
   });
 
-  it("speaks the renamed vocabulary in every description the user reads", () => {
+  it("speaks herdr's vocabulary in every description the user reads", () => {
     for (const binding of TestBed.inject(KeyboardService).shortcuts().values()) {
       expect(binding.description)
         .withContext(binding.action)
-        .not.toMatch(/\bpane\b|\btab\b|\bworkspace\b|\bhost\b/);
+        .not.toMatch(/\bpen\b|\bfield\b|\blane\b/);
     }
   });
 

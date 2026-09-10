@@ -20,8 +20,8 @@
         Visible in the header on first render — never a hover-revealed
         pencil. It borrows `.retry`'s button rule (the component's only
         button style, already touch-sized under `pointer: coarse`) because
-        `pane-detail.scss` is held by a concurrent lane; a dedicated
-        `.rename-control` rule belongs there once that lane lands.
+        `pane-detail.scss` is held by a concurrent work lane; a dedicated
+        `.rename-control` rule belongs there once that lands.
       -->
       <button
         type="button"
@@ -98,7 +98,7 @@
           }
           @case ("empty") {
             <div class="terminal-state terminal-empty">
-              <p class="state-line">{{ copy.emptyState.penEmpty }}</p>
+              <p class="state-line">{{ copy.emptyState.hostEmpty }}</p>
             </div>
           }
         }

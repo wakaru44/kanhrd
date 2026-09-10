@@ -113,7 +113,7 @@ a.card-open::after {
 }
 
 /*
- * Location row: `field / lane` first, then herdr's own project provenance.
+ * Location row: `workspace / tab` first, then herdr's own project provenance.
  * One non-wrapping line that truncates inside the card — `min-width: 0` on
  * both the row and its children is what keeps a 200-character checkout path
  * from widening the column and, through it, the page.
@@ -271,11 +271,16 @@ a.card-open::after {
   }
 }
 
+/*
+ * The menu renders inside the CDK overlay pane, which owns its position
+ * (anchored to the trigger, flipped when the viewport is short). Nothing
+ * here may set `position` or `z-index`: an in-flow menu is clipped by
+ * `.column-body`'s scroll and buried by the next card's `.card-actions`
+ * stacking context, which is the bug this replaced. The margin is the gap
+ * to the trigger, symmetric so it survives the flip.
+ */
 .overflow-menu {
-  position: absolute;
-  top: calc(100% + var(--sp-1));
-  right: 0;
-  z-index: 2;
+  margin: var(--sp-1) 0;
   display: flex;
   flex-direction: column;
   min-width: var(--sp-12);

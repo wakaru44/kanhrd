@@ -142,7 +142,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   /** herdr's git provenance for this pane's workspace — the FULL path here, never the card's truncated form. */
   protected readonly project = computed(() => this.pane()?.project ?? null);
 
-  /** Whether `pane.rename` will succeed on this pane's pen. */
+  /** Whether `pane.rename` will succeed on this pane's host. */
   protected readonly paneRenameAvailable = computed(
     () => this.store.capabilitiesSignal().get(this.host())?.paneRename === true,
   );
@@ -155,7 +155,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   });
 
   /**
-   * Whether the pen this pane lives on is currently in view. An unknown
+   * Whether the host this pane lives on is currently in view. An unknown
    * host is *not* reported as gone — only a host the bridge has told us
    * about and marked disconnected.
    */
@@ -342,7 +342,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
 
   /**
    * The single source of truth for what the terminal area shows. Order
-   * matters: a disconnected pen outranks everything, a failure only wins
+   * matters: a disconnected host outranks everything, a failure only wins
    * while there is nothing to read, and content that already rendered is
    * marked stale rather than thrown away.
    */

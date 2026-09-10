@@ -8,8 +8,8 @@
     </div>
   } @else {
     <div class="empty-state">
-      <h2>{{ copy.emptyState.noPens }}</h2>
-      <p>{{ copy.emptyState.noPensBody }}</p>
+      <h2>{{ copy.emptyState.noHosts }}</h2>
+      <p>{{ copy.emptyState.noHostsBody }}</p>
       <div class="snippet-row">
         <pre class="config-snippet">{{ configSnippet }}</pre>
         <button type="button" class="action copy-action" (click)="copySnippet()">
@@ -17,16 +17,16 @@
           <span>{{ copied() ? 'copied' : 'copy' }}</span>
         </button>
       </div>
-      <p>{{ copy.emptyState.noPensThen }}</p>
+      <p>{{ copy.emptyState.noHostsThen }}</p>
       <pre class="config-snippet">{{ startCommand }}</pre>
       <p>
         <a class="guide-link" [href]="operatingGuideUrl" target="_blank" rel="noreferrer">
-          {{ copy.emptyState.noPensDocsLink }}
+          {{ copy.emptyState.noHostsDocsLink }}
         </a>
       </p>
       <div class="heartbeat">
         <span class="pulse-dot"></span>
-        <span>{{ copy.emptyState.waitingForPen }}</span>
+        <span>{{ copy.emptyState.waitingForHost }}</span>
       </div>
     </div>
   }

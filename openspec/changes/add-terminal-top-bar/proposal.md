@@ -10,7 +10,7 @@ Two pieces of operator feedback describe the same missing surface:
 > windows/panes from that bar."
 
 Today `/pane/:host/:id` renders a header with four things: a back link,
-the title, the pen seal, and a metadata strip (status, pane id, revision,
+the title, the host seal, and a metadata strip (status, pane id, revision,
 last poll). Three facts are missing from it and all three are already in
 the browser's hands:
 
@@ -20,14 +20,14 @@ the browser's hands:
    `Pane` carries `workspace: { id, name }` and `tab: { id, name }`
    (`packages/schema/src/herdr.ts:221-236`), stamped by `projectPane`
    (`apps/bridge/src/herdr/project.ts:20-31`).
-2. **The other cards in this lane.** `PanesStore.panesSignal` holds every
-   pane of every pen keyed by `paneKey(host, id)`. Sibling cards are
+2. **The other cards in this tab.** `PanesStore.panesSignal` holds every
+   pane of every host keyed by `paneKey(host, id)`. Sibling cards are
    `panes.filter(p => p.host === host && p.tab.id === tab.id)` — a pure
    client-side derivation of data already resident.
 3. **A way to move between them without going back to the board.** The
    only exit from a terminal today is `back to the board` (and that is
    deliberate — see `docs/UX-GUIDELINES.md`, "Keyboard-first, but the
-   terminal owns its keys"). Two cards in one lane means two full round
+   terminal owns its keys"). Two cards in one tab means two full round
    trips through the board to compare them.
 
 **No wire, schema or bridge change is required.** See `design.md`
@@ -49,21 +49,21 @@ rejected there too.
 the existing header would spend a second row of vertical height on the
 one route whose whole job is to be a terminal, and would put two
 back-paths on screen. The existing header's row order (back → title →
-pen seal → meta strip) is preserved; the bar gains a breadcrumb and a
+host seal → meta strip) is preserved; the bar gains a breadcrumb and a
 switcher, and its second row stays the metadata strip that
 `add-pane-workdir-and-task-title` is extending (see _Composition_).
 
-- **Breadcrumb.** `field / lane` in `--ink-mute`, between the back
-  control and the title, with the pen carried by the existing hanko seal
+- **Breadcrumb.** `workspace / tab` in `--ink-mute`, between the back
+  control and the title, with the host carried by the existing hanko seal
   that already sits in this header. Wire/API terms stay `workspace` /
-  `tab` in code; UI copy says field / lane per `docs/BRAND.md`.
-- **Card switcher.** A strip of the sibling cards in this lane —
+  `tab` in code; UI copy says workspace / tab per `docs/BRAND.md`.
+- **Card switcher.** A strip of the sibling cards in this tab —
   including the current one — each a `<a routerLink="/pane/:host/:id">`
   carrying a status dot and the card's display name. Selection is marked
   by `--fw-semi` plus a 2px `--ochre-line` underline, the treatment the
   mobile status switcher and the Settings density control already use;
-  never a colour fill. The strip renders **only when the lane holds more
-  than one card** — a lane of one gets no chrome for a choice that does
+  never a colour fill. The strip renders **only when the tab holds more
+  than one card** — a tab of one gets no chrome for a choice that does
   not exist.
 - **Overflow.** More siblings than fit scroll horizontally inside the
   strip's own `overflow-x: auto` container, which is what herdr's tab row
@@ -71,7 +71,7 @@ switcher, and its second row stays the metadata strip that
 
 ### Keyboard
 
-The sharp edge of this lane is that **the terminal owns the keyboard**.
+The sharp edge of this change is that **the terminal owns the keyboard**.
 `KeyboardService.handleKeydown` returns early whenever a text input has
 focus, and xterm.js's helper element is a real `<textarea>`
 (`isTextInputFocused`, `state/keyboard.service.ts`), so while the
@@ -98,11 +98,11 @@ terminal is focused *no* kanhrd binding fires — by design, and both
   explicitly-enumerated exception to `keyboard-shortcuts`' suppression
   rule — spelled out as a MODIFIED requirement, not slipped in.
 - **A next-card button** carries `prefix + o` for the pointer: it
-  renders whenever the lane holds more than one card, carries
+  renders whenever the tab holds more than one card, carries
   `LucideSquareSplitHorizontal` (a window split in two, which is what a
-  shared lane is), and dispatches the same action the chord does. The
+  shared tab is), and dispatches the same action the chord does. The
   strip stays for picking a specific card; the button is the one-press
-  hop that suits the common two-card lane.
+  hop that suits the common two-card tab.
 - **Everything else is free.** Once the switcher has focus the terminal
   does not, so arrows / `Home` / `End` / `Enter` / `Escape` are ordinary
   focused-widget keys and cost the pane nothing.
@@ -121,7 +121,7 @@ terminal is focused *no* kanhrd binding fires — by design, and both
   per-pane setting the product does not have.
 - **herdr's `tab_bar_right` status area** (hostname, datetime, shell
   command). kanhrd is a browser client, not a session host: the hostname
-  is the pen seal already on the bar, and running an operator's shell
+  is the host seal already on the bar, and running an operator's shell
   command in a browser has no path.
 - **A `+` new-card control.** The board's `+` menu owns creation.
 

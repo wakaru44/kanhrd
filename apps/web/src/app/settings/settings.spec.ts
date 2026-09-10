@@ -15,7 +15,7 @@ import {
 import { COPY } from "../shared/copy";
 
 const LONG_ERROR =
-  "dial unix /run/user/1000/herdr.sock: connect: connection refused after 5 attempts over 30s — check that herdr is running on this pen and that the socket path in kanhrd.config.yaml matches";
+  "dial unix /run/user/1000/herdr.sock: connect: connection refused after 5 attempts over 30s — check that herdr is running on this host and that the socket path in kanhrd.config.yaml matches";
 
 class FakePanesStore {
   readonly hostsSignal = signal<HostSummary[]>([
@@ -124,14 +124,14 @@ describe("Settings", () => {
     expect(section("appearance").querySelectorAll(".segment").length).toBe(2);
   });
 
-  it("renders the runtime section with per-pen advertised poll intervals", () => {
+  it("renders the runtime section with per-host advertised poll intervals", () => {
     expect(el().textContent).toContain("runtime");
     expect(el().textContent).toContain("150ms");
     expect(el().textContent).toContain("n/a");
   });
 
-  it("renders the pens section with connection status and a wrapping last_error", () => {
-    expect(el().textContent).toContain("pens");
+  it("renders the hosts section with connection status and a wrapping last_error", () => {
+    expect(el().textContent).toContain("hosts");
     expect(el().textContent).toContain("laptop");
     expect(el().textContent).toContain("desktop");
 
@@ -158,9 +158,9 @@ describe("Settings", () => {
     expect(el().textContent).toContain("from herdr config");
   });
 
-  it("says pens, never hosts or servers", () => {
+  it("says hosts, never pens or servers", () => {
     const headings = Array.from(el().querySelectorAll(".settings-section h2")).map((h) => h.textContent);
-    expect(headings).not.toContain("Servers / hosts");
+    expect(headings).not.toContain("Servers / pens");
   });
 
   it("renders the data section with a clear-data button", () => {
