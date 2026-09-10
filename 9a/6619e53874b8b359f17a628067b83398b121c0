@@ -1,0 +1,39 @@
+openspec/changes/add-l-brand-neo-shepherd-redesign/tasks.md
+  s_f8e4251c591816::t_53d07475515c99 115-117,119-137,169-180,190-191
+openspec/changes/add-l-brand-neo-shepherd-redesign/specs/l-brand-neo-shepherd-redesign/spec.md
+  s_f8e4251c591816::t_c128ff3aca5b32 315-317,329-394
+  s_f8e4251c591816::t_e976dd4e51db8d 395
+docs/UX-GUIDELINES.md
+  s_f8e4251c591816::t_d46a14eab30cf9 294
+  s_f8e4251c591816::t_42f3211777ee0c 656-659
+  s_f8e4251c591816::t_2e3cb8701610e2 339
+  s_f8e4251c591816::t_709fb83f4666ce 510
+  s_f8e4251c591816::t_685b9d87423acd 309-325,327-338,340-398
+  s_f8e4251c591816::t_d06505e908a94e 542-544,581-583,589-591,600-602,609-611,621-623
+  s_f8e4251c591816::t_5353f4ed539f88 292-293,326,511
+  s_f8e4251c591816::t_fe6664812c2aef 527-538,540-541,545-580,584-588,592-599,603-608,612-620,624-628
+docs/BRAND.md
+  s_f8e4251c591816::t_5353f4ed539f88 156-157
+docs/DESIGN-SYSTEM.md
+  s_f8e4251c591816::t_5f27e58e31e500 305-311
+  s_f8e4251c591816::t_5353f4ed539f88 297,746-769,771-772
+  s_f8e4251c591816::t_af43943e39f90c 496-517,770
+  s_f8e4251c591816::t_5f1b98a93b2501 466-469
+  s_f8e4251c591816::t_98797f42f77eb4 312
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9a6619e53874b8b359f17a628067b83398b121c0",
+  "prompts": {},
+  "sessions": {
+    "s_f8e4251c591816": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d12f5dab-ef42-467f-8f5f-833d86b7562a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
