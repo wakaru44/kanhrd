@@ -1,0 +1,20 @@
+CLAUDE.md
+  s_0c2ef12b51a130::t_0317b5d3871e64 1-46,48-167
+  s_0c2ef12b51a130::t_cc44cd39de103c 47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "274b3422724b3183dcce5ad82bdac9896e791278",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
