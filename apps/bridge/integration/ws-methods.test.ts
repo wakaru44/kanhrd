@@ -56,6 +56,24 @@ describe("B. WebSocket protocol methods", () => {
     });
   });
 
+  // ponytail: extra opt-in gate on top of the file's normal
+  // `requireHerdrOrSkipReason()` skip — per the openspec proposal for
+  // `add-host-keybinds-passthrough`, this test additionally requires
+  // `KANHRD_INT_HERDR_SOCKET` to be set, so a bare `pnpm test:int` run
+  // never depends on (or gets tripped up by) whatever `config.toml` prefix
+  // happens to be configured on a given machine.
+  it("B1b. bridge.capabilities.hostKeybinds reports a plausible mirrored prefix", async (ctx) => {
+    if (skipReason) return ctx.skip();
+    if (!process.env.KANHRD_INT_HERDR_SOCKET) {
+      return ctx.skip();
+    }
+    const data = await client.call("local", "bridge.capabilities", {});
+    expect(data.hostKeybinds).toBeDefined();
+    expect(typeof data.hostKeybinds?.prefix).toBe("string");
+    expect(data.hostKeybinds?.prefix.length).toBeGreaterThan(0);
+    expect(["herdr-api", "herdr-cli", "config-file", "default"]).toContain(data.hostKeybinds?.source);
+  });
+
   it("B2. pane.read returns non-empty ansi/recent content with an integer revision", async (ctx) => {
     if (skipReason) return ctx.skip();
     const data = await client.call("local", "pane.read", { pane_id: panePid });

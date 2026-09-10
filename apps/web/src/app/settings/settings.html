@@ -125,6 +125,10 @@
   <section class="settings-section">
     <h2>{{ text.keyboard }}</h2>
     <p class="section-note">{{ text.keyboardNote }}</p>
+    <p class="current-prefix">
+      current prefix: <kbd>{{ currentPrefix() }}</kbd>
+      <span class="prefix-source">({{ prefixSourceLabel() }})</span>
+    </p>
 
     <div class="table-scroll">
       <table class="shortcut-table">
