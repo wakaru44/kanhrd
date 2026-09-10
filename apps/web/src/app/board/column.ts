@@ -52,6 +52,36 @@ export function mobileViewportSignal(): Signal<boolean> {
 }
 
 /**
+ * Focus the card `paneKey` names, inside `root`.
+ *
+ * One implementation, two callers: the column restoring focus a recycled
+ * view dropped, and the board putting focus back on the card a user just
+ * came out of. Both need the same three rules — the same `data-pane` query,
+ * the card's first focusable control, and never taking focus the user has
+ * already placed somewhere themselves.
+ *
+ * `true` once the card has been reached (focused, or deliberately left
+ * alone because focus was elsewhere); `false` while it is not rendered,
+ * which is every caller's cue to look again.
+ */
+export function focusCard(
+  root: HTMLElement | null,
+  paneKey: string,
+  options?: FocusOptions,
+): boolean {
+  const card = root?.querySelector(`app-card[data-pane="${CSS.escape(paneKey)}"]`);
+  const focusable = card?.querySelector<HTMLElement>("a[href], button");
+  if (!focusable) {
+    return false;
+  }
+  const active = document.activeElement;
+  if (active === null || active === document.body) {
+    focusable.focus(options);
+  }
+  return true;
+}
+
+/**
  * One status column.
  *
  * Status membership is herdr's fact, not the user's: the column exposes no
@@ -140,13 +170,9 @@ export class Column {
     }
     const active = document.activeElement;
     if (active && active !== document.body) {
-      return;
+      return; // the user chose this focus while the views were recycling
     }
-    const root = this.host.nativeElement as HTMLElement;
-    const card = root.querySelector(`app-card[data-pane="${CSS.escape(key)}"]`);
-    const focusable = card?.querySelector<HTMLElement>("a[href], button");
-    if (focusable) {
-      focusable.focus();
+    if (focusCard(this.host.nativeElement as HTMLElement, key)) {
       this.focusLostToRecycling = false;
     }
   }

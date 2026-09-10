@@ -11,24 +11,20 @@ import {
   viewChild,
   viewChildren,
 } from "@angular/core";
-import { takeUntilDestroyed, toSignal } from "@angular/core/rxjs-interop";
+import { toSignal } from "@angular/core/rxjs-interop";
 import { ActivatedRoute, Router } from "@angular/router";
 import { map } from "rxjs";
 import type { AgentStatus } from "@kanhrd/schema";
 import { LucidePlus, LucideRefreshCw, LucideTriangleAlert, LucideUnplug, LucideX } from "../shared/icons";
 import { COPY } from "../shared/copy";
 import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from "../state/panes.store";
-import { Column, mobileViewportSignal } from "./column";
+import { Column, focusCard, mobileViewportSignal } from "./column";
 import { FilterBar } from "./filter-bar";
 import { StatusSwitcher } from "./status-switcher";
 import { Rail } from "../rail/rail";
 import { LayoutService } from "../state/layout.service";
 import { ToastService } from "../state/toast.service";
-import {
-  BoardReturnService,
-  returnFocusTarget,
-  type BoardReturn,
-} from "../state/board-return.service";
+import { BoardReturnService, type BoardRestorePort } from "../state/board-return.service";
 import { ClockTick } from "../util/clock";
 import { EmptyState } from "./empty-state";
 
@@ -52,18 +48,6 @@ export function pageIndex(scrollLeft: number, clientWidth: number): number {
 
 /** Three placeholder rows per skeleton column — a static skeleton, never a spinner. */
 export const SKELETON_ROWS = [0, 1, 2] as const;
-
-/**
- * How long the board keeps trying to put the user back where they were
- * before giving up and leaving them at the top. Cards arrive with
- * `pane.list`, so the target may not exist for a beat after mount; past
- * this, the data is late enough that a jump would be more surprising than
- * the reset.
- */
-export const RESTORE_GRACE_MS = 2000;
-
-/** How often the restore pump re-checks for a target that has not rendered yet. */
-const RESTORE_RETRY_MS = 50;
 
 /**
  * Where the pager should rest when `previous` may no longer be visible: the
@@ -280,15 +264,6 @@ export class Board implements OnDestroy {
   );
 
   constructor() {
-    // Every emission here happens while this route is the active one, so
-    // `Router.url` is still the board's own URL. `paramMap` emits on
-    // subscribe and again on each in-place scope change (`/` →
-    // `/workspace/:id` reuses this component), which is exactly the set of
-    // moments the remembered URL can change.
-    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => {
-      this.activeUrl = this.currentUrl();
-    });
-
     // The route is the single source of truth for `scopeSignal` — see the
     // signal's own doc in panes.store.ts. Re-resolves whenever the route
     // params change OR the workspace/tab data needed to resolve them
@@ -350,130 +325,46 @@ export class Board implements OnDestroy {
     // pump's own timer.
     effect(() => {
       this.columns();
-      this.tryRestore();
+      this.boardReturn.retryRestore();
     });
 
-    this.startRestore();
+    this.boardReturn.restore(this.restorePort);
+    afterNextRender(() => this.boardReturn.retryRestore(), { injector: this.injector });
   }
 
   // --- coming back from a pane ------------------------------------------
   //
   // Opening a card is a round trip (docs/UX-GUIDELINES.md, "Focus and
-  // terminal input survive navigation"): the scope is carried by the URL the
-  // pane's back control points at, and the rest — which page the strip
-  // rested on, how far each column was scrolled, which card had focus — is
-  // handed back by `BoardReturnService`.
+  // terminal input survive navigation"). `BoardReturnService` owns that
+  // trip end to end — the record, the URL it belongs to, the retry pump and
+  // the grace deadline. What is left here is what only a template knows:
+  // which element scrolls what, and how a card is found in the DOM.
   //
-  // The record is consumed on mount but applied later: cards arrive with
-  // `pane.list`, so the target usually is not in the DOM yet. The pump
-  // retries until it lands or `RESTORE_GRACE_MS` runs out.
+  // The board deliberately holds no URL of its own. It cannot: the only
+  // moment it could hand one over is `ngOnDestroy`, and by then `Router.url`
+  // already names the route being navigated TO — see the service's own doc
+  // for the bug that shipped.
 
-  /** The position to restore, until it has been applied or has expired. */
-  private pendingReturn: BoardReturn | null = null;
-  private restoreDeadline = 0;
-  private restoreTimer: ReturnType<typeof setTimeout> | undefined;
-
-  /**
-   * The board URL as of the last moment this route was actually active.
-   *
-   * `Router.url` must NOT be read in `ngOnDestroy`: by then the router has
-   * already committed the navigation, so it names the route being navigated
-   * TO. Reading it there made every departure remember the pane's own URL,
-   * which is what the pane's "back to the board" control links to — the
-   * link pointed at the page the user was already on, so the first click
-   * did nothing (a reload cleared the record and the link fell back to
-   * `/`, which is why refreshing "fixed" it).
-   */
-  private activeUrl = this.currentUrl();
-
-  /** `Router.url`, defensively: a test double (or a router mid-teardown) may not have one. */
-  private currentUrl(): string {
-    return this.router.url || "/";
-  }
-
-  private startRestore(): void {
-    const record = this.boardReturn.take();
-    if (!record) {
-      return;
-    }
-    this.pendingReturn = record;
-    this.restoreDeadline = Date.now() + RESTORE_GRACE_MS;
-    afterNextRender(() => this.pumpRestore(), { injector: this.injector });
-  }
-
-  private pumpRestore(): void {
-    if (!this.pendingReturn) {
-      return;
-    }
-    this.tryRestore();
-    if (this.pendingReturn) {
-      this.restoreTimer = setTimeout(() => this.pumpRestore(), RESTORE_RETRY_MS);
-    }
-  }
-
-  private tryRestore(): void {
-    const record = this.pendingReturn;
-    if (!record) {
-      return;
-    }
-    // A board that came up somewhere else has no use for someone else's
-    // position, and a record that has waited too long is stale.
-    if (record.url !== this.currentUrl() || Date.now() > this.restoreDeadline) {
-      this.finishRestore();
-      return;
-    }
-    const strip = this.strip()?.nativeElement;
-    if (!strip) {
-      return; // still on the skeleton
-    }
-
-    this.restoreScroll(record, strip);
-
-    const status = record.status;
-    if (!status) {
-      this.finishRestore(); // left the board without opening a card: scroll was the whole job
-      return;
-    }
-    const keys = (this.columns()[status] ?? []).map((pane) => `${pane.host}:${pane.id}`);
-    const target = returnFocusTarget(record.paneKey, record.index, keys);
-    if (!target) {
-      this.finishRestore();
-      return;
-    }
-    const card = strip.querySelector(`app-card[data-pane="${CSS.escape(target)}"]`);
-    const focusable = card?.querySelector<HTMLElement>("a[href], button");
-    if (!focusable) {
-      return; // not rendered yet — the pump will look again
-    }
-    // Never take focus the user has already placed somewhere themselves.
-    if (document.activeElement === null || document.activeElement === document.body) {
-      // `preventScroll` so restoring focus cannot undo the scroll just restored.
-      focusable.focus({ preventScroll: true });
-    }
-    this.finishRestore();
-  }
-
-  private restoreScroll(record: BoardReturn, strip: HTMLElement): void {
-    if (strip.scrollLeft !== record.scrollLeft && strip.clientWidth > 0) {
-      strip.scrollLeft = record.scrollLeft;
-      const status = this.visibleStatuses()[pageIndex(record.scrollLeft, strip.clientWidth)];
+  private readonly restorePort: BoardRestorePort = {
+    currentUrl: () => this.router.url || "/",
+    strip: () => this.strip()?.nativeElement ?? null,
+    showPage: (scrollLeft) => {
+      const element = this.strip()?.nativeElement;
+      if (!element || element.clientWidth === 0) {
+        return;
+      }
+      const status = this.visibleStatuses()[pageIndex(scrollLeft, element.clientWidth)];
       if (status) {
         this.currentStatus.set(status);
       }
-    }
-    for (const [status, top] of Object.entries(record.scrollTops)) {
-      const scroller = this.columnScroller(status as AgentStatus);
-      if (scroller && top !== undefined) {
-        scroller.scrollTop = top;
-      }
-    }
-  }
-
-  private finishRestore(): void {
-    this.pendingReturn = null;
-    clearTimeout(this.restoreTimer);
-    this.restoreTimer = undefined;
-  }
+    },
+    scroller: (status) => this.columnScroller(status),
+    columnKeys: (status) =>
+      (this.columns()[status] ?? []).map((pane) => `${pane.host}:${pane.id}`),
+    // `preventScroll` so restoring focus cannot undo the scroll just restored.
+    focusCard: (paneKey) =>
+      focusCard(this.strip()?.nativeElement ?? null, paneKey, { preventScroll: true }),
+  };
 
   /** The element that actually scrolls a column: the CDK viewport when virtualized, the body otherwise. */
   private columnScroller(status: AgentStatus): HTMLElement | null {
@@ -491,7 +382,6 @@ export class Board implements OnDestroy {
 
   /** Hand the next mount everything it needs to put the user back here. */
   ngOnDestroy(): void {
-    clearTimeout(this.restoreTimer);
     const strip = this.strip()?.nativeElement;
     const scrollTops: Partial<Record<AgentStatus, number>> = {};
     for (const status of this.visibleStatuses()) {
@@ -500,11 +390,7 @@ export class Board implements OnDestroy {
         scrollTops[status] = scroller.scrollTop;
       }
     }
-    this.boardReturn.rememberBoard({
-      url: this.activeUrl,
-      scrollLeft: strip?.scrollLeft ?? 0,
-      scrollTops,
-    });
+    this.boardReturn.rememberBoard({ scrollLeft: strip?.scrollLeft ?? 0, scrollTops });
   }
 
   protected readonly scopePillLabel = computed(() => {

@@ -46,11 +46,13 @@ describe("NotFound", () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideRouter([])],
     });
-    TestBed.inject(BoardReturnService).rememberBoard({
-      url: "/workspace/w6/tab/w6:t2",
-      scrollLeft: 0,
-      scrollTops: {},
+    // `BoardReturnService` reads the board URL off the router itself, so the
+    // setup is a router that says that is where the user came from.
+    Object.defineProperty(TestBed.inject(Router), "url", {
+      get: () => "/workspace/w6/tab/w6:t2",
+      configurable: true,
     });
+    TestBed.inject(BoardReturnService).rememberBoard({ scrollLeft: 0, scrollTops: {} });
 
     const fixture = TestBed.createComponent(NotFound);
     fixture.detectChanges();

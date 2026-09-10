@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from "@angular/router";
 import { provideHttpClient } from "@angular/common/http";
 import { HttpTestingController, provideHttpClientTesting } from "@angular/common/http/testing";
-import { BehaviorSubject, Subject } from "rxjs";
+import { BehaviorSubject, EMPTY, Subject } from "rxjs";
 import type { WsEvent } from "@kanhrd/schema";
 import { Board, SCOPE_RESOLVE_GRACE_MS, nearestVisibleStatus, pageIndex } from "./board";
 import { BoardReturnService } from "../state/board-return.service";
@@ -519,7 +519,8 @@ describe("Board: URL scope (rail = navigator, decision locked)", () => {
         provideHttpClientTesting(),
         { provide: WsClient, useValue: ws },
         { provide: ActivatedRoute, useValue: { paramMap: paramMap$.asObservable() } },
-        { provide: Router, useValue: { navigate: navigateSpy } },
+        // `url` + `events` because `BoardReturnService` watches navigation itself.
+        { provide: Router, useValue: { navigate: navigateSpy, url: "/", events: EMPTY } },
       ],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
@@ -701,7 +702,14 @@ describe("Board: filter interaction with the pager", () => {
         provideHttpClientTesting(),
         { provide: WsClient, useValue: ws },
         { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({})).asObservable() } },
-        { provide: Router, useValue: { navigate: jasmine.createSpy("navigate").and.resolveTo(true) } },
+        {
+          provide: Router,
+          useValue: {
+            navigate: jasmine.createSpy("navigate").and.resolveTo(true),
+            url: "/",
+            events: EMPTY,
+          },
+        },
       ],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
@@ -824,7 +832,14 @@ describe("Board: an invalid scope is reported, never silently swallowed", () => 
         provideHttpClientTesting(),
         { provide: WsClient, useValue: ws },
         { provide: ActivatedRoute, useValue: { paramMap: paramMap$.asObservable() } },
-        { provide: Router, useValue: { navigate: jasmine.createSpy("navigate").and.resolveTo(true) } },
+        {
+          provide: Router,
+          useValue: {
+            navigate: jasmine.createSpy("navigate").and.resolveTo(true),
+            url: "/",
+            events: EMPTY,
+          },
+        },
       ],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
@@ -896,9 +911,11 @@ describe("Board: an invalid scope is reported, never silently swallowed", () => 
 /**
  * Section 17.6: coming out of a pane puts the user back where they were.
  *
- * The scope half is the URL the pane's back control points at (asserted in
- * `pane-detail.spec.ts`); this covers the two halves `Board` owns — writing
- * the position down as it is torn down, and applying it on the way back in.
+ * The protocol itself — the URL match, the grace deadline, the retry pump,
+ * scroll before focus, the neighbour fallback — is `BoardReturnService`'s,
+ * and is tested against a fake port in `board-return.service.spec.ts`. What
+ * is left here is only what needs a real board: that the port is wired to a
+ * real DOM, and that a real click, teardown and remount travel through it.
  *
  * `PanesStore` is root-provided, so it survives between the two fixtures
  * here exactly as it survives a real navigation: the second board mounts
@@ -910,7 +927,6 @@ describe("Board: returning from a pane", () => {
   let fixture: ComponentFixture<Board>;
   let httpMock: HttpTestingController;
   let boardReturn: BoardReturnService;
-  let store: PanesStore;
   let currentUrl: string;
 
   const BOARD_URL = "/workspace/w6";
@@ -998,16 +1014,17 @@ describe("Board: returning from a pane", () => {
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);
-    boardReturn = TestBed.inject(BoardReturnService);
-    store = TestBed.inject(PanesStore);
 
     // The real Router, so `routerLink` on the cards works, with a drivable
     // `url` shadowing the getter that would otherwise read the test page's.
+    // Shadowed before `BoardReturnService` is constructed: the service seeds
+    // its board URL from the router rather than being handed one.
     currentUrl = BOARD_URL;
     Object.defineProperty(TestBed.inject(Router), "url", {
       get: () => currentUrl,
       configurable: true,
     });
+    boardReturn = TestBed.inject(BoardReturnService);
 
     fixture = await createBoard();
   });
@@ -1030,35 +1047,6 @@ describe("Board: returning from a pane", () => {
     expect(boardReturn.boardUrl()).toBe(BOARD_URL);
   });
 
-  it("remembers the board URL it was ON, not the pane URL the router already moved to", () => {
-    openCard(fixture, "local:w6:p2");
-    // The router commits the navigation before the outgoing component is
-    // torn down, so by `ngOnDestroy` `Router.url` already names the pane.
-    currentUrl = "/pane/local/w6:p2";
-    fixture.destroy();
-
-    expect(boardReturn.boardUrl()).toBe(BOARD_URL);
-  });
-
-  it("carries the clicked card, its column and its position into that record", () => {
-    openCard(fixture, "local:w6:p2");
-    fixture.destroy();
-
-    const record = boardReturn.take();
-    expect(record?.paneKey).toBe("local:w6:p2");
-    expect(record?.status).toBe("working");
-    expect(record?.index).toBe(1);
-    expect(record?.url).toBe(BOARD_URL);
-  });
-
-  it("records a departure that opened no card, so the scroll still comes back", () => {
-    fixture.destroy();
-    const record = boardReturn.take();
-
-    expect(record?.paneKey).toBeNull();
-    expect(record?.url).toBe(BOARD_URL);
-  });
-
   it("puts focus back on the card that was opened", async () => {
     openCard(fixture, "local:w6:p2");
     fixture.destroy();
@@ -1067,25 +1055,6 @@ describe("Board: returning from a pane", () => {
     await pump(returned);
 
     expect(focusedPane()).toBe("local:w6:p2");
-    returned.destroy();
-  });
-
-  it("falls back to the card standing in its place when the opened one is gone", async () => {
-    openCard(fixture, "local:w6:p2");
-    fixture.destroy();
-
-    // That pane closed while the user was inside it; another took its slot.
-    store.panesSignal.update((panes) => {
-      const next = new Map(panes);
-      next.delete("local:w6:p2");
-      next.set("local:w6:p3", pane("w6:p3") as never);
-      return next;
-    });
-
-    const returned = await createBoard();
-    await pump(returned);
-
-    expect(focusedPane()).toBe("local:w6:p3");
     returned.destroy();
   });
 
@@ -1102,28 +1071,6 @@ describe("Board: returning from a pane", () => {
 
     expect(document.activeElement).toBe(elsewhere);
     elsewhere.remove();
-    returned.destroy();
-  });
-
-  it("restores nothing when the board comes up at a different URL", async () => {
-    openCard(fixture, "local:w6:p2");
-    fixture.destroy();
-    currentUrl = "/workspace/somewhere-else";
-
-    const returned = await createBoard();
-    await pump(returned);
-
-    expect(focusedPane()).toBeFalsy();
-    returned.destroy();
-  });
-
-  it("consumes the record, so a later visit is not yanked around by an old one", async () => {
-    openCard(fixture, "local:w6:p2");
-    fixture.destroy();
-
-    const returned = await createBoard();
-    await pump(returned);
-    expect(boardReturn.take()).toBeNull();
     returned.destroy();
   });
 });
