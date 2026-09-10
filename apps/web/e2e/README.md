@@ -6,8 +6,34 @@ Playwright driver L5B used during tier-2 validation
 (`tmp/foreman/VALIDATION-TIER2.md`); future tiers extend this suite instead
 of re-implementing a driver from `/tmp/`.
 
+## This suite drives a REAL herdr — read this first
+
+These specs are not sandboxed. They call the `herdr` CLI against whatever
+server is running on this machine, take a pane out of `herdr pane list`, and
+act on it: `tier2` types `echo <marker>` into it, and `tier3` exercises
+lifecycle, which **closes real tabs and workspaces**. On a developer machine
+that is a live session.
+
+So the suite is **opt-in**:
+
+```bash
+KANHRD_E2E_LIVE_HERDR=1 pnpm --filter @kanhrd/web test:e2e
+```
+
+Without it every spec skips with an explanatory message. Reachability is not
+consent — a herdr being up says nothing about whether its panes are yours to
+type into. This mirrors how the bridge's integration suite gates on
+`KANHRD_INT_HERDR_SOCKET`.
+
+Why the gate exists: on 2026-09-10 a suite run typed `echo <marker>` into the
+operator's real panes, one of which was running an agent, which executed it as
+a prompt. Nothing was damaged — the payload is deliberately non-destructive —
+but it should not have been possible without an explicit opt-in.
+
 ## Prerequisites
 
+0. `KANHRD_E2E_LIVE_HERDR=1` in the environment (see above), and a herdr whose
+   panes you are willing to have typed into and closed.
 1. A local herdr server reachable at `~/.config/herdr/herdr.sock`, with at
    least one open pane. The suite pre-flight-checks this in `beforeAll` and
    skips with a clear message (not a hard fail) if herdr isn't running or has
