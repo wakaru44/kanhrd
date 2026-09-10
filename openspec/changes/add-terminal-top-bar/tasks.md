@@ -1,15 +1,52 @@
-## 0. Maintainer decisions (before any code)
+## 0. Maintainer decisions
 
-- [ ] 0.1 D1 — `docs/UX-GUIDELINES.md` § Mobile → Pane detail currently
-      forbids a pane switcher below 900px. Confirm desktop-only, or
-      amend the paragraph. The spec as written is desktop-only; a change
-      of answer changes task 3.5 and one spec scenario
-- [ ] 0.2 D2 — approve `nav.cardSwitcher` / `nav.cardSwitcherItem` for
-      `docs/BRAND.md`'s approved-copy table, or supply substitutes.
-      Until approved they live in a component-local `SWITCHER_COPY`
-- [ ] 0.3 D3 — confirm that `Ctrl+Alt+[` / `Ctrl+Alt+]` for
-      previous / next sibling are **not** wanted in this lane
-- [ ] 0.4 D4 — confirm no new lucide icon is added to the pinned set
+Answered 2026-09-10 unless marked open. See `design.md` § "Maintainer
+decisions" for the reasoning; do not re-ask.
+
+- [x] 0.1 D1 — **amend the doc; the switcher renders at every width,
+      phone width included.** The maintainer's reading: forbidding pane
+      switchers on mobile (and probably on the web too) makes no sense;
+      that paragraph is overblown feedback from the early MVP, not the
+      MLP being built now, and a pane switcher is wanted in the web
+      terminal view for panels in the same view. A maintainer amends
+      `docs/UX-GUIDELINES.md` § Mobile → Pane detail to permit a
+      route-navigator strip
+- [x] 0.2 D2 — **strings approved as written, but they stay OUT of
+      `docs/BRAND.md`'s approved-copy table for now.** `nav.cardSwitcher`
+      = `cards in this lane`, `nav.cardSwitcherItem` = `{name} — {status}`
+      go into `shared/copy.ts` under `nav`, beside the existing
+      `nav.statusSwitcher` / `nav.statusSwitcherItem` (`copy.ts:125-126`)
+      whose shape they mirror. **No component-local copy constant**: the
+      pending-copy pattern this lane originally cited was removed in
+      commit `f173992` ("give every user-facing string one home in
+      copy.ts"), which folded `CARD_COPY` and four siblings back into
+      `copy.ts`. Do **not** add `docs/BRAND.md` table rows and do **not**
+      re-ask; a maintainer promotes them if and when the table grows
+- [x] 0.3 D3 — **postponed. Not in this lane.** The maintainer's
+      reasoning: the keyboard experience should be familiar and
+      equivalent to herdr — herdr's hierarchy and bindings triumph for
+      keyboard navigation — and a pair of chords whose only job is
+      "jump to the next busy thing" is of dubious value once the
+      herdr-equivalent tab and pane movements work. Do not re-ask.
+      Two follow-ups this raised are recorded in `design.md`
+      § "Maintainer decisions" under D3 and are **not** this lane's
+      to answer
+- [x] 0.4 D4 — **the pinned set gains one glyph:
+      `LucideGalleryHorizontal`**, a leading marker on the switcher
+      strip. Switcher entries themselves keep the CSS status dot plus
+      the card name (no per-entry icon), and the breadcrumb separator
+      stays the textual `/` the board card's `path()` already uses.
+      Verified present in `@lucide/angular@1.43.0`. **A second glyph,
+      `LucideSquareSplitHorizontal`, joins it** for the next-card button
+      (task 3.6) — a window divided into two panes, for "hop to the
+      other card sharing this lane". The pinned set goes from eighteen
+      to twenty. Two edits are the maintainer's, not this lane's: the
+      rows in `docs/DESIGN-SYSTEM.md`'s pinned icon table
+      naming `LucideGalleryHorizontal`, its selector
+      `svg[lucideGalleryHorizontal]`, and the use "card switcher on the
+      terminal bar", plus the count in the
+      surrounding prose if it names eighteen. This lane adds the
+      re-export in `apps/web/src/app/shared/icons.ts`
 
 ## 1. Sibling derivation (no wire change)
 
@@ -28,13 +65,23 @@
 
 ## 2. The switcher component
 
+- [ ] 2.0 `apps/web/src/app/shared/icons.ts` — add
+      `LucideGalleryHorizontal` and `LucideSquareSplitHorizontal` to the
+      import block and the `export` block, keeping both alphabetical,
+      with the existing file comment convention. The
+      `docs/DESIGN-SYSTEM.md` pinned-table rows are the maintainer's
+      edit (task 0.4), not this lane's
+
 - [ ] 2.1 `pane-detail/card-switcher.ts` — a presentational component
       taking the sibling list and the current pane key, emitting nothing
       (entries are `routerLink`s). Modelled on
       `board/status-switcher.ts`: inputs in, no owned selection state
-- [ ] 2.2 Same file — `SWITCHER_COPY`, typed and `as const`, with the
-      comment naming the `copy.ts` keys it is destined for, exactly as
-      `CARD_COPY` in `board/card.ts` does
+- [ ] 2.2 `shared/copy.ts` — add `nav.cardSwitcher` = `cards in this
+      lane`, `nav.cardSwitcherItem` = `{name} — {status}` and
+      `nav.nextCard` = `next card in this lane` beside the
+      existing `nav.statusSwitcher` / `nav.statusSwitcherItem`, whose
+      `{}`-interpolation shape (`fill`) they mirror. No component-local
+      copy constant — see task 0.2
 - [ ] 2.3 `card-switcher.html` — one `<a routerLink>` per sibling with a
       status dot, the display name, `aria-current="page"` on the current
       one, and an accessible name carrying name plus status word
@@ -65,17 +112,36 @@
       `.terminal-container` padding — take theirs on any `padding`
       conflict (see design.md, "Concurrent edit")
 - [ ] 3.4 `pane-detail.scss` — below `--breakpoint-mobile`: breadcrumb
-      collapses to the lane name, switcher is not rendered
+      collapses to the lane name; the switcher **still renders** as the
+      same horizontally scrolling strip, with the back control first and
+      visible without scrolling, entries at `--touch-target-min`
+      separated by `--sp-2`, and `overflow-x` on the strip so the page
+      itself never scrolls horizontally
 - [ ] 3.5 `pane-detail.spec.ts` — the terminal refits when the header
       gains the switcher row and the prompt stays reachable; at a
-      390px-wide viewport no switcher renders and
+      390px-wide viewport the switcher renders and
       `documentElement.scrollWidth <= clientWidth`
+- [ ] 3.6 `pane-detail.html` / `.ts` — the **next-card button**:
+      `LucideSquareSplitHorizontal`, accessible name `nav.nextCard`,
+      rendered only when the lane holds more than one card, dispatching
+      the same `next-sibling-card` action as `prefix + o` (one shared
+      handler, never a second implementation of "which card is next").
+      It does not open, focus or scroll the switcher. Placement: the
+      title row, after the back control — the one detail a maintainer
+      may want to move, since the strip already occupies its own row
+- [ ] 3.7 `pane-detail.spec.ts` — the button is absent in a lane of one,
+      routes to the sibling in a lane of two, and lands where two
+      `prefix + o` presses land in a lane of three; it meets
+      `--touch-target-min` at 390px
 
 ## 4. Keyboard
 
+Two actions, per D3's follow-up: `prefix + o` keeps herdr's meaning
+(next pane) and `prefix + i` / `Ctrl+Alt+I` opens the switcher.
+
 - [ ] 4.1 `keyboard.service.ts` — a single named constant enumerating
       the direct chords recognized despite a focused input, holding
-      exactly `Ctrl+Alt+O` → `focus-card-switcher`, with a comment
+      exactly `Ctrl+Alt+I` → `focus-card-switcher`, with a comment
       stating that every entry is a key the pane can no longer receive
 - [ ] 4.2 `keyboard.service.ts` — in `handleKeydown`, check that list
       *before* the `isTextInputFocused` early return; skip any chord
@@ -83,18 +149,27 @@
       itself available, and otherwise call neither `preventDefault()`
       nor `stopPropagation()`
 - [ ] 4.3 `keyboard.service.ts` — add the `focus-card-switcher` action
-      with the chord binding `prefix + o` and the direct binding
-      `Ctrl+Alt+O`, category `Navigation`, so both appear in the help
+      with the chord binding `prefix + i` and the direct binding
+      `Ctrl+Alt+I`, category `Navigation`, so both appear in the help
       overlay
-- [ ] 4.4 `keyboard.service.ts` — dispatch: focus the switcher's current
-      entry when pane detail is showing a lane with more than one card;
-      no-op otherwise
-- [ ] 4.5 `keyboard.service.spec.ts` — a focused-input `Ctrl+Alt+K` is
-      passed through untouched; `Ctrl+Alt+O` with the switcher available
-      is recognized and stops propagation; `Ctrl+Alt+O` with no switcher
-      is passed through; a prefix of `Ctrl+Alt+O` arms the chord instead
-- [ ] 4.6 `keyboard-help-overlay.spec.ts` — both bindings are listed
-      under Navigation
+- [ ] 4.4 `keyboard.service.ts` — add the `next-sibling-card` action,
+      chord-only on `prefix + o`, category `Navigation`, sitting beside
+      the existing `next-tab` / `prev-tab` / `last-tab` entries it is
+      the pane-level counterpart to. Chord-only, so it takes no key
+      from the pane
+- [ ] 4.5 `keyboard.service.ts` — dispatch: `focus-card-switcher`
+      focuses the switcher's current entry when pane detail is showing
+      a lane with more than one card; `next-sibling-card` routes to the
+      next sibling in store order, wrapping past the last; both no-op
+      in a lane of one
+- [ ] 4.6 `keyboard.service.spec.ts` — a focused-input `Ctrl+Alt+K` is
+      passed through untouched; `Ctrl+Alt+I` with the switcher available
+      is recognized and stops propagation; `Ctrl+Alt+I` with no switcher
+      is passed through; a prefix of `Ctrl+Alt+I` arms the chord instead
+- [ ] 4.7 `keyboard.service.spec.ts` — `prefix + o` routes to the next
+      sibling, wraps from last to first, and is a no-op in a lane of one
+- [ ] 4.8 `keyboard-help-overlay.spec.ts` — all three bindings are
+      listed under Navigation
 
 ## 5. Verification
 
@@ -104,9 +179,10 @@
 - [ ] 5.4 `bash tools/lint-scss-tokens.sh`
 - [ ] 5.5 `pre-commit run --all-files`
 - [ ] 5.6 Playwright `mobile` project (390 × 844): the detail route
-      renders no switcher, the back control is visible without
-      scrolling, and the page does not scroll horizontally
+      renders the switcher, the back control is visible without
+      scrolling, every entry meets `--touch-target-min`, and the page
+      does not scroll horizontally
 - [ ] 5.7 Against a private herdr fixture (never the operator's socket —
       `HERDR_SOCKET_PATH=/tmp/...`), open a lane with two panes and
-      confirm `Ctrl+Alt+O` from inside a running program focuses the
+      confirm `Ctrl+Alt+I` from inside a running program focuses the
       switcher while the same program still receives `Ctrl+Alt+K`

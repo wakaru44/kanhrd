@@ -78,22 +78,35 @@ focus, and xterm.js's helper element is a real `<textarea>`
 terminal is focused *no* kanhrd binding fires — by design, and both
 `keyboard-shortcuts` and `host-keybinds-passthrough` depend on it.
 
-- **`prefix + o`** (mnemonic: tmux's "other pane") focuses the switcher.
-  `o` is unused by the current chord table (`c n p l w & x , 0-9 ? t`).
-  This works when the terminal does **not** have focus — on arrival at
-  the route, after `Escape`-ing an overlay, after using the back control.
-- **`Ctrl+Alt+O`** does the same *while the terminal has focus*, and is
+- **`prefix + o`** navigates straight to the **next sibling card**,
+  wrapping past the last, without opening the switcher. This is herdr's
+  and tmux's own meaning for the key ("other pane"), and it sits beside
+  the tab movement kanhrd already mirrors (`prefix + n` / `p` / `l` /
+  `0-9` in `keyboard.service.ts`). Maintainer decision, 2026-09-10:
+  herdr's hierarchy and bindings win for keyboard navigation.
+- **`prefix + i`** focuses the switcher strip. `i` is unused by the
+  current chord table (`c n p l w & x , 0-9 ? t`). This works when the
+  terminal does **not** have focus — on arrival at the route, after
+  `Escape`-ing an overlay, after using the back control.
+- **`Ctrl+Alt+I`** does the same *while the terminal has focus*, and is
   the only key this change takes away from the pane. `Ctrl+Alt` is the
   one modifier family herdr's own keyboard documentation identifies as
   free across every terminal and desktop it surveyed, and it is the
-  family herdr recommends for its own prefix-free bindings; `ctrl+alt+o`
-  is not on herdr's published "avoid" list. This requires a narrow,
+  family herdr recommends for its own prefix-free bindings; `ctrl+alt+i`
+  is not on herdr's published "avoid" list (`ctrl+alt+s` is, which is
+  why the strip is not on `s` — see `design.md`). This requires a narrow,
   explicitly-enumerated exception to `keyboard-shortcuts`' suppression
   rule — spelled out as a MODIFIED requirement, not slipped in.
+- **A next-card button** carries `prefix + o` for the pointer: it
+  renders whenever the lane holds more than one card, carries
+  `LucideSquareSplitHorizontal` (a window split in two, which is what a
+  shared lane is), and dispatches the same action the chord does. The
+  strip stays for picking a specific card; the button is the one-press
+  hop that suits the common two-card lane.
 - **Everything else is free.** Once the switcher has focus the terminal
   does not, so arrows / `Home` / `End` / `Enter` / `Escape` are ordinary
   focused-widget keys and cost the pane nothing.
-- If the effective prefix *is* `Ctrl+Alt+O`, the prefix wins and the
+- If the effective prefix *is* `Ctrl+Alt+I`, the prefix wins and the
   direct chord is not registered. The prefix is never shadowed.
 
 ### Deliberately not in the bar
@@ -128,7 +141,7 @@ terminal is focused *no* kanhrd binding fires — by design, and both
 - **No change to:** `packages/schema/**`, `apps/bridge/**`, any wire
   method, any capability flag, any herdr call.
 - **Risk:** low, and client-local. The one genuine risk is the stolen
-  `Ctrl+Alt+O` chord — a key the pane's program can no longer receive.
+  `Ctrl+Alt+I` chord — a key the pane's program can no longer receive.
   It is one chord, from the family herdr itself designates as safe, and
   it is enumerated in one place so it can be removed in one place.
 - **Migration:** none. No storage, no preference, no persisted state.

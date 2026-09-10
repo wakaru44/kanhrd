@@ -149,7 +149,7 @@ the suppression rule explicitly exempts — which is a change to a shipped
 capability, so it is written as a MODIFIED requirement rather than
 assumed.
 
-### Why `Ctrl+Alt+O`
+### Why `Ctrl+Alt+I`
 
 herdr's own keyboard documentation
 (`docs/versions/0.8.2/website/src/content/docs/keyboard.mdx`) surveyed
@@ -164,8 +164,15 @@ plus the global shortcuts of GNOME and KDE" and concluded:
 
 Its published exceptions are `ctrl+alt+arrows`, `ctrl+alt+t`,
 `ctrl+alt+l`, `ctrl+alt+a`, `ctrl+alt+s`, `ctrl+alt+u` and
-`ctrl+alt+f1..f12`. `ctrl+alt+o` is on none of them, and `o` is free in
+`ctrl+alt+f1..f12`. `ctrl+alt+i` is on none of them, and `i` is free in
 kanhrd's own chord table (`c n p l w & x , 0-9 ? t`).
+
+Note for anyone revisiting this: **`ctrl+alt+s` is on that avoid list**,
+which is why the switcher's direct chord is not `Ctrl+Alt+S` even though
+`prefix + s` would have been the better mnemonic (tmux's `prefix + s`
+opens a chooser). The prefix half and the direct half stay on the same
+letter, so both moved to `i`. `o` is free too, but it now carries
+herdr's own meaning — next pane — under D3's follow-up.
 
 There is a second reason this is cheaper here than it looks. kanhrd does
 not type into herdr's keybind layer: input goes to `pane.send_text` /
@@ -201,7 +208,7 @@ Settings, and to the next reader of `keyboard.service.ts`, and would
 diverge from the single dispatch point the `fix-keyboard-shortcut-suppression`
 change deliberately consolidated.
 
-## Finding 5 — mobile, and a direct conflict with UX-GUIDELINES
+## Finding 5 — mobile, and the UX-GUIDELINES paragraph it collided with
 
 `docs/UX-GUIDELINES.md`, § Mobile → Per-screen requirements at 390px →
 Pane detail, states:
@@ -210,30 +217,30 @@ Pane detail, states:
 > switcher. Do not build one and do not hint at one.**
 
 The operator's feedback asks for a switch-pane control on the terminal
-view. At ≥ 900px there is no conflict. **Below 900px there is a direct
-one**, and per this repo's authority rule the resolution is a maintainer
-decision, not this lane's invention.
+view, which collided with that paragraph below 900px. **Resolved by
+maintainer decision D1 (2026-09-10): amend the paragraph.** In the
+maintainer's words, forbidding pane switchers on mobile — and probably
+on the web too — makes no sense; that sentence is overblown feedback
+from the early MVP, not the MLP being built now, and a pane switcher is
+wanted in the web terminal view before long, for panels in the same
+view. The switcher is a *navigator between routes* (each entry is a
+`routerLink` to `/pane/:host/:id`, one terminal at a time), not the
+multi-pane or split view the paragraph rules out.
 
-**This change ships the doc-compliant behaviour**: below
-`--breakpoint-mobile` the switcher strip is not rendered and nothing
-hints at it; the breadcrumb collapses to the lane name alone so the
-title keeps its row. `Ctrl+Alt+O` and `prefix + o` are inert there
-because there is nothing to focus.
+**This change therefore ships the switcher at every width.** Below
+`--breakpoint-mobile` it is the same horizontally scrolling strip; only
+the breadcrumb collapses to the lane name alone, so the title keeps its
+row. `Ctrl+Alt+I`, `prefix + i` and `prefix + o` work there too.
 
-Recommendation for the decision (D1): permit the switcher at phone width
-too, as the same horizontally scrolling strip, on the grounds that it is
-a *navigator between routes* (each entry is a `routerLink` to
-`/pane/:host/:id`, one terminal at a time) rather than the multi-pane or
-split view the paragraph rules out. That reading needs the paragraph
-amended to say so; until it is, the desktop-only behaviour above is what
-the spec requires.
+The mobile constraints are satisfiable and are written into the spec:
+the bar keeps the back control first and visible without scrolling,
+`overflow-x` sits on the strip rather than the page so
+`document.documentElement.scrollWidth <= clientWidth` holds at 390px,
+and every switcher entry meets `--touch-target-min` with `--sp-2`
+separation.
 
-The other mobile constraints are already satisfiable and are written into
-the spec: the bar keeps the back control first and visible without
-scrolling, the page never scrolls horizontally
-(`document.documentElement.scrollWidth <= clientWidth` at 390px), and
-every switcher entry meets `--touch-target-min` with `--sp-2` separation
-if D1 is granted.
+A maintainer lands the `docs/UX-GUIDELINES.md` edit; this lane does not
+edit that doc itself.
 
 ## Finding 6 — copy and icons the design docs do not yet cover
 
@@ -243,11 +250,16 @@ Flagged, not invented.
   per entry. `docs/BRAND.md`'s approved-copy table has no row for
   either. Precedent for the interim exists in this codebase:
   `CARD_COPY` (`board/card.ts:35-41`) holds three per-card action labels
-  as a typed component-local constant with a comment saying they "must
-  move into `copy.ts` … the moment the approved-copy table gains those
-  rows." This change follows that precedent exactly, with these
-  candidate strings for the maintainer to approve, amend or reject
-  (decision D2):
+  **Correction, 2026-09-10.** This lane originally cited `CARD_COPY` in
+  `board/card.ts` as the precedent for a component-local pending-copy
+  constant. That precedent no longer exists: commit `f173992` ("give
+  every user-facing string one home in copy.ts") folded `CARD_COPY` and
+  four sibling blocks back into `shared/copy.ts`, and today's
+  `CARD_COPY` is a pure mapping onto `COPY.card.*` with no strings of
+  its own. The repo's current rule is that every user-facing string
+  lives in `copy.ts`, whether or not `docs/BRAND.md`'s table has caught
+  up. So the strings are **approved** (D2), the BRAND table row is
+  **deferred**, and they go into `copy.ts` under `nav`:
 
   | Key                          | Candidate string          |
   | ---------------------------- | ------------------------- |
@@ -262,12 +274,13 @@ Flagged, not invented.
 
 - **Icons.** `docs/DESIGN-SYSTEM.md` pins a set of eighteen lucide icons
   and `shared/icons.ts` re-exports exactly those. Nothing in the set
-  reads as "panes in a lane". This change therefore uses **no new
-  icon**: the breadcrumb separator is the same textual `/` the board
-  card's `path()` already uses, and switcher entries carry the existing
-  status dot (a CSS dot, not an icon) plus the card name. If a maintainer
-  wants a glyph on the switcher, extending the pinned icon list is a
-  docs edit and theirs to make (decision D4).
+  read as "panes in a lane", so D4 asked whether to extend it.
+  **Resolved: yes — `LucideGalleryHorizontal` joins the set**, as the
+  leading marker on the switcher strip. Switcher entries still carry no
+  icon (the existing CSS status dot plus the card name), and the
+  breadcrumb separator stays the textual `/` the board card's `path()`
+  already uses. The pinned-table row in `docs/DESIGN-SYSTEM.md` is the
+  maintainer's edit; this lane adds the `shared/icons.ts` re-export.
 
 ## Composition with `add-pane-workdir-and-task-title`
 
@@ -338,16 +351,81 @@ take theirs.
 
 ## Maintainer decisions
 
-- **D1 — mobile.** `docs/UX-GUIDELINES.md` currently forbids a pane
-  switcher below 900px. Ship desktop-only (what this spec requires), or
-  amend the paragraph to permit a route-navigator strip at phone width?
-  *Recommendation: amend, then a follow-up lane lifts the width gate.*
-- **D2 — copy.** Approve `nav.cardSwitcher` / `nav.cardSwitcherItem` (or
-  substitutes) for `docs/BRAND.md`'s table. Until then they live in a
-  component-local `SWITCHER_COPY`, as `CARD_COPY` does.
-  *Recommendation: approve as written.*
-- **D3 — a second and third chord.** Add `Ctrl+Alt+[` / `Ctrl+Alt+]` for
-  previous / next sibling without opening the switcher?
-  *Recommendation: no — not until an operator asks twice.*
-- **D4 — an icon.** Extend the pinned lucide set with a glyph for the
-  switcher? *Recommendation: no; the status dot and name carry it.*
+- **D1 — mobile. RESOLVED 2026-09-10: amend the paragraph.** The
+  switcher renders at every width, phone width included. The maintainer
+  judged the "no pane switcher" sentence overblown early-MVP feedback
+  rather than an MLP rule, and expects to want a pane switcher in the
+  web terminal view too, for panels in the same view. A maintainer lands
+  the `docs/UX-GUIDELINES.md` edit; no follow-up width-gate lane is
+  needed. See Finding 5.
+- **D2 — copy. RESOLVED 2026-09-10: approved as written, table row
+  deferred.** `nav.cardSwitcher` = `cards in this lane` and
+  `nav.cardSwitcherItem` = `{name} — {status}` are the strings to use,
+  and they go straight into `shared/copy.ts` under `nav`, beside
+  `nav.statusSwitcher` / `nav.statusSwitcherItem` (`copy.ts:125-126`).
+  They are **not** added to `docs/BRAND.md`'s approved-copy table now;
+  a maintainer promotes them if the table grows, and this lane does not
+  edit `docs/BRAND.md`.
+- **D3 — a second and third chord. RESOLVED 2026-09-10: postponed, not
+  in this lane.** The maintainer's reasoning is a principle, not just a
+  no: *the keyboard experience should be familiar and equivalent to
+  herdr; herdr's hierarchy and structure triumph, especially for
+  keyboard navigation.* A chord pair whose only job is "jump to the next
+  busy thing" is of dubious value once the herdr-equivalent tab and pane
+  movements work. Two things this raised, neither of them this lane's to
+  answer:
+
+  **Both were then decided by the maintainer, and this lane carries
+  them:** `prefix + o` is rebound to **next sibling card** (herdr's
+  meaning on herdr's key), and the switcher moves to `prefix + i` with
+  the direct chord `Ctrl+Alt+I`. `i` was picked from the maintainer's
+  `s` / `r` / `i` shortlist. `s` was the better mnemonic — tmux's own
+  `prefix + s` opens a chooser, which is what the strip is — but
+  **`ctrl+alt+s` is on herdr's published avoid list** (see § "Why
+  `Ctrl+Alt+I`" below), so the direct half could not follow the prefix
+  half onto `s`, and splitting the two letters is worse than losing the
+  mnemonic. `i` is free in kanhrd's chord table and on none of herdr's
+  exception lists. One cost is worth naming: a
+  card hop loads a pane, so holding `prefix + o` through a five-card
+  lane issues five `pane.read` calls, where tmux pays nothing. That is
+  the price of herdr parity and the switcher's arrow keys remain the
+  zero-cost path — they move focus without navigating.
+
+  1. **An unverified claim, now flagged.** Finding 4 asserts that
+     herdr's own docs bind `Ctrl+Alt+[` / `Ctrl+Alt+]` to
+     `previous_tab` / `next_tab` in a prefix-free example. The
+     maintainer's reading is that those keys do nothing in herdr.
+     Nothing in this repo sources either reading — herdr is upstream
+     (`herdrdev/herdr`). The claim SHOULD be checked against herdr's
+     actual keybinding config before it is used as an argument again.
+     It is not load-bearing for this change, which takes neither key.
+  2. **`prefix + o` carries the wrong verb, possibly.** kanhrd already
+     ships herdr/tmux-convention tab movement in
+     `keyboard.service.ts:44-131` — `prefix + n` next-tab, `prefix + p`
+     prev-tab, `prefix + l` last-tab, `prefix + 0-9` jump-tab. In
+     tmux and herdr, `prefix + o` **goes to the next pane**; this
+     change binds it to *focus the switcher strip* instead. Under the
+     maintainer's parity principle that may be the wrong verb on the
+     right key. A separate lane owns the question of full herdr
+     keyboard parity for pane-level movement; this change does not
+     rebind anything on its own authority.*
+- **D4 — an icon. RESOLVED 2026-09-10: yes, extend the pinned set with
+  `LucideGalleryHorizontal` and `LucideSquareSplitHorizontal`.** It is the leading marker on the switcher
+  strip — a row of panels with the middle one emphasised, which is
+  literally what the strip is. Verified present in
+  `@lucide/angular@1.43.0`. Rejected alternatives and why:
+  `LucideSquareSplitHorizontal` and the split-pane family read as the
+  *split* action, which `LucideArrowRight` / `LucideArrowDown` already
+  carry; `LucidePanelsTopLeft` reads as a sidebar toggle, which
+  `LucideMenu` already carries; `LucideColumns3` is close but says
+  "panes side by side" rather than "cards to move between".
+  `LucideSquareSplitHorizontal` was rejected *for the strip*, above, and
+  then claimed by the maintainer for a different control: the
+  **next-card button** (see § "The next-card button"). Its glyph is a
+  window divided into two panes, which is what a lane of two cards is,
+  and it sits on a hop action rather than a chooser. Switcher
+  **entries** still carry no icon — the CSS status dot plus the card
+  name — and the breadcrumb separator stays the textual `/` the board
+  card's `path()` already uses. The pinned set goes from eighteen to
+  twenty; the `docs/DESIGN-SYSTEM.md` table rows are a maintainer edit,
+  and this lane adds only the `shared/icons.ts` re-exports.

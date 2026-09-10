@@ -127,16 +127,23 @@ horizontally at any width.
 The switcher SHALL NOT fetch pane output, subscribe to any pane, or
 issue any request. It renders from the store only.
 
-Below `--breakpoint-mobile` the switcher SHALL NOT be rendered and
-nothing in the view SHALL hint at it, per `docs/UX-GUIDELINES.md`
-§ Mobile → Pane detail ("no pane switcher. Do not build one and do not
-hint at one"). Lifting that restriction requires that document to be
-amended first.
+The switcher SHALL render at every width, phone width included
+(maintainer decision D1, 2026-09-10). Below `--breakpoint-mobile` it
+SHALL remain the same horizontally scrolling strip: the back control
+SHALL stay first and visible without scrolling, every entry SHALL meet
+`--touch-target-min` with `--sp-2` separation, and the strip itself —
+not the page — SHALL be the element that scrolls, so
+`document.documentElement.scrollWidth` does not exceed `clientWidth`.
+
+`docs/UX-GUIDELINES.md` § Mobile → Pane detail ("no pane switcher. Do
+not build one and do not hint at one") SHALL be amended to permit a
+route-navigator strip: the sentence rules out a multi-pane or split
+view, and each switcher entry is a `routerLink` to `/pane/:host/:id`
+showing one terminal at a time.
 
 #### Scenario: Two cards share a lane
 
-- **WHEN** the operator opens a card whose lane holds two panes, at a
-  viewport ≥ 900px
+- **WHEN** the operator opens a card whose lane holds two panes
 - **THEN** the top bar shows a switcher with two entries, the current
   card's entry marked current and reporting `aria-current="page"`
 
@@ -177,23 +184,40 @@ amended first.
 
 - **WHEN** the detail route renders at a 390px-wide viewport for a lane
   with several cards
-- **THEN** no switcher is rendered, and
-  `document.documentElement.scrollWidth` does not exceed `clientWidth`
+- **THEN** the switcher renders as a horizontally scrolling strip, the
+  back control is visible without scrolling, every entry meets
+  `--touch-target-min`, and `document.documentElement.scrollWidth` does
+  not exceed `clientWidth`
 
 ### Requirement: The switcher is reachable and operable by keyboard without taking the terminal's keys
 
-The switcher SHALL be focusable by two bindings, both listed in the
-keyboard help overlay:
+This capability adds two actions (maintainer decision D3 follow-up,
+2026-09-10), both listed in the keyboard help overlay under `Navigation`.
 
-- the prefix chord **`prefix + o`**, which applies when the terminal does
+**`next-sibling-card`** SHALL be bound to the prefix chord
+**`prefix + o`**. It SHALL navigate directly to the next sibling card in
+the lane, wrapping from the last to the first, without opening the
+switcher. This mirrors tmux and herdr, where `prefix + o` goes to the
+next pane; kanhrd already mirrors their tab movement in
+`keyboard.service.ts` (`prefix + n` / `prefix + p` / `prefix + l` /
+`prefix + 0-9`), and pane movement SHALL be consistent with it. Like
+those bindings it is prefix-only and takes no key from the pane.
+
+**`focus-card-switcher`** SHALL be focusable by two bindings:
+
+- the prefix chord **`prefix + i`**, which applies when the terminal does
   not have focus; and
-- the direct chord **`Ctrl+Alt+O`**, which applies whether or not the
+- the direct chord **`Ctrl+Alt+I`**, which applies whether or not the
   terminal has focus, and is the only key this capability takes away from
   the pane.
 
-`Ctrl+Alt+O` SHALL be the single exception this capability adds to
+`prefix + o` SHALL NOT be reused for the switcher, and `prefix + i` SHALL
+NOT navigate; the two verbs stay on separate keys so that the herdr-parity
+key keeps herdr's meaning.
+
+`Ctrl+Alt+I` SHALL be the single exception this capability adds to
 `keyboard-shortcuts`' input-suppression rule. If the effective prefix is
-itself `Ctrl+Alt+O`, the prefix SHALL win and the direct chord SHALL NOT
+itself `Ctrl+Alt+I`, the prefix SHALL win and the direct chord SHALL NOT
 be recognized.
 
 Once the switcher has focus the terminal does not, so the following SHALL
@@ -207,14 +231,16 @@ Moving between entries with the arrow keys SHALL move focus only; it
 SHALL NOT navigate until the operator activates an entry, so a keyboard
 user does not load four panes on the way to the fifth.
 
-Neither binding SHALL fire when no switcher is rendered.
+No binding in this capability SHALL fire when the pane is the only card
+in its lane: `prefix + o` SHALL be a no-op there, and the switcher
+bindings SHALL do nothing since no switcher is rendered.
 
 Focus SHALL be visible on every entry; `:focus-visible` SHALL NOT be
 suppressed.
 
 #### Scenario: Reaching the switcher from a live terminal
 
-- **WHEN** the terminal has focus and the operator presses `Ctrl+Alt+O`
+- **WHEN** the terminal has focus and the operator presses `Ctrl+Alt+I`
   in a lane with more than one card
 - **THEN** focus moves to the switcher's current entry and the keystroke
   is not sent to the pane
@@ -222,7 +248,7 @@ suppressed.
 #### Scenario: Reaching the switcher without the terminal focused
 
 - **WHEN** the terminal does not have focus and the operator presses the
-  prefix followed by `o`
+  prefix followed by `i`
 - **THEN** focus moves to the switcher's current entry
 
 #### Scenario: Arrow keys move focus, not the route
@@ -246,26 +272,94 @@ suppressed.
 
 #### Scenario: The prefix is never shadowed
 
-- **WHEN** the effective prefix resolves to `Ctrl+Alt+O` (by user
+- **WHEN** the effective prefix resolves to `Ctrl+Alt+I` (by user
   override or by a herdr-mirrored `[keys].prefix`)
-- **THEN** pressing `Ctrl+Alt+O` arms the prefix chord and does not focus
+- **THEN** pressing `Ctrl+Alt+I` arms the prefix chord and does not focus
   the switcher
 
 #### Scenario: Nothing to switch to
 
 - **WHEN** the pane is the only card in its lane and the operator presses
-  `Ctrl+Alt+O`
+  `Ctrl+Alt+I`
 - **THEN** nothing is focused, no error is shown, and the keystroke is
   passed to the terminal unchanged
+
+#### Scenario: `prefix + o` hops to the next sibling
+
+- **WHEN** the terminal does not have focus, the lane holds three cards,
+  and the operator presses the prefix followed by `o`
+- **THEN** the route becomes the next sibling's `/pane/:host/:id`
+  without the switcher being opened or focused
+
+#### Scenario: `prefix + o` wraps
+
+- **WHEN** the operator is on the last card of the lane and presses the
+  prefix followed by `o`
+- **THEN** the route becomes the first card of the lane
+
+#### Scenario: `prefix + o` in a lane of one
+
+- **WHEN** the pane is the only card in its lane and the operator presses
+  the prefix followed by `o`
+- **THEN** the route is unchanged and no request is sent
+
+### Requirement: The bar carries a visible control for hopping to the next card in the lane
+
+`prefix + o` needs a pointer affordance, since
+`docs/UX-GUIDELINES.md` requires visible affordances rather than
+keyboard-only paths. The bar SHALL therefore carry a **next-card
+button** whenever the pane shares its lane with at least one other card
+— the same condition under which the switcher renders.
+
+The button SHALL carry `LucideSquareSplitHorizontal`, whose glyph is a
+window divided into two panes, and SHALL perform exactly the
+`next-sibling-card` action `prefix + o` performs: navigate to the next
+sibling in store order, wrapping past the last. It SHALL NOT open,
+focus, or scroll the switcher.
+
+The button and the switcher strip are deliberately both present and are
+not redundant: the button is a one-press hop, correct in the common
+two-card lane; the strip is how the operator picks a *specific* card in
+a lane of three or more. In a lane of one, neither renders.
+
+The button SHALL meet `--touch-target-min` at every width and SHALL
+carry an accessible name from `copy.ts`; its glyph SHALL NOT be its only
+label to assistive technology.
+
+#### Scenario: The button appears only with a sibling
+
+- **WHEN** the operator opens a card whose lane holds exactly one pane
+- **THEN** no next-card button is rendered
+
+#### Scenario: The button hops
+
+- **WHEN** the lane holds two cards and the operator activates the
+  next-card button
+- **THEN** the route becomes the other card's `/pane/:host/:id`, and the
+  switcher is neither opened nor focused
+
+#### Scenario: The button and the chord agree
+
+- **WHEN** the lane holds three cards and the operator activates the
+  next-card button twice
+- **THEN** the route lands on the same card two presses of
+  `prefix + o` would have reached
 
 ### Requirement: Every string and every value on the bar is a token or approved copy
 
 Every visible string added by this capability SHALL come from
-`shared/copy.ts`, or — until `docs/BRAND.md`'s approved-copy table gains
-the corresponding rows — from a typed component-local copy constant
-carrying a comment naming the keys it is destined for, following the
-precedent of `CARD_COPY` in `board/card.ts`. No string literal SHALL
-appear in a template.
+`shared/copy.ts`. No string literal SHALL appear in a template, and no
+component-local copy constant SHALL be introduced — commit `f173992`
+folded the last five of those back into `copy.ts`, and `copy.ts` is now
+the single home for user-facing strings whether or not
+`docs/BRAND.md`'s table has caught up.
+
+Per maintainer decision D2 (2026-09-10) the switcher's two strings —
+`nav.cardSwitcher` = `cards in this lane` and `nav.cardSwitcherItem` =
+`{name} — {status}` — are approved as written and SHALL be added to
+`copy.ts` under `nav`, beside `nav.statusSwitcher` and
+`nav.statusSwitcherItem` whose shape they mirror. This change SHALL NOT
+add rows to `docs/BRAND.md`'s approved-copy table.
 
 The switcher SHALL expose an accessible name for the strip and an
 accessible name per entry that carries both the card name and its status,
@@ -276,8 +370,13 @@ be a token from `docs/DESIGN-SYSTEM.md`. No raw hex, `px` or `rem` SHALL
 appear in the new styles, so `tools/lint-scss-tokens.sh` stays clean.
 
 No icon outside the pinned lucide set in `docs/DESIGN-SYSTEM.md` SHALL be
-introduced. The breadcrumb separator SHALL be the same textual `/` the
-board card's path already uses.
+introduced. Per maintainer decision D4 (2026-09-10) that set gains
+exactly two glyphs, both re-exported from
+`apps/web/src/app/shared/icons.ts`: **`LucideGalleryHorizontal`** as the
+leading marker on the switcher strip, and
+**`LucideSquareSplitHorizontal`** on the next-card button. Switcher entries SHALL carry no icon — the existing
+CSS status dot plus the card name. The breadcrumb separator SHALL be the
+same textual `/` the board card's path already uses.
 
 #### Scenario: Token lint
 

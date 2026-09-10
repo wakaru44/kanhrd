@@ -6,6 +6,29 @@ in `openspec/changes/add-pane-workdir-and-task-title/design.md`, which
 was written against an installed herdr 0.8.2. Where nothing could be
 verified from here, this file says so rather than guessing.
 
+## The column model (maintainer, 2026-09-10)
+
+The board carries two kinds of column, and every design choice below
+follows from the split:
+
+- **Agent-defined columns** — the five status columns. They are the
+  natural state of the agent, derived from `agent_status`. Membership is
+  not the operator's to set; it follows the agent.
+- **User-defined columns** — parked columns. The operator creates,
+  names and **drags cards into** them. Membership is deliberate, and a
+  card leaves only under that column's **exit rule**.
+
+The exit rules, in the operator's own examples:
+
+| Column name | Exit rule          | Behaviour                                                                                       |
+| ----------- | ------------------ | ----------------------------------------------------------------------------------------------- |
+| `archived`  | `never`            | only manual movement takes a card out — status changes, work starting, and messages do not eject |
+| `parking`   | `on agent activity`| the card exits when the agent activates (a bot messages it, it starts working); it stays while `unknown`, `idle` or `stopped` |
+
+Drag into a user-defined column is the point of the feature, not an
+accelerator (Q1, granted). A status column is never a drop target and
+status membership is never changed by a drag.
+
 ## Finding 1 — a parked column is not a herdr concept, at any level
 
 herdr's model is host → workspace → tab → pane. A pane belongs to
@@ -363,19 +386,22 @@ Rejected as not the ask, and worse than the ask: a hidden card is gone,
 and the operator wants their file-explorer *reachable* — parked, not
 hidden. It would also collide with the existing hidden-status chips.
 
-### Drag first, menu later
+### Drag first, menu later — partly superseded by Q1's grant
 
-Rejected on the docs. `docs/UX-GUIDELINES.md` says "drag-drop must work
-or not appear", and the current docs forbid the affordance, so under
-today's rules the correct read is *not appear*. Shipping the menu path
-first also means phase A is complete and useful on its own, and phase B
-becomes an accelerator rather than the feature's only door — which is
-what the accessibility requirement wanted anyway.
+The *ordering* stands; the framing does not. `docs/UX-GUIDELINES.md`
+says "drag-drop must work or not appear", and the **unamended** docs
+forbid the affordance, so until the amendment lands the correct read is
+*not appear* — phase A therefore ships menu-first. But drag is not a
+mere accelerator: Q1 is granted and dragging into a user-defined column
+is what the feature is for. Menu-first still earns its place, because it
+makes phase A complete and useful on its own and gives the keyboard path
+a door that does not depend on pointer input, which is what the
+accessibility requirement wanted anyway.
 
 ## Delivery order
 
 Phase A is self-contained: SPA-only, no wire change, no dependency on
 `add-l-brand-neo-shepherd-redesign` beyond the card overflow menu that
-is already shipped in `card.html`. Phase B needs Q1 answered in the
-docs. Phase C needs a spike against a live herdr. Nothing in B or C
+is already shipped in `card.html`. Phase B has Q1 granted (2026-09-10) and needs only the
+doc amendment landed. Phase C needs a spike against a live herdr. Nothing in B or C
 changes A's data model, so a slip in either does not block A.

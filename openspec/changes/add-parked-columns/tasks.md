@@ -1,17 +1,27 @@
-## 0. Gate — maintainer decisions before code
+## 0. Gate — maintainer decisions
 
-- [ ] 0.1 Q4 (copy): a maintainer approves or replaces the proposed
-      `card.park` / `card.unpark` / `park.*` / `settings.clearParked`
-      strings and adds them to `docs/BRAND.md`'s approved-copy table.
-      Until then the lane follows `card.ts`'s existing `CARD_COPY`
-      pending-copy precedent and does **not** invent table rows
-- [ ] 0.2 Q3 (column-header menu) and Q6 (mobile switcher widening from
-      "one segment per status" to "one segment per column") confirmed,
-      and `docs/UX-GUIDELINES.md` extended by the maintainer if the
-      answer changes either contract
-- [ ] 0.3 Q2 (default exit rule is `agent-activity`) confirmed
-- [ ] 0.4 Q1 (drag) recorded as **not** answered yet — phase 5 stays
-      unstarted; nothing in phases 1–4 depends on it
+Answered 2026-09-10. See `proposal.md` § "Maintainer decisions —
+resolved 2026-09-10" for the reasoning; do not re-ask.
+
+- [x] 0.1 Q4 (copy): approved as proposed. The keys go straight into
+      `shared/copy.ts`; a maintainer separately adds the rows to
+      `docs/BRAND.md`'s approved-copy table, and `copy.ts` does not wait
+      on it. **No component-local copy constant** — the `CARD_COPY`
+      pending-copy precedent this lane originally cited was removed in
+      commit `f173992` ("give every user-facing string one home in
+      copy.ts"). This lane does **not** edit `docs/BRAND.md`
+- [x] 0.2 Q3 (column-header overflow menu) and Q6 (mobile switcher
+      widening from "one segment per status" to "one segment per
+      column") confirmed
+- [x] 0.3 Q2 (default exit rule is `agent-activity`) confirmed;
+      revisited only after phase 6's spike
+- [x] 0.4 Q1 (drag) **granted** — user-defined columns are drag drop
+      targets; that is the point of the feature. Phase 5 is unblocked
+      once task 5.1's doc amendment lands
+- [ ] 0.5 Q5 (browser-local arrangement vs "URL is state") — still
+      open. Does **not** block any phase: the proposal keeps parking
+      out of the URL either way, and a `yes` only adds a sentence to
+      `docs/UX-GUIDELINES.md`
 
 ## 1. Park store
 
@@ -90,17 +100,20 @@
       parked columns appear after `unknown`; arrow navigation reaches
       them by stable pane identity
 
-## 5. Drag and drop — BLOCKED on Q1, do not start
+## 5. Drag and drop — Q1 granted; gated on the doc amendment only
 
-- [ ] 5.1 Blocked: maintainer amends `docs/UX-GUIDELINES.md` (the
+- [ ] 5.1 Maintainer amends `docs/UX-GUIDELINES.md` (the
       anti-pattern line, § "Status columns are read-only", and E2E
       assertion 22) and `docs/DESIGN-SYSTEM.md` § "Status column" to
-      define which drag affordances the board permits
-- [ ] 5.2 Blocked: `cdkDrag` on cards as a drag **source**, parked
+      define which drag affordances the board permits: a status column
+      is never a **drop target** and status membership is never changed
+      by drag; drop targets are user-defined columns only; assertion 22
+      scopes to drop targets and to boards with no user-defined columns
+- [ ] 5.2 `cdkDrag` on cards as a drag **source**, parked
       columns as `cdkDropList` drop targets; status columns stay
       non-drop-targets and their membership is never changed by a drag
-- [ ] 5.3 Blocked: parked-column reordering by drag, mirroring `order`
-- [ ] 5.4 Blocked: e2e — drop parks; a drop on a status column is
+- [ ] 5.3 Parked-column reordering by drag, mirroring `order`
+- [ ] 5.4 e2e — drop parks; a drop on a status column is
       refused; the affordance is absent when no parked column exists
 
 ## 6. `on any activity` rule — BLOCKED on Q2's spike, do not start

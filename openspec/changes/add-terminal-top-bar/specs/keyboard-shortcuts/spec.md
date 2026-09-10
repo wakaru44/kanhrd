@@ -20,7 +20,7 @@ and SHALL avoid the chords herdr publishes as taken
 (`Ctrl+Alt+` arrows, `t`, `l`, `a`, `s`, `u`, `F1`–`F12`).
 
 At the introduction of this exception the list holds exactly one entry:
-`Ctrl+Alt+O`, which focuses the pane-detail card switcher (see the
+`Ctrl+Alt+I`, which focuses the pane-detail card switcher (see the
 `terminal-top-bar` capability).
 
 The effective prefix SHALL always win: if the effective prefix — whether
@@ -50,17 +50,17 @@ rather than folklore.
 
 #### Scenario: A listed chord is recognized despite the focused terminal
 - **WHEN** a user has a pane-detail terminal focused, the card switcher
-  is available, and the user presses `Ctrl+Alt+O`
+  is available, and the user presses `Ctrl+Alt+I`
 - **THEN** the switcher takes focus, the keystroke is not sent to the
   pane, and both `preventDefault()` and `stopPropagation()` are called
 
 #### Scenario: A listed chord whose action is unavailable is passed through
 - **WHEN** a user has a pane-detail terminal focused on a card that is
-  the only pane in its lane, and presses `Ctrl+Alt+O`
+  the only pane in its lane, and presses `Ctrl+Alt+I`
 - **THEN** the keystroke is sent to the terminal, and neither
   `preventDefault()` nor `stopPropagation()` is called
 
 #### Scenario: The prefix outranks a listed chord
-- **WHEN** the effective prefix is `Ctrl+Alt+O` and the user presses it
+- **WHEN** the effective prefix is `Ctrl+Alt+I` and the user presses it
   with no input focused
 - **THEN** the prefix chord arms and the switcher is not focused

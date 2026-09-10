@@ -34,9 +34,11 @@ established by investigation rather than assumed:
    column' idea it was reserved for — the docs now forbid the affordance
    outright." This change does not overrule that. It ships the
    menu-and-keyboard path, which the docs already sanction, and holds
-   drag behind an explicit maintainer amendment (see **Open questions**,
-   Q1). `docs/UX-GUIDELINES.md` also says "drag-drop must work or not
-   appear" — under the current docs, the honest reading is *not appear*.
+   drag behind an explicit maintainer amendment (Q1, since **granted** —
+   see § "Maintainer decisions"). `docs/UX-GUIDELINES.md` also says
+   "drag-drop must work or not appear"; under the *unamended* docs the
+   honest reading is *not appear*, which is why phase A ships without
+   it and phase B waits on the amendment rather than on a decision.
 
 ## What Changes
 
@@ -61,7 +63,7 @@ established by investigation rather than assumed:
 - **The column header carries the rule as visible text** (`never` /
   `on agent activity`) plus a `LucideMoreHorizontal` overflow trigger —
   the documented visible-affordance pattern — opening rename column /
-  exit rule / remove column. Not a tooltip. See **Open questions**, Q3.
+  exit rule / remove column. Not a tooltip. Q3, confirmed.
 - **Park and unpark are card overflow-menu items.** `card.html` already
   ships a keyboard-reachable `role="menu"`; parking adds `park in…`
   (listing the parked columns plus `new column…`) and, for a parked
@@ -82,16 +84,17 @@ established by investigation rather than assumed:
 - **Settings** gains a `clear parked columns` row, so browser-local state
   has a visible way out.
 
-### Phase B — drag and drop (gated on Q1)
+### Phase B — drag and drop (Q1 granted; gated on the doc amendment)
 
 `@angular/cdk/drag-drop` is already a dependency. Dragging a card from a
-status column into a parked column, and reordering parked columns, land
-only after a maintainer amends `docs/UX-GUIDELINES.md` and
+status column into a parked column, and reordering parked columns, are
+**the point of user-defined columns** and are approved. They land once a
+maintainer amends `docs/UX-GUIDELINES.md` and
 `docs/DESIGN-SYSTEM.md` to permit a drag **source** on a status column
 while keeping status columns non-drop-targets. Until then no drag
 handle, no `cursor: grab`, and assertion 22 stays true.
 
-### Phase C — an `on any activity` rule (gated on Q2)
+### Phase C — an `on any activity` rule (Q2 confirmed; gated on the spike)
 
 The operator's default rule was "any signal pops it out". The bridge
 cannot observe that today for an unsubscribed card, and the one field
@@ -116,8 +119,10 @@ it holds, a revision diff on the existing 5s poll. `design.md` § "What
 - `apps/web/src/app/board/card.{ts,html}` — `park in…` / `unpark` menu
   items. **Overlaps `add-pane-workdir-and-task-title`** — see below.
 - `apps/web/src/app/settings/**` — `clear parked columns`.
-- `apps/web/src/app/shared/copy.ts` — pending; `docs/BRAND.md`'s
-  approved-copy table has no `park.*` rows (Q4).
+- `apps/web/src/app/shared/copy.ts` — the `park.*` / `card.park` /
+  `card.unpark` / `settings.clearParked` keys land here (Q4 approved).
+  `docs/BRAND.md`'s table row is a separate maintainer edit; `copy.ts`
+  does not wait on it.
 - **No change to `packages/schema`, `apps/bridge`, or any wire method.**
   Nothing about this feature reaches herdr.
 
@@ -152,11 +157,12 @@ card overflow menu. They do not contradict, and neither blocks the other:
   arrangement. A parked pane's workspace, tab and status are untouched.
 - **No new bridge state, no new wire method, no new capability flag.**
 - **No change to the status columns**: same five, same order, same
-  read-only semantics, no drag affordance in phase A.
+  read-only semantics, no drag affordance in phase A. In phase B they
+  gain a drag *source* only, and are never drop targets.
 - **No sharing across devices, browsers or operators.** Parked columns
   are per-browser. Stated plainly in the spec and surfaced in Settings.
 - **No parked column in the URL.** Parking is arrangement, not scope; see
-  `design.md` § "Where parked columns live" and Q5.
+  `design.md` § "Where parked columns live" and Q5 (still open).
 - **No per-card terminal subscription.** `docs/UX-GUIDELINES.md` forbids
   a card fetching terminal output for decoration; an exit rule is
   decoration.
@@ -166,56 +172,95 @@ card overflow menu. They do not contradict, and neither blocks the other:
 - **No nesting, no per-parked-column filters, no cross-pen grouping
   rules.**
 
-## Open questions — maintainer decisions required
+## Maintainer decisions — resolved 2026-09-10
 
-These are design-authority calls. Per `CLAUDE.md`, the lane flags them
-rather than inventing an answer.
+Recorded so they are not re-asked. The original questions are kept for
+context; each carries the maintainer's answer.
 
-- **Q1 (blocking phase B). Does a status column get a drag *source*
-  affordance?** The docs forbid it three times over (UX anti-pattern
-  list, DESIGN-SYSTEM § Status column, E2E assertion 22) and `column.ts`
-  records the park idea as the reason the drag scaffold was deleted. The
-  operator's ask is explicitly drag-and-drop. Recommended amendment:
-  narrow the rule from "no drag affordance on a status column" to "a
-  status column is never a **drop target** and status membership is
-  never changed by drag"; permit a card to be a drag source **only when
-  at least one parked column exists**, so a board with no parked columns
-  is byte-for-byte the board the docs describe today; amend assertion 22
-  to scope to drop targets and to boards without parked columns.
-  **Until a maintainer makes this edit, phase B does not start.**
-- **Q2 (blocking phase C). Is the default exit rule `on agent activity`?**
-  The operator asked for "on activation (default) — any signal pops it
-  out", and any-signal is not observable today (`design.md`). Recommended:
-  `on agent activity` is the default in phase A, and the default is
-  revisited only if phase C's spike shows `PaneInfo.revision` advances.
-- **Q3. Is the column-header overflow menu the accepted substitute for
-  the requested "small tooltip UI"?** `docs/UX-GUIDELINES.md` forbids
-  hover-only affordances, so a hover tooltip carrying the control is not
-  available; the doc has no pattern for a *column header* menu, only for
-  cards and rail rows. Recommended: reuse the card/rail overflow pattern
-  verbatim on the column header, and render the current rule as visible
-  text beside the count so the rule is legible without opening anything.
-- **Q4. Copy.** `docs/BRAND.md`'s approved-copy table has no rows for
-  parked columns. Proposed strings, following the voice rules (lowercase,
-  no exclamation, care verbs reserved for lifecycle — parking is not a
-  lifecycle end, so no care verb): `card.park` = `park in…`,
-  `card.unpark` = `unpark`, `park.newColumn` = `new column…`,
-  `park.defaultName` = `parked`, `park.rule.never` = `never`,
-  `park.rule.agentActivity` = `on agent activity`,
-  `park.removeColumn` = `remove column`,
-  `park.removeColumnBody` = `the cards go back to their status columns.
-  nothing on the pen changes.`, `settings.clearParked` =
-  `clear parked columns`. A maintainer approves or replaces these and
-  adds them to the table; until then they follow `card.ts`'s existing
-  `CARD_COPY` pending-copy precedent.
+### The column model (answers Q1)
+
+The board has **two kinds of column**, and the distinction is the whole
+feature:
+
+- **Agent-defined columns** — the five status columns. They are the
+  natural state of the agent, derived from `agent_status`. A card's
+  membership in them is not the operator's to set; it follows the agent.
+- **User-defined columns** — parked columns. The operator creates them,
+  names them, and **drags cards into them**. Membership is deliberate.
+  A card leaves only under the column's **exit rule**.
+
+Exit rules, as the operator described them:
+
+- `never` — e.g. a column named `archived`. Only manual movement takes a
+  card out. The card stays put when its `agent_status` changes, when the
+  agent starts working, and when it receives a message.
+- `on agent activity` — e.g. a column named `parking`. The card exits
+  when the agent activates: another bot messages it and it starts
+  working. While it sits in `unknown`, `idle` or `stopped` it stays in
+  the column.
+
+**Q1 — does a status column get a drag *source* affordance? → YES,
+granted.** User-defined columns exist so the operator can drag cards
+into them; a menu-only path is not the feature. Phase B is unblocked once
+a maintainer lands the doc amendment:
+
+- `docs/UX-GUIDELINES.md` — narrow "no drag affordance on a status
+  column" to "**a status column is never a drop target**, and status
+  membership is never changed by drag". Drop targets are user-defined
+  columns only.
+- `docs/DESIGN-SYSTEM.md` § Status column — same narrowing.
+- E2E assertion 22 — scope to drop targets, and to boards with no
+  user-defined columns.
+
+Lane's reading of the condition, absent a maintainer word against it: a
+card is a drag source **only when at least one user-defined column
+exists**, so a board with none is byte-for-byte the board the docs
+describe today.
+
+### Q2 — is the default exit rule `on agent activity`? → YES
+
+`on agent activity` is the phase A default. Revisit only after phase C's
+spike shows whether `PaneInfo.revision` advances — the operator's
+"any signal pops it out" is not observable today (`design.md` § "What
+'activation' actually is").
+
+### Q3 — column-header overflow menu instead of the requested tooltip? → YES
+
+Reuse the card/rail overflow pattern verbatim on the column header, and
+render the current rule as visible text beside the count so the rule is
+legible without opening anything. Hover-only affordances stay forbidden.
+
+### Q4 — copy → APPROVED as proposed
+
+`card.park` = `park in…`, `card.unpark` = `unpark`,
+`park.newColumn` = `new column…`, `park.defaultName` = `parked`,
+`park.rule.never` = `never`, `park.rule.agentActivity` =
+`on agent activity`, `park.removeColumn` = `remove column`,
+`park.removeColumnBody` = `the cards go back to their status columns.
+nothing on the pen changes.`, `settings.clearParked` =
+`clear parked columns`. They go into `shared/copy.ts` directly; a
+maintainer separately adds the rows to `docs/BRAND.md`'s approved-copy
+table. **Not** a component-local copy constant: commit `f173992` ("give
+every user-facing string one home in copy.ts") folded `CARD_COPY` and
+four sibling blocks back into `copy.ts`, so the pending-copy precedent
+this proposal originally cited no longer exists.
+
+### Q6 — mobile → CONFIRMED
+
+Parked columns page and switch identically to status columns, with the
+column's name as the segment label. The status switcher's contract
+widens from "one segment per visible **status**" to "per visible
+**column**".
+
+## Open question — still outstanding
+
 - **Q5. Is a browser-local board arrangement in tension with "URL is
-  state"?** The doc's rule is about **scope**, and parking is not scope,
-  so the proposal keeps parking out of the URL. But it means a shared
-  link renders differently for the recipient, which is the outcome that
-  rule exists to prevent. Recommended: accept it, and say so in the doc
-  — density and filters already have the same property.
-- **Q6. Mobile.** A parked column becomes another page in the pager and
-  another segment in the status switcher, whose spec says "one segment
-  per **visible status**". Recommended: parked columns page and switch
-  identically, with the column's name as the segment label; a maintainer
-  confirms the switcher's contract widens from "status" to "column".
+  state"?** Restated plainly: parked columns live in this browser's
+  `localStorage`, not in the URL. Copy the board URL, send it to someone
+  else, and they see no parked columns — the cards sit in their status
+  columns instead. The doc's rule is about **scope**, and parking is not
+  scope, so the proposal keeps parking out of the URL. Recommended:
+  accept it and say so in the doc — density and filter chips already
+  have exactly this property. The alternative is encoding column
+  definitions and membership into the URL, which makes links long and
+  imposes one operator's arrangement on the recipient.

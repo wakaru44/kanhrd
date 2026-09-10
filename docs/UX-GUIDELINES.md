@@ -412,8 +412,8 @@ What this model does not do:
 - Pane detail is a **route** (`/pane/:host/:id`), one terminal at a
   time, subscribing on init and tearing down on destroy. At phone width
   it is a full-screen view.
-- There is no mobile multi-pane view, no split view, and no pane
-  switcher. Do not build one and do not hint at one.
+- There is no mobile multi-pane view, no split view. We might need panel
+  switchers for mobile instead of multi-pane view.
 - Header at 390px: a visible back control (`LucideArrowLeft` +
   `back to the board`) as the first focusable element, then the title,
   then the host seal. The metadata strip (pane id, revision, live state)
