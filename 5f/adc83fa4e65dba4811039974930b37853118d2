@@ -1,0 +1,14 @@
+docs/screenshots/mobile_kanban.jpg
+  h_c3e9cdb69766c6 2-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5fadc83fa4e65dba4811039974930b37853118d2",
+  "prompts": {},
+  "humans": {
+    "h_c3e9cdb69766c6": {
+      "author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
