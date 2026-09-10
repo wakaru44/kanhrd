@@ -67,18 +67,41 @@ headless, and `herdr session stop|delete <name>` disposes of one. The
 first task confirms the exact non-interactive start incantation and
 records it, because everything else depends on it.
 
-## Maintainer decisions still open
+## Maintainer decisions — resolved 2026-09-11
 
-- **Q1 — one session per suite, or one per file?** `test:int` sets
-  `fileParallelism: false` because its files share live state; a session
-  per file would remove that constraint at the cost of N server starts.
-- **Q2 — what does a suite do when it cannot start a session?** Skip as
-  the suites do today, or fail loudly. Skipping keeps CI green on a
-  machine without herdr; failing prevents a silent regression to zero
-  coverage.
-- **Q3 — do the seeded fixture panes run a real agent?** `agent_status`
-  columns and tier-2 terminal specs may need one; a bare shell pane is
-  cheaper and more deterministic.
+Do not re-ask these.
+
+**Q1 — one session per suite, and keep `fileParallelism: false`.**
+Running servers are not free. A session per file would buy back
+parallelism at the cost of N herdr starts per suite, which is the wrong
+trade for a suite this size. The existing serial execution stands.
+
+**Q2 — it depends which suite, and the distinction matters more than the
+answer.** Three tiers, three rules:
+
+- **Mocked e2e** (`page.route`-backed, no herdr at all) MUST pass on any
+  machine, with no herdr installed and no opt-in. A mock suite that
+  skips is not a suite. Written well, these cover the same ground the
+  live ones do.
+- **Live e2e** (real bridge, real herdr) SKIPS when no herdr is
+  reachable. Nothing else is honest on a machine without one.
+- **Integration** (`test:int`, bridge against herdr's wire) SKIPS the
+  same way, for the same reason.
+
+This exposes a gap this change must not paper over: today almost
+everything in `apps/web/e2e` is a live spec — 64 of 91 skipped on a
+plain run — so "the mocked suite passes anywhere" is currently a claim
+about 27 tests. Widening mock coverage to match is real work and is
+scoped in section 4 rather than smuggled in.
+
+**Q3 — bare shell panes; a test needing a real agent skips.** The
+question was posed backwards. kanhrd renders what the wire reports; that
+an agent's `agent_status` transitions correctly is herdr's contract with
+itself, not something kanhrd's suite should be re-proving. Fixture panes
+are bare shells, deterministic and cheap. Where a spec genuinely needs a
+live agent's transitions, it skips cleanly with that reason stated —
+never fails, and never becomes a reason to seed agents into every
+fixture.
 
 ## Impact
 

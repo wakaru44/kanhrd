@@ -99,6 +99,15 @@ jobs:
           echo "bin=$BIN" >> "$GITHUB_OUTPUT"
           "$BIN" --version
 
+      # `@kanhrd/schema` is consumed through its build output, so anything
+      # that compiles against it needs the package built first. The web
+      # package now does this itself via a `pretest` hook, but the bridge
+      # suite runs before that hook fires — and an explicit step keeps the
+      # failure legible if the hook is ever removed. The Forgejo pipeline
+      # has carried this step since it was written; this one had not.
+      - name: build schema
+        run: pnpm --filter @kanhrd/schema build
+
       - name: bridge unit tests
         run: pnpm --filter @kanhrd/bridge test
 

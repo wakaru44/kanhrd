@@ -1,11 +1,18 @@
 ## 0. Gate — maintainer decisions
 
-Blocked on Q1-Q3 in `proposal.md`. Do not start section 2 before they
-are answered; section 1 is safe to do regardless.
+Answered 2026-09-11. See `proposal.md` § "Maintainer decisions"; do not
+re-ask.
 
-- [ ] 0.1 Q1: one throwaway session per suite, or one per test file?
-- [ ] 0.2 Q2: skip or fail when a session cannot be started?
-- [ ] 0.3 Q3: do seeded fixture panes run a real agent, or a bare shell?
+- [x] 0.1 Q1: **one session per suite**, `fileParallelism: false` stays.
+      Running servers are not free.
+- [x] 0.2 Q2: **mocked e2e passes anywhere with no herdr and no opt-in;
+      live e2e and integration skip when no herdr is reachable.** The
+      mock suite is currently 27 of 91 specs — widening it is section 4,
+      not an aside.
+- [x] 0.3 Q3: **bare shell panes.** A spec needing a real agent's
+      transitions skips with that reason; it never fails, and never
+      justifies seeding agents everywhere. kanhrd renders what the wire
+      says; herdr's agent detection is herdr's to prove.
 
 ## 1. Confirm the primitive
 
@@ -40,20 +47,35 @@ are answered; section 1 is safe to do regardless.
 - [ ] 3.3 Re-scope `KANHRD_E2E_LIVE_HERDR` to mean "run against a real
       session on purpose", not "you may type into the operator's panes".
 
-## 4. Docs
+## 4. Mock coverage (Q2's consequence)
 
-- [ ] 4.1 `CLAUDE.md`: state what is enforced once this ships.
-- [ ] 4.2 `apps/bridge/integration/README.md` and `apps/web/e2e/README.md`:
+The mocked suite must be worth trusting on a machine with no herdr, and
+today it is 27 of 91 specs. This section closes the distance; it is
+sized deliberately and may be split into its own change if it grows.
+
+- [ ] 4.1 Inventory `apps/web/e2e`: for each spec, does it assert on SPA
+      behaviour (mockable) or on herdr's own wire behaviour (not)?
+- [ ] 4.2 Move every SPA-behaviour spec onto the `page.route` fixture so
+      it runs with no herdr and no opt-in.
+- [ ] 4.3 Leave genuinely wire-level specs live-only, and say so in each
+      file's header rather than leaving a reader to infer it.
+- [ ] 4.4 Confirm the mocked suite passes with herdr uninstalled and
+      `KANHRD_E2E_LIVE_HERDR` unset.
+
+## 5. Docs
+
+- [ ] 5.1 `CLAUDE.md`: state what is enforced once this ships.
+- [ ] 5.2 `apps/bridge/integration/README.md` and `apps/web/e2e/README.md`:
       drop the "requires a reachable local herdr with panes open"
       precondition.
-- [ ] 4.3 Note in the archived keyboard-shortcut change that its task
+- [ ] 5.3 Note in the archived keyboard-shortcut change that its task
       3.5 is now runnable.
 
-## 5. Verification
+## 6. Verification
 
-- [ ] 5.1 `pnpm test:int` green with the operator's default session
+- [ ] 6.1 `pnpm test:int` green with the operator's default session
       running, and its pane/tab/workspace set unchanged afterwards.
-- [ ] 5.2 Live e2e green against the throwaway session.
-- [ ] 5.3 Kill a run mid-suite; confirm the next run sweeps the leak.
-- [ ] 5.4 Confirm no suite opens `~/.config/herdr/herdr.sock` — by
+- [ ] 6.2 Live e2e green against the throwaway session.
+- [ ] 6.3 Kill a run mid-suite; confirm the next run sweeps the leak.
+- [ ] 6.4 Confirm no suite opens `~/.config/herdr/herdr.sock` — by
       inspection of the generated configs and the herdr CLI invocations.
