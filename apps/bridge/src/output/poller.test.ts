@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { WsEvent } from "@kanhrd/schema";
+import type { ReadFormat, ReadSource, WsEvent } from "@kanhrd/schema";
 import { OutputPoller, type PaneReader, type PaneReaderSource } from "./poller.js";
 
 /** Fake `pane.read` that resolves however the test script tells it to, and counts in-flight calls. */
 class FakeHost implements PaneReader {
   calls = 0;
+  lastParams: { pane_id: string; source?: ReadSource; format?: ReadFormat } | null = null;
   inFlightCount = 0;
   maxInFlight = 0;
   private script: Array<{ revision: number; content: string }> = [];
@@ -25,13 +26,14 @@ class FakeHost implements PaneReader {
     this.script.push({ revision, content });
   }
 
-  async paneRead(): Promise<{
+  async paneRead(params: { pane_id: string; source?: ReadSource; format?: ReadFormat }): Promise<{
     content: string;
     revision: number;
     truncated: boolean;
     format: "ansi";
     source: "visible";
   }> {
+    this.lastParams = params;
     this.calls++;
     this.inFlightCount++;
     this.maxInFlight = Math.max(this.maxInFlight, this.inFlightCount);
@@ -57,6 +59,31 @@ describe("OutputPoller", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("polls at source `recent` by default, so live snapshots carry scrollback", async () => {
+    // `pane.output` is a full snapshot the client paints over the whole
+    // terminal (ADR-0004). Polling `visible` behind a `recent` initial read
+    // deletes the pane's scrollback on the first tick — the scrollback bug.
+    const host = new FakeHost();
+    host.queue(1, "a");
+
+    const poller = new OutputPoller(sourceOf(host), 10);
+    poller.subscribe("local", "p1", undefined, undefined, "conn-1", () => {});
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(host.lastParams).toEqual({ pane_id: "p1", source: "recent", format: "ansi" });
+  });
+
+  it("still honours an explicitly requested source and format", async () => {
+    const host = new FakeHost();
+    host.queue(1, "a");
+
+    const poller = new OutputPoller(sourceOf(host), 10);
+    poller.subscribe("local", "p1", "visible", "text", "conn-1", () => {});
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(host.lastParams).toEqual({ pane_id: "p1", source: "visible", format: "text" });
   });
 
   it("emits pane.output only when the revision advances (dedup)", async () => {

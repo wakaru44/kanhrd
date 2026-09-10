@@ -71,13 +71,20 @@ export class OutputPoller {
     if (!entry) {
       // ponytail: dedupe is keyed on (host, pane_id) only, per CONTRACT-TIER2 §5.1 — the
       // first subscriber's source/format wins for the whole shared poll loop. Fine in
-      // practice since L3B always requests the same (visible, ansi) defaults; revisit
-      // with per-(host,pane_id,source,format) keys if a caller ever needs a second shape.
+      // practice since the SPA is the only caller and always requests the same
+      // (recent, ansi) shape; revisit with per-(host,pane_id,source,format) keys if a
+      // caller ever needs a second shape.
       const created: PollEntry = {
         key,
         host,
         paneId,
-        source: source ?? "visible",
+        // `recent` (viewport + scrollback), NOT `visible` (viewport only), and the same
+        // default `HerdrHost.paneRead` already applies to a one-shot read. `pane.output`
+        // is a FULL snapshot the client paints over the whole terminal (ADR-0004), so a
+        // `visible` poll behind a `recent` initial read silently deletes the pane's
+        // scrollback on the first tick. A caller that wants the cheap viewport-only
+        // stream asks for `source: "visible"` explicitly.
+        source: source ?? "recent",
         format: format ?? "ansi",
         lastRevision: -1,
         lastContentHash: null,
