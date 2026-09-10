@@ -118,13 +118,19 @@ colour-filled.
 
 ### Status columns are read-only
 
-Status membership is herdr's fact, not the user's. The board exposes
-**no** drag handle, grab cursor, or drop target on a status column, and
-never calls `pane.move` to change a status — `pane.move`'s destination
-is a tab or workspace. Relocating a pane between tabs or workspaces is a
-separate feature with its own destination, capability, keyboard, error
-and reconciliation requirements; it is not part of this redesign, and
-the UI must not hint that it exists.
+Status membership is herdr's fact, not the user's. A status column is
+**never a drop target**: it accepts no drop, carries no drop affordance,
+and no drag changes a card's status. Drop targets are user-defined
+columns only, and a card is a drag **source** only once at least one of
+them exists — a board with none carries no drag handle and no grab
+cursor. (Maintainer decision Q1, 2026-09-10; see
+`openspec/changes/add-parked-columns`.)
+
+The board never calls `pane.move` to change a status — `pane.move`'s
+destination is a tab or workspace. Relocating a pane between tabs or
+workspaces is a separate feature with its own destination, capability,
+keyboard, error and reconciliation requirements; it is not part of this
+redesign, and the UI must not hint that it exists.
 
 ### Feedback surface
 
@@ -438,8 +444,15 @@ What this model does not do:
 - Pane detail is a **route** (`/pane/:host/:id`), one terminal at a
   time, subscribing on init and tearing down on destroy. At phone width
   it is a full-screen view.
-- There is no mobile multi-pane view, no split view. We might need panel
-  switchers for mobile instead of multi-pane view.
+- There is no mobile multi-pane view and no split view. A **card
+  switcher** is neither: it navigates between routes, one terminal at a
+  time, so it renders at every width, phone included. Forbidding it
+  outright would rule out the panels-in-the-same-view controls wanted
+  here and in the web terminal view. (Maintainer decision D1,
+  2026-09-10; see `openspec/changes/add-terminal-top-bar`.)
+- The card switcher, rendered when the tab holds more than one card, is
+  a horizontally scrolling strip: `overflow-x` sits on the strip and
+  never on the page, and every entry meets `--touch-target-min`.
 - Header at 390px: a visible back control (`LucideArrowLeft` +
   `back to the board`) as the first focusable element, then the title,
   then the host seal. The metadata strip (pane id, revision, live state)
