@@ -94,6 +94,8 @@ export const COPY = {
     settings: 'settings',
     toggleNav: 'toggle navigation',
     help: 'keyboard shortcuts',
+    statusSwitcher: 'status columns',
+    statusSwitcherItem: '{status} — {count} cards',
   },
   notShipped: 'not yet.',
 } as const;

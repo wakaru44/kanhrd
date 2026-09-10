@@ -22,7 +22,6 @@ REM='(^|[^-a-zA-Z0-9_])[0-9]*\.?[0-9]+rem\b'
 LEGACY=(
   apps/web/src/app/app.scss
   apps/web/src/app/board/board.scss
-  apps/web/src/app/board/card.scss
   apps/web/src/app/board/column.scss
   apps/web/src/app/board/empty-state.scss
   apps/web/src/app/board/filter-bar.scss
