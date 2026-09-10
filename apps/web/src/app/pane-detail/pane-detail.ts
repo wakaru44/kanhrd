@@ -20,11 +20,32 @@ import { PanesStore, paneKey } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
 import { classifyInput } from "./key-mapping";
 import { TerminalThemeService } from "../state/terminal-theme.service";
+import { TerminalFontSizeService } from "../state/terminal-font-size.service";
 import { ToastService } from "../state/toast.service";
 import { ClockTick, formatElapsed } from "../util/clock";
+import { COPY, fill } from "../shared/copy";
+import {
+  LucideArrowLeft,
+  LucideRefreshCw,
+  LucideTriangleAlert,
+  LucideUnplug,
+} from "../shared/icons";
 
+/**
+ * xterm.js takes a font *string*, not a CSS custom property, so the
+ * `--font-mono` role from docs/DESIGN-SYSTEM.md is transcribed here. Keep
+ * this stack in step with `--font-mono` in shared/typography.scss.
+ */
 const XTERM_FONT_FAMILY =
-  'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
+  '"JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
+
+/**
+ * The reliability states this view can be in. They are mutually exclusive
+ * and none of them is faked — see docs/UX-GUIDELINES.md ("Reliability
+ * states tell the truth"). `stale` and `unavailable` never blank the
+ * terminal: whatever already rendered stays on screen underneath.
+ */
+export type PaneViewState = "loading" | "failed" | "unavailable" | "stale" | "empty" | "live";
 
 /**
  * Tier-2 terminal detail view: an xterm.js terminal fed by `pane.read` +
@@ -32,10 +53,16 @@ const XTERM_FONT_FAMILY =
  * `pane.send_keys`. See CONTRACT-TIER2.md section 6 — `pane.resize` never
  * succeeds in this tier, so window/container resizing is a pure client-side
  * (`FitAddon`) cosmetic concern with no wire call.
+ *
+ * This component registers **no global keyboard handler**. An unmodified
+ * `Escape` or a bare `?` bound at the document would be swallowed away from
+ * vim, less, fzf and every other TUI running inside the pane; the visible
+ * back control in the header is the escape hatch, and app-level bindings
+ * stay with the existing explicit prefix-shortcut mechanism.
  */
 @Component({
   selector: "app-pane-detail",
-  imports: [RouterLink],
+  imports: [RouterLink, LucideArrowLeft, LucideRefreshCw, LucideTriangleAlert, LucideUnplug],
   templateUrl: "./pane-detail.html",
   styleUrl: "./pane-detail.scss",
 })
@@ -44,11 +71,20 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   private readonly ws = inject(WsClient);
   private readonly store = inject(PanesStore);
   private readonly terminalTheme = inject(TerminalThemeService);
+  private readonly terminalFontSize = inject(TerminalFontSizeService);
   private readonly toast = inject(ToastService);
   protected readonly clock = inject(ClockTick);
 
+  protected readonly copy = COPY;
+
   /** True from the moment a `pane.read` request goes out until its first content lands (or fails). Drives the `.terminal-loading` overlay. */
   protected readonly loading = signal(false);
+  /** Set when a `pane.read` rejects. Cleared on the next attempt. Carries herdr's own wording, quoted verbatim. */
+  protected readonly failure = signal<string | null>(null);
+  /** True once a read or an output frame has landed for the current pane, whether or not it carried any bytes. */
+  private readonly frameReceived = signal(false);
+  /** True while the terminal is showing content the user can read. A disconnect must never flip this back to false. */
+  private readonly hasContent = signal(false);
 
   @ViewChild("terminalContainer", { static: true })
   private readonly containerRef!: ElementRef<HTMLDivElement>;
@@ -63,9 +99,26 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   );
 
   protected readonly pane = computed(() => this.store.panesSignal().get(paneKey(this.host(), this.id())));
-  protected readonly capabilities = computed(() => this.store.capabilitiesSignal().get(this.host()));
-  protected readonly graphicsAvailable = computed(() => this.capabilities()?.paneGraphics === true);
-  protected readonly pollIntervalMs = computed(() => this.capabilities()?.outputPollIntervalMs ?? 150);
+
+  /** UI-sans title, never the display serif: this is a repeated technical identifier. */
+  protected readonly title = computed(
+    () => this.pane()?.agent?.name ?? this.pane()?.title ?? this.id(),
+  );
+  protected readonly statusKey = computed(() => this.pane()?.agent_status ?? "unknown");
+  protected readonly statusLabel = computed(() => {
+    const key = this.statusKey();
+    return key in COPY.status ? COPY.status[key as keyof typeof COPY.status] : COPY.status.unknown;
+  });
+
+  /**
+   * Whether the pen this pane lives on is currently in view. An unknown
+   * host is *not* reported as gone — only a host the bridge has told us
+   * about and marked disconnected.
+   */
+  private readonly penInSight = computed(() => {
+    const entry = this.store.hostsSignal().find((h) => h.name === this.host());
+    return entry ? entry.connected : true;
+  });
 
   private term: Terminal | null = null;
   private fitAddon: FitAddon | null = null;
@@ -92,24 +145,173 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
         console.warn("pane-detail: send failed", err);
       });
   }
-  private readonly onWindowResize = (): void => {
-    this.fitAddon?.fit();
+  /**
+   * The terminal is refit from the *container's* box, not from
+   * `window.resize`.
+   *
+   * A window-resize listener is both too narrow and mistimed. Too narrow:
+   * the container also changes size without the window doing so — the
+   * header's meta strip rewrapping, the rail drawer opening. Mistimed: one
+   * `fit()` per resize event fits against the box as it is at that
+   * instant, and xterm's own re-render reflows the surrounding flex column
+   * afterwards, so the fitted row count can end up taller than the box it
+   * was fitted into. `.terminal-container` is `overflow: hidden`, so those
+   * extra rows are clipped and unreachable — the prompt included — and
+   * nothing ever refits to recover them. A `ResizeObserver` fires again on
+   * that second reflow and converges.
+   */
+  private resizeObserver: ResizeObserver | null = null;
+
+  // --- the terminal owns the vertical touch axis ------------------------
+  //
+  // xterm 6 does not scroll on touch. Its `.xterm-viewport` is decorative
+  // (scrollHeight === clientHeight); the real scrolling is done by
+  // `.xterm-scrollable-element`, which transforms its content and listens
+  // only for wheel and scrollbar drags. The vendored vscode `Gesture`
+  // helper is present in the bundle but `Gesture.addTarget` is never
+  // called on it, so a finger drag over the terminal moves nothing.
+  //
+  // With no scroller anywhere in the chain (`.terminal-container`,
+  // `.pane-detail` and the shell's `main` are all unscrollable at phone
+  // size) the browser hands that unclaimed vertical gesture to the root
+  // scroller, and Chrome on a phone reads a downward one as
+  // pull-to-refresh. Both halves of the reported bug — history that cannot
+  // be reached by touch, and a boundary swipe that reloads the page — are
+  // the same missing claim.
+  //
+  // So: `touch-action: pan-x pinch-zoom` on the container (see
+  // pane-detail.scss) tells the browser this element reserves the vertical
+  // axis, which stops the page gesture before it starts, and these
+  // handlers spend it on `scrollLines` instead. Only `touchmove` is
+  // handled — `touchstart`/`touchend` stay untouched so a tap still
+  // focuses the terminal and raises the on-screen keyboard.
+
+  private touchAnchorY: number | null = null;
+  /** Sub-row leftover, so a slow drag accumulates instead of rounding to nothing. */
+  private touchCarryPx = 0;
+
+  private readonly onTouchStart = (event: TouchEvent): void => {
+    const touch = event.touches.length === 1 ? event.touches[0] : null;
+    this.touchAnchorY = touch ? touch.clientY : null;
+    this.touchCarryPx = 0;
   };
 
-  // --- stats strip: revision count, last-poll timestamp, subscription
+  private readonly onTouchMove = (event: TouchEvent): void => {
+    const term = this.term;
+    const touch = event.touches.length === 1 ? event.touches[0] : null;
+    if (!term || !touch || this.touchAnchorY === null) {
+      return;
+    }
+    // Content-following, not scrollbar-following: dragging the finger down
+    // pulls older output into view.
+    const deltaPx = this.touchAnchorY - touch.clientY + this.touchCarryPx;
+    this.touchAnchorY = touch.clientY;
+    const rowHeight = this.rowHeightPx();
+    if (rowHeight <= 0) {
+      return;
+    }
+    const lines = Math.trunc(deltaPx / rowHeight);
+    this.touchCarryPx = deltaPx - lines * rowHeight;
+    if (lines !== 0) {
+      term.scrollLines(lines);
+    }
+    // Claimed for the whole gesture, both boundaries included: the leftover
+    // of a swipe that runs past the top of the scrollback must not become
+    // page overscroll.
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+  };
+
+  private readonly onTouchEnd = (): void => {
+    this.touchAnchorY = null;
+    this.touchCarryPx = 0;
+  };
+
+  /** Rendered row height in CSS pixels, measured rather than assumed from the font size. */
+  private rowHeightPx(): number {
+    const rows = this.term?.rows ?? 0;
+    const screen = this.containerRef?.nativeElement.querySelector(".xterm-screen");
+    if (!screen || rows <= 0) {
+      return 0;
+    }
+    return screen.getBoundingClientRect().height / rows;
+  }
+
+  private fitToContainer(): void {
+    const el = this.containerRef?.nativeElement;
+    // fit() divides by the cell size; a detached or zero-height container
+    // yields NaN rows and corrupts the buffer.
+    if (!el || el.clientHeight === 0 || el.clientWidth === 0) {
+      return;
+    }
+    this.fitAddon?.fit();
+    // `fit()` divides the available height by the renderer's *cached* cell
+    // size. A resize can change that measurement, so the first fit can
+    // land on a row count that no longer fits once the renderer has
+    // re-measured — and the container clips the difference. Fitting once
+    // more on the next frame, with the fresh cell size, converges. A fit
+    // that computes the same dimensions is a no-op, so this settles rather
+    // than looping.
+    requestAnimationFrame(() => {
+      if (this.fitAddon && el.clientHeight > 0 && el.clientWidth > 0) {
+        this.fitAddon.fit();
+      }
+    });
+  }
+
+  // --- meta strip: revision count, last-poll timestamp, subscription
   // health. All from data already on the tier-2 wire surface (`pane.read`'s
   // and `pane.output`'s `revision` — see BridgeMethodResult/BridgeEventPayload
-  // in wire.ts) — no bridge change needed.
+  // in wire.ts) — no bridge change needed. Elapsed is observed client time,
+  // never presented as a server-authoritative duration.
   protected readonly revision = signal<number | null>(null);
   protected readonly lastPollAt = signal<number | null>(null);
   protected readonly subscribed = signal(false);
 
+  /**
+   * Data readouts, not product copy (see the header comment in
+   * `shared/copy.ts`): a revision id and an observed elapsed duration.
+   * They are formatted here rather than in the template so the template
+   * itself carries no free-standing string.
+   */
+  protected readonly revisionLabel = computed(() => {
+    const rev = this.revision();
+    return rev === null ? "rev —" : `rev ${rev}`;
+  });
   protected readonly lastPollLabel = computed(() => {
     const at = this.lastPollAt();
     if (at === null) {
-      return "never";
+      return "updated —";
     }
-    return `${formatElapsed(this.clock.now() - at)} ago`;
+    return `updated ${formatElapsed(this.clock.now() - at)} ago`;
+  });
+
+  /** herdr's own wording for the failed read, quoted verbatim and never rewritten. */
+  protected readonly failureReason = computed(() => this.failure() ?? "");
+
+  /**
+   * The single source of truth for what the terminal area shows. Order
+   * matters: a disconnected pen outranks everything, a failure only wins
+   * while there is nothing to read, and content that already rendered is
+   * marked stale rather than thrown away.
+   */
+  protected readonly viewState = computed<PaneViewState>(() => {
+    if (!this.penInSight()) {
+      return "unavailable";
+    }
+    if (this.hasContent()) {
+      const settled = !this.loading();
+      const lost = !this.ws.connected() || (settled && !this.subscribed());
+      return lost ? "stale" : "live";
+    }
+    if (this.failure() !== null) {
+      return "failed";
+    }
+    if (this.loading() || !this.frameReceived()) {
+      return "loading";
+    }
+    return "empty";
   });
 
   constructor() {
@@ -122,6 +324,26 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       untracked(() => {
         if (this.term) {
           this.term.options.theme = theme;
+        }
+      });
+    });
+
+    // The theme effect's sibling, with one extra obligation: a colour change
+    // leaves cell geometry alone, a size change does not. The same pixel box
+    // now holds a different number of cells, so without a refit `cols`/`rows`
+    // keep their old values and the terminal either renders into a fraction
+    // of its box or overflows a container that is `overflow: hidden` — with
+    // the prompt clipped out of reach. The `ResizeObserver` cannot cover
+    // this: it watches the *container*, whose box does not change when only
+    // the cell inside it does, so no callback fires. Order matters — the
+    // option is assigned first so xterm has re-measured the cell before
+    // `fit()` divides the box by it.
+    effect(() => {
+      const fontSize = this.terminalFontSize.size();
+      untracked(() => {
+        if (this.term) {
+          this.term.options.fontSize = fontSize;
+          this.fitToContainer();
         }
       });
     });
@@ -155,7 +377,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     const term = new Terminal({
       theme: this.terminalTheme.theme(),
       fontFamily: XTERM_FONT_FAMILY,
-      fontSize: 13,
+      fontSize: this.terminalFontSize.size(),
       convertEol: true,
       scrollback: 5000,
     });
@@ -167,7 +389,14 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
 
     this.term = term;
     this.fitAddon = fitAddon;
-    window.addEventListener("resize", this.onWindowResize);
+    this.resizeObserver = new ResizeObserver(() => this.fitToContainer());
+    this.resizeObserver.observe(this.containerRef.nativeElement);
+
+    const container = this.containerRef.nativeElement;
+    container.addEventListener("touchstart", this.onTouchStart, { passive: true });
+    container.addEventListener("touchmove", this.onTouchMove, { passive: false });
+    container.addEventListener("touchend", this.onTouchEnd, { passive: true });
+    container.addEventListener("touchcancel", this.onTouchEnd, { passive: true });
 
     this.outputEventsSub = this.ws.events$
       .pipe(filter((evt): evt is WsEvent<"pane.output"> => evt.event === "pane.output"))
@@ -177,11 +406,27 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    window.removeEventListener("resize", this.onWindowResize);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    const container = this.containerRef?.nativeElement;
+    container?.removeEventListener("touchstart", this.onTouchStart);
+    container?.removeEventListener("touchmove", this.onTouchMove);
+    container?.removeEventListener("touchend", this.onTouchEnd);
+    container?.removeEventListener("touchcancel", this.onTouchEnd);
     this.outputEventsSub?.unsubscribe();
     this.teardownSubscription();
     this.term?.dispose();
     this.term = null;
+  }
+
+  /** Failed state's only action: re-run the same load for the pane in the route. */
+  protected retry(): void {
+    const host = this.host();
+    const id = this.id();
+    if (!host || !id) {
+      return;
+    }
+    void this.loadForPane(host, id);
   }
 
   private teardownSubscription(): void {
@@ -201,6 +446,9 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     }
     this.teardownSubscription();
     this.term.reset();
+    this.frameReceived.set(false);
+    this.hasContent.set(false);
+    this.failure.set(null);
     this.loading.set(true);
     try {
       const result = await this.ws.request(host, "pane.read", {
@@ -215,8 +463,12 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
         this.term.write(result.content);
         this.revision.set(result.revision);
         this.lastPollAt.set(Date.now());
+        this.frameReceived.set(true);
+        this.hasContent.set(result.content.length > 0);
       }
-      this.loading.set(false);
+      // `loading` stays true across the subscribe round-trip on purpose:
+      // it suppresses a one-frame `stale` flash between the read landing
+      // and the subscription being confirmed.
       try {
         const sub = await this.ws.request(host, "pane.subscribe_output", { pane_id: id });
         if (this.host() !== host || this.id() !== id) {
@@ -233,14 +485,18 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       } catch (err) {
         this.toast.push({
           level: "error",
-          message: `Live updates unavailable for this pane: ${err instanceof Error ? err.message : String(err)}`,
+          message: fill(COPY.toast.liveUpdatesUnavailable, {
+            reason: err instanceof Error ? err.message : String(err),
+          }),
         });
       }
-    } catch {
+    } catch (err) {
       // Bridge unreachable, tier-1 bridge, or connection dropped mid-load —
       // per the runtime/client boundary guardrail this is a client-local
       // outcome: leave the terminal showing whatever it already has rather
-      // than tearing down the view or the WS connection.
+      // than tearing down the view or the WS connection. With content on
+      // screen this reads as `stale`; with nothing on screen, as `failed`.
+      this.failure.set(err instanceof Error ? err.message : String(err));
     } finally {
       this.loading.set(false);
     }
@@ -258,6 +514,8 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     this.term.write(payload.content);
     this.revision.set(payload.revision);
     this.lastPollAt.set(Date.now());
+    this.frameReceived.set(true);
+    this.hasContent.set(payload.content.length > 0);
   }
 
   private handleInput(data: string): void {

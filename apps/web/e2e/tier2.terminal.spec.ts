@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures/kanhrd";
 import { herdrAvailable, herdrPaneRead, herdrPaneSendText } from "./fixtures/herdr";
-import { allCards, terminalContainer, xtermElement, xtermRows } from "./helpers/selectors";
+import { allCards, cardOpenLink, terminalContainer, xtermElement, xtermRows } from "./helpers/selectors";
 import { waitFor } from "./helpers/wait";
 import type { Page } from "@playwright/test";
 
@@ -45,7 +45,9 @@ test.beforeEach(() => {
 async function openFirstPane(app: Page): Promise<void> {
   const cards = allCards(app);
   await expect(cards.first()).toBeVisible({ timeout: 10_000 });
-  await cards.first().click();
+  // The card's opening control is a sibling `<a class="card-open">`, not the
+  // `.card` element itself (see helpers/selectors.ts) — click the link.
+  await cardOpenLink(cards.filter({ has: app.locator("a.card-open") }).first()).click();
   await expect(xtermElement(app)).toBeVisible({ timeout: 3_000 });
 }
 

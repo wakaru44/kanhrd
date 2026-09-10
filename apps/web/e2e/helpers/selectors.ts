@@ -35,9 +35,54 @@ export function cardsInColumn(page: Page, status: string): Locator {
   return columnByStatus(page, status).locator(".card");
 }
 
-/** Card's own host chip (inside `.card`, distinct from the filter bar's `.host-chip`). */
+/**
+ * The card's own host seal (inside `.card`, distinct from the filter bar's
+ * `.host-chip`). The redesign renamed this element from `.host-chip` to
+ * `.host-seal` (`src/app/board/card.html`).
+ */
 export function cardHostChip(card: Locator): Locator {
-  return card.locator(".host-chip");
+  return card.locator(".host-seal");
+}
+
+/**
+ * The card's opening control. Since the card became a `<div class="card">`
+ * grid with `<a class="card-open">` and `.card-actions` as SIBLINGS, the
+ * card itself is no longer the anchor — read `href` off this, never off
+ * `.card`. Renders as a `<span class="card-open">` (no href) for a
+ * tier-1-only card, which is exactly what `card--static` means.
+ */
+export function cardOpenLink(card: Locator): Locator {
+  return card.locator("a.card-open");
+}
+
+/** The card's title text, link or not. */
+export function cardTitle(card: Locator): Locator {
+  return card.locator(".card-open");
+}
+
+/** The card's action cluster — visible on first render, never a hover reveal. */
+export function cardActions(card: Locator): Locator {
+  return card.locator(".card-actions");
+}
+
+/** The always-visible `LucideMoreHorizontal` overflow trigger on a card. */
+export function cardOverflowTrigger(card: Locator): Locator {
+  return card.locator(".card-action.overflow-trigger");
+}
+
+/** The board's status-column strip — the mobile pager, a scrolling row on desktop. */
+export function boardStrip(page: Page): Locator {
+  return page.locator(".board-strip");
+}
+
+/** The mobile status switcher (`role="tablist"`), rendered only below 900px. */
+export function statusSwitcher(page: Page): Locator {
+  return page.locator("app-status-switcher .switcher");
+}
+
+/** The switcher's segments, in `STATUS_COLUMN_ORDER`. */
+export function switcherSegments(page: Page): Locator {
+  return statusSwitcher(page).locator('[role="tab"]');
 }
 
 export function terminalContainer(page: Page): Locator {
@@ -59,6 +104,3 @@ export function xtermRows(page: Page): Locator {
   return page.locator(".xterm-rows");
 }
 
-export function liveIndicator(page: Page): Locator {
-  return page.locator(".live-indicator");
-}

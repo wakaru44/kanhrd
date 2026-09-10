@@ -1,8 +1,8 @@
 import { Component, inject } from "@angular/core";
 import type { AgentStatus } from "@kanhrd/schema";
+import { COPY } from "../shared/copy";
 import { PanesStore, STATUS_COLUMN_ORDER } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
-import { hostColor } from "../util/host-color";
 
 @Component({
   selector: "app-filter-bar",
@@ -14,8 +14,11 @@ export class FilterBar {
   protected readonly store = inject(PanesStore);
   protected readonly ws = inject(WsClient);
   protected readonly statusOrder = STATUS_COLUMN_ORDER;
+  protected readonly copy = COPY;
 
-  protected readonly hostColor = hostColor;
+  protected statusLabel(status: AgentStatus): string {
+    return COPY.status[status];
+  }
 
   protected isHostExcluded(host: string): boolean {
     return this.store.filtersSignal().excludedHosts.has(host);

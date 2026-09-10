@@ -38,6 +38,30 @@ touching implementation code.
 Existing capability specs (source of truth) live at `openspec/specs/`.
 Existing proposals in flight are under `openspec/changes/` (archived ones
 under `openspec/changes/archive/`).
+
+## Brand + design + UX authority
+
+If your lane touches `apps/web/src/**` or produces user-facing copy,
+**you MUST read these three docs first**:
+
+- `docs/BRAND.md` — voice (terse, lowercase, verbs of tending; no
+  exclamation marks; care verbs on lifecycle/empty/error only), wordmark
+  (lowercase serif + ochre brushstroke crook), domain renames
+  (host→**pen**, workspace→**field**, tab→**lane**, pane→**card** in UI
+  copy — wire/API/code keep herdr's terms).
+- `docs/DESIGN-SYSTEM.md` — tokens (paper cream `#f4ede0` primary, ochre
+  `#c8842a` accent, torii-red vermilion `#b6412a` for blocked; hairline
+  rules over shadows; lucide icons; typography Shippori Mincho display,
+  Inter UI, JetBrains Mono terminal; every spacing/radius/motion value
+  is a token — no raw hex/px/rem in components).
+- `docs/UX-GUIDELINES.md` — patterns (visible affordances not
+  hover-only; keyboard-first; URL is state — rail is navigator not
+  filter; empty states are next steps, not messages; drag-drop must work
+  or not appear).
+
+Do not invent copy, colors, or interaction patterns. Do not use HTML
+entity glyphs or emoji in chrome. If the docs don't cover your case,
+flag it in your report — a maintainer extends the docs; you don't.
 """.strip()
 
 

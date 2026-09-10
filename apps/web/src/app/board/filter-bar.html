@@ -5,16 +5,16 @@
         type="button"
         class="chip host-chip"
         [class.excluded]="isHostExcluded(host.name)"
-        [style.--chip-color]="hostColor(host.name)"
+        [attr.aria-pressed]="!isHostExcluded(host.name)"
         (click)="toggleHost(host.name)"
       >
         <span
           class="conn-dot"
           [class.ok]="host.connected"
           [class.err]="!host.connected"
-          [attr.title]="host.connected ? 'connected' : (host.last_error ?? 'not connected')"
+          [attr.title]="host.connected ? 'connected' : (host.last_error ?? copy.state.unavailable)"
         ></span>
-        {{ host.name }}
+        <span class="chip-label">{{ host.name }}</span>
       </button>
     }
   </div>
@@ -24,10 +24,13 @@
       <button
         type="button"
         class="chip status-chip"
+        [attr.data-status]="status"
         [class.excluded]="isStatusHidden(status)"
+        [attr.aria-pressed]="!isStatusHidden(status)"
         (click)="toggleStatus(status)"
       >
-        {{ status }}
+        <span class="status-dot"></span>
+        <span class="chip-label">{{ statusLabel(status) }}</span>
       </button>
     }
   </div>

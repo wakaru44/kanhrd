@@ -1,19 +1,28 @@
 @if (open()) {
   <div class="modal-backdrop" (click)="onBackdropClick()">
     <div
+      #dialog
       class="modal"
       role="dialog"
       aria-modal="true"
-      aria-label="Keyboard shortcuts"
+      tabindex="-1"
+      [attr.aria-label]="copy.nav.help"
       (click)="$event.stopPropagation()"
+      (keydown.escape)="close()"
     >
       <div class="modal-header">
-        <h2 class="modal-title">Keyboard shortcuts</h2>
-        <button type="button" class="close-btn" title="Close" aria-label="Close" (click)="close()">×</button>
+        <h2 class="modal-title">{{ copy.nav.help }}</h2>
+        <button
+          type="button"
+          class="close-btn"
+          [title]="pending.close"
+          [attr.aria-label]="pending.close"
+          (click)="close()"
+        >
+          <svg lucideX class="icon"></svg>
+        </button>
       </div>
-      <p class="prefix-note">
-        Prefix: <kbd>{{ keyboard.prefix() }}</kbd> — press it, release, then the action key within 2s.
-      </p>
+      <p class="prefix-note"><kbd>{{ keyboard.prefix() }}</kbd> {{ pending.prefixNote }}</p>
 
       @for (group of groups(); track group.category) {
         <section class="shortcut-group">

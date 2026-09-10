@@ -1,19 +1,79 @@
-import { Component, computed, effect, inject } from "@angular/core";
+import { Component, ElementRef, computed, effect, inject, signal, viewChild, viewChildren } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { ActivatedRoute, Router } from "@angular/router";
 import { map } from "rxjs";
-import { LucidePlus, LucideX } from "@lucide/angular";
-import { PanesStore, STATUS_COLUMN_ORDER } from "../state/panes.store";
-import { Column } from "./column";
+import type { AgentStatus } from "@kanhrd/schema";
+import { LucidePlus, LucideRefreshCw, LucideTriangleAlert, LucideUnplug, LucideX } from "../shared/icons";
+import { COPY } from "../shared/copy";
+import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from "../state/panes.store";
+import { Column, mobileViewportSignal } from "./column";
 import { FilterBar } from "./filter-bar";
+import { StatusSwitcher } from "./status-switcher";
 import { Rail } from "../rail/rail";
 import { LayoutService } from "../state/layout.service";
 import { ToastService } from "../state/toast.service";
+import { ClockTick } from "../util/clock";
 import { EmptyState } from "./empty-state";
+
+/**
+ * How long a `/workspace/:id` in the URL may stay unresolved before the
+ * board says so. Long enough for `pane.list` to come back on a cold load at
+ * a deep link, short enough that a stale or bogus id is reported rather than
+ * silently swallowed (docs/UX-GUIDELINES.md, "Reliability states tell the
+ * truth": never silently falling back to a previous scope).
+ */
+export const SCOPE_RESOLVE_GRACE_MS = 4000;
+
+/**
+ * The resting page index of the strip. Deterministic by construction: with
+ * `scroll-snap-type: x mandatory` and columns at `flex: 0 0 100%`, a settled
+ * `scrollLeft` is always a whole multiple of `clientWidth`.
+ */
+export function pageIndex(scrollLeft: number, clientWidth: number): number {
+  return clientWidth > 0 ? Math.round(scrollLeft / clientWidth) : 0;
+}
+
+/** Three placeholder rows per skeleton column — a static skeleton, never a spinner. */
+export const SKELETON_ROWS = [0, 1, 2] as const;
+
+/**
+ * Where the pager should rest when `previous` may no longer be visible: the
+ * status itself if it survived, otherwise the nearest visible column to its
+ * left in `STATUS_COLUMN_ORDER`, otherwise the first visible one. `null`
+ * only when nothing is visible at all — which is the no-matches empty state,
+ * not a blank page.
+ */
+export function nearestVisibleStatus(
+  previous: AgentStatus,
+  visible: readonly AgentStatus[],
+): AgentStatus | null {
+  if (visible.includes(previous)) {
+    return previous;
+  }
+  const previousPosition = STATUS_COLUMN_ORDER.indexOf(previous);
+  for (let i = previousPosition - 1; i >= 0; i--) {
+    const candidate = STATUS_COLUMN_ORDER[i];
+    if (visible.includes(candidate)) {
+      return candidate;
+    }
+  }
+  return visible[0] ?? null;
+}
 
 @Component({
   selector: "app-board",
-  imports: [Column, FilterBar, Rail, EmptyState, LucideX, LucidePlus],
+  imports: [
+    Column,
+    FilterBar,
+    Rail,
+    EmptyState,
+    StatusSwitcher,
+    LucideX,
+    LucidePlus,
+    LucideRefreshCw,
+    LucideTriangleAlert,
+    LucideUnplug,
+  ],
   templateUrl: "./board.html",
   styleUrl: "./board.scss",
 })
@@ -21,16 +81,102 @@ export class Board {
   protected readonly store = inject(PanesStore);
   protected readonly layout = inject(LayoutService);
   private readonly toast = inject(ToastService);
+  private readonly clock = inject(ClockTick);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  protected readonly copy = COPY;
+  protected readonly skeletonRows = SKELETON_ROWS;
   protected readonly statusOrder = STATUS_COLUMN_ORDER;
   protected readonly columns = this.store.columnsSignal;
   protected readonly loading = this.store.hostsLoading;
   protected readonly error = this.store.hostsError;
   protected readonly capabilities = this.store.capabilitiesSignal;
+  protected readonly mobile = mobileViewportSignal();
 
-  protected isStatusHidden(status: (typeof STATUS_COLUMN_ORDER)[number]): boolean {
+  // --- the pager: one state, two views ----------------------------------
+  //
+  // Below `--breakpoint-mobile` the board is a one-column-per-screen pager
+  // (docs/UX-GUIDELINES.md, "Board paging model"). The strip's scroll
+  // position and the switcher's selection are the same state: a swipe writes
+  // `currentStatus` from `Math.round(scrollLeft / clientWidth)`, a tap writes
+  // it directly and scrolls the strip to match.
+
+  private readonly strip = viewChild<ElementRef<HTMLElement>>("strip");
+  private readonly columnEls = viewChildren("columnEl", { read: ElementRef });
+
+  /** Visible status columns, always in `STATUS_COLUMN_ORDER`. Paging never reorders. */
+  protected readonly visibleStatuses = computed<readonly AgentStatus[]>(() => {
+    const hidden = this.store.filtersSignal().hiddenStatuses;
+    return STATUS_COLUMN_ORDER.filter((status) => !hidden.has(status));
+  });
+
+  /** Card count per visible status, index-aligned with `visibleStatuses`. */
+  protected readonly visibleCounts = computed(() =>
+    this.visibleStatuses().map((status) => this.columns()[status].length),
+  );
+
+  private readonly currentStatus = signal<AgentStatus>(STATUS_COLUMN_ORDER[0]);
+
+  protected readonly currentIndex = computed(() => {
+    const index = this.visibleStatuses().indexOf(this.currentStatus());
+    return index < 0 ? 0 : index;
+  });
+
+  /** Every status hidden: the pager is replaced by the no-matches empty state, not left blank. */
+  protected readonly noMatches = computed(() => this.visibleStatuses().length === 0);
+
+  /** Pens that are configured but currently unreachable — content stays, marked stale. */
+  protected readonly staleHosts = computed(() =>
+    this.store.hostsSignal().filter((host) => !host.connected),
+  );
+
+  protected isStatusHidden(status: AgentStatus): boolean {
     return this.store.filtersSignal().hiddenStatuses.has(status);
+  }
+
+  /** Tapping a segment pages the strip; `scroll-snap` does the settling. */
+  protected selectStatus(index: number): void {
+    const status = this.visibleStatuses()[index];
+    if (!status) {
+      return;
+    }
+    this.currentStatus.set(status);
+    this.scrollToIndex(index);
+  }
+
+  private scrollToIndex(index: number): void {
+    const element = this.columnEls()[index]?.nativeElement as HTMLElement | undefined;
+    if (!element) {
+      return;
+    }
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+    element.scrollIntoView({
+      inline: "start",
+      block: "nearest",
+      behavior: reduced ? "auto" : "smooth",
+    });
+  }
+
+  /** A swipe moves the selection: the index is `Math.round(scrollLeft / clientWidth)`, deterministic by construction. */
+  protected onStripScroll(): void {
+    if (!this.mobile()) {
+      return;
+    }
+    const element = this.strip()?.nativeElement;
+    if (!element || element.clientWidth === 0) {
+      return;
+    }
+    const index = pageIndex(element.scrollLeft, element.clientWidth);
+    const status = this.visibleStatuses()[index];
+    if (status && status !== this.currentStatus()) {
+      this.currentStatus.set(status);
+    }
+  }
+
+  protected clearFilters(): void {
+    this.store.filtersSignal.set(defaultFilters());
   }
 
   // --- URL scope: rail = navigator (decision locked) ---------------------
@@ -80,6 +226,28 @@ export class Board {
     return null;
   });
 
+  /** When the current unresolved workspace id was first seen — the honesty clock. */
+  private readonly unresolvedSince = signal<number | null>(null);
+
+  /** A scoped URL whose field hasn't resolved yet: still loading, not yet a verdict. */
+  protected readonly scopePending = computed(
+    () => !!this.routeWorkspaceId() && !this.resolvedWorkspace(),
+  );
+
+  /** A scoped URL whose field never resolved: say so, don't fall back to the previous scope. */
+  protected readonly scopeUnavailable = computed(() => {
+    if (!this.scopePending()) {
+      return false;
+    }
+    const since = this.unresolvedSince();
+    return since !== null && this.clock.now() - since > SCOPE_RESOLVE_GRACE_MS;
+  });
+
+  /** Static skeleton columns, never a spinner over the wordmark. */
+  protected readonly showSkeleton = computed(
+    () => this.loading() || (this.scopePending() && !this.scopeUnavailable()),
+  );
+
   constructor() {
     // The route is the single source of truth for `scopeSignal` — see the
     // signal's own doc in panes.store.ts. Re-resolves whenever the route
@@ -92,13 +260,49 @@ export class Board {
       const workspace = this.resolvedWorkspace();
       const tab = this.resolvedTab();
       if (!workspaceId) {
+        this.unresolvedSince.set(null);
         this.store.clearScope();
         return;
       }
       if (!workspace) {
-        return; // not resolvable yet — leave the previous scope until it is, or forever if the id is stale/bogus
+        // Unresolvable *so far*. The board must never keep showing the
+        // previous scope's cards under a URL that no longer names them, so
+        // the scope is dropped now and the view shows the skeleton until
+        // either the field resolves or `SCOPE_RESOLVE_GRACE_MS` elapses and
+        // the unavailable state takes over.
+        if (this.unresolvedSince() === null) {
+          this.unresolvedSince.set(Date.now());
+        }
+        this.store.clearScope();
+        return;
       }
+      this.unresolvedSince.set(null);
       this.store.setScope(workspace.host, workspace.id, tabId ? (tab?.id ?? null) : null);
+    });
+
+    // Keep the pager on a column that exists: hiding the shown status pages
+    // to the nearest visible column to its left, never to a hidden or blank
+    // page. Un-hiding re-inserts a column without moving the current page,
+    // because `currentStatus` is untouched when it is still visible.
+    effect(() => {
+      const visible = this.visibleStatuses();
+      const next = nearestVisibleStatus(this.currentStatus(), visible);
+      if (next && next !== this.currentStatus()) {
+        this.currentStatus.set(next);
+      }
+    });
+
+    // Settle the strip on whichever column the state says is current, after
+    // the visible set changes underneath it.
+    effect(() => {
+      const index = this.currentIndex();
+      const element = this.strip()?.nativeElement;
+      if (!this.mobile() || !element || element.clientWidth === 0) {
+        return;
+      }
+      if (pageIndex(element.scrollLeft, element.clientWidth) !== index) {
+        this.scrollToIndex(index);
+      }
     });
   }
 
@@ -113,6 +317,16 @@ export class Board {
 
   protected clearScope(): void {
     void this.router.navigate(["/"]);
+  }
+
+  /**
+   * `PanesStore` fetches `/api/hosts` through an `httpResource` it does not
+   * expose a reload handle for, so the honest retry for a failed discovery
+   * is a reload of the app itself. Cheaper than widening the store's API for
+   * one button; swap it for `hostsResource.reload()` if that ever lands.
+   */
+  protected retry(): void {
+    window.location.reload();
   }
 
   // --- header "+" menu: new pane / new tab / new workspace -------------

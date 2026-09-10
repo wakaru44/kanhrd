@@ -5,8 +5,10 @@ import { provideHttpClient } from "@angular/common/http";
 import { HttpTestingController, provideHttpClientTesting } from "@angular/common/http/testing";
 import { BehaviorSubject, Subject } from "rxjs";
 import type { WsEvent } from "@kanhrd/schema";
-import { Board } from "./board";
-import { PanesStore } from "../state/panes.store";
+import { Board, SCOPE_RESOLVE_GRACE_MS, nearestVisibleStatus, pageIndex } from "./board";
+import { VIRTUAL_ITEM_SIZE, isCompact, isVirtualized } from "./column";
+import { ClockTick } from "../util/clock";
+import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
 import { KeyboardService } from "../state/keyboard.service";
 
@@ -264,7 +266,7 @@ describe("Board: two panes sharing one tab (split view) both render as separate 
 
     // Specifically: both panes sharing tab w6:t2 must each render their own
     // card, not collapse into one.
-    const hrefs = Array.from(cards)
+    const hrefs = Array.from(el.querySelectorAll("a.card-open"))
       .map((c) => c.getAttribute("href"))
       .filter((h): h is string => h !== null);
     expect(hrefs).toContain("/pane/local/w6:p2");
@@ -341,7 +343,7 @@ describe("Board: two panes sharing one tab (split view) both render as separate 
 
     const el = fixture.nativeElement as HTMLElement;
     const cards = el.querySelectorAll(".card");
-    const hrefs = Array.from(cards)
+    const hrefs = Array.from(el.querySelectorAll("a.card-open"))
       .map((c) => c.getAttribute("href"))
       .filter((h): h is string => h !== null);
     expect(hrefs).withContext("both panes should each render their own card").toContain("/pane/local/w6:p2");
@@ -480,5 +482,311 @@ describe("Board: URL scope (rail = navigator, decision locked)", () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(store.scopeSignal()).toBeNull();
     expect(el.querySelector(".scope-pill")).toBeNull();
+  });
+});
+
+describe("Board pager: pure paging + density rules", () => {
+  it("pageIndex is Math.round(scrollLeft / clientWidth), and 0 before layout", () => {
+    expect(pageIndex(0, 390)).toBe(0);
+    expect(pageIndex(390, 390)).toBe(1);
+    expect(pageIndex(1170, 390)).toBe(3);
+    // Mid-gesture readings round to the nearer page; a settled strip is exact.
+    expect(pageIndex(400, 390)).toBe(1);
+    expect(pageIndex(560, 390)).toBe(1);
+    expect(pageIndex(600, 390)).toBe(2);
+    expect(pageIndex(100, 0)).toBe(0);
+  });
+
+  it("nearestVisibleStatus keeps the current column when it is still visible", () => {
+    expect(nearestVisibleStatus("idle", ["working", "blocked", "idle", "done", "unknown"])).toBe("idle");
+  });
+
+  it("nearestVisibleStatus falls back to the nearest visible column to the LEFT", () => {
+    // `idle` hidden while shown -> `blocked` (its left neighbour in STATUS_COLUMN_ORDER)
+    expect(nearestVisibleStatus("idle", ["working", "blocked", "done", "unknown"])).toBe("blocked");
+    // both left neighbours hidden too -> keeps walking left
+    expect(nearestVisibleStatus("done", ["working", "unknown"])).toBe("working");
+  });
+
+  it("nearestVisibleStatus falls back to the FIRST visible column when nothing is to the left", () => {
+    expect(nearestVisibleStatus("working", ["idle", "done"])).toBe("idle");
+  });
+
+  it("nearestVisibleStatus reports nothing when every status is hidden", () => {
+    expect(nearestVisibleStatus("working", [])).toBeNull();
+  });
+
+  it("compact at > 20 and virtualization at > 50 are distinct thresholds", () => {
+    expect(isCompact(20, false)).toBe(false);
+    expect(isCompact(21, false)).toBe(true);
+    expect(isVirtualized(20)).toBe(false);
+    expect(isVirtualized(21)).toBe(false);
+    expect(isVirtualized(50)).toBe(false);
+    expect(isVirtualized(51)).toBe(true);
+  });
+
+  it("everything is compact below the mobile breakpoint, whatever the count", () => {
+    expect(isCompact(0, true)).toBe(true);
+    expect(isCompact(1, true)).toBe(true);
+  });
+
+  it("itemSize is the compact row height plus its gap, or virtualized rows clip", () => {
+    expect(VIRTUAL_ITEM_SIZE).toBe(52);
+  });
+});
+
+describe("Board: filter interaction with the pager", () => {
+  // Same fake-route scaffolding as the URL-scope suite above: what is under
+  // test here is which status columns render, and what replaces them when
+  // every one of them is hidden.
+  let ws: FakeWsClient;
+  let fixture: ComponentFixture<Board>;
+  let httpMock: HttpTestingController;
+  let store: PanesStore;
+
+  function renderedStatuses(): string[] {
+    const el = fixture.nativeElement as HTMLElement;
+    return Array.from(el.querySelectorAll("app-column")).map(
+      (column) => column.querySelector(".column")?.getAttribute("data-status") ?? "",
+    );
+  }
+
+  beforeEach(async () => {
+    ws = new FakeWsClient();
+    ws.request.and.callFake((_host: string, method: string) => {
+      if (method === "pane.list") {
+        return Promise.resolve({
+          panes: [
+            {
+              id: "p1",
+              host: "local",
+              workspace: { id: "w6", name: "jmorales" },
+              tab: { id: "t1", name: "one" },
+              agent_status: "idle",
+            },
+            {
+              id: "p2",
+              host: "local",
+              workspace: { id: "w6", name: "jmorales" },
+              tab: { id: "t1", name: "one" },
+              agent_status: "working",
+            },
+          ],
+        });
+      }
+      if (method === "events.subscribe") return Promise.resolve({ subscription_id: "s1" });
+      if (method === "bridge.capabilities") {
+        return Promise.resolve({
+          tier: 1,
+          terminal: false,
+          paneResize: false,
+          paneGraphics: false,
+          outputPollIntervalMs: 0,
+          paneCreate: false,
+          paneClose: false,
+          paneMove: false,
+          tabCrud: false,
+          workspaceCrud: false,
+        });
+      }
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+
+    await TestBed.configureTestingModule({
+      imports: [Board],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: ws },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({})).asObservable() } },
+        { provide: Router, useValue: { navigate: jasmine.createSpy("navigate").and.resolveTo(true) } },
+      ],
+    }).compileComponents();
+    httpMock = TestBed.inject(HttpTestingController);
+
+    fixture = TestBed.createComponent(Board);
+    store = TestBed.inject(PanesStore);
+    store.filtersSignal.set(defaultFilters());
+    fixture.detectChanges();
+    await settle(fixture);
+    for (const req of httpMock.match("/api/hosts")) {
+      if (!req.cancelled) {
+        req.flush({ hosts: [{ name: "local", connected: true }] });
+      }
+    }
+    await settle(fixture);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+    store.filtersSignal.set(defaultFilters());
+  });
+
+  it("renders one page per status, in STATUS_COLUMN_ORDER, including the empty ones", async () => {
+    expect(renderedStatuses()).toEqual(["working", "blocked", "idle", "done", "unknown"]);
+  });
+
+  it("hiding a status removes its page and leaves the order unchanged", async () => {
+    store.toggleStatus("idle");
+    await settle(fixture);
+
+    expect(renderedStatuses()).toEqual(["working", "blocked", "done", "unknown"]);
+  });
+
+  it("un-hiding re-inserts the page at its STATUS_COLUMN_ORDER position", async () => {
+    store.toggleStatus("idle");
+    await settle(fixture);
+    store.toggleStatus("idle");
+    await settle(fixture);
+
+    expect(renderedStatuses()).toEqual(["working", "blocked", "idle", "done", "unknown"]);
+  });
+
+  it("hiding every status shows the no-matches empty state with a clear action, not an empty pager", async () => {
+    for (const status of STATUS_COLUMN_ORDER) {
+      store.toggleStatus(status);
+    }
+    await settle(fixture);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector(".board-strip")).withContext("no empty pager").toBeNull();
+    expect(el.querySelector("app-status-switcher")).toBeNull();
+    const noMatches = el.querySelector(".no-matches");
+    expect(noMatches?.textContent).toContain("nothing matches these filters.");
+
+    const clear = noMatches?.querySelector<HTMLButtonElement>(".action");
+    expect(clear?.textContent?.trim()).toBe("clear filters");
+    clear?.click();
+    await settle(fixture);
+
+    expect(renderedStatuses()).toEqual(["working", "blocked", "idle", "done", "unknown"]);
+  });
+
+  it("exposes no drag affordance on a status column", async () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector("[cdkDrag], .cdk-drag, .cdk-drop-list, [cdkDropList]")).toBeNull();
+    expect(el.querySelector(".drag-handle")).toBeNull();
+  });
+});
+
+describe("Board: an invalid scope is reported, never silently swallowed", () => {
+  let ws: FakeWsClient;
+  let fixture: ComponentFixture<Board>;
+  let httpMock: HttpTestingController;
+  let store: PanesStore;
+  let clock: ClockTick;
+  let paramMap$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+
+  beforeEach(async () => {
+    ws = new FakeWsClient();
+    paramMap$ = new BehaviorSubject(convertToParamMap({}));
+    ws.request.and.callFake((_host: string, method: string) => {
+      if (method === "pane.list") {
+        return Promise.resolve({
+          panes: [
+            {
+              id: "p1",
+              host: "local",
+              workspace: { id: "w6", name: "jmorales" },
+              tab: { id: "t1", name: "one" },
+              agent_status: "idle",
+            },
+          ],
+        });
+      }
+      if (method === "events.subscribe") return Promise.resolve({ subscription_id: "s1" });
+      if (method === "bridge.capabilities") {
+        return Promise.resolve({
+          tier: 1,
+          terminal: false,
+          paneResize: false,
+          paneGraphics: false,
+          outputPollIntervalMs: 0,
+          paneCreate: false,
+          paneClose: false,
+          paneMove: false,
+          tabCrud: false,
+          workspaceCrud: false,
+        });
+      }
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+
+    await TestBed.configureTestingModule({
+      imports: [Board],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: ws },
+        { provide: ActivatedRoute, useValue: { paramMap: paramMap$.asObservable() } },
+        { provide: Router, useValue: { navigate: jasmine.createSpy("navigate").and.resolveTo(true) } },
+      ],
+    }).compileComponents();
+    httpMock = TestBed.inject(HttpTestingController);
+
+    fixture = TestBed.createComponent(Board);
+    store = TestBed.inject(PanesStore);
+    clock = TestBed.inject(ClockTick);
+    fixture.detectChanges();
+    await settle(fixture);
+    for (const req of httpMock.match("/api/hosts")) {
+      if (!req.cancelled) {
+        req.flush({ hosts: [{ name: "local", connected: true }] });
+      }
+    }
+    await settle(fixture);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it("shows the skeleton, not the previous scope's board, while a scoped id is still unresolved", async () => {
+    paramMap$.next(convertToParamMap({ workspaceId: "w6" }));
+    await settle(fixture);
+    expect(store.scopeSignal()).toEqual({ host: "local", workspaceId: "w6", tabId: null });
+
+    paramMap$.next(convertToParamMap({ workspaceId: "gone" }));
+    await settle(fixture);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(store.scopeSignal()).withContext("the old scope is dropped immediately").toBeNull();
+    expect(el.querySelector(".board-skeleton")).not.toBeNull();
+    expect(el.querySelector(".board-strip")).toBeNull();
+    expect(el.querySelector(".scope-pill")).toBeNull();
+  });
+
+  it("says the field is no longer here once the id has stayed unresolved", async () => {
+    paramMap$.next(convertToParamMap({ workspaceId: "gone" }));
+    await settle(fixture);
+
+    clock.now.set(Date.now() + SCOPE_RESOLVE_GRACE_MS + 1000);
+    await settle(fixture);
+
+    const el = fixture.nativeElement as HTMLElement;
+    const state = el.querySelector(".state-unavailable");
+    expect(state?.textContent).toContain("that field is no longer here.");
+    expect(state?.querySelector("button")?.textContent?.trim()).toBe("back to the board");
+    expect(el.querySelector(".board-strip")).withContext("no silent fallback board").toBeNull();
+  });
+
+  it("recovers without a reload once the scoped field resolves", async () => {
+    paramMap$.next(convertToParamMap({ workspaceId: "gone" }));
+    await settle(fixture);
+    clock.now.set(Date.now() + SCOPE_RESOLVE_GRACE_MS + 1000);
+    await settle(fixture);
+    expect((fixture.nativeElement as HTMLElement).querySelector(".state-unavailable")).not.toBeNull();
+
+    paramMap$.next(convertToParamMap({ workspaceId: "w6" }));
+    await settle(fixture);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector(".state-unavailable")).toBeNull();
+    expect(el.querySelector(".board-strip")).not.toBeNull();
+    expect(store.scopeSignal()).toEqual({ host: "local", workspaceId: "w6", tabId: null });
   });
 });

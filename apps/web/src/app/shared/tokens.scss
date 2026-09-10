@@ -1,0 +1,190 @@
+/*
+ * kanhrd design tokens — the single source of raw values in the app.
+ *
+ * Authority: docs/DESIGN-SYSTEM.md. Every custom property below is copied
+ * verbatim from that document (names and values). Colour values are the
+ * output of measured WCAG arithmetic: changing one silently breaks an
+ * accessibility guarantee, so edit the doc first, then this file.
+ *
+ * This is the ONLY .scss file allowed to contain raw hex literals
+ * (enforced by tools/lint-scss-tokens.sh via pre-commit).
+ *
+ * Light (washi) is the reference palette and lives on bare `:root`.
+ * Dark (sumi) is a separately tuned palette on `[data-theme="dark"]` —
+ * not an inversion. `ThemeService` stamps `data-theme` on <html>.
+ */
+
+/* ── Light — washi (default) ───────────────────────────────────────── */
+
+:root {
+  /* surfaces */
+  --paper: #f4ede0; /* washi cream — app background */
+  --paper-sunk: #ebe2d1; /* recessed surfaces, card body */
+  --paper-raised: #fbf6ea; /* popovers, dialogs, toasts */
+  --paper-scrim: rgba(26, 24, 21, 0.44); /* modal / drawer backdrop */
+
+  /* rules */
+  --rule: #d8cdb8; /* decorative hairline, card border */
+  --rule-strong: #b8ad96; /* structural divider under headers */
+  --rule-control: #8a7f6a; /* essential control boundary (>= 3:1) */
+
+  /* ink */
+  --ink: #1a1815; /* sumi — primary text */
+  --ink-soft: #4a463f; /* secondary text */
+  --ink-mute: #6b6459; /* captions, enabled muted actions */
+  --ink-disabled: #a09786; /* disabled only — never an enabled control */
+
+  /* accent */
+  --ochre: #c8842a; /* brand swatch: seal outline, crook, fills */
+  --ochre-line: #aa6f20; /* accent as an essential boundary (>= 3:1) */
+  --ochre-ink: #85571b; /* accent as text (>= 4.5:1) */
+  --ochre-tint: #f0dcb6; /* accent background wash */
+  --accent-fill: #c8842a; /* primary button resting fill */
+  --accent-fill-press: #85571b; /* primary button pressed fill */
+  --on-accent: #1a1815; /* foreground on --accent-fill */
+  --on-accent-press: #f4ede0; /* foreground on --accent-fill-press */
+  --danger-fill: #b6412a; /* irrecoverable-loss button fill only */
+  --on-danger: #f4ede0; /* foreground on --danger-fill */
+  --focus-ring: #aa6f20; /* == --ochre-line */
+
+  /* brand swatches — identity references, never used directly as a
+     foreground or as an essential boundary; see the status tokens */
+  --vermilion: #b6412a;
+  --matcha: #6b7d4a;
+  --indigo: #2f4a6b;
+  --stone: #8a8578;
+
+  /* status — dot / indicator fills (>= 3:1 on --paper and --paper-sunk) */
+  --status-working: #aa6f20;
+  --status-blocked: #b6412a;
+  --status-done: #6b7d4a;
+  --status-idle: #2f4a6b;
+  --status-unknown: #827d70;
+
+  /* status — text labels (>= 4.5:1 on all three surfaces) */
+  --status-working-ink: #85571b;
+  --status-blocked-ink: #a53a25;
+  --status-done-ink: #5b6a3f;
+  --status-idle-ink: #2f4a6b;
+  --status-unknown-ink: #69655b;
+}
+
+/* ── Dark — sumi ───────────────────────────────────────────────────── */
+
+[data-theme='dark'] {
+  /* surfaces */
+  --paper: #161311;
+  --paper-sunk: #1e1a17;
+  --paper-raised: #24201c;
+  --paper-scrim: rgba(8, 7, 6, 0.6);
+
+  /* rules */
+  --rule: #2f2a25;
+  --rule-strong: #423b34;
+  --rule-control: #75695c;
+
+  /* ink */
+  --ink: #ece3d1;
+  --ink-soft: #b4ab98;
+  --ink-mute: #8f8776;
+  --ink-disabled: #5c554a;
+
+  /* accent */
+  --ochre: #d69746;
+  --ochre-line: #d69746;
+  --ochre-ink: #e0a75c;
+  --ochre-tint: #3a2c17;
+  --accent-fill: #d69746;
+  --accent-fill-press: #b47826;
+  --on-accent: #161311;
+  --on-accent-press: #161311;
+  --danger-fill: #d0765f;
+  --on-danger: #161311;
+  --focus-ring: #d69746;
+
+  /* brand swatches */
+  --vermilion: #c4553d;
+  --matcha: #86975f;
+  --indigo: #5f7ea0;
+  --stone: #8f8879;
+
+  /* status — dot / indicator fills */
+  --status-working: #d69746;
+  --status-blocked: #c4553d;
+  --status-done: #86975f;
+  --status-idle: #5f7ea0;
+  --status-unknown: #8f8879;
+
+  /* status — text labels */
+  --status-working-ink: #e0a75c;
+  --status-blocked-ink: #d0765f;
+  --status-done-ink: #9aab72;
+  --status-idle-ink: #7c97b5;
+  --status-unknown-ink: #a49c8b;
+}
+
+/* ── Theme-independent tokens ─────────────────────────────────────── */
+
+:root {
+  /* spacing — base 4px, all layout spacing is a multiple */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+
+  /* layout constants */
+  --column-min-width: 260px; /* status column minimum */
+  --content-max-width: 68ch; /* settings + explanatory copy only */
+  --touch-target-min: 40px;
+  --breakpoint-mobile: 900px;
+  --card-compact-height: 44px; /* compact card row, excluding gap */
+  --card-gap: 8px; /* vertical gap between cards in a column */
+  --switcher-height: 40px; /* mobile status switcher, also its tap target */
+
+  /* radii — modals have no radius; prefer square + hairline */
+  --radius-sm: 4px; /* chips, host seals (hanko) */
+  --radius-md: 6px; /* cards, inputs, buttons */
+  --radius-lg: 10px; /* popovers, overflow menus */
+  --radius-pill: 999px; /* scope pill only */
+
+  /* elevation — there is no elevation; a rule, not a blur */
+  --elev-1: 1px solid var(--rule); /* resting card, toast */
+  --elev-2: 1px solid var(--rule-strong); /* hover */
+  --elev-3: 1px solid var(--rule-control); /* enabled control boundary */
+
+  /* motion */
+  --motion-fast: 90ms; /* hover, focus, border colour change */
+  --motion-med: 180ms; /* modal open, toast enter/leave */
+  --motion-slow: 320ms; /* route change, empty-state entrance */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* icon sizes — colour is always currentColor */
+  --icon-sm: 14px; /* inline in text */
+  --icon-md: 16px; /* buttons (default .icon size) */
+  --icon-lg: 20px; /* header */
+  --icon-xl: 24px; /* empty state */
+}
+
+/*
+ * Density: `SettingsService` stamps `data-density="comfortable"|"compact"`
+ * on <html>. `--density-scale` multiplies component padding only; grid gaps
+ * stay at their token so column alignment survives a density change.
+ */
+
+:root,
+[data-density='comfortable'] {
+  --density-scale: 1;
+  --density-text-scale: 1;
+}
+
+[data-density='compact'] {
+  --density-scale: 0.65;
+  --density-text-scale: 0.92;
+  --density-line-height: 1.25;
+}

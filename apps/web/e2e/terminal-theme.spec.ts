@@ -32,7 +32,9 @@ test("changing the terminal theme to Monokai changes the open terminal's backgro
   panePicker,
 }) => {
   await app.goto("/settings");
-  await expect(app.locator(".settings-section h2")).toContainText(["Appearance", "Terminal"]);
+  // Section headings are lowercase per docs/BRAND.md's voice.
+  await expect(app.locator(".settings-section h2").first()).toHaveText("appearance");
+  await expect(app.locator(".settings-section h2").nth(1)).toHaveText("terminal");
 
   const select = app.locator("#terminal-theme");
   await select.selectOption("monokai");

@@ -1,9 +1,26 @@
 @if (toasts().length > 0) {
-  <div class="toast-stack" role="status" aria-live="polite">
+  <div
+    class="toast-stack"
+    [class.at-top]="compact()"
+    [class.at-bottom-right]="!compact()"
+    role="status"
+    aria-live="polite"
+  >
     @for (toast of toasts(); track toast.id) {
       <div class="toast" [class]="toast.level">
+        @if (isError(toast.level)) {
+          <svg lucideTriangleAlert class="icon"></svg>
+        } @else {
+          <svg lucideInfo class="icon"></svg>
+        }
         <span class="toast-message">{{ toast.message }}</span>
-        <button type="button" class="toast-dismiss" title="Dismiss" aria-label="Dismiss" (click)="dismiss(toast.id)">
+        <button
+          type="button"
+          class="toast-dismiss"
+          [title]="pending.dismiss"
+          [attr.aria-label]="pending.dismiss"
+          (click)="dismiss(toast.id)"
+        >
           <svg lucideX class="icon"></svg>
         </button>
       </div>

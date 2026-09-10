@@ -1,58 +1,108 @@
-<ng-template #cardContent>
-  <div class="card-top">
-    <span class="agent-name">{{ displayName() }}</span>
-    <span class="status-dot" [class]="pane().agent_status" [attr.title]="pane().agent_status"></span>
-  </div>
-  <div class="path">{{ path() }}</div>
-  <span class="host-chip" [style.background]="hostColor()">{{ pane().host }}</span>
+<!--
+  The card's opening control and its actions are SIBLINGS. The link covers
+  the card via a stretched `::after` overlay in card.scss; the actions sit
+  above it. A <button> inside the card's <a> is invalid HTML and breaks
+  keyboard and screen-reader semantics — do not nest them again.
+-->
+<div class="card" [class.card--static]="!terminalAvailable()">
+  <span class="status-dot" [class]="pane().agent_status" aria-hidden="true"></span>
 
-  <div class="stats-badge" title="Time in current status{{ lineCount() ? ' and last known output size' : '' }}">
-    <span>{{ pane().agent_status }} · {{ elapsed() }}</span>
+  @if (terminalAvailable()) {
+    <a class="card-open" [routerLink]="['/pane', pane().host, pane().id]">{{ displayName() }}</a>
+  } @else {
+    <span class="card-open">{{ displayName() }}</span>
+  }
+
+  <span class="host-seal">{{ pane().host }}</span>
+
+  <span class="meta">
+    <span class="elapsed">{{ elapsed() }}</span>
+    <!-- A data readout, not product copy (see the header of shared/copy.ts):
+         a count and its unit, like the `12m` beside it. -->
     @if (lineCount(); as lines) {
-      <span> · {{ lines }} lines</span>
+      <span class="lines">{{ lines }} lines</span>
     }
-  </div>
+  </span>
 
-  @if (paneSplitAvailable() || paneCloseAvailable()) {
-    <div class="card-actions">
-      @if (paneSplitAvailable()) {
-        <div class="split-wrap">
-          <button type="button" class="card-action split" title="Split pane" (click)="onSplitClick($event)">
+  <span class="status-label" [class]="pane().agent_status">{{ statusLabel() }}</span>
+
+  <span class="path">{{ path() }}</span>
+
+  @if (hasActions()) {
+    <div class="card-actions" #actions>
+      <!-- Standard density: visible on first render, never a hover reveal. -->
+      <div class="actions-inline">
+        @if (paneSplitAvailable()) {
+          <button
+            type="button"
+            class="card-action split-right"
+            [attr.aria-label]="actionLabel(action.splitRight)"
+            (click)="doSplit('right')"
+          >
             <svg lucideArrowRight class="icon"></svg>
           </button>
-          @if (showSplitMenu()) {
-            <div class="split-menu" (click)="$event.stopPropagation()">
-              <button type="button" (click)="doSplit('right', $event)">Split right</button>
-              <button type="button" (click)="doSplit('down', $event)">Split down</button>
-            </div>
-          }
-        </div>
-      }
-      @if (paneCloseAvailable()) {
-        <button type="button" class="card-action close" title="Close pane" (click)="onCloseClick($event)">
-          <svg lucideX class="icon"></svg>
+          <button
+            type="button"
+            class="card-action split-down"
+            [attr.aria-label]="actionLabel(action.splitDown)"
+            (click)="doSplit('down')"
+          >
+            <svg lucideArrowDown class="icon"></svg>
+          </button>
+        }
+        @if (paneCloseAvailable()) {
+          <button
+            type="button"
+            class="card-action close"
+            [attr.aria-label]="actionLabel(action.close)"
+            (click)="onCloseClick()"
+          >
+            <svg lucideX class="icon"></svg>
+          </button>
+        }
+      </div>
+
+      <!-- Compact / touch: the same actions behind one visible trigger. -->
+      <div class="actions-overflow" (keydown)="onMenuKeydown($event)">
+        <button
+          type="button"
+          class="card-action overflow-trigger"
+          #menuTrigger
+          aria-haspopup="menu"
+          [attr.aria-expanded]="menuOpen()"
+          [attr.aria-label]="actionLabel(action.moreActions)"
+          (click)="toggleMenu()"
+        >
+          <svg lucideMoreHorizontal class="icon"></svg>
         </button>
-      }
+        @if (menuOpen()) {
+          <div class="overflow-menu" role="menu" #menu [attr.aria-label]="actionLabel(action.moreActions)">
+            @if (paneSplitAvailable()) {
+              <button type="button" role="menuitem" (click)="doSplit('right')">
+                <svg lucideArrowRight class="icon"></svg>{{ action.splitRight }}
+              </button>
+              <button type="button" role="menuitem" (click)="doSplit('down')">
+                <svg lucideArrowDown class="icon"></svg>{{ action.splitDown }}
+              </button>
+            }
+            @if (paneCloseAvailable()) {
+              <button type="button" role="menuitem" class="close" (click)="onCloseClick()">
+                <svg lucideX class="icon"></svg>{{ action.close }}
+              </button>
+            }
+          </div>
+        }
+      </div>
     </div>
   }
-</ng-template>
-
-@if (terminalAvailable()) {
-  <a class="card" [routerLink]="['/pane', pane().host, pane().id]">
-    <ng-container [ngTemplateOutlet]="cardContent" />
-  </a>
-} @else {
-  <div class="card card--static" title="Terminal detail requires a tier-2 bridge">
-    <ng-container [ngTemplateOutlet]="cardContent" />
-  </div>
-}
+</div>
 
 @if (showCloseConfirm()) {
   <app-confirm-modal
-    title="Close pane?"
-    [body]="closeConfirmBody()"
-    confirmLabel="Close pane"
-    [danger]="true"
+    [title]="copy.confirm.closePane"
+    [body]="copy.confirm.closePaneBody"
+    [confirmLabel]="copy.confirm.closePaneAction"
+    [cancelLabel]="copy.confirm.keep"
     (confirmed)="confirmClose()"
     (cancelled)="showCloseConfirm.set(false)"
   />
