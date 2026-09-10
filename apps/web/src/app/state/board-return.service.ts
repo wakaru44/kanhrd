@@ -59,12 +59,20 @@ export function isBoardUrl(url: string): boolean {
 export interface BoardRestorePort {
   /** The URL the board is on right now. */
   currentUrl(): string;
-  /** The horizontally scrolling strip, or `null` while the board is still on the skeleton. */
-  strip(): HTMLElement | null;
-  /** Settle the pager on the page that offset names: strip scroll and pager selection are one state. */
-  showPage(scrollLeft: number): void;
-  /** The element that actually scrolls one status column. */
-  scroller(status: AgentStatus): HTMLElement | null;
+  /** `false` while the board is still on the skeleton — nothing to restore into yet. */
+  ready(): boolean;
+  /**
+   * Put the horizontal paging offset back, and settle the pager on the page
+   * it names — a strip's scroll and the pager's selection are one state.
+   * A board with no single strip (swimlanes on) has nowhere to put it.
+   */
+  restorePage(scrollLeft: number): void;
+  /**
+   * Put one status column's vertical offset back. A board whose columns
+   * live inside bands has no single column per status, so this is a no-op
+   * there rather than a guess at which band was meant.
+   */
+  restoreColumnScroll(status: AgentStatus, scrollTop: number): void;
   /** `${host}:${paneId}` of every card in a status column, in order. */
   columnKeys(status: AgentStatus): readonly string[];
   /**
@@ -237,12 +245,11 @@ export class BoardReturnService {
       this.finishRestore();
       return;
     }
-    const strip = port.strip();
-    if (!strip) {
+    if (!port.ready()) {
       return; // still on the skeleton
     }
 
-    this.restoreScroll(record, port, strip);
+    this.restoreScroll(record, port);
 
     const status = record.status;
     if (!status) {
@@ -261,15 +268,11 @@ export class BoardReturnService {
   }
 
   /** Scroll first, always: focus restored into a column still at the top would undo itself. */
-  private restoreScroll(record: BoardReturn, port: BoardRestorePort, strip: HTMLElement): void {
-    if (strip.scrollLeft !== record.scrollLeft && strip.clientWidth > 0) {
-      strip.scrollLeft = record.scrollLeft;
-      port.showPage(record.scrollLeft);
-    }
+  private restoreScroll(record: BoardReturn, port: BoardRestorePort): void {
+    port.restorePage(record.scrollLeft);
     for (const [status, top] of Object.entries(record.scrollTops)) {
-      const scroller = port.scroller(status as AgentStatus);
-      if (scroller && top !== undefined) {
-        scroller.scrollTop = top;
+      if (top !== undefined) {
+        port.restoreColumnScroll(status as AgentStatus, top);
       }
     }
   }

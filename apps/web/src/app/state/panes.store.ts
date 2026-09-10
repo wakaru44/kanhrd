@@ -14,6 +14,7 @@ import type {
   WsEvent,
 } from '@kanhrd/schema';
 import { WsClient } from './ws-client';
+import { SettingsService, type SwimlaneDimension } from './settings.service';
 
 /** What a bridge that never answers (or errors on) `bridge.capabilities` gets treated as: tier-1, no terminal. */
 export function fallbackCapabilities(): BridgeCapabilities {
@@ -424,6 +425,88 @@ export function groupByStatus(
   return groups;
 }
 
+/** Band key/label for the no-`project` fallback. Rendered last, labelled by `copy.swimlane.ungrouped`. */
+const UNGROUPED_BAND_KEY = 'ungrouped';
+
+/**
+ * One horizontal band of the board. `columns` keeps `groupByStatus`'s exact
+ * shape, so a band renders the same column set the ungrouped board does —
+ * swimlanes group cards, they never reclassify them.
+ */
+export interface Swimlane {
+  /**
+   * Stable identity for `@for ... track`. `"all"` when the dimension is
+   * `none`; `"ungrouped"` for the no-`project` fallback band.
+   */
+  key: string;
+  /** Band heading as rendered. Empty string for `"all"` and for `"ungrouped"` (the view supplies that one's copy). */
+  label: string;
+  columns: Record<AgentStatus, Pane[]>;
+}
+
+function bandOf(
+  pane: Pane,
+  dimension: Exclude<SwimlaneDimension, 'none'>
+): { key: string; label: string } {
+  switch (dimension) {
+    case 'host':
+      return { key: pane.host, label: pane.host };
+    case 'repository':
+      return pane.project
+        ? { key: pane.project.repo_name, label: pane.project.repo_name }
+        : { key: UNGROUPED_BAND_KEY, label: '' };
+    case 'checkout':
+      return pane.project
+        ? { key: pane.project.checkout_path, label: pane.project.checkout_path }
+        : { key: UNGROUPED_BAND_KEY, label: '' };
+    case 'tab':
+      return { key: paneKey(pane.host, pane.tab.id), label: pane.tab.name };
+  }
+}
+
+/**
+ * Bands `panes` by `dimension`, applying `filters` FIRST so a filtered-out
+ * pane can never keep a band alive. A band with no cards in any column is
+ * not returned (proposal Q2). Bands are ordered by their label, never by
+ * arrival order, so they don't reshuffle as cards move between statuses;
+ * the `ungrouped` band sorts last regardless.
+ */
+export function groupIntoSwimlanes(
+  panes: Iterable<Pane>,
+  filters: Filters,
+  dimension: SwimlaneDimension
+): readonly Swimlane[] {
+  if (dimension === 'none') {
+    return [{ key: 'all', label: '', columns: groupByStatus(panes, filters) }];
+  }
+  const bands = new Map<string, { label: string; members: Pane[] }>();
+  for (const pane of panes) {
+    if (filters.excludedHosts.has(pane.host) || filters.hiddenStatuses.has(pane.agent_status)) {
+      continue;
+    }
+    const { key, label } = bandOf(pane, dimension);
+    const existing = bands.get(key);
+    if (existing) {
+      existing.members.push(pane);
+    } else {
+      bands.set(key, { label, members: [pane] });
+    }
+  }
+  // Every band here holds at least one pane that survived the filter, so the
+  // "empty band is not rendered" rule needs no extra pass.
+  return [...bands]
+    .map(([key, band]) => ({
+      key,
+      label: band.label,
+      columns: groupByStatus(band.members, filters),
+    }))
+    .sort((a, b) => {
+      if (a.key === UNGROUPED_BAND_KEY) return b.key === UNGROUPED_BAND_KEY ? 0 : 1;
+      if (b.key === UNGROUPED_BAND_KEY) return -1;
+      return a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' });
+    });
+}
+
 /**
  * Every `EventKind` the store subscribes to per host. Tier-3's eight
  * lifecycle kinds are herdr-native (CONTRACT-TIER3.md section 4) — a
@@ -455,6 +538,7 @@ const ALL_EVENT_KINDS = [
 @Injectable({ providedIn: 'root' })
 export class PanesStore {
   private readonly ws = inject(WsClient);
+  private readonly settings = inject(SettingsService);
 
   /** Bumped on every successful (re)connect to retrigger the hosts fetch. */
   private readonly connectTick = signal(0);
@@ -550,19 +634,41 @@ export class PanesStore {
     return counts;
   });
 
-  readonly columnsSignal = computed(() => {
+  /**
+   * Every pane the URL scope allows through, before `filtersSignal` is
+   * applied. One shared source for `columnsSignal` and `swimlanesSignal` so
+   * the two can never disagree about what the board is looking at.
+   */
+  private readonly scopedPanesSignal = computed<readonly Pane[]>(() => {
     const scope = this.scopeSignal();
-    let panes: Iterable<Pane> = this.panesSignal().values();
-    if (scope) {
-      panes = [...panes].filter((p) => {
-        if (p.host !== scope.host || p.workspace.id !== scope.workspaceId) {
-          return false;
-        }
-        return scope.tabId === null || p.tab.id === scope.tabId;
-      });
+    const panes = [...this.panesSignal().values()];
+    if (!scope) {
+      return panes;
     }
-    return groupByStatus(panes, this.filtersSignal());
+    return panes.filter((p) => {
+      if (p.host !== scope.host || p.workspace.id !== scope.workspaceId) {
+        return false;
+      }
+      return scope.tabId === null || p.tab.id === scope.tabId;
+    });
   });
+
+  readonly columnsSignal = computed(() =>
+    groupByStatus(this.scopedPanesSignal(), this.filtersSignal())
+  );
+
+  /**
+   * The board's bands under the persisted `swimlaneDimension`. With the
+   * default `none` this is a single `"all"` band whose columns are exactly
+   * `columnsSignal`'s.
+   */
+  readonly swimlanesSignal = computed<readonly Swimlane[]>(() =>
+    groupIntoSwimlanes(
+      this.scopedPanesSignal(),
+      this.filtersSignal(),
+      this.settings.settings().swimlaneDimension
+    )
+  );
 
   private readonly subscribedHosts = new Set<string>();
 

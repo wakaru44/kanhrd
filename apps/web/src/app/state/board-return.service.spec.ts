@@ -78,11 +78,6 @@ class FakeRouter {
   }
 }
 
-/** Anything the service writes a scroll offset onto. Never a real element here. */
-function scrollable(scrollLeft = 0, clientWidth = 900): HTMLElement {
-  return { scrollLeft, clientWidth, scrollTop: 0 } as HTMLElement;
-}
-
 /**
  * The board, reduced to the six answers the restore protocol needs. The
  * protocol under test is all timing, ordering and give-up rules, so it is
@@ -92,35 +87,35 @@ function scrollable(scrollLeft = 0, clientWidth = 900): HTMLElement {
  */
 class FakePort implements BoardRestorePort {
   url = '/workspace/w6';
-  stripEl: HTMLElement | null = null;
+  /** The board is on the skeleton until something says otherwise. */
+  rendered = false;
   keys: readonly string[] = [];
   /** Cards the DOM has rendered so far; `focusCard` reports the rest as not there yet. */
-  rendered = new Set<string>();
+  cards = new Set<string>();
   readonly log: string[] = [];
   focused: string | null = null;
-  pages: number[] = [];
-  readonly scrollers = new Map<AgentStatus, HTMLElement>();
+  page: number | null = null;
+  readonly columnScrolls = new Map<AgentStatus, number>();
 
   currentUrl(): string {
     return this.url;
   }
-  strip(): HTMLElement | null {
-    return this.stripEl;
+  ready(): boolean {
+    return this.rendered;
   }
-  showPage(scrollLeft: number): void {
-    this.pages.push(scrollLeft);
+  restorePage(scrollLeft: number): void {
+    this.log.push(`page:${scrollLeft}`);
+    this.page = scrollLeft;
   }
-  scroller(status: AgentStatus): HTMLElement | null {
-    const found = this.scrollers.get(status) ?? scrollable();
-    this.scrollers.set(status, found);
+  restoreColumnScroll(status: AgentStatus, scrollTop: number): void {
     this.log.push(`scroll:${status}`);
-    return found;
+    this.columnScrolls.set(status, scrollTop);
   }
   columnKeys(): readonly string[] {
     return this.keys;
   }
   focusCard(paneKey: string): boolean {
-    if (!this.rendered.has(paneKey)) {
+    if (!this.cards.has(paneKey)) {
       return false;
     }
     this.log.push(`focus:${paneKey}`);
@@ -255,46 +250,45 @@ describe('BoardReturnService', () => {
 
     it('restores scroll and focus when the board comes up at the remembered URL', () => {
       leaveByCard();
-      port.stripEl = scrollable();
+      port.rendered = true;
       port.keys = ['local:w6:p1', 'local:w6:p2'];
-      port.rendered.add('local:w6:p2');
+      port.cards.add('local:w6:p2');
 
       comeBack();
 
-      expect(port.stripEl.scrollLeft).toBe(780);
-      expect(port.pages).toEqual([780]);
-      expect(port.scrollers.get('working')?.scrollTop).toBe(240);
+      expect(port.page).toBe(780);
+      expect(port.columnScrolls.get('working')).toBe(240);
       expect(port.focused).toBe('local:w6:p2');
     });
 
     it('restores the scroll before it restores focus', () => {
       leaveByCard();
-      port.stripEl = scrollable();
+      port.rendered = true;
       port.keys = ['local:w6:p1', 'local:w6:p2'];
-      port.rendered.add('local:w6:p2');
+      port.cards.add('local:w6:p2');
 
       comeBack();
 
-      expect(port.log).toEqual(['scroll:working', 'focus:local:w6:p2']);
+      expect(port.log).toEqual(['page:780', 'scroll:working', 'focus:local:w6:p2']);
     });
 
     it('restores nothing when the board comes up at a different URL', () => {
       leaveByCard();
       port.url = '/workspace/somewhere-else';
-      port.stripEl = scrollable();
+      port.rendered = true;
       port.keys = ['local:w6:p2'];
-      port.rendered.add('local:w6:p2');
+      port.cards.add('local:w6:p2');
 
       comeBack();
       jasmine.clock().tick(200);
 
       expect(port.focused).toBeNull();
-      expect(port.stripEl.scrollLeft).toBe(0);
+      expect(port.page).toBeNull();
     });
 
     it('keeps looking every 50ms until the card renders', () => {
       leaveByCard();
-      port.stripEl = scrollable();
+      port.rendered = true;
       port.keys = ['local:w6:p1', 'local:w6:p2'];
 
       comeBack();
@@ -304,7 +298,7 @@ describe('BoardReturnService', () => {
       expect(port.focused).toBeNull();
 
       // `pane.list` lands, and the pump's next tick finds the card.
-      port.rendered.add('local:w6:p2');
+      port.cards.add('local:w6:p2');
       jasmine.clock().tick(1);
       expect(port.focused).toBe('local:w6:p2');
     });
@@ -312,12 +306,12 @@ describe('BoardReturnService', () => {
     it('waits through a board that is still on the skeleton', () => {
       leaveByCard();
       port.keys = ['local:w6:p2'];
-      port.rendered.add('local:w6:p2');
+      port.cards.add('local:w6:p2');
 
       comeBack();
       expect(port.focused).toBeNull();
 
-      port.stripEl = scrollable();
+      port.rendered = true;
       jasmine.clock().tick(50);
       expect(port.focused).toBe('local:w6:p2');
     });
@@ -330,20 +324,20 @@ describe('BoardReturnService', () => {
       jasmine.clock().tick(RESTORE_GRACE_MS + RESTORE_RETRY_TICK);
 
       // The data finally arrives, far too late to be anything but a surprise.
-      port.stripEl = scrollable();
-      port.rendered.add('local:w6:p2');
+      port.rendered = true;
+      port.cards.add('local:w6:p2');
       jasmine.clock().tick(500);
 
       expect(port.focused).toBeNull();
-      expect(port.stripEl.scrollLeft).toBe(0);
+      expect(port.page).toBeNull();
     });
 
     it("falls back to the card standing in the opened one's place", () => {
       leaveByCard('local:w6:p2', 'working', 1);
-      port.stripEl = scrollable();
+      port.rendered = true;
       // That pane closed while the user was inside it; another took its slot.
       port.keys = ['local:w6:p1', 'local:w6:p3'];
-      port.rendered.add('local:w6:p3');
+      port.cards.add('local:w6:p3');
 
       comeBack();
 
@@ -352,37 +346,37 @@ describe('BoardReturnService', () => {
 
     it('has nothing to focus in a column that emptied out, and stops looking', () => {
       leaveByCard();
-      port.stripEl = scrollable();
+      port.rendered = true;
       port.keys = [];
 
       comeBack();
       port.keys = ['local:w6:p2'];
-      port.rendered.add('local:w6:p2');
+      port.cards.add('local:w6:p2');
       jasmine.clock().tick(500);
 
       expect(port.focused).toBeNull();
-      expect(port.stripEl.scrollLeft).toBe(780);
+      expect(port.page).toBe(780);
     });
 
     it('restores the scroll of a departure that opened no card, and asks for no focus', () => {
       service.rememberBoard(geometry);
-      port.stripEl = scrollable();
+      port.rendered = true;
       port.keys = ['local:w6:p1'];
-      port.rendered.add('local:w6:p1');
+      port.cards.add('local:w6:p1');
 
       comeBack();
       jasmine.clock().tick(500);
 
-      expect(port.stripEl.scrollLeft).toBe(780);
+      expect(port.page).toBe(780);
       expect(port.focused).toBeNull();
     });
 
     it('leaves focus the user has already placed somewhere else alone, and stops looking', () => {
       leaveByCard();
-      port.stripEl = scrollable();
+      port.rendered = true;
       port.keys = ['local:w6:p2'];
       // The port's own rule: the card is there, but focus was not taken.
-      port.rendered.add('local:w6:p2');
+      port.cards.add('local:w6:p2');
       spyOn(port, 'focusCard').and.returnValue(true);
 
       comeBack();
@@ -391,36 +385,25 @@ describe('BoardReturnService', () => {
       expect(port.focusCard).toHaveBeenCalledTimes(1);
     });
 
-    it('does not page the strip that is already where it was left', () => {
-      leaveByCard();
-      port.stripEl = scrollable(780);
-      port.keys = ['local:w6:p2'];
-      port.rendered.add('local:w6:p2');
-
-      comeBack();
-
-      expect(port.pages).toEqual([]);
-    });
-
     it('is good for exactly one return', () => {
       leaveByCard();
-      port.stripEl = scrollable();
+      port.rendered = true;
       port.keys = ['local:w6:p2'];
-      port.rendered.add('local:w6:p2');
+      port.cards.add('local:w6:p2');
       comeBack();
       expect(port.focused).toBe('local:w6:p2');
 
       // The user navigates away and back again by some other route.
       const second = new FakePort();
-      second.stripEl = scrollable();
+      second.rendered = true;
       second.keys = ['local:w6:p2'];
-      second.rendered.add('local:w6:p2');
+      second.cards.add('local:w6:p2');
       service.restore(second);
       service.retryRestore();
       jasmine.clock().tick(500);
 
       expect(second.focused).toBeNull();
-      expect(second.stripEl.scrollLeft).toBe(0);
+      expect(second.page).toBeNull();
     });
 
     it("does not let a later departure inherit an earlier visit's card", () => {
@@ -431,15 +414,15 @@ describe('BoardReturnService', () => {
       // Second visit, left through the rail rather than a card.
       service.rememberBoard(geometry);
       const second = new FakePort();
-      second.stripEl = scrollable();
+      second.rendered = true;
       second.keys = ['local:w6:p1', 'local:w6:p2'];
-      second.rendered.add('local:w6:p2');
+      second.cards.add('local:w6:p2');
       service.restore(second);
       service.retryRestore();
       jasmine.clock().tick(500);
 
       expect(second.focused).toBeNull();
-      expect(second.stripEl.scrollLeft).toBe(780);
+      expect(second.page).toBe(780);
     });
 
     it('stops the pump when the board it was restoring is torn down again', () => {
@@ -448,8 +431,8 @@ describe('BoardReturnService', () => {
       comeBack();
 
       service.rememberBoard({ scrollLeft: 0, scrollTops: {} });
-      port.stripEl = scrollable();
-      port.rendered.add('local:w6:p2');
+      port.rendered = true;
+      port.cards.add('local:w6:p2');
       jasmine.clock().tick(500);
 
       expect(port.focused).toBeNull();

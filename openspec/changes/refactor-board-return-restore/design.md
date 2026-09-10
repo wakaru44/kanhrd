@@ -28,9 +28,11 @@ decisions the move rests on.
 ### 1. The view passes a port; the service never queries the document
 
 `restore(port: BoardRestorePort)`. The port answers six questions —
-current URL, the strip element, settle the pager on a page, the scrolling
-element of a status column, the card keys of a status column, focus this
-card — and knows nothing about retries, deadlines or records.
+current URL, is there anything rendered yet, put the page offset back, put
+a status column's offset back, the card keys of a status column, focus this
+card — and knows nothing about retries, deadlines or records. No DOM
+element crosses the line: the board does its own scrolling, so the service
+holds no `HTMLElement` and its tests need no fake ones.
 
 The service owns the protocol: the pump, the deadline, the URL match, the
 scroll-before-focus order, and the rule that focus the user has already
@@ -72,6 +74,32 @@ structure.
 board X" by passing `url` to `rememberBoard`. They now drive the router
 instead, which is also a more honest setup.
 
+### 2b. Swimlanes: what a band does to the port
+
+The port was first written when a status column was the only container. With
+`swimlaneDimension` on, the board renders no strip and no columns of its
+own — every band renders its own strip and its own copy of every column —
+so "the element that scrolls this status column" has no single answer.
+
+The port therefore asks the board to *perform* the two scroll restores
+rather than handing elements over: `ready()`, `restorePage(scrollLeft)` and
+`restoreColumnScroll(status, scrollTop)` replace `strip()`, `showPage()`
+and `scroller()`. Under grouping the two scroll calls are honest no-ops —
+the record holds one horizontal offset and one offset per status, and
+neither names a band — while `ready()` is satisfied by any strip, board's
+or band's.
+
+Focus is not lost that way: `focusCard` searches the board's host element,
+so a card is found by its `data-pane` key wherever it is rendered. That is
+the half of the return trip keyboard users feel
+(docs/UX-GUIDELINES.md, "Keyboard-first"), and it is a strict improvement —
+before this, the restore looked only inside the board's own strip, which
+does not exist under grouping, so a grouped board restored nothing at all.
+
+Restoring per-band geometry would mean the record naming its band: a change
+to what is remembered, not to how it is applied, and therefore a separate
+change with its own proposal.
+
 ### 3. `Card.rememberCard()` stays where it is
 
 `Card` is the only module that knows which card was clicked, and it must
@@ -106,7 +134,7 @@ just restored; the column passes nothing, as before.
 - "Consumed either way" — a record is good for exactly one return, whether
   or not it could be applied.
 - The CDK-virtual-scroll-viewport-vs-`.column-body` scroller lookup, which
-  stays in `Board` behind `port.scroller` because it is template
+  stays in `Board` behind `port.restoreColumnScroll` because it is template
   knowledge.
 - A record whose URL does not match the board that came up is dropped, not
   applied.

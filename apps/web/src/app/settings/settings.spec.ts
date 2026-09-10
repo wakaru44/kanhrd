@@ -204,7 +204,10 @@ describe('Settings', () => {
     expect(modal?.querySelector('.preview-heading')?.textContent).toContain(
       COPY.confirm.previewHeading
     );
-    expect(modal?.querySelectorAll('.preview-row').length).toBe(5);
+    // One row per kanhrd-owned setting the sweep clears — board grouping
+    // rides the same `kanhrd.settings` key, so it is listed too.
+    expect(modal?.querySelectorAll('.preview-row').length).toBe(6);
+    expect(modal?.textContent).toContain(COPY.settings.clearSwimlane);
     expect(modal?.querySelector('.modal-body')?.textContent).toContain('cannot be undone');
     expect(clearSpy).not.toHaveBeenCalled();
   });

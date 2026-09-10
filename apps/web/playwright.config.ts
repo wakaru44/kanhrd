@@ -25,7 +25,7 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: /mobile\.spec\.ts$/,
+      testIgnore: [/mobile\.spec\.ts$/, /capture\.spec\.ts$/],
     },
     {
       name: 'mobile',
@@ -34,6 +34,14 @@ export default defineConfig({
       // force the browser while keeping the device's viewport/UA/touch bits.
       use: { ...devices['iPhone 13'], browserName: 'chromium' },
       testMatch: /mobile\.spec\.ts$/,
+    },
+    {
+      // Documentation captures. Writes committed LFS binaries, so it is NOT
+      // part of `make test-e2e` and never runs in CI — `make screenshots`
+      // selects it explicitly with `--project=capture`.
+      name: 'capture',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /capture\.spec\.ts$/,
     },
   ],
   webServer: {

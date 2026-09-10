@@ -26,6 +26,14 @@ export class StatusSwitcher {
   readonly counts = input.required<readonly number[]>();
   /** Index into `statuses` of the column the strip is currently resting on. */
   readonly selectedIndex = input.required<number>();
+  /**
+   * Whether each segment controls exactly one panel. True on the ungrouped
+   * board, where one status is one column. With swimlanes on there is one
+   * column per status *per band*, so no single panel id is the tab's — the
+   * reference is dropped rather than left pointing at an element that is
+   * not there.
+   */
+  readonly controlsPanels = input<boolean>(true);
 
   readonly select = output<number>();
 

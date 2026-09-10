@@ -105,6 +105,21 @@ export const COPY = {
     /** The dismiss control on a toast itself. */
     dismiss: 'dismiss',
   },
+  /**
+   * The board's swimlane grouping. `groupBy` labels the control; the rest
+   * name the dimensions the operator picks between. `ungrouped` is a fact
+   * about the pane — those cards have no repository — not an error, so it
+   * takes no care verb.
+   */
+  swimlane: {
+    groupBy: 'group by',
+    none: 'none',
+    host: 'host',
+    repository: 'repository',
+    checkout: 'checkout path',
+    tab: 'tab',
+    ungrouped: 'no repository',
+  },
   status: {
     working: 'working',
     blocked: 'blocked',
@@ -245,6 +260,8 @@ export const COPY = {
     clearAction: 'clear',
     clearKindSetting: 'setting',
     clearFilters: 'board filters',
+    /** The swimlane dimension rides the same settings key, so clearing takes it too. */
+    clearSwimlane: 'board grouping',
     clearAppearance: 'theme and density',
     clearTerminal: 'terminal palette',
     clearTerminalFontSize: 'terminal text size',

@@ -12,7 +12,7 @@
       class="segment"
       [class.selected]="i === selected()"
       [id]="'switcher-tab-' + status"
-      [attr.aria-controls]="'column-panel-' + status"
+      [attr.aria-controls]="controlsPanels() ? 'column-panel-' + status : null"
       [attr.aria-selected]="i === selected()"
       [attr.tabindex]="i === selected() ? 0 : -1"
       [attr.aria-label]="itemLabel(status, i)"
