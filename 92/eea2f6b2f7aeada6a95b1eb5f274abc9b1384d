@@ -1,0 +1,44 @@
+apps/web/src/app/pane-detail/pane-detail.scss
+  s_f8e4251c591816::t_4c0fab220aa6ce 173-183,192,202
+  s_f8e4251c591816::t_10ba6ba4dbf407 191,193-201,203-204
+apps/web/src/app/pane-detail/pane-detail.ts
+  s_f8e4251c591816::t_48670b9a14799b 249-260
+  s_f8e4251c591816::t_c0328b49e1c93a 74
+  s_f8e4251c591816::t_8033ca6f295a41 148-164,203-204,211-212,217,223,237,239,241-247,261-262,372-379,389-390
+  s_f8e4251c591816::t_365346aa051375 23
+  s_f8e4251c591816::t_83ee01d64c51b1 165-167,200-202
+  s_f8e4251c591816::t_fdb5ddaf6cddea 205-210
+  s_f8e4251c591816::t_23905c4414ee17 213-216
+  s_f8e4251c591816::t_958e65ae60de14 218-222
+  s_f8e4251c591816::t_53edb27b1743b6 234-236
+  s_f8e4251c591816::t_bd73b91af78f1e 238
+  s_f8e4251c591816::t_ec0ca1752bee73 240
+  s_f8e4251c591816::t_aad6ea775f215d 248
+  s_f8e4251c591816::t_6bf8361923e5d1 391-393
+  s_f8e4251c591816::t_4d1cd791cbe07b 168-199,226-233,394-395
+apps/web/src/app/board/board.scss
+  s_f8e4251c591816::t_fdc180e673b544 10-21,174,236-237,239,241
+  s_f8e4251c591816::t_00414313c4e0a6 233-235,238
+apps/web/src/app/pane-detail/pane-detail.spec.ts
+  s_f8e4251c591816::t_b26538e11dad33 6,534-622,625-626,629-630,632-633
+  s_f8e4251c591816::t_c0e9f518784200 623-624,627-628,631
+apps/web/src/app/board/column.scss
+  s_f8e4251c591816::t_fdc180e673b544 51,54-57,66-70,74-82,85
+  s_f8e4251c591816::t_b7930976d02401 71-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "92eea2f6b2f7aeada6a95b1eb5f274abc9b1384d",
+  "prompts": {},
+  "sessions": {
+    "s_f8e4251c591816": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d12f5dab-ef42-467f-8f5f-833d86b7562a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
