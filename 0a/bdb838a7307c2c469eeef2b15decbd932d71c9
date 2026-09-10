@@ -1,0 +1,106 @@
+apps/web/src/app/shared/rename-modal.html
+  s_a62153c2b8328e::t_9102c91641148b 24-25,27-29
+apps/web/e2e/tier3.spec.ts
+  s_a62153c2b8328e::t_a3056922043818 13,226-227,229,312,375
+apps/web/src/app/state/ws-client.ts
+  s_a62153c2b8328e::t_0eead628692897 11,37-46,102-105,118-123,125,127
+apps/web/src/app/not-found/not-found.scss
+  s_a62153c2b8328e::t_199a218459420d 1-49
+apps/web/src/app/rail/rail.spec.ts
+  s_a62153c2b8328e::t_e68fbb272997e2 190-313
+apps/web/src/app/shared/style-lint.spec.ts
+  s_a62153c2b8328e::t_4e59eedb7ca64b 9,68,104
+  s_a62153c2b8328e::t_e8184f99c4b7f9 163-167,169-175
+  s_a62153c2b8328e::t_7e4fdb9181a27e 153-162,168,176-177
+apps/web/src/app/state/pen-notices.service.spec.ts
+  s_a62153c2b8328e::t_ebd9f02542e8ab 1-122
+apps/web/src/app/board/card.spec.ts
+  s_a62153c2b8328e::t_49376ef865ef27 492-574
+apps/web/src/app/app.ts
+  s_a62153c2b8328e::t_fdbe538f6ef66a 9,49-54
+apps/web/src/app/board/board.html
+  s_a62153c2b8328e::t_b6908ca7850dea 8-9,22-28,34,37,40
+apps/web/src/app/board/card.ts
+  s_a62153c2b8328e::t_fc84e1f603ebe0 20,73,86-91,202-213
+  s_f8e4251c591816::t_06893260f0110c 214,328-329
+  s_a62153c2b8328e::t_50fcbebd3b89bd 154-157,284-296,299,302,304-306,318-319,323-327,330-337,340-341,344-345,347-351,357,363,365
+  s_f8e4251c591816::t_a272a7035dae70 215
+apps/web/src/app/shared/copy.ts
+  s_a62153c2b8328e::t_b6908ca7850dea 113-131
+apps/web/src/app/state/pen-notices.service.ts
+  s_a62153c2b8328e::t_fdbe538f6ef66a 1-74
+apps/web/src/app/board/board.ts
+  s_a62153c2b8328e::t_00004ced3c47c5 4,27-31,114,338-347
+  s_a62153c2b8328e::t_2fa0bbc15373fa 1-3,5-13,57-67,109,113
+  s_a62153c2b8328e::t_5cf3ec2dc981fa 348,350-366,372-398,400-439,441-481,483-484
+  s_a62153c2b8328e::t_988a80da31b625 367-371,399,482
+  s_f8e4251c591816::t_06893260f0110c 440,485
+  s_f8e4251c591816::t_3179c168f10c45 56,349
+apps/web/src/app/rail/rail.ts
+  s_a62153c2b8328e::t_d19f090825fd01 17,20,84,268,279,285
+  s_a62153c2b8328e::t_625101092cf429 175-178,188,196,201-206,208-217,221-231,235,238-260,264-267,269-274
+  s_f8e4251c591816::t_d2c5091c4f49fe 275
+apps/web/src/app/state/toast.service.spec.ts
+  s_a62153c2b8328e::t_7f0fb1b4dcaaec 3,67-201
+  s_f8e4251c591816::t_06893260f0110c 202
+apps/web/src/app/rail/rail.html
+  s_a62153c2b8328e::t_d19f090825fd01 19-21,27-29,82-84,90-92
+apps/web/src/app/board/card.html
+  s_a62153c2b8328e::t_9102c91641148b 135-136,138
+  s_a62153c2b8328e::t_fc84e1f603ebe0 11-16
+openspec/changes/add-l-brand-neo-shepherd-redesign/tasks.md
+  s_a62153c2b8328e::t_929e2741a91f7a 217,221,227
+apps/web/src/app/rail/rail.scss
+  s_a62153c2b8328e::t_dc6bf2e4aee569 74-76,234-257
+apps/web/src/app/app.routes.ts
+  s_a62153c2b8328e::t_199a218459420d 5,13-16
+apps/web/src/app/not-found/not-found.html
+  s_a62153c2b8328e::t_199a218459420d 1-4
+apps/web/src/app/not-found/not-found.spec.ts
+  s_a62153c2b8328e::t_39ad70dc48d3cf 2-62,67-72,74-99,101-103
+  s_a62153c2b8328e::t_bfb8c981790e55 1,63-66,73,100
+apps/web/src/app/shared/rename-modal.scss
+  s_a62153c2b8328e::t_9546ecb49cb65c 110-128
+apps/web/src/app/not-found/not-found.ts
+  s_a62153c2b8328e::t_199a218459420d 1-36
+apps/web/src/app/shared/rename-modal.ts
+  s_a62153c2b8328e::t_9102c91641148b 38-44
+apps/web/src/app/state/toast.service.ts
+  s_a62153c2b8328e::t_c638d1334dd406 7-13,26-35,41-58,67-71,74-91,93-96,98,102,106-111,122-169
+  s_f8e4251c591816::t_06893260f0110c 112-113,170-171
+apps/web/src/app/board/column.html
+  s_a62153c2b8328e::t_fc84e1f603ebe0 10,12,16
+apps/web/src/app/board/board.spec.ts
+  s_a62153c2b8328e::t_a3056922043818 10,163,165-167
+  s_f8e4251c591816::t_1734d7fe431ec1 183-259
+  s_a62153c2b8328e::t_75b445c29354aa 9,894-901,907-912,916-917,921-923,929-942,944-948,961-989,993-1001,1012-1018,1020,1025-1027,1029-1032,1035-1040,1050-1052,1054-1058,1060-1063,1065-1066,1073-1077,1079-1082,1084-1098,1100,1102-1105,1107-1110,1112-1117
+  s_f8e4251c591816::t_06893260f0110c 1118-1119
+  s_f8e4251c591816::t_6442e74914266a 41-56
+  s_a62153c2b8328e::t_0df3480ee5b688 990-992
+  s_a62153c2b8328e::t_f5e6f7750c9459 902-906,913-915,918-920,924-928,943,949-960,1002-1011,1019,1021-1024,1028,1033-1034,1041-1049,1053,1059,1064,1067-1072,1078,1083,1099,1101,1106,1111
+  s_a62153c2b8328e::t_9b3ac2234a034a 182
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0abdb838a7307c2c469eeef2b15decbd932d71c9",
+  "prompts": {},
+  "sessions": {
+    "s_a62153c2b8328e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fae23786-fdaa-46af-b39c-69a564a2b7c2",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    },
+    "s_f8e4251c591816": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d12f5dab-ef42-467f-8f5f-833d86b7562a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
