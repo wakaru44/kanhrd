@@ -22,10 +22,10 @@ The code confirms the gap is documentation and ergonomics, not transport:
 - `apps/bridge/src/herdr/hosts.ts` — one `HostRuntime` per configured
   host, each with its own `HerdrClient`, its own reconnect backoff
   (1s → 30s), and a `HostSummary { name, connected, last_error }` the SPA
-  renders per pen. Nothing in that runtime cares whether the socket path
+  renders per host. Nothing in that runtime cares whether the socket path
   is local or forwarded.
-- `apps/web/src/app/settings/settings.ts` — `/settings` lists pens
-  read-only and says so: "the pen list is bridge-owned … this screen reads
+- `apps/web/src/app/settings/settings.ts` — `/settings` lists hosts
+  read-only and says so: "the host list is bridge-owned … this screen reads
   it, it never writes it."
 
 So the transport work for a remote host is: put a socket file at a path
@@ -115,12 +115,12 @@ The work is documentation and ergonomics, not transport:
   (`autossh`/systemd user unit on Linux, `launchd` KeepAlive on macOS).
 - Fix the `socket_path` → `socket` drift in `docs/OPERATING.md` and
   `docs/CONTEXT.md`.
-- Surface the "how to add a pen" snippet from a route the operator can
-  actually reach — `/settings` under the existing read-only pens section —
+- Surface the "how to add a host" snippet from a route the operator can
+  actually reach — `/settings` under the existing read-only hosts section —
   instead of only from a board empty state that a bridge with the default
   `local` host can never enter.
 
-Adding a pen stays a config-file operation. The SPA reads pens; it does
+Adding a host stays a config-file operation. The SPA reads hosts; it does
 not write them.
 
 Optionally (a separate, later decision, not decided here): the bridge may
@@ -164,7 +164,7 @@ apart on the board.
   authenticating proxy; `make run-tailscale-serve` already fronts a
   loopback bridge with Tailscale HTTPS. What is missing is not deployment
   — it is the board. kanhrd's stated purpose is *one* kanban across every
-  pen. N co-located bridges means N origins, N proxy configs, N places
+  host. N co-located bridges means N origins, N proxy configs, N places
   auth can be misconfigured, and either N browser tabs or a client that
   federates. That is ADR-0001's alternative A, rejected then for the same
   reason, and nothing in the repo has changed to reopen it. It remains the
@@ -194,8 +194,8 @@ apart on the board.
 - Remote-host support ships as docs plus one example file plus a settings
   snippet. No `HostConfig` change, no schema change, no new bridge code
   paths, and no new tests beyond whatever the settings snippet needs.
-- Every remote pen depends on a supervisor process kanhrd does not own.
-  When it dies the pen goes grey with a `last_error` and nothing else
+- Every remote host depends on a supervisor process kanhrd does not own.
+  When it dies the host goes grey with a `last_error` and nothing else
   breaks — the failure is per-host and already handled.
 - The three SSH failure modes (`ENOENT` no socket file, `ECONNREFUSED`
   tunnel down, `EPIPE` wrong remote path) currently all read as a generic

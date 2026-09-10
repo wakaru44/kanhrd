@@ -1,6 +1,6 @@
 # Agent vendor icons on cards — research memo
 
-**Type:** Divio _explanation_. Research only, lane R4. No code, no assets
+**Type:** Divio _explanation_. Research only, work lane R4. No code, no assets
 downloaded, no design doc edited. Nothing here is a decision; the
 maintainer decides, and only the maintainer extends
 [`DESIGN-SYSTEM.md`](../DESIGN-SYSTEM.md).
@@ -232,7 +232,7 @@ Constraints every option is measured against, all from
 - **Not the display serif** on any repeated per-card identifier.
 
 Where the mark goes, in all four options: the secondary identity row that
-`add-pane-workdir-and-task-title` introduces — beside `field / lane` and
+`add-pane-workdir-and-task-title` introduces — beside `workspace / tab` and
 the project name, in `--ink-mute`, _not_ on the title line. When the
 operator has named a card, the title is theirs; the vendor is metadata.
 
