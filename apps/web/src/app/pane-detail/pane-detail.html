@@ -8,7 +8,7 @@
 
 <div class="pane-detail">
   <header class="detail-header">
-    <a routerLink="/" class="back">
+    <a [routerLink]="backUrl" class="back">
       <svg lucideArrowLeft class="icon" aria-hidden="true"></svg>
       <span>{{ copy.nav.backToBoard }}</span>
     </a>
@@ -81,7 +81,7 @@
                   <svg lucideRefreshCw class="icon" aria-hidden="true"></svg>
                   {{ copy.loading.retry }}
                 </button>
-                <a routerLink="/" class="state-back">{{ copy.nav.backToBoard }}</a>
+                <a [routerLink]="backUrl" class="state-back">{{ copy.nav.backToBoard }}</a>
               </div>
             </div>
           }
@@ -92,7 +92,7 @@
                 {{ copy.state.unavailable }}
               </p>
               <div class="state-actions">
-                <a routerLink="/" class="state-back">{{ copy.nav.backToBoard }}</a>
+                <a [routerLink]="backUrl" class="state-back">{{ copy.nav.backToBoard }}</a>
               </div>
             </div>
           }

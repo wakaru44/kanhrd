@@ -33,6 +33,7 @@ import {
   LucideTriangleAlert,
   LucideUnplug,
 } from "../shared/icons";
+import { BoardReturnService } from "../state/board-return.service";
 
 /**
  * xterm.js takes a font *string*, not a CSS custom property, so the
@@ -85,8 +86,24 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   private readonly terminalFontSize = inject(TerminalFontSizeService);
   private readonly toast = inject(ToastService);
   protected readonly clock = inject(ClockTick);
+  private readonly boardReturn = inject(BoardReturnService);
 
   protected readonly copy = COPY;
+
+  /**
+   * Where "back to the board" goes: the board URL this pane was opened
+   * from, so a card opened under a scoped board returns to that scope
+   * instead of dumping the user on an unscoped board
+   * (docs/UX-GUIDELINES.md, "Focus and terminal input survive navigation").
+   * `/` when the pane was reached by a deep link and there is nothing to
+   * return to — the board is still the right destination, just not a
+   * remembered one.
+   *
+   * Captured once, at construction: the router tears the board down before
+   * it builds this view, so the record is already there, and it must not
+   * change under the user while they are looking at the terminal.
+   */
+  protected readonly backUrl = this.boardReturn.boardUrl();
 
   /** True from the moment a `pane.read` request goes out until its first content lands (or fails). Drives the `.terminal-loading` overlay. */
   protected readonly loading = signal(false);

@@ -12,6 +12,7 @@ import {
   TERMINAL_FONT_SIZES,
   TerminalFontSizeService,
 } from "../state/terminal-font-size.service";
+import { BoardReturnService } from "../state/board-return.service";
 import { COPY } from "../shared/copy";
 import { PanesStore } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
@@ -693,6 +694,50 @@ describe("PaneDetail", () => {
     // First focusable element in the header.
     const focusable = fixture.nativeElement.querySelectorAll("header a, header button");
     expect(focusable[0]).toBe(back);
+  });
+
+  // --- back to where the card was opened from (section 17.6) -------------
+
+  /** Renders the view and returns its header back link. */
+  async function backLink(): Promise<HTMLAnchorElement> {
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+    return fixture.nativeElement.querySelector("header .back") as HTMLAnchorElement;
+  }
+
+  it("returns to the scoped board the card was opened from", async () => {
+    TestBed.inject(BoardReturnService).rememberBoard({
+      url: "/workspace/w6/tab/w6:t2",
+      scrollLeft: 0,
+      scrollTops: {},
+    });
+
+    expect((await backLink()).getAttribute("href")).toBe("/workspace/w6/tab/w6:t2");
+  });
+
+  it("returns to the unscoped board when the pane was reached by a deep link", async () => {
+    TestBed.inject(BoardReturnService).clear();
+    expect((await backLink()).getAttribute("href")).toBe("/");
+  });
+
+  it("points every back path at the same place, not just the header one", async () => {
+    TestBed.inject(BoardReturnService).rememberBoard({
+      url: "/workspace/w6",
+      scrollLeft: 0,
+      scrollTops: {},
+    });
+    await backLink();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const hrefs = Array.from(root.querySelectorAll<HTMLAnchorElement>(".back, .state-back")).map(
+      (a) => a.getAttribute("href"),
+    );
+    expect(hrefs.length).toBeGreaterThan(0);
+    for (const href of hrefs) {
+      expect(href).toBe("/workspace/w6");
+    }
   });
 
   it("makes no promise about an unshipped feature and no claim about the poll interval", async () => {
