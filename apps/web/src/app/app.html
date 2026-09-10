@@ -2,18 +2,18 @@
   <button
     type="button"
     class="icon-btn hamburger"
-    title="Toggle navigation"
-    aria-label="Toggle navigation"
+    [title]="copy.nav.toggleNav"
+    [attr.aria-label]="copy.nav.toggleNav"
     (click)="toggleRail()"
   ><svg lucideMenu class="icon"></svg></button>
-  <a routerLink="/" class="brand">kanhrd</a>
+  <a routerLink="/" class="brand">ka<span class="crook-letter">n</span>hrd</a>
   <span class="header-spacer"></span>
   <button
     type="button"
     class="icon-btn theme-toggle"
     [attr.data-theme-target]="themeService.theme() === 'dark' ? 'light' : 'dark'"
-    [title]="themeService.theme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
-    [attr.aria-label]="themeService.theme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+    [title]="themeLabel()"
+    [attr.aria-label]="themeLabel()"
     (click)="toggleTheme()"
   >
     @if (themeService.theme() === 'dark') {
@@ -22,7 +22,7 @@
       <svg lucideMoon class="icon"></svg>
     }
   </button>
-  <a routerLink="/settings" class="icon-btn" title="Settings" aria-label="Settings">
+  <a routerLink="/settings" class="icon-btn" [title]="copy.nav.settings" [attr.aria-label]="copy.nav.settings">
     <svg lucideSettings class="icon"></svg>
   </a>
 </header>

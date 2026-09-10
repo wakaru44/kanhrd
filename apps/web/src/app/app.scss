@@ -1,4 +1,12 @@
 :host {
+  /*
+   * Published to the whole shell so the mobile toast stack can sit *below*
+   * the header instead of over its controls (docs/UX-GUIDELINES.md
+   * § Toasts on mobile). Header controls are tap-sized, so the header is
+   * one tap target plus its padding.
+   */
+  --app-header-height: calc(var(--touch-target-min) + var(--sp-6));
+
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -7,8 +15,10 @@
 .app-header {
   display: flex;
   align-items: center;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border);
+  gap: var(--sp-2);
+  height: var(--app-header-height);
+  padding-inline: var(--sp-4);
+  border-block-end: 1px solid var(--rule-strong);
   flex: none;
 }
 
@@ -18,11 +28,46 @@ main {
   overflow: auto;
 }
 
+/*
+ * The wordmark — the one display surface in the shell. Lowercase Shippori
+ * Mincho with the ochre crook set over the `n`, which has no descender and
+ * so leaves the ascender band free (docs/BRAND.md § Wordmark).
+ *
+ * The crook is `apps/web/public/mark/crook.svg` used as a mask, so it takes
+ * `--ochre` from the live theme in both palettes. No hover underline and no
+ * letterspacing: the serif carries it.
+ */
 .brand {
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  font-weight: var(--fw-regular);
+  color: var(--ink);
   text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: none;
+  }
+}
+
+.crook-letter {
+  position: relative;
+  display: inline-block;
+  line-height: 1;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 0.74em;
+    width: 0.46em;
+    height: 0.46em;
+    transform: translateX(-50%);
+    background: var(--ochre);
+    mask: url("/mark/crook.svg") no-repeat center / contain;
+    -webkit-mask: url("/mark/crook.svg") no-repeat center / contain;
+  }
 }
 
 .header-spacer {
@@ -33,19 +78,20 @@ main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.9rem;
-  height: 1.9rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  border-radius: var(--radius-md);
+  border: 0;
+  background: transparent;
+  color: var(--ink-mute);
   text-decoration: none;
-  font-size: 0.95rem;
   line-height: 1;
   cursor: pointer;
+  transition: color var(--motion-fast) var(--ease-out);
 
-  &:hover {
-    border-color: var(--border-hover);
+  &:hover,
+  &:focus-visible {
+    color: var(--ink-soft);
   }
 }
 

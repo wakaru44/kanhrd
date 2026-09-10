@@ -2,140 +2,179 @@
   display: block;
 }
 
+/* Single reading column — the one place in the app that is width-capped. */
 .settings {
-  max-width: 40rem;
+  max-width: var(--content-max-width);
   margin: 0 auto;
-  padding: 1rem;
+  padding: var(--sp-4);
 }
 
 .settings-header {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 1.5rem;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-6);
 
+  /* First focusable element on the screen — see docs/UX-GUIDELINES.md § Settings. */
   .back {
-    color: var(--text-dim);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: var(--touch-target-min);
+    color: var(--ink-mute);
     text-decoration: none;
-    font-size: 0.85rem;
+    font-size: var(--fs-small);
+    line-height: var(--lh-small);
+    transition: color var(--motion-fast) var(--ease-out);
+
+    &:hover,
+    &:focus-visible {
+      color: var(--ink-soft);
+    }
   }
 
   h1 {
     margin: 0;
-    font-size: 1.4rem;
+    font-family: var(--font-display);
+    font-size: var(--fs-h2);
+    line-height: var(--lh-h2);
+    font-weight: var(--fw-regular);
+    color: var(--ink);
   }
 }
 
 .settings-section {
-  margin-bottom: 1.75rem;
-  padding: 1rem;
-  border-radius: 10px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
+  margin-bottom: var(--sp-8);
+  padding-block-end: var(--sp-6);
+  border-block-end: 1px solid var(--rule);
+
+  &:last-of-type {
+    margin-bottom: 0;
+    border-block-end: 0;
+  }
 
   h2 {
-    margin: 0 0 0.75rem;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-dim);
+    margin: 0 0 var(--sp-3);
+    font-family: var(--font-display);
+    font-size: var(--fs-h3);
+    line-height: var(--lh-h3);
+    font-weight: var(--fw-regular);
+    color: var(--ink);
   }
 }
 
 .section-note {
-  margin: 0.25rem 0 0.75rem;
-  font-size: 0.82rem;
-  color: var(--text-dim);
+  margin: var(--sp-1) 0 var(--sp-3);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--ink-mute);
+  overflow-wrap: anywhere;
 
   code {
-    background: var(--surface-2);
-    padding: 0.05rem 0.3rem;
-    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-caption);
+    background: var(--paper-sunk);
+    padding: 0 var(--sp-1);
+    border-radius: var(--radius-sm);
   }
-}
-
-.coming-soon {
-  font-style: italic;
 }
 
 .setting-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.4rem 0;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
 
   &:not(:last-child) {
-    border-bottom: 1px solid var(--border);
+    border-block-end: 1px solid var(--rule);
   }
 }
 
 .setting-label {
-  font-size: 0.85rem;
-  color: var(--text);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.pen-name,
+.setting-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-small);
 }
 
 .setting-value {
-  font-size: 0.85rem;
-  color: var(--text-dim);
+  color: var(--ink-mute);
 }
 
 .segmented {
   display: flex;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  overflow: hidden;
+  gap: var(--sp-1);
+  flex: none;
 }
 
+/* Selection is weight plus an ochre underline — never a colour fill alone. */
 .segment {
-  padding: 0.35rem 0.7rem;
-  border: none;
-  background: var(--surface-2);
-  color: var(--text-dim);
-  font-size: 0.8rem;
+  min-height: var(--touch-target-min);
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-block-end: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-mute);
+  font: inherit;
+  font-size: var(--fs-small);
   cursor: pointer;
+  transition: color var(--motion-fast) var(--ease-out);
 
   &.active {
-    background: var(--status-done);
-    color: #10131a;
+    color: var(--ink);
+    font-weight: var(--fw-semi);
+    border-block-end-color: var(--ochre-line);
   }
 
   &:hover:not(.active) {
-    color: var(--text);
+    color: var(--ink-soft);
   }
 }
 
 .text-input {
-  width: 8rem;
-  padding: 0.3rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--border-hover);
-  background: var(--bg);
-  color: var(--text);
+  min-height: var(--touch-target-min);
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 var(--sp-3);
+  border-radius: var(--radius-md);
+  border: var(--elev-3);
+  background: var(--paper);
+  color: var(--ink);
   font: inherit;
+  font-size: var(--fs-body);
 }
 
 .btn {
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
+  min-height: var(--touch-target-min);
+  padding: 0 var(--sp-4);
+  border-radius: var(--radius-md);
+  border: var(--elev-3);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semi);
   cursor: pointer;
-  font-size: 0.85rem;
+  transition: border-color var(--motion-fast) var(--ease-out);
 
   &:hover {
-    border-color: var(--border-hover);
+    border-color: var(--rule-control);
   }
 
+  /* Irrecoverable local data loss — the one sanctioned danger fill. */
   &.danger {
-    border-color: var(--status-blocked);
-    color: var(--status-blocked);
-
-    &:hover {
-      background: var(--status-blocked);
-      color: #1a0a0c;
-    }
+    border: 0;
+    background: var(--danger-fill);
+    color: var(--on-danger);
   }
 }
 
@@ -148,33 +187,43 @@
 
 .host-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0;
-  font-size: 0.85rem;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
 
   &:not(:last-child) {
-    border-bottom: 1px solid var(--border);
+    border-block-end: 1px solid var(--rule);
   }
 }
 
 .host-name {
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-weight: var(--fw-medium);
+  overflow-wrap: anywhere;
 }
 
 .host-status {
-  color: var(--text-dim);
+  color: var(--ink-mute);
 }
 
+/* A long herdr error wraps; it never forces the page to scroll sideways. */
 .host-error {
-  color: var(--status-blocked);
-  font-size: 0.8rem;
+  flex-basis: 100%;
+  min-width: 0;
+  color: var(--status-blocked-ink);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .conn-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: var(--radius-pill);
   background: var(--status-unknown);
   flex: none;
 
@@ -188,34 +237,65 @@
 }
 
 .empty {
-  color: var(--text-dim);
-  font-size: 0.85rem;
+  color: var(--ink-mute);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+
+/* The one element here allowed to scroll sideways, and only inside itself. */
+.table-scroll {
+  overflow-x: auto;
+  margin-bottom: var(--sp-3);
 }
 
 .shortcut-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 0.75rem;
-  font-size: 0.82rem;
+  font-size: var(--fs-small);
 
   th,
   td {
     text-align: left;
-    padding: 0.35rem 0.5rem 0.35rem 0;
-    border-bottom: 1px solid var(--border);
+    padding: var(--sp-2) var(--sp-3) var(--sp-2) 0;
+    border-block-end: 1px solid var(--rule);
   }
 
   th {
-    color: var(--text-dim);
-    font-weight: 500;
+    color: var(--ink-mute);
+    font-weight: var(--fw-medium);
   }
 
   kbd {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 0.05rem 0.35rem;
-    font-size: 0.78rem;
-    font-family: inherit;
+    display: inline-block;
+    background: var(--paper-sunk);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    padding: 0 var(--sp-1);
+    font-family: var(--font-mono);
+    font-size: var(--fs-caption);
+    white-space: nowrap;
+  }
+}
+
+/* Below --breakpoint-mobile every row stacks label over full-width control. */
+@media (max-width: 900px) {
+  .setting-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-2);
+  }
+
+  .segmented,
+  .text-input {
+    width: 100%;
+  }
+
+  .segment {
+    flex: 1 1 0;
+    min-width: var(--touch-target-min);
+  }
+
+  .btn {
+    align-self: flex-start;
   }
 }

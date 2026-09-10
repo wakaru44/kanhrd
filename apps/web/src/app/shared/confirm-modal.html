@@ -1,19 +1,44 @@
 <div class="modal-backdrop" (click)="onCancel()">
-  <div class="modal" role="dialog" aria-modal="true" [attr.aria-label]="title()" (click)="$event.stopPropagation()">
+  <div
+    #dialog
+    class="modal"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    [attr.aria-label]="title()"
+    (click)="$event.stopPropagation()"
+    (keydown.escape)="onCancel()"
+  >
     <h2 class="modal-title">{{ title() }}</h2>
 
     @if (refusalReason()) {
       <p class="modal-body refusal">{{ refusalReason() }}</p>
       <div class="modal-actions">
-        <button type="button" class="btn" (click)="onCancel()">Close</button>
+        <button type="button" class="btn" (click)="onCancel()">{{ cancelLabel() }}</button>
       </div>
     } @else {
       @if (body()) {
         <p class="modal-body">{{ body() }}</p>
       }
+
+      @if (previewItems().length > 0) {
+        <p class="preview-heading">{{ copy.confirm.previewHeading }}</p>
+        <ul class="preview-list">
+          @for (item of previewItems(); track item.kind + "/" + item.name) {
+            <li class="preview-row">
+              <span class="preview-kind">{{ item.kind }}</span>
+              <span class="preview-name">{{ item.name }}</span>
+              @if (item.detail) {
+                <span class="preview-detail">{{ item.detail }}</span>
+              }
+            </li>
+          }
+        </ul>
+      }
+
       <div class="modal-actions">
         <button type="button" class="btn" (click)="onCancel()">{{ cancelLabel() }}</button>
-        <button type="button" class="btn" [class.danger]="danger()" (click)="onConfirm()">
+        <button type="button" class="btn primary" [class.danger]="danger()" (click)="onConfirm()">
           {{ confirmLabel() }}
         </button>
       </div>
