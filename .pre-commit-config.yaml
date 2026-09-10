@@ -1,20 +1,23 @@
 # pre-commit configuration for kanhrd.
 #
-# Scope note: apps/**, packages/**, openspec/**, docs/adr/**, docs/CONTEXT.md,
-# docs/OPERATING.md, root README.md and tmp/foreman/** are owned by other
-# in-flight work and are excluded from every hook below so this config cannot
-# produce file conflicts with it. See docs/CONTRIBUTING.md for how to widen
-# that scope later (e.g. once apps/web gets its own `lint` script).
+# Scope note: `apps/**` and `packages/**` were excluded while the lint lane
+# ran concurrently with the tier lanes, so the gate could not conflict with
+# in-flight work. That work landed; the fence outlived it and left the whole
+# SPA and bridge unlinted (prettier had never run on a single source file).
+# They are IN scope now.
+#
+# Still out of scope, deliberately:
+#   openspec/**      - `openspec validate --strict` is its own, stronger gate
+#   docs/adr/**      - decision records are frozen once accepted
+#   docs/history/**  - frozen historical artifacts, captured verbatim
+#   .claude/         - prompt structure, not prose
+#   pnpm-lock.yaml   - generated
+# `tmp/` is gitignored in its entirety, so it never reaches a hook.
 exclude: >
   (?x)^(
-    apps/|
-    packages/|
     openspec/|
     docs/adr/|
-    docs/CONTEXT\.md|
-    docs/OPERATING\.md|
     README\.md|
-    tmp/foreman/|
     pnpm-lock\.yaml|
     \.claude/|
     docs/history/
@@ -34,6 +37,10 @@ repos:
         args: [--unsafe]
         exclude: ^\.forgejo/workflows/
       - id: check-json
+        # Angular's tsconfigs are JSONC — comments are load-bearing there
+        # (they document why each compiler flag is set) and `check-json`
+        # is a strict JSON parser. TypeScript itself validates them.
+        exclude: (?x)^(apps/web/tsconfig.*\.json)$
       - id: check-added-large-files
 
   - repo: https://github.com/adrienverge/yamllint
@@ -78,10 +85,9 @@ repos:
   # then instead of failing every commit.
   # Design-token gate for apps/web SCSS: no raw hex outside
   # `shared/tokens.scss`, no raw `rem` outside `shared/typography.scss`
-  # (docs/DESIGN-SYSTEM.md, "Lint gate"). The global `exclude:` above hides
-  # apps/ from every hook's file list, so this one scans the tree itself
-  # instead of taking filenames; the not-yet-migrated component styles are
-  # ratcheted inside the script.
+  # (docs/DESIGN-SYSTEM.md, "Lint gate"). Scans the tree itself rather than
+  # taking filenames, so it also covers a commit that touches no SCSS; the
+  # not-yet-migrated component styles are ratcheted inside the script.
   - repo: local
     hooks:
       - id: scss-design-tokens
@@ -98,5 +104,4 @@ repos:
         entry: pnpm --filter @kanhrd/web run --if-present lint
         language: system
         files: ^apps/web/.*\.[jt]sx?$
-        exclude: ''
         pass_filenames: false
