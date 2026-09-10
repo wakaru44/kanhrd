@@ -1,0 +1,20 @@
+openspec/changes/add-swimlane-grouping/tasks.md
+  s_cc22a38b40f3d3::t_1230d93ddb7e42 19,21,24,28,30-31,38,40,45-46,51-53
+  s_cc22a38b40f3d3::t_f4441ecf21eace 56-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "64dfa7c12aa052a0d3908c95c49b6963b7a0ea5a",
+  "prompts": {},
+  "sessions": {
+    "s_cc22a38b40f3d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93fe3ed2-366b-4659-9492-d600bcf7a5d9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
