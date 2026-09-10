@@ -1,0 +1,216 @@
+openspec/changes/add-pane-status-since/README.md
+  s_a62153c2b8328e::t_7bd877865e237d 1-2
+apps/web/src/app/shared/confirm-modal.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 127
+openspec/changes/fix-card-menu-stacking/specs/board-card-actions/spec.md
+  s_a62153c2b8328e::t_e57fdf13b11281 1-42
+docs/UX-GUIDELINES.md
+  s_a62153c2b8328e::t_ae2a840580fda8 151-159
+  s_a62153c2b8328e::t_ea5f0a127d5e42 7-10,33,102,124,136,142,161,170-171,176,178-179,181,187,223-225,237,239-240,450,452,506,525,586,647
+  s_a62153c2b8328e::t_ef3fddb901b84a 160
+openspec/changes/rename-vocabulary-to-herdr-terms/specs/domain-vocabulary/spec.md
+  s_a62153c2b8328e::t_795dd0b5300131 1-69
+openspec/changes/add-terminal-top-bar/specs/terminal-top-bar/spec.md
+  s_a62153c2b8328e::t_c153f9c398d5ab 4,6-7,14,51,56,58-59,62-63,72,79-80,91,94,97,120,144,146,157,159,164,166,169,171,180,185,199,235,244,282,289,296,298,300,302,306,311,322-323,331,336,343,358
+  s_a62153c2b8328e::t_92da9bec0315db 12-13
+openspec/changes/add-pane-status-since/specs/pane-status-since/spec.md
+  s_a62153c2b8328e::t_7bd877865e237d 1-81
+openspec/changes/add-terminal-top-bar/proposal.md
+  s_a62153c2b8328e::t_c153f9c398d5ab 13,23-24,30,52,56-57,59-60,65-66,74,101,103,105,124
+openspec/changes/fix-card-menu-stacking/tasks.md
+  s_a62153c2b8328e::t_e57fdf13b11281 1-2,4-8,17-22,24-26,28,30-33,35-38,40-44,54-55
+  s_a62153c2b8328e::t_35541bdc1b7308 3,9-16,23,27,29,34,39,45-53
+apps/web/src/app/settings/settings.spec.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 18,127,133-134,161,163
+openspec/changes/add-pane-status-since/tasks.md
+  s_a62153c2b8328e::t_7bd877865e237d 1-60
+apps/web/src/app/board/empty-state.html
+  s_a62153c2b8328e::t_e9820e450697dc 11-12,20,24,29
+apps/web/src/app/settings/settings.html
+  s_a62153c2b8328e::t_e9820e450697dc 75,102,104,108
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 80
+apps/web/src/app/board/empty-state.spec.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 36,58,103,122,137
+apps/web/src/app/rail/rail.ts
+  s_a62153c2b8328e::t_cd365fd15ab27b 505,513,564-565
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 38-40,43,495,510,551
+apps/web/src/app/board/board.html
+  s_a62153c2b8328e::t_e9820e450697dc 37,40
+apps/web/src/app/state/terminal-font-size.service.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 76
+apps/web/e2e/settings.spec.ts
+  s_a62153c2b8328e::t_58222f70459c2d 3
+  s_a62153c2b8328e::t_91866f341c8177 32,34-41
+apps/web/e2e/keyboard.spec.ts
+  s_a62153c2b8328e::t_91866f341c8177 12,76
+openspec/changes/add-parked-columns/specs/board-parked-columns/spec.md
+  s_a62153c2b8328e::t_c153f9c398d5ab 87,100,102,156,159,170,172,175,177-178,271
+  s_a62153c2b8328e::t_92da9bec0315db 10-13
+apps/web/src/app/state/toast.service.spec.ts
+  s_a62153c2b8328e::t_e37bef1cdb25c2 105-107,113-115,117,121-122,125
+apps/web/src/app/board/empty-state.ts
+  s_a62153c2b8328e::t_95fa292b376ba0 20
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 12,18,38
+apps/web/e2e/tier3.spec.ts
+  s_a62153c2b8328e::t_91866f341c8177 13,19,72,229
+  s_a62153c2b8328e::t_cd365fd15ab27b 226-227,256,258,287,289,312,375,400-401
+apps/web/src/app/shared/toast-host.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 19
+apps/web/src/app/board/card.spec.ts
+  s_a62153c2b8328e::t_76eebb475170d5 408-415,425,427-430
+  s_a62153c2b8328e::t_22870763ed4f06 374-380,382-383,385-389,391-395,397-398,407,416,418-424,426,431-445,447-467
+  s_a62153c2b8328e::t_f1a8887c8358d6 381,384
+  s_a62153c2b8328e::t_ac3b17bca4238c 94-115,118,357-358,367,370,596,600
+  s_a62153c2b8328e::t_218cf0ed3d8f14 390
+  s_a62153c2b8328e::t_117b9dbbcf09b5 468-504
+  s_a62153c2b8328e::t_a93819aba8149d 52-53,56-57,399-406,446
+  s_a62153c2b8328e::t_68fb0c3be71b02 593
+  s_a62153c2b8328e::t_f9e40783b5585d 54-55,58-59
+  s_a62153c2b8328e::t_7fd1209c8a34c5 396,417
+openspec/changes/add-parked-columns/design.md
+  s_a62153c2b8328e::t_c153f9c398d5ab 114,236,247,250,256,260,276,280,299,333,357,359,370
+apps/web/src/app/board/board.spec.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 188,864,873,878
+  s_a62153c2b8328e::t_2b504bee24e828 232,244-245
+  s_a62153c2b8328e::t_cd365fd15ab27b 163,166,240
+apps/web/src/app/shared/icons.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 40,48,70
+apps/web/src/app/board/card.scss
+  s_a62153c2b8328e::t_68fb0c3be71b02 116
+  s_a62153c2b8328e::t_fd8a0b751d5677 274-281,283
+openspec/changes/add-swimlane-grouping/specs/board-swimlanes/spec.md
+  s_a62153c2b8328e::t_cf28a936325da3 1-57
+openspec/changes/add-parked-columns/proposal.md
+  s_a62153c2b8328e::t_c153f9c398d5ab 25,82,172,215,240
+openspec/changes/add-terminal-top-bar/specs/keyboard-shortcuts/spec.md
+  s_a62153c2b8328e::t_c153f9c398d5ab 59
+apps/web/src/app/board/card.html
+  s_a62153c2b8328e::t_68fb0c3be71b02 42
+  s_a62153c2b8328e::t_3806e88beb1fc2 93-104,110-111,114,120-134,154
+apps/web/src/app/shared/copy.ts
+  s_a62153c2b8328e::t_cc65ab70c17185 9-17,28-33,40,62,65-69,77-86,91-92,98-99,114,120,145-146,174-176,178,181-182,192-193,209,214-215,220-224,237,241,260
+openspec/changes/rename-vocabulary-to-herdr-terms/tasks.md
+  s_a62153c2b8328e::t_8708deb07d11db 3,6,9,11,14,16-17,21,24,27,30,32,37,40,47,49-51,53,58,62-65
+  s_a62153c2b8328e::t_795dd0b5300131 1-2,4-5,7-8,10,12-13,15,18-20,22-23,25-26,28-29,31,33-36,38-39,41-46,48,52,54-57,59-61
+openspec/changes/rename-vocabulary-to-herdr-terms/README.md
+  s_a62153c2b8328e::t_795dd0b5300131 1-2
+openspec/changes/add-swimlane-grouping/proposal.md
+  s_a62153c2b8328e::t_cf28a936325da3 1-88
+apps/web/e2e/README.md
+  s_a62153c2b8328e::t_91866f341c8177 112,179
+openspec/changes/add-terminal-top-bar/README.md
+  s_a62153c2b8328e::t_c153f9c398d5ab 3
+openspec/changes/add-swimlane-grouping/README.md
+  s_a62153c2b8328e::t_cf28a936325da3 1-2
+apps/web/src/app/board/board.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 159,263,268,311
+apps/web/src/app/pane-detail/pane-detail.spec.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 608,621,641
+  s_a62153c2b8328e::t_cd365fd15ab27b 539
+apps/web/src/app/pane-detail/pane-detail.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 145,158,345
+apps/web/src/app/settings/settings.scss
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 111
+apps/web/src/app/settings/settings.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 19-20,80
+openspec/changes/rename-vocabulary-to-herdr-terms/proposal.md
+  s_a62153c2b8328e::t_795dd0b5300131 1-95
+openspec/changes/fix-card-menu-stacking/proposal.md
+  s_a62153c2b8328e::t_e57fdf13b11281 1-67
+apps/web/src/app/shared/copy.spec.ts
+  s_a62153c2b8328e::t_95fa292b376ba0 5,52
+  s_a62153c2b8328e::t_cd365fd15ab27b 26,41-43
+  s_a62153c2b8328e::t_7ab8c7cb855c28 131,133,136-141
+apps/web/src/app/state/toast.service.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 26,57
+apps/web/src/app/shared/confirm-modal.spec.ts
+  s_a62153c2b8328e::t_cd365fd15ab27b 69-70,89-90
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 72-73,141,148
+apps/web/src/app/board/column.scss
+  s_a62153c2b8328e::t_fd8a0b751d5677 54-58
+apps/web/src/app/state/host-notices.service.spec.ts
+  s_a62153c2b8328e::t_f1bfd47bfecc78 6,23,46,68,83,95-96
+  s_a62153c2b8328e::t_e37bef1cdb25c2 19,27,50-51,56-58,62-64,66,71-72,74,79-81,85-86,90-93,99-101,105-107,110,114-115,117,119
+apps/web/e2e/empty-state.spec.ts
+  s_a62153c2b8328e::t_91866f341c8177 9,23,25,43,49-50
+  s_a62153c2b8328e::t_cd365fd15ab27b 40-41,60,70
+apps/web/src/app/board/card.ts
+  s_a62153c2b8328e::t_c61e2e5d2a407b 12,48-50,55,162-167,169-178,213-215,219-229,231-233,307-311,313-316,318-320,322
+  s_a62153c2b8328e::t_5171a1db013321 168
+openspec/changes/fix-card-menu-stacking/README.md
+  s_a62153c2b8328e::t_e57fdf13b11281 1-2
+apps/web/src/app/app.ts
+  s_a62153c2b8328e::t_e37bef1cdb25c2 39
+  s_a62153c2b8328e::t_f1bfd47bfecc78 9,43
+docs/BRAND.md
+  s_a62153c2b8328e::t_f1a8887c8358d6 97-210,212-219,306
+  s_a62153c2b8328e::t_d36d1da14d5e26 5,15,74,211,220-224,269-270,279-296,300-304,307,309-310
+  s_a62153c2b8328e::t_0ec30d1d0cb93e 305
+apps/web/src/app/util/pane-title.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 8
+docs/DESIGN-SYSTEM.md
+  s_a62153c2b8328e::t_ea5f0a127d5e42 6,398,402,413,580,587,776
+  s_a62153c2b8328e::t_f3f5e9fedbb0ad 457-458
+apps/web/src/app/pane-detail/pane-detail.html
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 23-24
+  s_a62153c2b8328e::t_e9820e450697dc 101
+openspec/changes/add-terminal-top-bar/tasks.md
+  s_a62153c2b8328e::t_c153f9c398d5ab 16,20,25,32,42-43,48,62-63,73,80-81,100,104,108,111,115,126,132-134,162,164,170,186
+openspec/changes/add-parked-columns/tasks.md
+  s_a62153c2b8328e::t_c153f9c398d5ab 10,12,49,56,93
+openspec/changes/add-pane-status-since/proposal.md
+  s_a62153c2b8328e::t_7bd877865e237d 1-98
+apps/web/e2e/mobile.spec.ts
+  s_a62153c2b8328e::t_cd365fd15ab27b 535
+  s_a62153c2b8328e::t_dfaaed6c163f89 237-241,249,752-753
+  s_a62153c2b8328e::t_91866f341c8177 505,507-508
+apps/web/e2e/tier2.terminal.spec.ts
+  s_a62153c2b8328e::t_91866f341c8177 26-27
+openspec/changes/add-bridge-origin-allowlist/proposal.md
+  s_a62153c2b8328e::t_c153f9c398d5ab 77
+apps/web/src/app/shared/copy-render.spec.ts
+  s_a62153c2b8328e::t_cd365fd15ab27b 80-81
+  s_a62153c2b8328e::t_95fa292b376ba0 83-84
+apps/web/src/app/state/keyboard.service.spec.ts
+  s_a62153c2b8328e::t_2b504bee24e828 215,219
+apps/web/src/app/rail/rail.scss
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 51,128
+apps/web/src/app/board/column.ts
+  s_a62153c2b8328e::t_f3187bbe4ec7b8 40
+docs/CONTEXT.md
+  s_a62153c2b8328e::t_8a5a4fd0605269 13,16-26
+apps/web/src/app/state/host-notices.service.ts
+  s_a62153c2b8328e::t_f1bfd47bfecc78 6-8,12-13,16-17,23,26-28,31,35,37,53,55,58-59,63,68
+apps/web/src/app/rail/rail.html
+  s_a62153c2b8328e::t_e9820e450697dc 58,66,117,125,143,145,157-159,169,171
+openspec/changes/add-swimlane-grouping/tasks.md
+  s_a62153c2b8328e::t_cf28a936325da3 1-26
+apps/web/src/app/rail/rail.spec.ts
+  s_a62153c2b8328e::t_95fa292b376ba0 166,185,196,478,486,495,501,514,523
+  s_a62153c2b8328e::t_cd365fd15ab27b 186,481-482,490-492,498,508-509
+CLAUDE.md
+  s_a62153c2b8328e::t_f780d08a0b9946 24-27,162-163,165-166,168-174
+  s_a62153c2b8328e::t_82a27ed744401d 175-177
+apps/web/src/styles.scss
+  s_a62153c2b8328e::t_ad9464319534be 15-23
+openspec/changes/add-terminal-top-bar/design.md
+  s_a62153c2b8328e::t_c153f9c398d5ab 34,232,242,253,266,277,283,317,325,337-338,343-344,359,362,367,370,375,378,390,409,425,431
+  s_a62153c2b8328e::t_8d9b6910bd42e2 77,328-329
+  s_a62153c2b8328e::t_efda0dcfdf4ca6 84-93,104-116,120-129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2acfc38e8910f46a679611693832fae12ff9ae87",
+  "prompts": {},
+  "sessions": {
+    "s_a62153c2b8328e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fae23786-fdaa-46af-b39c-69a564a2b7c2",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
