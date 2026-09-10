@@ -140,6 +140,24 @@
   }
 }
 
+/*
+ * Segments whose label is a number rather than a word — the terminal text
+ * size ramp. Mono with tabular numerals so the five steps sit on a fixed
+ * grid and the row does not shimmer as the selection moves (see
+ * docs/DESIGN-SYSTEM.md, "Numerals").
+ */
+.segment-numeric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+
+  /*
+   * A two-digit mono label plus --sp-3 padding lands just under 40px on a
+   * wide viewport, so the coarse-pointer floor is stated rather than left
+   * to the text metrics (docs/UX-GUIDELINES.md, "Touch targets").
+   */
+  min-width: var(--touch-target-min);
+}
+
 .text-input {
   min-height: var(--touch-target-min);
   min-width: 0;

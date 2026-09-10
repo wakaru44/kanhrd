@@ -50,6 +50,21 @@
         }
       </select>
     </div>
+
+    <div class="setting-row">
+      <span class="setting-label" id="terminal-font-size-label">{{ text.terminalFontSize }}</span>
+      <div class="segmented" role="group" aria-labelledby="terminal-font-size-label">
+        @for (size of terminalFontSizes; track size) {
+          <button
+            type="button"
+            class="segment segment-numeric"
+            [class.active]="terminalFontSizeService.size() === size"
+            [attr.aria-pressed]="terminalFontSizeService.size() === size"
+            (click)="setTerminalFontSize(size)"
+          >{{ size }}</button>
+        }
+      </div>
+    </div>
   </section>
 
   <section class="settings-section">

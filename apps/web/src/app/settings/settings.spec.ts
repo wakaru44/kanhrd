@@ -6,6 +6,12 @@ import { Settings } from "./settings";
 import { PanesStore } from "../state/panes.store";
 import { SettingsService } from "../state/settings.service";
 import { ThemeService } from "../state/theme.service";
+import { TerminalThemeService } from "../state/terminal-theme.service";
+import {
+  DEFAULT_TERMINAL_FONT_SIZE,
+  TERMINAL_FONT_SIZES,
+  TerminalFontSizeService,
+} from "../state/terminal-font-size.service";
 import { COPY } from "../shared/copy";
 
 const LONG_ERROR =
@@ -42,10 +48,14 @@ describe("Settings", () => {
   let fixture: ComponentFixture<Settings>;
   let settingsService: SettingsService;
   let themeService: ThemeService;
+  let fontSizeService: TerminalFontSizeService;
+  let terminalThemeService: TerminalThemeService;
 
   beforeEach(async () => {
     localStorage.removeItem("kanhrd.settings");
     localStorage.removeItem("kanhrd.theme");
+    localStorage.removeItem("kanhrd.terminal-font-size");
+    localStorage.removeItem("kanhrd.terminal-theme");
     store = new FakePanesStore();
     await TestBed.configureTestingModule({
       imports: [Settings],
@@ -59,16 +69,33 @@ describe("Settings", () => {
     fixture = TestBed.createComponent(Settings);
     settingsService = TestBed.inject(SettingsService);
     themeService = TestBed.inject(ThemeService);
+    fontSizeService = TestBed.inject(TerminalFontSizeService);
+    terminalThemeService = TestBed.inject(TerminalThemeService);
     fixture.detectChanges();
   });
 
   afterEach(() => {
     localStorage.removeItem("kanhrd.settings");
     localStorage.removeItem("kanhrd.theme");
+    localStorage.removeItem("kanhrd.terminal-font-size");
+    localStorage.removeItem("kanhrd.terminal-theme");
   });
 
   function el(): HTMLElement {
     return fixture.nativeElement as HTMLElement;
+  }
+
+  /** The `.settings-section` whose `h2` is `heading` — segments now appear in more than one. */
+  function section(heading: string): HTMLElement {
+    const found = Array.from(el().querySelectorAll<HTMLElement>(".settings-section")).find(
+      (s) => s.querySelector("h2")?.textContent?.trim() === heading,
+    );
+    expect(found).withContext(`no settings section titled "${heading}"`).toBeTruthy();
+    return found!;
+  }
+
+  function fontSizeSegments(): HTMLButtonElement[] {
+    return Array.from(section("terminal").querySelectorAll<HTMLButtonElement>(".segment"));
   }
 
   it("titles the screen and its back control from copy.ts", () => {
@@ -86,7 +113,7 @@ describe("Settings", () => {
   it("renders the appearance section with a theme toggle and density segments", () => {
     const sections = Array.from(el().querySelectorAll(".settings-section h2")).map((h) => h.textContent);
     expect(sections).toContain("appearance");
-    expect(el().querySelectorAll(".segment").length).toBe(2);
+    expect(section("appearance").querySelectorAll(".segment").length).toBe(2);
   });
 
   it("renders the runtime section with per-pen advertised poll intervals", () => {
@@ -115,7 +142,7 @@ describe("Settings", () => {
   });
 
   it("clicking density segments persists the choice via SettingsService", () => {
-    const compactButton = Array.from(el().querySelectorAll<HTMLButtonElement>(".segment")).find((b) =>
+    const compactButton = Array.from(section("appearance").querySelectorAll<HTMLButtonElement>(".segment")).find((b) =>
       b.textContent?.includes("compact"),
     );
     compactButton?.click();
@@ -139,8 +166,57 @@ describe("Settings", () => {
     const modal = el().querySelector("app-confirm-modal");
     expect(modal).toBeTruthy();
     expect(modal?.querySelector(".preview-heading")?.textContent).toContain(COPY.confirm.previewHeading);
-    expect(modal?.querySelectorAll(".preview-row").length).toBe(4);
+    expect(modal?.querySelectorAll(".preview-row").length).toBe(5);
     expect(modal?.querySelector(".modal-body")?.textContent).toContain("cannot be undone");
     expect(clearSpy).not.toHaveBeenCalled();
   });
+
+  // --- terminal text size -------------------------------------------------
+
+  it("offers one segment per ladder step in the terminal section", () => {
+    const labels = fontSizeSegments().map((b) => b.textContent?.trim());
+    expect(labels).toEqual(TERMINAL_FONT_SIZES.map(String));
+    expect(section("terminal").textContent).toContain("text size");
+  });
+
+  it("marks the current size selected, and exposes it as aria-pressed rather than by weight alone", () => {
+    const pressed = fontSizeSegments().filter((b) => b.getAttribute("aria-pressed") === "true");
+    expect(pressed.length).toBe(1);
+    expect(pressed[0].textContent?.trim()).toBe(String(DEFAULT_TERMINAL_FONT_SIZE));
+    expect(pressed[0].classList).toContain("active");
+  });
+
+  it("clicking a size segment persists the choice via TerminalFontSizeService", () => {
+    const twenty = fontSizeSegments().find((b) => b.textContent?.trim() === "20");
+    twenty!.click();
+    fixture.detectChanges();
+
+    expect(fontSizeService.size()).toBe(20);
+    expect(twenty!.getAttribute("aria-pressed")).toBe("true");
+    expect(fontSizeSegments().filter((b) => b.getAttribute("aria-pressed") === "true").length).toBe(1);
+  });
+
+  it("keeps size and palette independent in both directions", () => {
+    const themeSelect = el().querySelector<HTMLSelectElement>("#terminal-theme")!;
+
+    fontSizeSegments().find((b) => b.textContent?.trim() === "17")!.click();
+    fixture.detectChanges();
+    expect(terminalThemeService.name()).toBe("auto");
+
+    themeSelect.value = "monokai";
+    themeSelect.dispatchEvent(new Event("change"));
+    fixture.detectChanges();
+
+    expect(terminalThemeService.name()).toBe("monokai");
+    expect(fontSizeService.size()).toBe(17);
+  });
+
+  it("sizes every segment past the coarse-pointer touch minimum", () => {
+    for (const segment of fontSizeSegments()) {
+      const box = segment.getBoundingClientRect();
+      expect(box.height).toBeGreaterThanOrEqual(40);
+      expect(box.width).toBeGreaterThanOrEqual(40);
+    }
+  });
+
 });

@@ -328,6 +328,26 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       });
     });
 
+    // The theme effect's sibling, with one extra obligation: a colour change
+    // leaves cell geometry alone, a size change does not. The same pixel box
+    // now holds a different number of cells, so without a refit `cols`/`rows`
+    // keep their old values and the terminal either renders into a fraction
+    // of its box or overflows a container that is `overflow: hidden` — with
+    // the prompt clipped out of reach. The `ResizeObserver` cannot cover
+    // this: it watches the *container*, whose box does not change when only
+    // the cell inside it does, so no callback fires. Order matters — the
+    // option is assigned first so xterm has re-measured the cell before
+    // `fit()` divides the box by it.
+    effect(() => {
+      const fontSize = this.terminalFontSize.size();
+      untracked(() => {
+        if (this.term) {
+          this.term.options.fontSize = fontSize;
+          this.fitToContainer();
+        }
+      });
+    });
+
     // Fetch (and refetch) this pane's content whenever the route resolves to
     // a different pane or the socket (re)connects — driven off signals
     // (Angular 20 way) rather than a one-shot `ngOnInit`/`ngAfterViewInit`
@@ -357,7 +377,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     const term = new Terminal({
       theme: this.terminalTheme.theme(),
       fontFamily: XTERM_FONT_FAMILY,
-      fontSize: 13,
+      fontSize: this.terminalFontSize.size(),
       convertEol: true,
       scrollback: 5000,
     });

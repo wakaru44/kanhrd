@@ -6,6 +6,12 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import type { HostSummary, WsEvent } from "@kanhrd/schema";
 import { PaneDetail } from "./pane-detail";
+import { TerminalThemeService } from "../state/terminal-theme.service";
+import {
+  DEFAULT_TERMINAL_FONT_SIZE,
+  TERMINAL_FONT_SIZES,
+  TerminalFontSizeService,
+} from "../state/terminal-font-size.service";
 import { COPY } from "../shared/copy";
 import { PanesStore } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
@@ -630,5 +636,102 @@ describe("PaneDetail", () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     expect(fit).toHaveBeenCalled();
+  });
+
+  // --- terminal font size --------------------------------------------------
+
+  const FONT_SIZE_KEY = "kanhrd.terminal-font-size";
+
+  /** The live xterm instance. Reached through the component because `cols`/`rows` live nowhere else. */
+  function terminal(): Terminal {
+    return (fixture.componentInstance as unknown as { term: Terminal | null }).term!;
+  }
+
+  it("constructs the terminal at the stored font size, not a hard-coded 13", async () => {
+    localStorage.setItem(FONT_SIZE_KEY, "17");
+    await mountSized();
+
+    expect(TestBed.inject(TerminalFontSizeService).size()).toBe(17);
+    expect(terminal().options.fontSize).toBe(17);
+
+    localStorage.removeItem(FONT_SIZE_KEY);
+  });
+
+  it("defaults to 13 when nothing is stored, so nothing changes for existing users", async () => {
+    localStorage.removeItem(FONT_SIZE_KEY);
+    await mountSized();
+
+    expect(terminal().options.fontSize).toBe(DEFAULT_TERMINAL_FONT_SIZE);
+  });
+
+  it("refits an open terminal so cols and rows are recomputed for the new cell", async () => {
+    localStorage.removeItem(FONT_SIZE_KEY);
+    await mountSized();
+    const fontSize = TestBed.inject(TerminalFontSizeService);
+    const smallest = TERMINAL_FONT_SIZES[0];
+    const largest = TERMINAL_FONT_SIZES[TERMINAL_FONT_SIZES.length - 1];
+
+    fontSize.set(smallest);
+    fixture.detectChanges();
+    const small = { cols: terminal().cols, rows: terminal().rows };
+
+    fontSize.set(largest);
+    fixture.detectChanges();
+    const large = { cols: terminal().cols, rows: terminal().rows };
+
+    expect(terminal().options.fontSize).toBe(largest);
+    // The container's pixel box never changed, so a bigger cell is strictly
+    // fewer cells. This is a prediction about geometry, not a restatement of
+    // what fit() computes — a spy on fit() would pass with a broken refit.
+    expect(large.cols).toBeLessThan(small.cols);
+    expect(large.rows).toBeLessThan(small.rows);
+
+    // Cell width and height both scale linearly with font size, so the
+    // counts scale inversely with it. Expected ratio comes from the sizes
+    // themselves (20 / 12 = 1.667), independently of the rendered face.
+    const expected = largest / smallest;
+    expect(small.cols / large.cols).toBeGreaterThan(expected - 0.4);
+    expect(small.cols / large.cols).toBeLessThan(expected + 0.4);
+
+    // And it comes back.
+    fontSize.set(smallest);
+    fixture.detectChanges();
+    expect(terminal().cols).toBe(small.cols);
+    expect(terminal().rows).toBe(small.rows);
+
+    localStorage.removeItem(FONT_SIZE_KEY);
+  });
+
+  it("sends no wire request when the font size changes", async () => {
+    localStorage.removeItem(FONT_SIZE_KEY);
+    await mountSized();
+    ws.request.calls.reset();
+
+    TestBed.inject(TerminalFontSizeService).set(20);
+    fixture.detectChanges();
+    await flushMicrotasks();
+
+    expect(ws.request.calls.allArgs().map(([, method]) => method)).not.toContain("pane.resize");
+    expect(ws.request).not.toHaveBeenCalled();
+
+    localStorage.removeItem(FONT_SIZE_KEY);
+  });
+
+  it("keeps the palette and the size independent on the live terminal", async () => {
+    localStorage.removeItem(FONT_SIZE_KEY);
+    await mountSized();
+    const themeBefore = terminal().options.theme;
+
+    TestBed.inject(TerminalFontSizeService).set(20);
+    fixture.detectChanges();
+    expect(terminal().options.theme).toEqual(themeBefore);
+
+    TestBed.inject(TerminalThemeService).set("monokai");
+    fixture.detectChanges();
+    expect(terminal().options.theme).not.toEqual(themeBefore);
+    expect(terminal().options.fontSize).toBe(20);
+
+    localStorage.removeItem(FONT_SIZE_KEY);
+    localStorage.removeItem("kanhrd.terminal-theme");
   });
 });

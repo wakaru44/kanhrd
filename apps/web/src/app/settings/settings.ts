@@ -8,6 +8,7 @@ import {
   TerminalThemeService,
   type TerminalThemeName,
 } from "../state/terminal-theme.service";
+import { TERMINAL_FONT_SIZES, TerminalFontSizeService } from "../state/terminal-font-size.service";
 import { DEFAULT_PREFIX, KeyboardService, formatBinding, type ShortcutBinding } from "../state/keyboard.service";
 import { ConfirmModal, type ConfirmPreviewItem } from "../shared/confirm-modal";
 import { LucideArrowLeft } from "../shared/icons";
@@ -36,6 +37,7 @@ const SETTINGS_COPY = {
   terminalNote:
     "one palette for every open terminal — cards are told apart by title, pen seal and status, never by terminal colour.",
   terminalTheme: "colour theme",
+  terminalFontSize: "text size",
 
   runtime: "runtime",
   runtimeNote: "the output poll interval is bridge-owned. each connected pen advertises its own cadence.",
@@ -71,6 +73,7 @@ const SETTINGS_COPY = {
   clearFilters: "board filters",
   clearAppearance: "theme and density",
   clearTerminal: "terminal palette",
+  clearTerminalFontSize: "terminal text size",
   clearKeyboard: "keyboard prefix",
 
   poll: {
@@ -102,6 +105,8 @@ export class Settings {
   protected readonly keyboardService = inject(KeyboardService);
   protected readonly terminalThemeService = inject(TerminalThemeService);
   protected readonly terminalThemeOptions = TERMINAL_THEME_OPTIONS;
+  protected readonly terminalFontSizeService = inject(TerminalFontSizeService);
+  protected readonly terminalFontSizes = TERMINAL_FONT_SIZES;
 
   protected readonly copy = COPY;
   protected readonly text = SETTINGS_COPY;
@@ -127,6 +132,10 @@ export class Settings {
 
   protected onTerminalThemeChange(value: string): void {
     this.terminalThemeService.set(value as TerminalThemeName);
+  }
+
+  protected setTerminalFontSize(size: number): void {
+    this.terminalFontSizeService.set(size);
   }
 
   protected onRequestedPollIntervalInput(value: string): void {
@@ -165,6 +174,7 @@ export class Settings {
     { kind: SETTINGS_COPY.clearKindSetting, name: SETTINGS_COPY.clearFilters },
     { kind: SETTINGS_COPY.clearKindSetting, name: SETTINGS_COPY.clearAppearance },
     { kind: SETTINGS_COPY.clearKindSetting, name: SETTINGS_COPY.clearTerminal },
+    { kind: SETTINGS_COPY.clearKindSetting, name: SETTINGS_COPY.clearTerminalFontSize },
     { kind: SETTINGS_COPY.clearKindSetting, name: SETTINGS_COPY.clearKeyboard },
   ];
 
