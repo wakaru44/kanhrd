@@ -297,17 +297,47 @@ describe('PaneTerminal', () => {
 
   it('resets and rewrites when the snapshot is not a continuation', async () => {
     const writeSpy = spyOn(Terminal.prototype, 'write');
+    await mounted();
+    writeSpy.calls.reset();
+
+    emitOutput('updated');
+
+    // The repaint passes a completion callback (it restores the reader's
+    // scroll offset once the snapshot has been parsed), so match on the data.
+    // `\x1bc` is RIS, the full reset, carried in the same write — see below.
+    expect(writeSpy.calls.mostRecent().args[0]).toBe('\x1bcupdated');
+  });
+
+  // Regression: the pane detail view strobed at the bridge's poll rate.
+  //
+  // `Terminal.reset()` recreates the buffer set, and xterm's RenderService
+  // clears every rendered row *synchronously* on `onBufferActivate`, while the
+  // replacement content only arrives through the asynchronous write queue and
+  // renders a frame or more later. Every `pane.output` therefore composited
+  // one fully blank frame. Any pane running a full-screen TUI — every coding
+  // agent — redraws rather than appends, so at OUTPUT_POLL_INTERVAL_MS (150ms)
+  // that was a whole-screen black-out at ~6.5Hz: inside the 3-30Hz band
+  // WCAG 2.3.1 treats as a seizure risk. Measured with a CDP screencast:
+  // 26 blank composited frames for 26 output frames before, 0 after.
+  //
+  // The redraw path must therefore carry its reset *inside* the write, never
+  // as an out-of-band `reset()` call. `e2e/terminal-flicker.spec.ts` measures
+  // the real frames; this pins the mechanism.
+  it('never calls reset() on a redraw — the reset rides in the write instead', async () => {
+    const writeSpy = spyOn(Terminal.prototype, 'write');
     const resetSpy = spyOn(Terminal.prototype, 'reset');
     await mounted();
     writeSpy.calls.reset();
     resetSpy.calls.reset();
 
-    emitOutput('updated');
+    emitOutput('a completely different screen');
+    emitOutput('and another one');
 
-    expect(resetSpy).toHaveBeenCalled();
-    // The repaint passes a completion callback (it restores the reader's
-    // scroll offset once the snapshot has been parsed), so match on the data.
-    expect(writeSpy.calls.mostRecent().args[0]).toBe('updated');
+    expect(resetSpy).not.toHaveBeenCalled();
+    expect(writeSpy.calls.allArgs().map((args) => args[0] as string)).toEqual([
+      '\x1bca completely different screen',
+      '\x1bcand another one',
+    ]);
   });
 
   it('keeps a scrolled-up reader where they were when a redraw lands', async () => {
