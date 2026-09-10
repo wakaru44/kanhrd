@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, convertToParamMap, provideRouter } from "@angul
 import { provideHttpClient } from "@angular/common/http";
 import { HttpTestingController, provideHttpClientTesting } from "@angular/common/http/testing";
 import { BehaviorSubject, Subject } from "rxjs";
-import type { WsEvent } from "@kanhrd/schema";
+import type { AgentStatus, WsEvent } from "@kanhrd/schema";
 import { Board, SCOPE_RESOLVE_GRACE_MS, nearestVisibleStatus, pageIndex } from "./board";
 import { BoardReturnService } from "../state/board-return.service";
 import { COPY } from "../shared/copy";
@@ -12,6 +12,7 @@ import { VIRTUAL_ITEM_SIZE, isCompact, isVirtualized } from "./column";
 import { ClockTick } from "../util/clock";
 import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
+import { SettingsService } from "../state/settings.service";
 import { KeyboardService } from "../state/keyboard.service";
 
 /**
@@ -1125,5 +1126,408 @@ describe("Board: returning from a pane", () => {
     await pump(returned);
     expect(boardReturn.take()).toBeNull();
     returned.destroy();
+  });
+});
+
+/**
+ * Swimlanes — openspec change `add-swimlane-grouping`, spec
+ * `board-swimlanes`. The board's side of the feature: what the DOM looks
+ * like with grouping off (unchanged), with grouping on (one band per
+ * distinct value, each holding the full visible column set), and what a
+ * band may never grow (a drag affordance).
+ */
+describe("Board: swimlanes", () => {
+  let ws: FakeWsClient;
+  let fixture: ComponentFixture<Board>;
+  let httpMock: HttpTestingController;
+  let store: PanesStore;
+  let settings: SettingsService;
+
+  const SETTINGS_STORAGE_KEY = "kanhrd.settings";
+
+  function pane(
+    id: string,
+    host: string,
+    status: AgentStatus,
+    tab: { id: string; name: string },
+    project?: { repo_name: string; checkout_path: string; is_linked_worktree: boolean },
+  ) {
+    return {
+      id,
+      host,
+      workspace: { id: `${host}-w`, name: host },
+      tab,
+      agent_status: status,
+      ...(project ? { project } : {}),
+    };
+  }
+
+  const KANHRD = { repo_name: "kanhrd", checkout_path: "~/src/kanhrd", is_linked_worktree: false };
+  const KANHRD_WT = { repo_name: "kanhrd", checkout_path: "~/src/kanhrd-wt", is_linked_worktree: true };
+
+  const PANES = [
+    pane("p1", "local", "working", { id: "t1", name: "main" }, KANHRD),
+    pane("p2", "local", "blocked", { id: "t1", name: "main" }, KANHRD_WT),
+    pane("p3", "remote", "idle", { id: "t2", name: "main" }, KANHRD),
+    // No `project` at all: the ungrouped band's reason to exist.
+    pane("p4", "remote", "done", { id: "t2", name: "main" }),
+  ];
+
+  function bands(): HTMLElement[] {
+    return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll("app-swimlane"));
+  }
+
+  function bandLabelsRendered(): string[] {
+    return bands().map((band) => band.querySelector(".swimlane-title")?.textContent?.trim() ?? "");
+  }
+
+  function columnsIn(band: HTMLElement): string[] {
+    return Array.from(band.querySelectorAll("app-column")).map(
+      (column) => column.querySelector(".column")?.getAttribute("data-status") ?? "",
+    );
+  }
+
+  beforeEach(async () => {
+    localStorage.removeItem(SETTINGS_STORAGE_KEY);
+    ws = new FakeWsClient();
+    ws.request.and.callFake((host: string, method: string) => {
+      if (method === "pane.list") {
+        return Promise.resolve({ panes: PANES.filter((p) => p.host === host) });
+      }
+      if (method === "events.subscribe") return Promise.resolve({ subscription_id: `s-${host}` });
+      if (method === "bridge.capabilities") {
+        return Promise.resolve({
+          tier: 1,
+          terminal: false,
+          paneResize: false,
+          paneGraphics: false,
+          outputPollIntervalMs: 0,
+          paneCreate: false,
+          paneClose: false,
+          paneMove: false,
+          paneRename: false,
+          tabCrud: false,
+          workspaceCrud: false,
+        });
+      }
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+
+    await TestBed.configureTestingModule({
+      imports: [Board],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: ws },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({})).asObservable() } },
+        { provide: Router, useValue: { navigate: jasmine.createSpy("navigate").and.resolveTo(true) } },
+      ],
+    }).compileComponents();
+    httpMock = TestBed.inject(HttpTestingController);
+
+    fixture = TestBed.createComponent(Board);
+    store = TestBed.inject(PanesStore);
+    settings = TestBed.inject(SettingsService);
+    store.filtersSignal.set(defaultFilters());
+    fixture.detectChanges();
+    await settle(fixture);
+    for (const req of httpMock.match("/api/hosts")) {
+      if (!req.cancelled) {
+        req.flush({
+          hosts: [
+            { name: "local", connected: true },
+            { name: "remote", connected: true },
+          ],
+        });
+      }
+    }
+    await settle(fixture);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+    settings.setSwimlaneDimension("none");
+    store.filtersSignal.set(defaultFilters());
+    localStorage.removeItem(SETTINGS_STORAGE_KEY);
+  });
+
+  it("renders the four seeded cards, which the rest of this suite depends on", () => {
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll("app-card").length).toBe(4);
+  });
+
+  // --- grouping off: the board is exactly the board ----------------------
+
+  it("renders NO band chrome and the single strip when grouping is none", () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(bands()).withContext("no band component at all").toEqual([]);
+    expect(el.querySelector(".swimlane-title")).toBeNull();
+    expect(el.querySelector(".swimlanes")).toBeNull();
+    expect(el.querySelector(".board-strip")).not.toBeNull();
+    expect(el.querySelectorAll("app-column").length).toBe(5);
+  });
+
+  it("turning grouping off restores the single strip", async () => {
+    settings.setSwimlaneDimension("host");
+    await settle(fixture);
+    expect(bands().length).toBe(2);
+
+    settings.setSwimlaneDimension("none");
+    await settle(fixture);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(bands()).toEqual([]);
+    expect(el.querySelector(".board-strip")).not.toBeNull();
+    expect(el.querySelectorAll("app-column").length).toBe(5);
+  });
+
+  // --- grouping on -------------------------------------------------------
+
+  it("groups by host: one band per host, each holding every visible column", async () => {
+    settings.setSwimlaneDimension("host");
+    await settle(fixture);
+
+    expect(bandLabelsRendered()).toEqual(["local", "remote"]);
+    for (const band of bands()) {
+      expect(columnsIn(band)).toEqual(["working", "blocked", "idle", "done", "unknown"]);
+    }
+    // The board's own strip is gone: grouping replaces it, never wraps it.
+    expect((fixture.nativeElement as HTMLElement).querySelector(".board-strip")).toBeNull();
+  });
+
+  it("a band's count is its own cards, not the board's", async () => {
+    settings.setSwimlaneDimension("host");
+    await settle(fixture);
+
+    const counts = bands().map((band) => band.querySelector(".swimlane-count")?.textContent?.trim());
+    expect(counts).toEqual(["2", "2"]);
+  });
+
+  it("keeps status columns' order and empty slots inside every band", async () => {
+    settings.setSwimlaneDimension("host");
+    await settle(fixture);
+
+    const local = bands()[0]!;
+    // `local` holds one working and one blocked card; the other three
+    // columns are empty and keep their slots.
+    expect(columnsIn(local)).toEqual(["working", "blocked", "idle", "done", "unknown"]);
+    expect(local.querySelectorAll("app-card").length).toBe(2);
+  });
+
+  it("hiding a status removes that column from EVERY band, order unchanged", async () => {
+    settings.setSwimlaneDimension("host");
+    await settle(fixture);
+    store.toggleStatus("idle");
+    await settle(fixture);
+
+    for (const band of bands()) {
+      expect(columnsIn(band)).toEqual(["working", "blocked", "done", "unknown"]);
+    }
+  });
+
+  it("does not render a band left with no cards by the filters", async () => {
+    settings.setSwimlaneDimension("host");
+    await settle(fixture);
+    expect(bandLabelsRendered()).toEqual(["local", "remote"]);
+
+    store.toggleHost("local");
+    await settle(fixture);
+
+    expect(bandLabelsRendered()).withContext("the emptied band closes up").toEqual(["remote"]);
+  });
+
+  it("groups by repository: linked worktrees of one repo share a band", async () => {
+    settings.setSwimlaneDimension("repository");
+    await settle(fixture);
+
+    // p1/p2/p3 are all `kanhrd`; p4 has no project at all.
+    expect(bandLabelsRendered()).toEqual(["kanhrd", COPY.swimlane.ungrouped]);
+    expect(bands()[0]!.querySelectorAll("app-card").length).toBe(3);
+  });
+
+  it("groups by checkout path: the same worktrees separate", async () => {
+    settings.setSwimlaneDimension("checkout");
+    await settle(fixture);
+
+    expect(bandLabelsRendered()).toEqual(["~/src/kanhrd", "~/src/kanhrd-wt", COPY.swimlane.ungrouped]);
+  });
+
+  it("puts the no-project band last and names it from copy, never from an empty label", async () => {
+    settings.setSwimlaneDimension("repository");
+    await settle(fixture);
+
+    const labels = bandLabelsRendered();
+    expect(labels[labels.length - 1]).toBe(COPY.swimlane.ungrouped);
+    expect(labels).not.toContain("");
+  });
+
+  it("qualifies a tab band with its host only when the tab name collides", async () => {
+    settings.setSwimlaneDimension("tab");
+    await settle(fixture);
+
+    // Both hosts have a tab called `main`, so both headings say which host.
+    expect(bandLabelsRendered()).toEqual(["local / main", "remote / main"]);
+  });
+
+  it("exposes no drag affordance anywhere on a band", async () => {
+    settings.setSwimlaneDimension("host");
+    await settle(fixture);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector("[cdkDrag], .cdk-drag, .cdk-drop-list, [cdkDropList]")).toBeNull();
+    expect(el.querySelector(".drag-handle")).toBeNull();
+    for (const band of bands()) {
+      expect(band.getAttribute("draggable")).toBeNull();
+      expect(band.querySelector("[draggable='true']")).toBeNull();
+    }
+  });
+
+  it("shows the no-matches empty state rather than a blank region when every band is filtered away", async () => {
+    settings.setSwimlaneDimension("host");
+    await settle(fixture);
+    store.toggleHost("local");
+    store.toggleHost("remote");
+    await settle(fixture);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(bands()).toEqual([]);
+    expect(el.querySelector(".no-matches")?.textContent).toContain(COPY.emptyState.noMatches);
+  });
+});
+
+/**
+ * Task 4.2 / proposal Q5: virtualization is per column *per band*, so bands
+ * multiply the scrollers. This pins the count at the documented 600-pane
+ * fixture shape (`apps/web/e2e/fixtures/six-hundred-panes.ts`: 3 hosts × 4
+ * workspaces × 5 tabs × 10 panes, on the same status cycle) so a later
+ * change to the thresholds or the banding cannot quietly multiply them.
+ */
+describe("Board: scroller count at the 600-pane fixture", () => {
+  let ws: FakeWsClient;
+  let fixture: ComponentFixture<Board>;
+  let httpMock: HttpTestingController;
+  let settings: SettingsService;
+
+  const SETTINGS_STORAGE_KEY = "kanhrd.settings";
+  const HOSTS = ["local", "remote-a", "remote-b"];
+  const STATUS_CYCLE: AgentStatus[] = [
+    "working",
+    "working",
+    "idle",
+    "idle",
+    "blocked",
+    "done",
+    "done",
+    "unknown",
+    "working",
+    "idle",
+  ];
+
+  function sixHundredPanes() {
+    const panes: unknown[] = [];
+    let i = 0;
+    for (const host of HOSTS) {
+      for (let w = 0; w < 4; w++) {
+        for (let t = 0; t < 5; t++) {
+          for (let p = 0; p < 10; p++) {
+            panes.push({
+              id: `${host}-w${w}-t${t}-p${p}`,
+              host,
+              workspace: { id: `${host}-ws${w}`, name: `workspace ${w}` },
+              tab: { id: `${host}-ws${w}-tab${t}`, name: `tab ${t}` },
+              agent_status: STATUS_CYCLE[i % STATUS_CYCLE.length],
+            });
+            i++;
+          }
+        }
+      }
+    }
+    return panes as { host: string }[];
+  }
+
+  const ALL = sixHundredPanes();
+
+  function scrollers(): number {
+    return (fixture.nativeElement as HTMLElement).querySelectorAll("cdk-virtual-scroll-viewport")
+      .length;
+  }
+
+  beforeEach(async () => {
+    localStorage.removeItem(SETTINGS_STORAGE_KEY);
+    ws = new FakeWsClient();
+    ws.request.and.callFake((host: string, method: string) => {
+      if (method === "pane.list") {
+        return Promise.resolve({ panes: ALL.filter((p) => p.host === host) });
+      }
+      if (method === "events.subscribe") return Promise.resolve({ subscription_id: `s-${host}` });
+      if (method === "bridge.capabilities") {
+        return Promise.resolve({
+          tier: 1,
+          terminal: false,
+          paneResize: false,
+          paneGraphics: false,
+          outputPollIntervalMs: 0,
+          paneCreate: false,
+          paneClose: false,
+          paneMove: false,
+          paneRename: false,
+          tabCrud: false,
+          workspaceCrud: false,
+        });
+      }
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+
+    await TestBed.configureTestingModule({
+      imports: [Board],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: ws },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({})).asObservable() } },
+        { provide: Router, useValue: { navigate: jasmine.createSpy("navigate").and.resolveTo(true) } },
+      ],
+    }).compileComponents();
+    httpMock = TestBed.inject(HttpTestingController);
+
+    fixture = TestBed.createComponent(Board);
+    settings = TestBed.inject(SettingsService);
+    TestBed.inject(PanesStore).filtersSignal.set(defaultFilters());
+    fixture.detectChanges();
+    await settle(fixture);
+    for (const req of httpMock.match("/api/hosts")) {
+      if (!req.cancelled) {
+        req.flush({ hosts: HOSTS.map((name) => ({ name, connected: true })) });
+      }
+    }
+    await settle(fixture);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+    settings.setSwimlaneDimension("none");
+    localStorage.removeItem(SETTINGS_STORAGE_KEY);
+  });
+
+  it("seeds all 600 panes", () => {
+    expect(ALL.length).toBe(600);
+  });
+
+  it("ungrouped: five columns, every one of them over the threshold — 5 scrollers", () => {
+    // working 180, idle 180, done 120, blocked 60, unknown 60.
+    expect(scrollers()).toBe(5);
+  });
+
+  it("grouped by host: 200 panes a band puts two columns a band over it — 6 scrollers", async () => {
+    settings.setSwimlaneDimension("host");
+    await settle(fixture);
+
+    // Per band: working 60, idle 60 (virtualized); blocked 20, done 40,
+    // unknown 20 (plain). Three bands.
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll("app-swimlane").length).toBe(3);
+    expect(scrollers()).toBe(6);
   });
 });

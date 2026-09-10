@@ -18,7 +18,9 @@ import type { AgentStatus } from "@kanhrd/schema";
 import { LucidePlus, LucideRefreshCw, LucideTriangleAlert, LucideUnplug, LucideX } from "../shared/icons";
 import { COPY } from "../shared/copy";
 import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from "../state/panes.store";
+import { SettingsService } from "../state/settings.service";
 import { Column, mobileViewportSignal } from "./column";
+import { Swimlane, bandLabels, pageIndex } from "./swimlane";
 import { FilterBar } from "./filter-bar";
 import { StatusSwitcher } from "./status-switcher";
 import { Rail } from "../rail/rail";
@@ -42,13 +44,12 @@ import { EmptyState } from "./empty-state";
 export const SCOPE_RESOLVE_GRACE_MS = 4000;
 
 /**
- * The resting page index of the strip. Deterministic by construction: with
- * `scroll-snap-type: x mandatory` and columns at `flex: 0 0 100%`, a settled
- * `scrollLeft` is always a whole multiple of `clientWidth`.
+ * The resting page index of a strip. Defined in `swimlane.ts` — every band
+ * pages by the same rule as the board's own single strip, and a band may not
+ * import the board that renders it. Re-exported here because it was the
+ * board's before swimlanes existed.
  */
-export function pageIndex(scrollLeft: number, clientWidth: number): number {
-  return clientWidth > 0 ? Math.round(scrollLeft / clientWidth) : 0;
-}
+export { pageIndex };
 
 /** Three placeholder rows per skeleton column — a static skeleton, never a spinner. */
 export const SKELETON_ROWS = [0, 1, 2] as const;
@@ -93,6 +94,7 @@ export function nearestVisibleStatus(
   selector: "app-board",
   imports: [
     Column,
+    Swimlane,
     FilterBar,
     Rail,
     EmptyState,
@@ -119,10 +121,35 @@ export class Board implements OnDestroy {
   protected readonly skeletonRows = SKELETON_ROWS;
   protected readonly statusOrder = STATUS_COLUMN_ORDER;
   protected readonly columns = this.store.columnsSignal;
+  /**
+   * The bands. Under dimension `none` this is a single `"all"` band the
+   * board deliberately does NOT render through `app-swimlane`: grouping off
+   * means no band chrome at all, and the single-strip path below stays the
+   * one the board has always used.
+   */
+  protected readonly swimlanes = this.store.swimlanesSignal;
   protected readonly loading = this.store.hostsLoading;
   protected readonly error = this.store.hostsError;
   protected readonly capabilities = this.store.capabilitiesSignal;
   protected readonly mobile = mobileViewportSignal();
+  private readonly settings = inject(SettingsService);
+
+  /** Whether any band chrome is rendered at all. `none` is today's board, untouched. */
+  protected readonly grouped = computed(
+    () => this.settings.settings().swimlaneDimension !== "none",
+  );
+
+  /**
+   * Grouping on, but every band empty. Bands with no cards are not rendered
+   * (proposal Q2), so without this the board region would simply go blank.
+   * The filters are the usual reason, and `noMatches` offers the way out.
+   */
+  protected readonly noBands = computed(() => this.grouped() && this.swimlanes().length === 0);
+
+  /** The bands with their headings resolved — copy, host qualification and path elision. */
+  protected readonly bands = computed(() =>
+    bandLabels(this.swimlanes(), this.settings.settings().swimlaneDimension),
+  );
 
   // --- the pager: one state, two views ----------------------------------
   //
