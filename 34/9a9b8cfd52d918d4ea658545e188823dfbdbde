@@ -1,0 +1,20 @@
+docs/adr/0003-delegated-auth-with-loopback-default.md
+  s_628531aeead175::t_1d3ca159d4106f 55-58
+  s_628531aeead175::t_3bfe21fb244bd7 20-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "349a9b8cfd52d918d4ea658545e188823dfbdbde",
+  "prompts": {},
+  "sessions": {
+    "s_628531aeead175": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1b03176e-7d05-52aa-a18c-71ce02428c31",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
