@@ -1,0 +1,87 @@
+openspec/changes/add-host-keybinds-passthrough/proposal.md
+  s_0c2ef12b51a130::t_fd0bc41d69844f 1-100
+apps/web/src/app/settings/settings.scss
+  s_0c2ef12b51a130::t_9799e3048afab0 61-69
+apps/web/src/app/state/keyboard.service.spec.ts
+  s_0c2ef12b51a130::t_eb8ea56daf2186 5,34,37-39
+  s_0c2ef12b51a130::t_5be2905a086e87 161-194
+apps/web/src/app/settings/settings.html
+  s_0c2ef12b51a130::t_9b1287b967f901 127-129
+  s_0c2ef12b51a130::t_5cd10bf9da889d 126
+openspec/changes/add-host-keybinds-passthrough/README.md
+  s_f8e4251c591816::t_35bfae63665add 1-3
+openspec/changes/add-host-keybinds-passthrough/.openspec.yaml
+  s_f8e4251c591816::t_35bfae63665add 1-2
+openspec/changes/add-host-keybinds-passthrough/design.md
+  s_0c2ef12b51a130::t_8b716f6bc496f5 1-118
+apps/web/src/app/settings/settings.spec.ts
+  s_0c2ef12b51a130::t_58975a9a780851 95-112
+  s_0c2ef12b51a130::t_5876f219a865d0 34-40
+openspec/changes/add-host-keybinds-passthrough/tasks.md
+  s_0c2ef12b51a130::t_7e0821b819075c 3-4,8-13,17,21-26,30,34-35
+  s_0c2ef12b51a130::t_d8ce60729cbc15 1-2,5-7,14-16,18-20,27-29,31-33
+apps/bridge/src/herdr/keybinds.ts
+  s_0c2ef12b51a130::t_51074d51928749 1-96
+apps/web/src/app/settings/settings.ts
+  s_0c2ef12b51a130::t_412a7d1c68b721 67-78
+apps/bridge/integration/ws-methods.test.ts
+  s_0c2ef12b51a130::t_8fcd61ecb4404b 59-76
+apps/bridge/src/herdr/keybinds.test.ts
+  s_0c2ef12b51a130::t_a76ee85ab35a5b 1-76
+openspec/changes/add-host-keybinds-passthrough/specs/host-keybinds-passthrough/spec.md
+  s_0c2ef12b51a130::t_4f5f0361f76bbc 1-98
+apps/web/src/app/state/panes.store.ts
+  s_0c2ef12b51a130::t_8df5ec5c55a94a 831-849
+apps/web/src/app/state/keyboard.service.ts
+  s_0c2ef12b51a130::t_14c4ce0912d981 1
+  s_0c2ef12b51a130::t_56fc13ed70fa11 236-262,278-279,283-284
+  s_0c2ef12b51a130::t_243b14573be98a 134-143,147,150,152,160-162
+  s_0c2ef12b51a130::t_f1515e5961e63c 163
+packages/schema/src/wire.ts
+  s_0c2ef12b51a130::t_67befc61f1e3f3 265-279
+apps/bridge/src/herdr/hosts.ts
+  s_0c2ef12b51a130::t_1709636b91a8e3 105-106
+  s_0c2ef12b51a130::t_67dbd762ff86ac 125-143
+  s_0c2ef12b51a130::t_fc141b6dc46405 33
+  s_0c2ef12b51a130::t_cb7509e42aa9a2 144-145
+apps/bridge/src/ws/dispatch.test.ts
+  s_0c2ef12b51a130::t_2bc7b96f7d792c 143,148-170
+  s_0c2ef12b51a130::t_2679eb6a379c3f 41,48
+  s_f8e4251c591816::t_23b8bdf7723fc1 118,191,246,261,321,339,362,396,411,434,449,461,481,496,531
+  s_0c2ef12b51a130::t_13d622cc7e9a05 171
+apps/web/src/app/shared/keyboard-help-overlay.spec.ts
+  s_0c2ef12b51a130::t_f03e4f5398dc55 16
+apps/bridge/src/ws/dispatch.ts
+  s_0c2ef12b51a130::t_2adf8aa2c3cd06 40-42,47-48
+  s_0c2ef12b51a130::t_48321d4e065d21 90-105
+  s_0c2ef12b51a130::t_9069c335e4e029 118
+  s_0c2ef12b51a130::t_309a8611a5c6b3 89,106
+apps/bridge/package.json
+  s_0c2ef12b51a130::t_4fb5c7d8dcf3e6 20,23,30
+pnpm-lock.yaml
+  s_0c2ef12b51a130::t_c2085f47e705fd 28-30,3254-3257,6774-6775
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "5195195991acaa5a2fecc5ce7340c740b11e87d1",
+  "prompts": {},
+  "sessions": {
+    "s_0c2ef12b51a130": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4bc0acc9-b227-5727-a300-dcbf4278f457",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    },
+    "s_f8e4251c591816": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d12f5dab-ef42-467f-8f5f-833d86b7562a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
