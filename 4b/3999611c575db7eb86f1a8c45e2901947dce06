@@ -1,0 +1,75 @@
+apps/web/src/app/board/column.html
+  s_f8e4251c591816::t_79a882a5c83fe5 1,11-12,16
+  s_f8e4251c591816::t_32dca8e15ed451 3-4,6
+  s_f8e4251c591816::t_07af8028b3de87 8
+apps/web/src/app/board/column.ts
+  s_f8e4251c591816::t_79a882a5c83fe5 86-88,96,100-102,104-111,134-151
+  s_f8e4251c591816::t_32dca8e15ed451 4,7-33,36-53,55-62,66,75,77-80,82
+  s_f8e4251c591816::t_59905802e27f06 89-93,97,99,112-114,116,124
+  s_f8e4251c591816::t_07af8028b3de87 1,94-95,103,115,117-123
+  s_f8e4251c591816::t_6647c05004624d 54,76,152
+  s_f8e4251c591816::t_dcdc97cb5285a9 98,125-133
+apps/web/src/app/board/board.scss
+  s_f8e4251c591816::t_c1e806d3660f38 1,7-8,14-44,47-54,60,62-75,83-84,88,92,96-97,105-106,115-124,130,135-138,141-142,145,147,149-151,154,161-171,190-191,205,213-216,222-236,238-247,249-253,255-257,259-265,267,269-271,273-281
+  s_f8e4251c591816::t_937585e08c5962 176,189
+  s_f8e4251c591816::t_716d78b54d4e46 210-211,218-221
+  s_f8e4251c591816::t_6647c05004624d 258
+  s_f8e4251c591816::t_bb991984ecbf29 2-6,209,248,272
+  s_f8e4251c591816::t_c21d2346e14ab3 76,237
+apps/web/src/app/board/status-switcher.spec.ts
+  s_f8e4251c591816::t_ed5020627f334c 101
+  s_f8e4251c591816::t_57a2af894ba2f0 1-100,102-118
+apps/web/src/app/board/filter-bar.html
+  s_f8e4251c591816::t_39d6f1662f6092 8,15,17,27,29,32-33
+apps/web/src/app/board/empty-state.html
+  s_f8e4251c591816::t_199f2aabc09902 2-7,9-32
+apps/web/src/app/board/board.ts
+  s_f8e4251c591816::t_a06067cda5ca45 1,5-9,11,15,18-26,36-62,65-76,84,87-88,94-116,118-133,137-170,172-181,229-243,245-249,263,268-277,279,282-302,304-305,322-329
+  s_f8e4251c591816::t_6647c05004624d 244,250,306,330-331
+  s_f8e4251c591816::t_6db363668ccdc9 27-35,171,303
+apps/web/src/app/board/column.scss
+  s_f8e4251c591816::t_32dca8e15ed451 1-11,15-18,23,25-28,30-37,39-44,47,50-51,53-57,61-63,67-82
+apps/web/src/app/board/empty-state.spec.ts
+  s_f8e4251c591816::t_9d11cc48ce7606 88-142
+  s_f8e4251c591816::t_6647c05004624d 143-144
+  s_f8e4251c591816::t_54e91fdd621f69 36,58
+apps/web/src/app/board/empty-state.scss
+  s_f8e4251c591816::t_199f2aabc09902 1-6,12-14,18-23,27-30,34-46,48-49,51-58,63-95,101-104,108-112
+  s_f8e4251c591816::t_6647c05004624d 96-97
+apps/web/src/app/board/filter-bar.ts
+  s_f8e4251c591816::t_39d6f1662f6092 3,17,19-21
+apps/web/src/app/board/filter-bar.scss
+  s_f8e4251c591816::t_39d6f1662f6092 1-7,11-12,18,24-34,37-38,41-45,49-50,53-58,60,62-64,66-87
+apps/web/src/app/board/board.html
+  s_f8e4251c591816::t_c1e806d3660f38 3-11,42-53,55-69,78-95,97-109
+apps/web/src/app/board/board.spec.ts
+  s_f8e4251c591816::t_6647c05004624d 791-792
+  s_f8e4251c591816::t_f0a6b3fc622b64 269,346
+  s_f8e4251c591816::t_4a9ca23bb7083c 8-11,487-790
+apps/web/src/app/board/status-switcher.ts
+  s_f8e4251c591816::t_f0a6b3fc622b64 1-69
+apps/web/src/app/shared/tokens.scss
+  s_f8e4251c591816::t_431a50fb59ac60 147
+apps/web/src/app/board/empty-state.ts
+  s_f8e4251c591816::t_199f2aabc09902 1,3-4,9-13,15-26,30,37-43,49-51,71,73-75,85-96
+apps/web/src/app/board/status-switcher.html
+  s_f8e4251c591816::t_1b18544bf93a5d 1-22
+apps/web/src/app/board/status-switcher.scss
+  s_f8e4251c591816::t_10057d32781414 1-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4b3999611c575db7eb86f1a8c45e2901947dce06",
+  "prompts": {},
+  "sessions": {
+    "s_f8e4251c591816": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d12f5dab-ef42-467f-8f5f-833d86b7562a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
