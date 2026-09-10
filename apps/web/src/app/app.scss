@@ -60,7 +60,11 @@ main {
     content: "";
     position: absolute;
     left: 50%;
-    bottom: 0.74em;
+    /* Tuned against Shippori Mincho's real metrics: its baseline sits
+     * 0.058em above the line-box bottom where Georgia's sat 0.154em, so
+     * the value tuned on the fallback floated the crook at 2.1x its
+     * intended gap above the `n`. */
+    bottom: 0.638em;
     width: 0.46em;
     height: 0.46em;
     transform: translateX(-50%);
