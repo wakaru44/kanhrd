@@ -94,6 +94,7 @@ degrade around both gaps.
 ## Getting started
 
 ```bash
+git lfs install   # once per machine; docs images are in LFS (`git lfs pull` if you cloned first)
 pnpm install
 pnpm --filter @kanhrd/bridge dev   # points at ~/.config/herdr/herdr.sock by default
 ```

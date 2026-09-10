@@ -9,11 +9,14 @@ This is a how-to guide. It assumes you already have the repo cloned and
 - Python 3.10+
 - [pre-commit](https://pre-commit.com/): `pipx install pre-commit` (preferred
   over `pip install`, since it keeps pre-commit out of your system Python)
+- [Git LFS](https://git-lfs.com/): `brew install git-lfs` (or your distro's
+  package). Screenshots and other images live in LFS — see below.
 
 Verify the install:
 
 ```bash
 pre-commit --version
+git lfs version
 ```
 
 ## Install the hooks
@@ -22,11 +25,39 @@ Run once per clone:
 
 ```bash
 cd kanhrd
-pre-commit install --hook-type pre-commit --hook-type pre-push
+make hooks
+# same as:
+#   git lfs install --local --force
+#   pre-commit install --hook-type pre-commit --hook-type pre-push
 ```
 
 This wires both hook stages so commit-time and push-time checks actually run
 (pre-commit only installs the `pre-commit` stage by default).
+
+Order matters: Git LFS and pre-commit both want the `pre-push` hook. Install
+LFS first and pre-commit chains it as `pre-push.legacy` instead of replacing
+it. If you run them the other way round, `git lfs install --local` refuses
+with "Hook already exists: pre-push".
+
+## Git LFS
+
+`.gitattributes` routes `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.webp`,
+`*.mp4` and `*.mov` through Git LFS — `docs/screenshots/` is expected to keep
+growing. The self-hosted fonts under `apps/web/public/fonts/` are deliberately
+_not_ in LFS: they are already committed as ordinary blobs and converting them
+would rewrite history for no gain.
+
+Install LFS before cloning (`git lfs install`, once per machine) and the
+images come down with the clone. If you cloned first and got pointer files
+instead of pictures:
+
+```bash
+git lfs pull
+```
+
+CI does not need the images — no job reads `docs/`, and the Docker build
+ignores it — so `.forgejo/workflows/ci.yml` checks out without `lfs: true`
+on purpose. Add it to a job the day one actually consumes a tracked asset.
 
 ## What runs when
 

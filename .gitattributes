@@ -1,0 +1,19 @@
+# Line endings. The pre-commit `mixed-line-ending --fix=lf` hook is
+# authoritative; this mirrors it so checkouts agree with the lint gate.
+* text=auto eol=lf
+
+# Screenshots and other raster/video assets go to Git LFS. They grow, they
+# never diff usefully, and docs/screenshots/ is expected to keep filling up.
+*.png  filter=lfs diff=lfs merge=lfs -text
+*.jpg  filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.gif  filter=lfs diff=lfs merge=lfs -text
+*.webp filter=lfs diff=lfs merge=lfs -text
+*.mp4  filter=lfs diff=lfs merge=lfs -text
+*.mov  filter=lfs diff=lfs merge=lfs -text
+
+# Fonts stay ordinary git blobs. apps/web/public/fonts/*.woff2 is already
+# committed; converting it would rewrite existing objects for no gain (four
+# files, frozen, ~520K total). No rule above matches *.woff2 — this line only
+# marks them binary so nothing eol-normalises them.
+*.woff2 -text
