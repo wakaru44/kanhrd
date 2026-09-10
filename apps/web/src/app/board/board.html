@@ -1,7 +1,14 @@
 @if (scopePillLabel(); as label) {
   <div class="scope-pill">
-    <span>In: {{ label }}</span>
-    <button type="button" class="scope-pill-close" title="Clear scope" aria-label="Clear scope" (click)="clearScope()">
+    <span class="scope-dot"></span>
+    <span>{{ label }}</span>
+    <button
+      type="button"
+      class="scope-pill-close"
+      title="Clear scope"
+      aria-label="Clear scope"
+      (click)="clearScope()"
+    >
       <svg lucideX class="icon"></svg>
     </button>
   </div>
@@ -32,10 +39,34 @@
   }
 </div>
 
-@if (loading()) {
-  <p class="state loading">loading hosts…</p>
+@if (showSkeleton()) {
+  <div class="board-skeleton" aria-hidden="true">
+    @for (status of statusOrder; track status) {
+      <div class="skeleton-column">
+        <div class="skeleton-header"></div>
+        @for (row of skeletonRows; track row) {
+          <div class="skeleton-card"></div>
+        }
+      </div>
+    }
+  </div>
+  <p class="state loading">{{ copy.loading.board }}</p>
 } @else if (error()) {
-  <p class="state error">Could not reach the bridge: {{ error() }}</p>
+  <div class="state state-failed" role="alert">
+    <svg lucideTriangleAlert class="icon"></svg>
+    <span class="state-text">{{ error() }}</span>
+    <button type="button" class="state-action" (click)="retry()">
+      <svg lucideRefreshCw class="icon"></svg>
+      <span>{{ copy.loading.retry }}</span>
+    </button>
+  </div>
+} @else if (scopeUnavailable()) {
+  <div class="state state-unavailable" role="alert">
+    <span class="state-text">{{ copy.emptyState.scopeUnavailable }}</span>
+    <button type="button" class="state-action" (click)="clearScope()">
+      {{ copy.emptyState.notFoundAction }}
+    </button>
+  </div>
 } @else {
   <app-empty-state #emptyState [hosts]="store.hostsSignal()" />
   @if (!emptyState.show()) {
@@ -44,11 +75,38 @@
         <div class="rail-backdrop" (click)="layout.closeRail()"></div>
       }
       <app-rail class="rail" [class.open]="layout.railOpen()" />
-      <div class="board-grid">
-        @for (status of statusOrder; track status) {
-          @if (!isStatusHidden(status)) {
-            <app-column [status]="status" [panes]="columns()[status]" [capabilities]="capabilities()" />
+      <div class="board-region">
+        @if (staleHosts().length > 0) {
+          <p class="stale-note">
+            <svg lucideUnplug class="icon"></svg>
+            <span>{{ copy.state.stale }}</span>
+          </p>
+        }
+
+        @if (noMatches()) {
+          <app-empty-state variant="noMatches" (clearFilters)="clearFilters()" />
+        } @else {
+          @if (mobile()) {
+            <app-status-switcher
+              [statuses]="visibleStatuses()"
+              [counts]="visibleCounts()"
+              [selectedIndex]="currentIndex()"
+              (select)="selectStatus($event)"
+            />
           }
+          <div class="board-grid board-strip" #strip (scroll)="onStripScroll()">
+            @for (status of visibleStatuses(); track status) {
+              <app-column
+                #columnEl
+                role="tabpanel"
+                [attr.id]="'column-panel-' + status"
+                [attr.aria-labelledby]="'switcher-tab-' + status"
+                [status]="status"
+                [panes]="columns()[status]"
+                [capabilities]="capabilities()"
+              />
+            }
+          </div>
         }
       </div>
     </div>

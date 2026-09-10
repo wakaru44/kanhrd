@@ -33,7 +33,7 @@ describe("EmptyState", () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.show()).toBe(true);
     expect(el().querySelector(".empty-state")).not.toBeNull();
-    expect(el().textContent).toContain("Connect a herdr host");
+    expect(el().textContent).toContain("no pens yet.");
   });
 
   it("does not render right away when a host is merely disconnected", () => {
@@ -55,7 +55,7 @@ describe("EmptyState", () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.show()).toBe(true);
-    expect(el().textContent).toContain("Waiting for herdr to come online");
+    expect(el().textContent).toContain("waiting for a pen…");
   });
 
   it("does not render when at least one host is connected", () => {
@@ -83,5 +83,62 @@ describe("EmptyState", () => {
     // Only 3s since the most recent disconnect (the earlier 3s+3s don't
     // carry over), so still below the 5s grace period.
     expect(fixture.componentInstance.show()).toBe(false);
+  });
+});
+
+describe("EmptyState: the no-matches variant", () => {
+  let fixture: ComponentFixture<EmptyState>;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [EmptyState],
+      providers: [provideZonelessChangeDetection()],
+    });
+    fixture = TestBed.createComponent(EmptyState);
+    fixture.componentRef.setInput("variant", "noMatches");
+    fixture.componentRef.setInput("hosts", [{ name: "local", connected: true }]);
+    fixture.detectChanges();
+  });
+
+  it("always shows, whatever the pens are doing", () => {
+    expect(fixture.componentInstance.show()).toBe(true);
+  });
+
+  it("offers clear filters as the next step, with no setup instructions", () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector(".no-matches")?.textContent).toContain("nothing matches these filters.");
+    expect(el.querySelector(".action")?.textContent?.trim()).toBe("clear filters");
+    expect(el.querySelector(".config-snippet")).withContext("never setup instructions").toBeNull();
+  });
+
+  it("emits clearFilters when the action is used", () => {
+    let emitted = 0;
+    fixture.componentInstance.clearFilters.subscribe(() => (emitted += 1));
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(".action")?.click();
+    expect(emitted).toBe(1);
+  });
+});
+
+describe("EmptyState: the no-pens variant is a tutorial", () => {
+  let fixture: ComponentFixture<EmptyState>;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [EmptyState],
+      providers: [provideZonelessChangeDetection()],
+    });
+    fixture = TestBed.createComponent(EmptyState);
+    fixture.componentRef.setInput("hosts", []);
+    fixture.detectChanges();
+  });
+
+  it("renders the config snippet, a copy action and the operating-guide link", () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector(".empty-state")?.textContent).toContain("no pens yet.");
+    expect(el.querySelector(".config-snippet")?.textContent).toContain("socket:");
+    expect(el.querySelector(".copy-action")).not.toBeNull();
+    const link = el.querySelector<HTMLAnchorElement>(".guide-link");
+    expect(link?.textContent?.trim()).toBe("read the operating guide");
+    expect(link?.href).toContain("OPERATING.md");
   });
 });

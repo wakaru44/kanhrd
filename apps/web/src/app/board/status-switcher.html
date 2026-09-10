@@ -1,0 +1,22 @@
+<div class="switcher" role="tablist" [attr.aria-label]="switcherLabel" (keydown)="onKeydown($event)">
+  @for (status of statuses(); track status; let i = $index) {
+    <button
+      #segment
+      type="button"
+      role="tab"
+      class="segment"
+      [class.selected]="i === selected()"
+      [id]="'switcher-tab-' + status"
+      [attr.aria-controls]="'column-panel-' + status"
+      [attr.aria-selected]="i === selected()"
+      [attr.tabindex]="i === selected() ? 0 : -1"
+      [attr.aria-label]="itemLabel(status, i)"
+      (click)="choose(i)"
+    >
+      <span class="segment-label">{{ label(status) }}</span>
+      @if (i === selected()) {
+        <span class="segment-count">{{ counts()[i] }}</span>
+      }
+    </button>
+  }
+</div>

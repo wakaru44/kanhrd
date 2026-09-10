@@ -1,0 +1,69 @@
+import { Component, ElementRef, computed, input, output, viewChildren } from "@angular/core";
+import type { AgentStatus } from "@kanhrd/schema";
+import { COPY, fill } from "../shared/copy";
+
+/**
+ * The mobile status switcher: a persistent segmented control between the
+ * filter bar and the paging strip (docs/DESIGN-SYSTEM.md, "Status switcher
+ * (mobile only)"; docs/UX-GUIDELINES.md, "Board paging model").
+ *
+ * It renders one `role="tab"` per *visible* status, in `STATUS_COLUMN_ORDER`
+ * — the caller decides which statuses those are. It owns no selection state:
+ * `selectedIndex` comes in and `select` goes out, so a swipe on the strip and
+ * a tap on a segment are one state with two views. It is rendered only below
+ * `--breakpoint-mobile`; the desktop board has side-by-side columns.
+ */
+@Component({
+  selector: "app-status-switcher",
+  imports: [],
+  templateUrl: "./status-switcher.html",
+  styleUrl: "./status-switcher.scss",
+})
+export class StatusSwitcher {
+  /** The visible statuses, already ordered by `STATUS_COLUMN_ORDER`. */
+  readonly statuses = input.required<readonly AgentStatus[]>();
+  /** Card count per visible status, index-aligned with `statuses`. */
+  readonly counts = input.required<readonly number[]>();
+  /** Index into `statuses` of the column the strip is currently resting on. */
+  readonly selectedIndex = input.required<number>();
+
+  readonly select = output<number>();
+
+  protected readonly switcherLabel = COPY.nav.statusSwitcher;
+
+  private readonly segments = viewChildren<ElementRef<HTMLButtonElement>>("segment");
+
+  protected readonly selected = computed(() => this.selectedIndex());
+
+  protected label(status: AgentStatus): string {
+    return COPY.status[status];
+  }
+
+  /** `{status} — {count} cards`: the accessible name carries the count for every segment, even though only the selected one shows it. */
+  protected itemLabel(status: AgentStatus, index: number): string {
+    return fill(COPY.nav.statusSwitcherItem, {
+      status: COPY.status[status],
+      count: String(this.counts()[index] ?? 0),
+    });
+  }
+
+  protected choose(index: number): void {
+    this.select.emit(index);
+  }
+
+  /** Left/right arrows move between segments; the strip follows via `select`. */
+  protected onKeydown(event: KeyboardEvent): void {
+    const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (delta === 0) {
+      return;
+    }
+    const count = this.statuses().length;
+    if (count === 0) {
+      return;
+    }
+    event.preventDefault();
+    const next = (this.selectedIndex() + delta + count) % count;
+    this.select.emit(next);
+    this.segments()[next]?.nativeElement.focus();
+  }
+}

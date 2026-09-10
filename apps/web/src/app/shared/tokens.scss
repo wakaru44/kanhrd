@@ -144,7 +144,7 @@
   --breakpoint-mobile: 900px;
   --card-compact-height: 44px; /* compact card row, excluding gap */
   --card-gap: 8px; /* vertical gap between cards in a column */
-  --column-snap-width: 85vw; /* one column per snap position below 900px */
+  --switcher-height: 40px; /* mobile status switcher, also its tap target */
 
   /* radii — modals have no radius; prefer square + hairline */
   --radius-sm: 4px; /* chips, host seals (hanko) */

@@ -1,65 +1,123 @@
+/*
+ * Page-level board empty states. Hairlines, no fill, no radius on the
+ * container: the page itself is the surface (docs/DESIGN-SYSTEM.md,
+ * "Empty state").
+ */
+
 :host {
   display: block;
 }
 
 .empty-state {
-  max-width: 32rem;
-  margin: 2rem auto;
-  padding: 1.5rem;
-  border-radius: 10px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
+  max-width: var(--content-max-width);
+  margin: var(--sp-8) auto;
+  padding: var(--sp-6) var(--sp-4);
   text-align: left;
 
   h2 {
-    margin: 0 0 0.75rem;
-    font-size: 1.05rem;
+    margin: 0 0 var(--sp-3);
+    font-family: var(--font-display);
+    font-size: var(--fs-h2);
+    line-height: var(--lh-h2);
+    font-weight: var(--fw-regular);
+    color: var(--ink);
   }
 
   p {
-    margin: 0.75rem 0 0.35rem;
-    color: var(--text-dim);
-    font-size: 0.85rem;
+    margin: var(--sp-4) 0 var(--sp-2);
+    color: var(--ink-soft);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
   }
 }
 
+.no-matches {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-4);
+}
+
+.snippet-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+}
+
 .config-snippet {
+  flex: 1;
+  min-width: 0;
   margin: 0;
-  padding: 0.6rem 0.75rem;
-  border-radius: 6px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 0.78rem;
+  padding: var(--sp-3);
+  background: var(--paper-sunk);
+  border: var(--elev-1);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
   overflow-x: auto;
   white-space: pre;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  padding: 0 var(--sp-4);
+  border: var(--elev-3);
+  border-radius: var(--radius-md);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+
+  &:hover {
+    border: var(--elev-3);
+    background: var(--ochre-tint);
+  }
+}
+
+.copy-action {
+  flex: none;
+}
+
+.guide-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  color: var(--ochre-ink);
+  font-size: var(--fs-body);
 }
 
 .heartbeat {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  color: var(--text-dim);
-  font-size: 0.8rem;
+  gap: var(--sp-2);
+  margin-top: var(--sp-6);
+  color: var(--ink-mute);
+  font-size: var(--fs-small);
 }
 
 .pulse-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: var(--status-working);
-  animation: pulse 1.6s ease-in-out infinite;
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: var(--radius-pill);
+  background: var(--ochre);
+  animation: pulse 1.6s var(--ease-in-out) infinite;
 }
 
 @keyframes pulse {
   0%,
   100% {
     opacity: 0.35;
-    transform: scale(0.85);
   }
   50% {
     opacity: 1;
-    transform: scale(1);
   }
 }

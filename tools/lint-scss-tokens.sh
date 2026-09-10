@@ -20,10 +20,6 @@ REM='(^|[^-a-zA-Z0-9_])[0-9]*\.?[0-9]+rem\b'
 # deleted as its component wave migrates to tokens (openspec change
 # add-l-brand-neo-shepherd-redesign, sections 7-12). Nothing may be added.
 LEGACY=(
-  apps/web/src/app/board/board.scss
-  apps/web/src/app/board/column.scss
-  apps/web/src/app/board/empty-state.scss
-  apps/web/src/app/board/filter-bar.scss
 )
 
 is_legacy() {
