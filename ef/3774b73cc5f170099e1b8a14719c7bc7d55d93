@@ -1,0 +1,71 @@
+openspec/changes/add-terminal-top-bar/specs/keyboard-shortcuts/spec.md
+  s_847f44d3c67cda::t_52aa8293ad6014 23,53,59,64
+openspec/changes/add-terminal-top-bar/proposal.md
+  s_847f44d3c67cda::t_711530fd070a4b 81-91,95-97,109,144
+  s_847f44d3c67cda::t_6656a51360ee19 100-105
+openspec/changes/add-parked-columns/proposal.md
+  s_847f44d3c67cda::t_2e0570e3592435 37-41,66,87,90-92,97,160-161,165
+  s_847f44d3c67cda::t_abc95bb332f0af 122-125,241-246
+  s_847f44d3c67cda::t_a635b9671f19d5 175-240,247-256,258-266
+openspec/changes/add-terminal-top-bar/specs/terminal-top-bar/spec.md
+  s_847f44d3c67cda::t_c90af60eebcc4a 194-195,197-207,215-216,234-236,287-304
+  s_847f44d3c67cda::t_52aa8293ad6014 208,210,214,218,220,243,251,275,277,283
+  s_847f44d3c67cda::t_68205d046f2174 351-355,359-362
+  s_847f44d3c67cda::t_0f7d28ee6313e1 373,378-379
+  s_847f44d3c67cda::t_bdc94ca99438c2 357-358
+  s_847f44d3c67cda::t_2a21b2e332c828 306-347,374-377
+  s_847f44d3c67cda::t_6b82e7f310cbc8 130-142,187-190
+  s_847f44d3c67cda::t_3c65907a83595e 146
+  s_847f44d3c67cda::t_462d6dfaef84da 217,305,356
+openspec/changes/add-parked-columns/design.md
+  s_847f44d3c67cda::t_85554431f7c31c 9-31
+  s_847f44d3c67cda::t_bb8e18930fe4d7 389,391-399
+  s_847f44d3c67cda::t_2e0570e3592435 405-406
+openspec/changes/add-terminal-top-bar/tasks.md
+  s_847f44d3c67cda::t_10fbbecb9e6d64 14-16,24
+  s_847f44d3c67cda::t_3c65907a83595e 1,3-13,115-119,122,182-184
+  s_847f44d3c67cda::t_68205d046f2174 17-23
+  s_847f44d3c67cda::t_91e44a58dc434b 25-33
+  s_847f44d3c67cda::t_8a29f7081bc0d8 45-47
+  s_847f44d3c67cda::t_ef526bbe2770e9 139,141,155-165,169-172
+  s_847f44d3c67cda::t_abc95bb332f0af 79,82-84
+  s_847f44d3c67cda::t_5554ce4632264f 39-44,69-73,80-81,124-135
+  s_847f44d3c67cda::t_0f7d28ee6313e1 68,74
+  s_847f44d3c67cda::t_fa73bb3b02e1ea 34-38,48-49
+  s_847f44d3c67cda::t_52aa8293ad6014 140,144,152-153,166-168,187
+docs/UX-GUIDELINES.md
+  h_c3e9cdb69766c6 415-416
+openspec/changes/add-parked-columns/tasks.md
+  s_847f44d3c67cda::t_2e0570e3592435 1,3-5,13-24,103,105,108-112,115-116
+  s_847f44d3c67cda::t_92bfb235c14188 6-12
+openspec/changes/add-terminal-top-bar/design.md
+  s_847f44d3c67cda::t_10fbbecb9e6d64 361-363
+  s_847f44d3c67cda::t_68205d046f2174 253-262,364-368
+  s_847f44d3c67cda::t_711530fd070a4b 152,167,170-176,233,380-388
+  s_847f44d3c67cda::t_91e44a58dc434b 369-376,393-411
+  s_847f44d3c67cda::t_6656a51360ee19 413,422-431
+  s_847f44d3c67cda::t_ef526bbe2770e9 377-379,389-392
+  s_847f44d3c67cda::t_96fe0b3bbf13ac 211,220-232,234-243,354-360
+  s_847f44d3c67cda::t_fa73bb3b02e1ea 277-283,412,414-421
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ef3774b73cc5f170099e1b8a14719c7bc7d55d93",
+  "prompts": {},
+  "humans": {
+    "h_c3e9cdb69766c6": {
+      "author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_847f44d3c67cda": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bec681b6-c1ec-4002-86ac-b9d2e635658e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
