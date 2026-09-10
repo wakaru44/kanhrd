@@ -1,0 +1,30 @@
+apps/bridge/src/herdr/project.ts
+  s_847f44d3c67cda::t_43e7851a9093e2 16-20,22-27,45
+apps/bridge/src/herdr/hosts.test.ts
+  s_847f44d3c67cda::t_43e7851a9093e2 273-360
+apps/bridge/src/herdr/hosts.ts
+  s_847f44d3c67cda::t_43e7851a9093e2 99-112,188,268,301,315,341,397,437-463,467-475,517-520,522,558-562,573-579,583-594,598,664,689,821
+packages/schema/src/herdr.ts
+  s_847f44d3c67cda::t_43e7851a9093e2 259-276
+  s_847f44d3c67cda::t_4580b9709a68ec 258
+apps/bridge/src/herdr/project.test.ts
+  s_847f44d3c67cda::t_43e7851a9093e2 127-137
+packages/schema/src/wire.ts
+  s_847f44d3c67cda::t_43e7851a9093e2 369-381
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f89cd2676e4662ebf3f4fe904a5fb88a6b73da34",
+  "prompts": {},
+  "sessions": {
+    "s_847f44d3c67cda": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bec681b6-c1ec-4002-86ac-b9d2e635658e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
