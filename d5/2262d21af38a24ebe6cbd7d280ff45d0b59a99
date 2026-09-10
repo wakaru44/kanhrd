@@ -1,0 +1,21 @@
+apps/web/src/app/board/board.ts
+  s_e465e30f266fa2::t_592ae998b3afb3 14,283-291,376-388,504
+apps/web/src/app/board/board.spec.ts
+  s_e465e30f266fa2::t_625ca5985ae098 1033-1042
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d52262d21af38a24ebe6cbd7d280ff45d0b59a99",
+  "prompts": {},
+  "sessions": {
+    "s_e465e30f266fa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2c5b23d5-95a9-4f8a-9e19-5ebcf3fb7297",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
