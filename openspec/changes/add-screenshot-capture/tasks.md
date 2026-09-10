@@ -27,24 +27,24 @@
 
 ## 4. Publish
 
-- [x] 4.1 Six captures: board, terminal, scoped, dense, settings, empty
+- [x] 4.1 Eight captures: board, terminal, scoped, dense, mobile,
+      settings, empty, and the six-palette composite
 - [x] 4.2 README gallery replaces the "pending a mock-bridge harness"
       paragraph; each image carries alt text
-- [x] 4.3 Name the remaining gap (the six-palette composite) rather than
-      implying the gallery is complete
+- [x] 4.3 The six-palette composite: one tile per palette, seeded through
+      `kanhrd.terminal-theme`, each shot in its own browser context, laid
+      out with `page.setContent` so no image library is needed
 
 ## 5. Checks
 
-- [x] 5.1 `pnpm screenshots` — 6 passed, determinism gate green
+- [x] 5.1 `pnpm screenshots` — 8 passed, determinism gate green
 - [x] 5.2 `pnpm test:e2e` — 27 passed, 64 skipped (no live herdr), 0 failed
 - [x] 5.3 `tsc --noEmit` over the new and edited e2e sources
 - [x] 5.4 `pre-commit` over this lane's files
 
-## 6. Deferred
+## 6. Done in the second pass
 
-- [ ] 6.1 The six-palette composite — six permutations plus a
-      compositing step, not a single page capture
-- [ ] 6.2 Regenerate `mobile_kanban.png` deterministically. It predates
-      this harness and is the one capture not reproducible by
-      `make screenshots`; left alone here because it is a committed
-      asset this lane did not author
+- [x] 6.1 The six-palette composite — shipped, see 4.3
+- [x] 6.2 `mobile_kanban.png` regenerated deterministically at the 390px
+      reference viewport. Every image in the README is now reproducible
+      by `make screenshots`; none is hand-taken

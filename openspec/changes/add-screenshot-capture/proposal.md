@@ -50,20 +50,34 @@ regeneration is a cost that compounds and never comes back.
   before it reaches LFS rather than after.
 - **A curated set, not the matrix.** The 4 × 6 matrix is 24 cells and
   exists to probe contrast, keyboard and paint timing — not to be
-  published. This change commits a small named set (see `design.md`),
+  published. This change commits a small named set, each entry carrying
+  its own `why` in `capture.spec.ts`,
   because every committed capture is a permanent LFS blob.
 - **`README.md`'s gallery paragraph is replaced** with the captures
   this change produces, and the stale "pending a mock-bridge harness"
   sentence goes.
 
-### Phase B — terminal, settings, palettes (not in phase A)
+### Phase B — terminal, settings, palettes, mobile
 
-The README promises three subjects the current mock does not cover:
-terminal detail needs mocked pane output over `/ws`; the settings
-capture needs a seeded settings state; the six-palette composite needs
-six permutations plus a compositing step. Each is a separate lane, and
-phase A does not block on them — it replaces the empty section with a
-real board gallery and leaves the remaining three named as pending.
+All shipped in this change rather than deferred.
+
+- **Terminal detail** — the mock gained an opt-in tier-3 capabilities
+  payload plus `pane.read`, with `pane.subscribe_output` confirmed and
+  then silent, because a live stream would repaint mid-capture.
+- **Settings** — captured with tier-3 on, so the runtime section shows a
+  real advertised poll cadence instead of the `0ms` the tier-1 fallback
+  renders.
+- **The six-palette composite** — one tile per palette, the palette
+  seeded into `localStorage` under `kanhrd.terminal-theme` before boot,
+  **each in its own browser context**. Re-booting one page stacks a
+  second set of route handlers and a second `clock.install`, and the
+  terminal then paints its chrome but never its text; the first attempt
+  produced five blank swatches. A per-tile assertion now fails the run
+  rather than publish a coloured rectangle. The tiles are laid out with
+  `page.setContent`, so compositing needs no image library.
+- **Mobile** — `mobile_kanban.png` regenerated at the 390px reference
+  viewport, replacing the one hand-taken image. Every screenshot in the
+  README is now reproducible.
 
 ## Impact
 
@@ -92,7 +106,7 @@ real board gallery and leaves the remaining three named as pending.
   human-run act. CI SHALL NOT run the capture project.
 - **No cross-machine byte guarantee.** Font rasterisation differs
   between machines, so the determinism gate is *two consecutive runs on
-  one machine*, not a hash checked into the repo. See `design.md`.
+  one machine*, not a hash checked into the repo.
 - **No screenshot-diff regression testing.** This change publishes
   documentation images. It does not introduce visual regression
   assertions, which would need the cross-machine guarantee above.
@@ -101,9 +115,9 @@ real board gallery and leaves the remaining three named as pending.
 
 ## Open questions
 
-- **S1. Which captures get committed?** `design.md` proposes a set of
-  four. Every one is a permanent LFS blob, so the list is a maintainer
-  call, not this lane's.
+- **S1. Which captures get committed?** Eight, listed in
+  `capture.spec.ts` with a `why` on each. Every one is a permanent LFS
+  blob, so trimming the set is a maintainer call.
 - **S2. Should the 600-pane state be published at all?** It proves
   kanhrd survives density, but it is not what an operator's board looks
   like, and a reader may take it as representative.

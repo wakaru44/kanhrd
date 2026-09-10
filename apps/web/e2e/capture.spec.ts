@@ -62,7 +62,24 @@ interface Capture {
   readonly tier3?: boolean;
   /** A selector that must be visible before the shot is taken. */
   readonly waitFor?: string;
+  /** `localStorage` seeded before the app boots — theme, palette, density. */
+  readonly storage?: Readonly<Record<string, string>>;
 }
+
+/**
+ * The six terminal palettes, in the order `TERMINAL_THEME_OPTIONS` lists them
+ * (`state/terminal-theme.service.ts`). `auto` is deliberately absent: it is
+ * not a palette, it follows the app theme, and showing it in a palette
+ * gallery would be showing washi or sumi twice under a third name.
+ */
+const PALETTES: readonly { value: string; label: string }[] = [
+  { value: "washi", label: "washi" },
+  { value: "sumi", label: "sumi" },
+  { value: "catppuccin-mocha", label: "catppuccin mocha" },
+  { value: "monokai", label: "monokai" },
+  { value: "solarized-dark", label: "solarized dark" },
+  { value: "solarized-light", label: "solarized light" },
+];
 
 /**
  * Terminal content for the pane-detail capture. Static and ANSI-free so the
@@ -129,6 +146,16 @@ const CAPTURES: readonly Capture[] = [
     waitFor: ".xterm-screen",
   },
   {
+    file: "mobile_kanban.png",
+    state: "populated-600",
+    // The 390px reference viewport from docs/UX-GUIDELINES.md. Replaces a
+    // hand-taken capture that predated this harness and was the one image
+    // `make screenshots` could not reproduce.
+    width: 390,
+    height: 844,
+    why: "the board on a phone — usable, not merely responsive",
+  },
+  {
     file: "settings.png",
     state: "populated-small",
     width: 1280,
@@ -148,6 +175,12 @@ async function bootFrozen(page: Page, capture: Capture): Promise<void> {
   // Install before any app code runs, so `ClockTick`'s constructor and its
   // `setInterval` are both under the fake clock.
   await page.clock.install({ time: FROZEN_EPOCH });
+  if (capture.storage) {
+    const seed = capture.storage;
+    await page.addInitScript((entries: Record<string, string>) => {
+      for (const [k, v] of Object.entries(entries)) localStorage.setItem(k, v);
+    }, seed);
+  }
   await installMock(page, {
     state: capture.state,
     tier3: capture.tier3,
@@ -199,4 +232,120 @@ for (const capture of CAPTURES) {
     // eslint-disable-next-line no-console
     console.log(`[capture] ${capture.file} (${capture.width}×${capture.height}) — ${capture.why}`);
   });
+}
+
+/**
+ * The six-palette composite — the last subject `README.md` promised.
+ *
+ * A palette gallery cannot be one page capture: only one palette is active
+ * at a time, and the setting lives in `localStorage` under
+ * `kanhrd.terminal-theme`. So this shoots the terminal element once per
+ * palette, seeding the setting before the app boots, then lays the six tiles
+ * out on a page built with `page.setContent` and shoots that. Compositing in
+ * the browser keeps the whole thing dependency-free — no image library — and
+ * inherits the same frozen clock and determinism gate as every other capture.
+ */
+test("capture — terminal_palettes.png", async ({ browser }) => {
+  const tiles: { label: string; dataUri: string }[] = [];
+
+  for (const palette of PALETTES) {
+    // A FRESH context per palette, not one reused page. Re-booting the same
+    // page stacks a second set of `page.route` / `routeWebSocket` handlers
+    // and a second `clock.install`, and the terminal then paints its chrome
+    // but never its text — which is precisely the thing a palette gallery
+    // exists to show.
+    const context = await browser.newContext();
+    const tilePage = await context.newPage();
+    try {
+      const shot = await captureTerminalTile(tilePage, palette.value);
+      tiles.push({
+        label: palette.label,
+        dataUri: `data:image/png;base64,${shot.toString("base64")}`,
+      });
+    } finally {
+      await context.close();
+    }
+  }
+
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  const compose = async (): Promise<Buffer> => {
+    // Short viewport + fullPage so the shot grows to the grid and stops,
+    // instead of padding the bottom with empty paper.
+    await page.setViewportSize({ width: 1280, height: 400 });
+    await page.setContent(compositeHtml(tiles), { waitUntil: "load" });
+    // Every tile is a data URI, so nothing is fetched; still, wait for decode
+    // so a half-painted tile cannot reach the shot.
+    await page.evaluate(async () => {
+      await Promise.all(Array.from(document.images).map((img) => img.decode()));
+    });
+    return await page.screenshot({ fullPage: true, animations: "disabled" });
+  };
+
+  const first = await compose();
+  const second = await compose();
+  expect(
+    first.equals(second),
+    "terminal_palettes.png is not reproducible: two consecutive composites differ.",
+  ).toBe(true);
+
+  await mkdir(SCREENSHOTS_DIR, { recursive: true });
+  await writeFile(resolve(SCREENSHOTS_DIR, "terminal_palettes.png"), first);
+  await context.close();
+
+  // eslint-disable-next-line no-console
+  console.log(`[capture] terminal_palettes.png — ${PALETTES.length} palettes composited`);
+});
+
+/** Boots pane detail with one palette active and shoots the terminal element alone. */
+async function captureTerminalTile(page: Page, palette: string): Promise<Buffer> {
+  await bootFrozen(page, {
+    file: `palette-${palette}`,
+    state: "populated-small",
+    width: 900,
+    height: 380,
+    why: "one tile of the palette composite",
+    path: "/pane/local/local-ws1-tab1-p1",
+    tier3: true,
+    waitFor: ".xterm-screen",
+    storage: {
+      "kanhrd.terminal-theme": palette,
+      // Pin the app theme too: `washi`/`sumi` render the same either way, but
+      // the chrome around the terminal would otherwise follow the OS.
+      "kanhrd.theme": palette === "sumi" ? "sumi" : "washi",
+    },
+  });
+
+  const terminal = page.locator(".terminal-wrap");
+  await expect(terminal).toBeVisible({ timeout: 10_000 });
+
+  // Guard the failure this composite hit once already: chrome painted, text
+  // absent. An empty tile makes the gallery actively misleading, so fail
+  // rather than publish a coloured rectangle.
+  await expect(
+    page.locator(".xterm-rows"),
+    `palette ${palette}: terminal painted no text, so the tile would be a blank swatch`,
+  ).toContainText("watching 3 hosts", { timeout: 10_000 });
+
+  return await terminal.screenshot({ animations: "disabled" });
+}
+
+/** The composite page: a 2 x 3 grid of labelled tiles on the brand's paper cream. */
+function compositeHtml(tiles: readonly { label: string; dataUri: string }[]): string {
+  const cells = tiles
+    .map(
+      (t) => `<figure><img src="${t.dataUri}" alt=""><figcaption>${t.label}</figcaption></figure>`,
+    )
+    .join("");
+  // Colours are the two the design system names for paper and ink. This page
+  // is a capture jig, not a shipped surface, so it carries no token imports.
+  return `<!doctype html><meta charset="utf-8"><style>
+    :root { color-scheme: light; }
+    body { margin: 0; padding: 24px; background: #f4ede0; font-family: ui-sans-serif, system-ui, sans-serif; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    figure { margin: 0; }
+    img { display: block; width: 100%; height: auto; border-radius: 6px; }
+    figcaption { margin-top: 6px; font-size: 13px; color: #6b5f4e; letter-spacing: 0.02em; }
+  </style><div class="grid">${cells}</div>`;
 }
