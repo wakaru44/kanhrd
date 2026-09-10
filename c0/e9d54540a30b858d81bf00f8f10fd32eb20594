@@ -1,0 +1,37 @@
+README.md
+  s_cc22a38b40f3d3::t_28b6b6a2feadab 52
+docs/DESIGN-SYSTEM.md
+  s_cc22a38b40f3d3::t_8b14dbb95b5bfb 394-423,492-498
+docs/UX-GUIDELINES.md
+  s_cc22a38b40f3d3::t_9a0d69517d7f04 233-242,605-607,674-676
+docs/screenshots/desktop_board.png
+  s_cc22a38b40f3d3::t_2cc0acb7bb78db 2-3
+docs/screenshots/desktop_board_dense.png
+  s_cc22a38b40f3d3::t_2a675a8528dc73 2-3
+docs/screenshots/desktop_board_scoped.png
+  s_cc22a38b40f3d3::t_ebb5ae78ac6423 2-3
+docs/screenshots/empty_state.png
+  s_cc22a38b40f3d3::t_21e6a4308015d6 2-3
+docs/screenshots/terminal_palettes.png
+  s_cc22a38b40f3d3::t_3c52ba904b2cdd 2-3
+openspec/changes/add-parked-columns/proposal.md
+  s_cc22a38b40f3d3::t_0dbba63f1f9e24 255-266
+openspec/changes/add-parked-columns/tasks.md
+  s_cc22a38b40f3d3::t_f96ec91e8f6dc8 21-24,105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c0e9d54540a30b858d81bf00f8f10fd32eb20594",
+  "prompts": {},
+  "sessions": {
+    "s_cc22a38b40f3d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93fe3ed2-366b-4659-9492-d600bcf7a5d9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
