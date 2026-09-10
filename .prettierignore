@@ -6,7 +6,7 @@ openspec/
 docs/adr/
 docs/CONTEXT.md
 docs/OPERATING.md
-README.md
+/README.md
 tmp/foreman/
 
 # Claude Code skill/command definitions: prompt structure, not prose docs.

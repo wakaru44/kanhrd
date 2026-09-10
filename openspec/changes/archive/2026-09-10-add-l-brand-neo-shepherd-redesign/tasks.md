@@ -211,11 +211,19 @@
       sumi; missing key follows OS `prefers-color-scheme` (default
       light on absence of signal)
 - [x] 15.2 `kanhrd.settings` `density` key preserved; no data loss
-- [ ] 15.3 Screenshot review: capture before/after of board (empty +
-      populated), pane detail, settings, mobile drawer and the mobile
-      board pager (first, middle and last status column) under both
-      themes; attach to the PR description
-
+- [x] 15.3 Capture set in `docs/review/neo-shepherd-redesign/` — board
+      (empty + populated), settings, pane detail, mobile drawer and the
+      mobile board pager (first, middle and last status column), each in
+      washi and sumi. Taken against two throwaway bridges so the
+      operator's own bridge and its stored preferences were untouched:
+      `:5199` against the live herdr for populated, and `:5198` started
+      with `hosts: []` for the only honest route to the no-hosts state.
+      Pane detail is cropped to the view's chrome on purpose — a
+      full-height shot would publish whatever the live terminal was
+      doing. BEFORE shots are not included: the redesign merged long
+      before this set was made, so a genuine before would mean building
+      a pre-redesign commit in a shared working tree, and the
+      originating PR is already merged.
 ## 16. Documentation and release notes
 
 - [x] 16.1 Update `docs/CONTEXT.md` glossary with the pen/field/lane
@@ -256,6 +264,7 @@
 
 ## 18. Archive
 
-- [ ] 18.1 `openspec validate add-l-brand-neo-shepherd-redesign --strict`
-- [ ] 18.2 `openspec archive add-l-brand-neo-shepherd-redesign --yes`
+- [x] 18.1 `openspec validate add-l-brand-neo-shepherd-redesign --strict`
+      → "Change 'add-l-brand-neo-shepherd-redesign' is valid"
+- [x] 18.2 `openspec archive add-l-brand-neo-shepherd-redesign --yes`
       after the change lands on master
