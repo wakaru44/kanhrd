@@ -1,21 +1,25 @@
 import { WritableSignal, provideZonelessChangeDetection, signal } from "@angular/core";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
-import { ActivatedRoute, convertToParamMap } from "@angular/router";
+import { ActivatedRoute, Router, convertToParamMap } from "@angular/router";
 import { BehaviorSubject, Subject, of } from "rxjs";
-import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
 import type { HostSummary, Pane, WsEvent } from "@kanhrd/schema";
 import { PaneDetail } from "./pane-detail";
-import { TerminalThemeService } from "../state/terminal-theme.service";
-import {
-  DEFAULT_TERMINAL_FONT_SIZE,
-  TERMINAL_FONT_SIZES,
-  TerminalFontSizeService,
-} from "../state/terminal-font-size.service";
 import { BoardReturnService } from "../state/board-return.service";
 import { COPY } from "../shared/copy";
 import { PanesStore } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
+
+/**
+ * What is left here after the terminal moved into `PaneTerminal`: the things
+ * that genuinely need a mounted component — the route driving which pane is
+ * shown, the header and meta strip, the back paths, and the one reliability
+ * state this component owns rather than the terminal (`unavailable`, from
+ * host connectivity).
+ *
+ * Painting, input, the send queue, fit/touch/theme/font handling and the
+ * state ladder itself are unit-tested against `PaneTerminal` directly in
+ * `pane-terminal.spec.ts` — no fixture, no TestBed.
+ */
 
 class FakeWsClient {
   readonly connected = signal(true);
@@ -38,24 +42,7 @@ class FakeWsClient {
   });
 }
 
-function paneOutput(content: string, subscriptionId = "sub-1"): WsEvent<"pane.output"> {
-  return {
-    host: "laptop",
-    event: "pane.output",
-    payload: {
-      subscription_id: subscriptionId,
-      pane_id: "pane-1",
-      revision: 2,
-      content,
-      format: "ansi",
-      truncated: false,
-    },
-  };
-}
-
 async function flushMicrotasks(): Promise<void> {
-  // The send queue chains `.catch().then().catch()` per enqueued send, so a
-  // failed-then-next-send sequence needs several microtask hops to settle.
   for (let i = 0; i < 15; i++) {
     await Promise.resolve();
   }
@@ -65,7 +52,7 @@ async function flushMicrotasks(): Promise<void> {
  * Metadata strip: herdr's own git provenance for the pane's workspace,
  * rendered in FULL here (the board card shows a computed tail instead) and
  * omitted entirely — no placeholder row — when the workspace resolves
- * outside a repository. Own TestBed so the shared one above keeps its empty
+ * outside a repository. Own TestBed so the shared one below keeps its empty
  * pane map.
  */
 describe("PaneDetail metadata strip — project provenance", () => {
@@ -145,11 +132,6 @@ describe("PaneDetail", () => {
     return fixture.nativeElement.querySelector(selector) as Element | null;
   }
 
-  /** Pushes a `pane.output` frame for the pane under test onto the fake socket. */
-  function emitOutput(content: string, subscriptionId = "sub-1"): void {
-    ws.events$.next(paneOutput(content, subscriptionId));
-  }
-
   beforeEach(async () => {
     ws = new FakeWsClient();
     hosts = signal<HostSummary[]>([{ name: "laptop", connected: true }]);
@@ -176,6 +158,8 @@ describe("PaneDetail", () => {
     }).compileComponents();
   });
 
+  // --- the route decides which pane the terminal is pointed at -------------
+
   it("fetches pane.read then subscribes to output on mount", async () => {
     fixture = TestBed.createComponent(PaneDetail);
     fixture.detectChanges();
@@ -191,13 +175,6 @@ describe("PaneDetail", () => {
       source: "recent",
       format: "ansi",
     });
-
-    const readIndex = ws.request.calls.allArgs().findIndex(([, method]) => method === "pane.read");
-    const subscribeIndex = ws.request.calls
-      .allArgs()
-      .findIndex(([, method]) => method === "pane.subscribe_output");
-    expect(readIndex).toBeGreaterThanOrEqual(0);
-    expect(subscribeIndex).toBeGreaterThan(readIndex);
   });
 
   it("unsubscribes on destroy", async () => {
@@ -210,221 +187,6 @@ describe("PaneDetail", () => {
     expect(ws.request).toHaveBeenCalledWith("laptop", "pane.unsubscribe_output", {
       subscription_id: "sub-1",
     });
-  });
-
-  it("writes fetched content on load and resets+rewrites on a matching pane.output event", async () => {
-    const writeSpy = spyOn(Terminal.prototype, "write");
-    const resetSpy = spyOn(Terminal.prototype, "reset");
-
-    fixture = TestBed.createComponent(PaneDetail);
-    fixture.detectChanges();
-    await flushMicrotasks();
-
-    expect(writeSpy).toHaveBeenCalledWith("hello");
-
-    ws.events$.next({
-      host: "laptop",
-      event: "pane.output",
-      payload: {
-        subscription_id: "sub-1",
-        pane_id: "pane-1",
-        revision: 2,
-        content: "updated",
-        format: "ansi",
-        truncated: false,
-      },
-    });
-
-    expect(resetSpy).toHaveBeenCalled();
-    // The repaint passes a completion callback (it restores the reader's
-    // scroll offset once the snapshot has been parsed), so match on the data.
-    expect(writeSpy.calls.mostRecent().args[0]).toBe("updated");
-  });
-
-  it("appends the new tail instead of repainting when a snapshot only grew", async () => {
-    const writeSpy = spyOn(Terminal.prototype, "write");
-    const resetSpy = spyOn(Terminal.prototype, "reset");
-
-    fixture = TestBed.createComponent(PaneDetail);
-    fixture.detectChanges();
-    await flushMicrotasks();
-    writeSpy.calls.reset();
-    resetSpy.calls.reset();
-
-    // The initial read returned "hello"; this snapshot is that plus a tail.
-    emitOutput("hello, and one more line\r\n");
-
-    // The whole point: history above the viewport is never cleared, so the
-    // scrollback the initial `recent` read painted survives every poll.
-    expect(resetSpy).not.toHaveBeenCalled();
-    expect(writeSpy.calls.allArgs().map((args) => args[0])).toEqual([", and one more line\r\n"]);
-  });
-
-  it("keeps a scrolled-up reader where they were when a redraw lands", async () => {
-    spyOn(Terminal.prototype, "write").and.callFake(((_data: string, done?: () => void) => {
-      done?.();
-    }) as never);
-    spyOn(Terminal.prototype, "reset");
-    const scrollToLine = spyOn(Terminal.prototype, "scrollToLine");
-    // Scrolled up: the viewport's top line sits well above the last screenful.
-    spyOnProperty(Terminal.prototype, "buffer", "get").and.returnValue({
-      active: { viewportY: 12, baseY: 400 },
-    } as never);
-
-    fixture = TestBed.createComponent(PaneDetail);
-    fixture.detectChanges();
-    await flushMicrotasks();
-    scrollToLine.calls.reset();
-
-    // Not a prefix of "hello" — a full-screen redraw, which still resets.
-    emitOutput("a completely different screen");
-
-    expect(scrollToLine).toHaveBeenCalledWith(12);
-  });
-
-  it("follows the tail after a redraw when the reader was already at the bottom", async () => {
-    spyOn(Terminal.prototype, "write").and.callFake(((_data: string, done?: () => void) => {
-      done?.();
-    }) as never);
-    spyOn(Terminal.prototype, "reset");
-    const scrollToLine = spyOn(Terminal.prototype, "scrollToLine");
-    spyOnProperty(Terminal.prototype, "buffer", "get").and.returnValue({
-      active: { viewportY: 400, baseY: 400 },
-    } as never);
-
-    fixture = TestBed.createComponent(PaneDetail);
-    fixture.detectChanges();
-    await flushMicrotasks();
-    scrollToLine.calls.reset();
-
-    emitOutput("a completely different screen");
-
-    expect(scrollToLine).not.toHaveBeenCalled();
-  });
-
-  it("ignores pane.output events for a different subscription id", async () => {
-    const writeSpy = spyOn(Terminal.prototype, "write");
-    const resetSpy = spyOn(Terminal.prototype, "reset");
-
-    fixture = TestBed.createComponent(PaneDetail);
-    fixture.detectChanges();
-    await flushMicrotasks();
-    writeSpy.calls.reset();
-    resetSpy.calls.reset();
-
-    ws.events$.next({
-      host: "laptop",
-      event: "pane.output",
-      payload: {
-        subscription_id: "some-other-subscription",
-        pane_id: "pane-1",
-        revision: 2,
-        content: "should not appear",
-        format: "ansi",
-        truncated: false,
-      },
-    });
-
-    expect(resetSpy).not.toHaveBeenCalled();
-    expect(writeSpy).not.toHaveBeenCalled();
-  });
-
-  it("serializes rapid keystrokes: each send is awaited before the next one is issued", async () => {
-    let capturedOnData: ((data: string) => void) | undefined;
-    // `Terminal.onData` is an accessor (`IEvent<string>`), not a plain
-    // method, so it needs `spyOnProperty(..., "get")` rather than `spyOn`.
-    spyOnProperty(Terminal.prototype, "onData", "get").and.returnValue(
-      (cb: (data: string) => void) => {
-        capturedOnData = cb;
-        return { dispose: () => undefined };
-      },
-    );
-
-    const sendCalls: string[] = [];
-    // Resolved manually rather than via a timer, so ordering is asserted
-    // deterministically instead of racing a real 20ms delay.
-    const resolvers: Array<() => void> = [];
-    ws.request.and.callFake((_host: string, method: string, params?: { text?: string }) => {
-      switch (method) {
-        case "pane.read":
-          return Promise.resolve({ content: "", revision: 1, truncated: false, format: "ansi", source: "recent" });
-        case "pane.subscribe_output":
-          return Promise.resolve({ subscription_id: "sub-1" });
-        case "pane.send_text":
-          sendCalls.push(params?.text ?? "");
-          return new Promise((resolve) => resolvers.push(() => resolve({})));
-        default:
-          return Promise.resolve({});
-      }
-    });
-
-    fixture = TestBed.createComponent(PaneDetail);
-    fixture.detectChanges();
-    await flushMicrotasks();
-    expect(capturedOnData).toBeTruthy();
-
-    // Type three keystrokes back-to-back, faster than any WS round-trip.
-    capturedOnData?.("a");
-    capturedOnData?.("b");
-    capturedOnData?.("c");
-    await flushMicrotasks();
-
-    // Only the first send is in flight; the queue must not fire the next
-    // one until the previous request's promise settles.
-    expect(sendCalls).toEqual(["a"]);
-
-    resolvers[0]();
-    await flushMicrotasks();
-    expect(sendCalls).toEqual(["a", "b"]);
-
-    resolvers[1]();
-    await flushMicrotasks();
-    expect(sendCalls).toEqual(["a", "b", "c"]);
-
-    resolvers[2]();
-    await flushMicrotasks();
-  });
-
-  it("logs a failed send but keeps draining the queue", async () => {
-    const warnSpy = spyOn(console, "warn");
-    let capturedOnData: ((data: string) => void) | undefined;
-    // `Terminal.onData` is an accessor (`IEvent<string>`), not a plain
-    // method, so it needs `spyOnProperty(..., "get")` rather than `spyOn`.
-    spyOnProperty(Terminal.prototype, "onData", "get").and.returnValue(
-      (cb: (data: string) => void) => {
-        capturedOnData = cb;
-        return { dispose: () => undefined };
-      },
-    );
-
-    const sendCalls: string[] = [];
-    ws.request.and.callFake((_host: string, method: string, params?: { text?: string }) => {
-      switch (method) {
-        case "pane.read":
-          return Promise.resolve({ content: "", revision: 1, truncated: false, format: "ansi", source: "recent" });
-        case "pane.subscribe_output":
-          return Promise.resolve({ subscription_id: "sub-1" });
-        case "pane.send_text":
-          sendCalls.push(params?.text ?? "");
-          if (params?.text === "a") {
-            return Promise.reject(new Error("boom"));
-          }
-          return Promise.resolve({});
-        default:
-          return Promise.resolve({});
-      }
-    });
-
-    fixture = TestBed.createComponent(PaneDetail);
-    fixture.detectChanges();
-    await flushMicrotasks();
-
-    capturedOnData?.("a");
-    capturedOnData?.("b");
-    await flushMicrotasks();
-
-    expect(sendCalls).toEqual(["a", "b"]);
-    expect(warnSpy).toHaveBeenCalledWith("pane-detail: send failed", jasmine.any(Error));
   });
 
   it("does not fetch on mount while the socket is disconnected, then fetches once it connects", async () => {
@@ -486,10 +248,11 @@ describe("PaneDetail", () => {
       format: "ansi",
     });
   });
-  // --- reliability states (docs/UX-GUIDELINES.md, "Reliability states tell
-  // the truth"). Asserted through the rendered markup, not the protected
-  // signal, so a refactor of the state machine that keeps the same visible
-  // behaviour keeps these tests green.
+
+  // --- reliability states, as the template renders them. The ladder itself
+  // is `PaneTerminal`'s and is unit-tested there; what is checked here is
+  // that each state reaches the markup with the right copy and controls, and
+  // that `unavailable` — the one state this component owns — outranks it.
 
   it("shows the keeping-watch loading state before the first frame, and nothing else", async () => {
     ws.connected.set(false);
@@ -519,27 +282,6 @@ describe("PaneDetail", () => {
     expect(stateEl(".stale-marker")).toBeNull();
   });
 
-  it("renders the empty state when the read succeeds with no bytes", async () => {
-    ws.request.and.callFake((_host: string, method: string) => {
-      switch (method) {
-        case "pane.read":
-          return Promise.resolve({ content: "", revision: 1, truncated: false, format: "ansi", source: "recent" });
-        case "pane.subscribe_output":
-          return Promise.resolve({ subscription_id: "sub-1" });
-        default:
-          return Promise.resolve({});
-      }
-    });
-
-    fixture = TestBed.createComponent(PaneDetail);
-    fixture.detectChanges();
-    await flushMicrotasks();
-    fixture.detectChanges();
-
-    expect(stateEl(".terminal-empty")?.textContent).toContain(COPY.emptyState.hostEmpty);
-    expect(stateEl(".terminal-loading")).toBeNull();
-  });
-
   it("replaces loading with a retry and a back path when the read fails with nothing on screen", async () => {
     ws.request.and.callFake((_host: string, method: string) => {
       if (method === "pane.read") {
@@ -563,7 +305,7 @@ describe("PaneDetail", () => {
     expect(stateEl(".terminal-loading")).toBeNull();
   });
 
-  it("retries the read from the failed state", async () => {
+  it("wires the failed state's retry control to another attempt", async () => {
     let attempt = 0;
     ws.request.and.callFake((_host: string, method: string) => {
       switch (method) {
@@ -571,7 +313,13 @@ describe("PaneDetail", () => {
           attempt += 1;
           return attempt === 1
             ? Promise.reject(new Error("herdr said no"))
-            : Promise.resolve({ content: "back", revision: 2, truncated: false, format: "ansi", source: "recent" });
+            : Promise.resolve({
+                content: "back",
+                revision: 2,
+                truncated: false,
+                format: "ansi",
+                source: "recent",
+              });
         case "pane.subscribe_output":
           return Promise.resolve({ subscription_id: "sub-1" });
         default:
@@ -592,42 +340,27 @@ describe("PaneDetail", () => {
     expect(stateEl(".terminal-failed")).toBeNull();
   });
 
-  it("marks a single disconnect stale and keeps the already-rendered content", async () => {
-    const writeSpy = spyOn(Terminal.prototype, "write");
-    const resetSpy = spyOn(Terminal.prototype, "reset");
-
+  it("marks a single disconnect stale in the meta strip", async () => {
     fixture = TestBed.createComponent(PaneDetail);
     fixture.detectChanges();
     await flushMicrotasks();
     fixture.detectChanges();
-
-    expect(writeSpy).toHaveBeenCalledWith("hello");
-    writeSpy.calls.reset();
-    resetSpy.calls.reset();
 
     // One host/bridge disconnect.
     ws.connected.set(false);
     fixture.detectChanges();
 
     expect(stateEl(".stale-marker")?.textContent).toContain(COPY.state.stale);
-    // Content survives: nothing is cleared and nothing is rewritten.
-    expect(resetSpy).not.toHaveBeenCalled();
-    expect(writeSpy).not.toHaveBeenCalled();
     // And it is not misreported as a fresh load or a failure.
     expect(stateEl(".terminal-loading")).toBeNull();
     expect(stateEl(".terminal-failed")).toBeNull();
   });
 
-  it("reports a disconnected host as unavailable, with a back path, without blanking content", async () => {
-    const writeSpy = spyOn(Terminal.prototype, "write");
-    const resetSpy = spyOn(Terminal.prototype, "reset");
-
+  it("reports a disconnected host as unavailable, with a back path", async () => {
     fixture = TestBed.createComponent(PaneDetail);
     fixture.detectChanges();
     await flushMicrotasks();
     fixture.detectChanges();
-    writeSpy.calls.reset();
-    resetSpy.calls.reset();
 
     hosts.set([{ name: "laptop", connected: false }]);
     fixture.detectChanges();
@@ -635,7 +368,6 @@ describe("PaneDetail", () => {
     const unavailable = stateEl(".terminal-unavailable");
     expect(unavailable?.textContent).toContain(COPY.state.unavailable);
     expect(unavailable?.querySelector("a.state-back")?.textContent).toContain(COPY.nav.backToBoard);
-    expect(resetSpy).not.toHaveBeenCalled();
   });
 
   it("does not claim a host is unavailable merely because the bridge has not listed it yet", async () => {
@@ -690,13 +422,23 @@ describe("PaneDetail", () => {
     const back = stateEl("header .back") as HTMLAnchorElement;
     expect(back.textContent).toContain(COPY.nav.backToBoard);
     expect(back.querySelector("svg")).not.toBeNull();
-    expect(back.textContent).not.toContain("\u2190");
+    expect(back.textContent).not.toContain("←");
     // First focusable element in the header.
     const focusable = fixture.nativeElement.querySelectorAll("header a, header button");
     expect(focusable[0]).toBe(back);
   });
 
   // --- back to where the card was opened from (section 17.6) -------------
+
+  /**
+   * The board the user was last on. `BoardReturnService` reads the URL off
+   * the router itself — no component hands it one — so the setup here is a
+   * router that says the app came up on that board.
+   */
+  function lastOnBoard(url: string): void {
+    Object.defineProperty(TestBed.inject(Router), "url", { get: () => url, configurable: true });
+    TestBed.inject(BoardReturnService).rememberBoard({ scrollLeft: 0, scrollTops: {} });
+  }
 
   /** Renders the view and returns its header back link. */
   async function backLink(): Promise<HTMLAnchorElement> {
@@ -708,11 +450,7 @@ describe("PaneDetail", () => {
   }
 
   it("returns to the scoped board the card was opened from", async () => {
-    TestBed.inject(BoardReturnService).rememberBoard({
-      url: "/workspace/w6/tab/w6:t2",
-      scrollLeft: 0,
-      scrollTops: {},
-    });
+    lastOnBoard("/workspace/w6/tab/w6:t2");
 
     expect((await backLink()).getAttribute("href")).toBe("/workspace/w6/tab/w6:t2");
   });
@@ -723,11 +461,7 @@ describe("PaneDetail", () => {
   });
 
   it("points every back path at the same place, not just the header one", async () => {
-    TestBed.inject(BoardReturnService).rememberBoard({
-      url: "/workspace/w6",
-      scrollLeft: 0,
-      scrollTops: {},
-    });
+    lastOnBoard("/workspace/w6");
     await backLink();
 
     const root = fixture.nativeElement as HTMLElement;
@@ -751,16 +485,9 @@ describe("PaneDetail", () => {
     expect(text.toLowerCase()).not.toContain("updates every");
   });
 
-  // --- the terminal owns the vertical axis on touch.
-  //
-  // xterm 6 has no touch scrolling of its own (its `.xterm-viewport` is
-  // decorative and `Gesture.addTarget` is never called), and nothing above
-  // the container scrolls at phone size, so an unclaimed vertical swipe
-  // used to fall through to the page — where a phone browser reads a
-  // downward one as pull-to-refresh.
-
-  /** Mounts with a real box, so the terminal renders rows with a measurable height. */
-  async function mountSized(): Promise<HTMLElement> {
+  // The gesture engine itself is `PaneTerminal`'s; what the component owns is
+  // the container's declaration that the vertical axis is spoken for.
+  it("reserves the vertical touch axis on the terminal container", async () => {
     fixture = TestBed.createComponent(PaneDetail);
     const root = fixture.nativeElement as HTMLElement;
     root.style.display = "block";
@@ -769,21 +496,8 @@ describe("PaneDetail", () => {
     fixture.detectChanges();
     await flushMicrotasks();
     fixture.detectChanges();
-    return root.querySelector(".terminal-container") as HTMLElement;
-  }
 
-  function touch(target: HTMLElement, type: string, clientY: number): TouchEvent {
-    const point = new Touch({ identifier: 1, target, clientX: 100, clientY });
-    return new TouchEvent(type, {
-      bubbles: true,
-      cancelable: type !== "touchstart",
-      touches: type === "touchend" || type === "touchcancel" ? [] : [point],
-      changedTouches: [point],
-    });
-  }
-
-  it("reserves the vertical touch axis on the terminal container", async () => {
-    const container = await mountSized();
+    const container = root.querySelector(".terminal-container") as HTMLElement;
     const style = getComputedStyle(container);
 
     // `pan-y` is deliberately absent: the app spends it on scrollback.
@@ -793,158 +507,5 @@ describe("PaneDetail", () => {
     // on-screen keyboard are unaffected.
     expect(style.touchAction).toContain("pinch-zoom");
     expect(style.overscrollBehaviorY).toBe("contain");
-  });
-
-  it("spends a vertical touch drag on the terminal's scrollback, not the page", async () => {
-    const scrollLines = spyOn(Terminal.prototype, "scrollLines");
-    const container = await mountSized();
-
-    container.dispatchEvent(touch(container, "touchstart", 300));
-    const move = touch(container, "touchmove", 100); // finger up 200px => newer output
-    container.dispatchEvent(move);
-
-    expect(scrollLines).toHaveBeenCalled();
-    expect(scrollLines.calls.mostRecent().args[0]).toBeGreaterThan(0);
-    // The browser must not also get the gesture — that is the
-    // pull-to-refresh path.
-    expect(move.defaultPrevented).toBe(true);
-
-    // Dragging the other way pulls older output back.
-    scrollLines.calls.reset();
-    container.dispatchEvent(touch(container, "touchmove", 300));
-    expect(scrollLines.calls.mostRecent().args[0]).toBeLessThan(0);
-  });
-
-  it("keeps the gesture at the scroll boundary so the page never overscrolls", async () => {
-    spyOn(Terminal.prototype, "scrollLines"); // pinned at the top of the scrollback
-    const container = await mountSized();
-
-    container.dispatchEvent(touch(container, "touchstart", 100));
-    const move = touch(container, "touchmove", 380);
-    container.dispatchEvent(move);
-
-    expect(move.defaultPrevented).toBe(true);
-  });
-
-  it("stops handling touch once destroyed", async () => {
-    const scrollLines = spyOn(Terminal.prototype, "scrollLines");
-    const container = await mountSized();
-    container.dispatchEvent(touch(container, "touchstart", 300));
-    fixture.destroy();
-
-    scrollLines.calls.reset();
-    container.dispatchEvent(touch(container, "touchmove", 100));
-    expect(scrollLines).not.toHaveBeenCalled();
-  });
-
-  it("refits from the container's own box rather than a window resize", async () => {
-    const container = await mountSized();
-    // Let the observer's initial observation land before measuring.
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const fit = spyOn(FitAddon.prototype, "fit");
-
-    // Nothing about the window changes here — only the box the terminal
-    // lives in, which is what a wrapping header or an opening drawer does.
-    (container.closest(".pane-detail") as HTMLElement).style.height = "240px";
-    await new Promise((resolve) => setTimeout(resolve, 150));
-
-    expect(fit).toHaveBeenCalled();
-  });
-
-  // --- terminal font size --------------------------------------------------
-
-  const FONT_SIZE_KEY = "kanhrd.terminal-font-size";
-
-  /** The live xterm instance. Reached through the component because `cols`/`rows` live nowhere else. */
-  function terminal(): Terminal {
-    return (fixture.componentInstance as unknown as { term: Terminal | null }).term!;
-  }
-
-  it("constructs the terminal at the stored font size, not a hard-coded 13", async () => {
-    localStorage.setItem(FONT_SIZE_KEY, "17");
-    await mountSized();
-
-    expect(TestBed.inject(TerminalFontSizeService).size()).toBe(17);
-    expect(terminal().options.fontSize).toBe(17);
-
-    localStorage.removeItem(FONT_SIZE_KEY);
-  });
-
-  it("defaults to 13 when nothing is stored, so nothing changes for existing users", async () => {
-    localStorage.removeItem(FONT_SIZE_KEY);
-    await mountSized();
-
-    expect(terminal().options.fontSize).toBe(DEFAULT_TERMINAL_FONT_SIZE);
-  });
-
-  it("refits an open terminal so cols and rows are recomputed for the new cell", async () => {
-    localStorage.removeItem(FONT_SIZE_KEY);
-    await mountSized();
-    const fontSize = TestBed.inject(TerminalFontSizeService);
-    const smallest = TERMINAL_FONT_SIZES[0];
-    const largest = TERMINAL_FONT_SIZES[TERMINAL_FONT_SIZES.length - 1];
-
-    fontSize.set(smallest);
-    fixture.detectChanges();
-    const small = { cols: terminal().cols, rows: terminal().rows };
-
-    fontSize.set(largest);
-    fixture.detectChanges();
-    const large = { cols: terminal().cols, rows: terminal().rows };
-
-    expect(terminal().options.fontSize).toBe(largest);
-    // The container's pixel box never changed, so a bigger cell is strictly
-    // fewer cells. This is a prediction about geometry, not a restatement of
-    // what fit() computes — a spy on fit() would pass with a broken refit.
-    expect(large.cols).toBeLessThan(small.cols);
-    expect(large.rows).toBeLessThan(small.rows);
-
-    // Cell width and height both scale linearly with font size, so the
-    // counts scale inversely with it. Expected ratio comes from the sizes
-    // themselves (20 / 12 = 1.667), independently of the rendered face.
-    const expected = largest / smallest;
-    expect(small.cols / large.cols).toBeGreaterThan(expected - 0.4);
-    expect(small.cols / large.cols).toBeLessThan(expected + 0.4);
-
-    // And it comes back.
-    fontSize.set(smallest);
-    fixture.detectChanges();
-    expect(terminal().cols).toBe(small.cols);
-    expect(terminal().rows).toBe(small.rows);
-
-    localStorage.removeItem(FONT_SIZE_KEY);
-  });
-
-  it("sends no wire request when the font size changes", async () => {
-    localStorage.removeItem(FONT_SIZE_KEY);
-    await mountSized();
-    ws.request.calls.reset();
-
-    TestBed.inject(TerminalFontSizeService).set(20);
-    fixture.detectChanges();
-    await flushMicrotasks();
-
-    expect(ws.request.calls.allArgs().map(([, method]) => method)).not.toContain("pane.resize");
-    expect(ws.request).not.toHaveBeenCalled();
-
-    localStorage.removeItem(FONT_SIZE_KEY);
-  });
-
-  it("keeps the palette and the size independent on the live terminal", async () => {
-    localStorage.removeItem(FONT_SIZE_KEY);
-    await mountSized();
-    const themeBefore = terminal().options.theme;
-
-    TestBed.inject(TerminalFontSizeService).set(20);
-    fixture.detectChanges();
-    expect(terminal().options.theme).toEqual(themeBefore);
-
-    TestBed.inject(TerminalThemeService).set("monokai");
-    fixture.detectChanges();
-    expect(terminal().options.theme).not.toEqual(themeBefore);
-    expect(terminal().options.fontSize).toBe(20);
-
-    localStorage.removeItem(FONT_SIZE_KEY);
-    localStorage.removeItem("kanhrd.terminal-theme");
   });
 });

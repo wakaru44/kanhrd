@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-09-10
+# Pure module-boundary refactor: user-visible behaviour is unchanged, so
+# there is no requirement delta to record.
+skip_specs: true
