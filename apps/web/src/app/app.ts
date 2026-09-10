@@ -1,14 +1,14 @@
-import { Component, DestroyRef, computed, inject } from "@angular/core";
-import { RouterLink, RouterOutlet } from "@angular/router";
-import { LucideMenu, LucideMoon, LucideSettings, LucideSun } from "./shared/icons";
-import { COPY } from "./shared/copy";
-import { ThemeService } from "./state/theme.service";
-import { LayoutService } from "./state/layout.service";
-import { KeyboardService } from "./state/keyboard.service";
-import { ToastService } from "./state/toast.service";
-import { HostNoticeService } from "./state/host-notices.service";
-import { KeyboardHelpOverlay } from "./shared/keyboard-help-overlay";
-import { ToastHost } from "./shared/toast-host";
+import { Component, DestroyRef, computed, inject } from '@angular/core';
+import { RouterLink, RouterOutlet } from '@angular/router';
+import { LucideMenu, LucideMoon, LucideSettings, LucideSun } from './shared/icons';
+import { COPY } from './shared/copy';
+import { ThemeService } from './state/theme.service';
+import { LayoutService } from './state/layout.service';
+import { KeyboardService } from './state/keyboard.service';
+import { ToastService } from './state/toast.service';
+import { HostNoticeService } from './state/host-notices.service';
+import { KeyboardHelpOverlay } from './shared/keyboard-help-overlay';
+import { ToastHost } from './shared/toast-host';
 
 /** True for a bare key press: no modifier, so it is exactly what a TUI inside a card expects to receive. */
 function isUnmodified(event: KeyboardEvent, key: string): boolean {
@@ -16,7 +16,7 @@ function isUnmodified(event: KeyboardEvent, key: string): boolean {
 }
 
 @Component({
-  selector: "app-root",
+  selector: 'app-root',
   imports: [
     RouterOutlet,
     RouterLink,
@@ -27,8 +27,8 @@ function isUnmodified(event: KeyboardEvent, key: string): boolean {
     LucideMoon,
     LucideSettings,
   ],
-  templateUrl: "./app.html",
-  styleUrl: "./app.scss",
+  templateUrl: './app.html',
+  styleUrl: './app.scss',
 })
 export class App {
   protected readonly themeService = inject(ThemeService);
@@ -50,11 +50,11 @@ export class App {
       this.keyboard.helpOpen() ||
       this.layout.railOpen() ||
       this.layout.plusMenuOpen() ||
-      this.toasts.toasts().length > 0,
+      this.toasts.toasts().length > 0
   );
 
   protected themeLabel(): string {
-    return this.themeService.theme() === "dark" ? COPY.nav.toWashi : COPY.nav.toSumi;
+    return this.themeService.theme() === 'dark' ? COPY.nav.toWashi : COPY.nav.toSumi;
   }
 
   protected toggleTheme(): void {
@@ -76,9 +76,9 @@ export class App {
     // order, so this wins regardless of extension load timing. See
     // openspec/changes/fix-keyboard-shortcut-suppression (or its archive)
     // for the full root-cause writeup and a deterministic karma repro.
-    window.addEventListener("keydown", this.onKeydown, { capture: true });
+    window.addEventListener('keydown', this.onKeydown, { capture: true });
     inject(DestroyRef).onDestroy(() => {
-      window.removeEventListener("keydown", this.onKeydown, { capture: true });
+      window.removeEventListener('keydown', this.onKeydown, { capture: true });
     });
   }
 
@@ -93,10 +93,10 @@ export class App {
    * visible controls; Escape dismisses only chrome that is actually open.
    */
   private readonly onKeydown = (event: KeyboardEvent): void => {
-    if (isUnmodified(event, "?")) {
+    if (isUnmodified(event, '?')) {
       return;
     }
-    if (isUnmodified(event, "Escape") && !this.chromeOpen()) {
+    if (isUnmodified(event, 'Escape') && !this.chromeOpen()) {
       return;
     }
     this.keyboard.handleKeydown(event, document.activeElement);

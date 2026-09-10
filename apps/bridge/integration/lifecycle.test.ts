@@ -1,8 +1,13 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { startBridge, waitForHostConnected, type RunningBridge } from "./fixtures/bridge.js";
-import { IntegrationClient } from "./fixtures/ws-client.js";
-import { herdrPaneList, herdrTabClose, herdrTabList, herdrWorkspaceList } from "./fixtures/herdr-cli.js";
-import { requireHerdrOrSkipReason } from "./fixtures/require-herdr.js";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { startBridge, waitForHostConnected, type RunningBridge } from './fixtures/bridge.js';
+import { IntegrationClient } from './fixtures/ws-client.js';
+import {
+  herdrPaneList,
+  herdrTabClose,
+  herdrTabList,
+  herdrWorkspaceList,
+} from './fixtures/herdr-cli.js';
+import { requireHerdrOrSkipReason } from './fixtures/require-herdr.js';
 
 /**
  * D. Tier-3 lifecycle — D1-D2 from the L-INT brief.
@@ -40,7 +45,7 @@ import { requireHerdrOrSkipReason } from "./fixtures/require-herdr.js";
  * suites hold the wire contract to, and will resolve promptly against a
  * quieter herdr instance.
  */
-describe("D. tier-3 lifecycle", () => {
+describe('D. tier-3 lifecycle', () => {
   let skipReason: string | undefined;
   let bridge: RunningBridge;
   let client: IntegrationClient;
@@ -52,7 +57,7 @@ describe("D. tier-3 lifecycle", () => {
     skipReason = await requireHerdrOrSkipReason();
     if (skipReason) return;
     bridge = await startBridge();
-    await waitForHostConnected(bridge, "local");
+    await waitForHostConnected(bridge, 'local');
     client = await IntegrationClient.connect(bridge.wsUrl);
     const panes = await herdrPaneList();
     workspaceId = panes[0].workspace_id;
@@ -64,7 +69,9 @@ describe("D. tier-3 lifecycle", () => {
     for (const tabId of createdTabIds) {
       const stillThere = (await herdrTabList()).some((t) => t.tab_id === tabId);
       if (stillThere) {
-        console.warn(`[integration] leftover tab ${tabId} from a crashed test — closing in cleanup`);
+        console.warn(
+          `[integration] leftover tab ${tabId} from a crashed test — closing in cleanup`
+        );
         await herdrTabClose(tabId);
       }
     }
@@ -76,67 +83,70 @@ describe("D. tier-3 lifecycle", () => {
     createdTabIds.splice(0);
   });
 
-  it(
-    "D1+D2. tab.create -> tab.rename -> tab.close round trips against real herdr state and fires matching events",
-    async (ctx) => {
-      if (skipReason) return ctx.skip();
+  it('D1+D2. tab.create -> tab.rename -> tab.close round trips against real herdr state and fires matching events', async (ctx) => {
+    if (skipReason) return ctx.skip();
 
-      const sub = await client.call("local", "events.subscribe", {
-        kinds: ["tab.created", "tab.renamed", "tab.closed"],
-      });
-      expect(sub.subscription_id).toBeTruthy();
+    const sub = await client.call('local', 'events.subscribe', {
+      kinds: ['tab.created', 'tab.renamed', 'tab.closed'],
+    });
+    expect(sub.subscription_id).toBeTruthy();
 
-      const label = `kanhrd-int-${Date.now()}`;
-      const created = await client.call("local", "tab.create", { workspace_id: workspaceId, label, focus: false });
-      // `TabSummary` (packages/schema/src/herdr.ts) is the bridge's own
-      // projection — `{ id, host, workspace: { id }, name }` — NOT herdr's
-      // raw `tab_id`/`label` field names used by the CLI/`herdrTabList()`.
-      const tabId = created.tab.id;
-      createdTabIds.push(tabId);
+    const label = `kanhrd-int-${Date.now()}`;
+    const created = await client.call('local', 'tab.create', {
+      workspace_id: workspaceId,
+      label,
+      focus: false,
+    });
+    // `TabSummary` (packages/schema/src/herdr.ts) is the bridge's own
+    // projection — `{ id, host, workspace: { id }, name }` — NOT herdr's
+    // raw `tab_id`/`label` field names used by the CLI/`herdrTabList()`.
+    const tabId = created.tab.id;
+    createdTabIds.push(tabId);
 
-      // D1 (create): confirm via herdr CLI independently of the bridge.
-      const afterCreate = await herdrTabList();
-      expect(afterCreate.some((t) => t.tab_id === tabId && t.label === label)).toBe(true);
+    // D1 (create): confirm via herdr CLI independently of the bridge.
+    const afterCreate = await herdrTabList();
+    expect(afterCreate.some((t) => t.tab_id === tabId && t.label === label)).toBe(true);
 
-      // D2 (create event).
-      const createdEvent = await client.waitForEvent(
-        (e) => e.event === "tab.created" && (e.payload as { tab: { id: string } }).tab.id === tabId,
-        25_000,
-      );
-      expect((createdEvent.payload as { tab: { name: string } }).tab.name).toBe(label);
+    // D2 (create event).
+    const createdEvent = await client.waitForEvent(
+      (e) => e.event === 'tab.created' && (e.payload as { tab: { id: string } }).tab.id === tabId,
+      25_000
+    );
+    expect((createdEvent.payload as { tab: { name: string } }).tab.name).toBe(label);
 
-      // D1 (rename).
-      const renamedLabel = `${label}-renamed`;
-      const renamed = await client.call("local", "tab.rename", { tab_id: tabId, label: renamedLabel });
-      expect(renamed.tab.name).toBe(renamedLabel);
+    // D1 (rename).
+    const renamedLabel = `${label}-renamed`;
+    const renamed = await client.call('local', 'tab.rename', {
+      tab_id: tabId,
+      label: renamedLabel,
+    });
+    expect(renamed.tab.name).toBe(renamedLabel);
 
-      const afterRename = await herdrTabList();
-      expect(afterRename.some((t) => t.tab_id === tabId && t.label === renamedLabel)).toBe(true);
+    const afterRename = await herdrTabList();
+    expect(afterRename.some((t) => t.tab_id === tabId && t.label === renamedLabel)).toBe(true);
 
-      // D2 (rename event).
-      const renamedEvent = await client.waitForEvent(
-        (e) => e.event === "tab.renamed" && (e.payload as { id: string }).id === tabId,
-        25_000,
-      );
-      expect((renamedEvent.payload as { name: string }).name).toBe(renamedLabel);
+    // D2 (rename event).
+    const renamedEvent = await client.waitForEvent(
+      (e) => e.event === 'tab.renamed' && (e.payload as { id: string }).id === tabId,
+      25_000
+    );
+    expect((renamedEvent.payload as { name: string }).name).toBe(renamedLabel);
 
-      // D1 (close) — full round-trip cleanup.
-      const closeRes = await client.request("local", "tab.close", { tab_id: tabId });
-      expect(closeRes.ok).toBe(true);
+    // D1 (close) — full round-trip cleanup.
+    const closeRes = await client.request('local', 'tab.close', { tab_id: tabId });
+    expect(closeRes.ok).toBe(true);
 
-      const afterClose = await herdrTabList();
-      expect(afterClose.some((t) => t.tab_id === tabId)).toBe(false);
-      createdTabIds.splice(createdTabIds.indexOf(tabId), 1); // confirmed gone, no leftover to purge in afterAll
+    const afterClose = await herdrTabList();
+    expect(afterClose.some((t) => t.tab_id === tabId)).toBe(false);
+    createdTabIds.splice(createdTabIds.indexOf(tabId), 1); // confirmed gone, no leftover to purge in afterAll
 
-      // D2 (close event).
-      const closedEvent = await client.waitForEvent(
-        (e) => e.event === "tab.closed" && (e.payload as { id: string }).id === tabId,
-        25_000,
-      );
-      expect((closedEvent.payload as { workspace: { id: string } }).workspace.id).toBe(workspaceId);
-    },
-    60_000,
-  );
+    // D2 (close event).
+    const closedEvent = await client.waitForEvent(
+      (e) => e.event === 'tab.closed' && (e.payload as { id: string }).id === tabId,
+      25_000
+    );
+    expect((closedEvent.payload as { workspace: { id: string } }).workspace.id).toBe(workspaceId);
+  }, 60_000);
 });
 
 /**
@@ -176,7 +186,7 @@ describe("D. tier-3 lifecycle", () => {
  * (subscribe-once, no resubscribe-on-churn); this integration test is a
  * live smoke check on top of that.
  */
-describe("E. no phantom lifecycle-event storm on a steady-state host", () => {
+describe('E. no phantom lifecycle-event storm on a steady-state host', () => {
   let skipReason: string | undefined;
   let bridge: RunningBridge;
 
@@ -184,76 +194,72 @@ describe("E. no phantom lifecycle-event storm on a steady-state host", () => {
     skipReason = await requireHerdrOrSkipReason();
     if (skipReason) return;
     bridge = await startBridge();
-    await waitForHostConnected(bridge, "local");
+    await waitForHostConnected(bridge, 'local');
   });
 
   afterAll(async () => {
     await bridge?.stop();
   });
 
-  it(
-    "a fresh subscription to lifecycle events sees no storm-volume or phantom-id events within several seconds",
-    async (ctx) => {
-      if (skipReason) return ctx.skip();
+  it('a fresh subscription to lifecycle events sees no storm-volume or phantom-id events within several seconds', async (ctx) => {
+    if (skipReason) return ctx.skip();
 
-      const client = await IntegrationClient.connect(bridge.wsUrl);
-      try {
-        const sub = await client.call("local", "events.subscribe", {
-          kinds: [
-            "pane.created",
-            "pane.closed",
-            "tab.created",
-            "tab.closed",
-            "tab.renamed",
-            "tab.moved",
-            "workspace.created",
-            "workspace.closed",
-            "workspace.renamed",
-            "pane.moved",
-          ],
-        });
-        expect(sub.subscription_id).toBeTruthy();
+    const client = await IntegrationClient.connect(bridge.wsUrl);
+    try {
+      const sub = await client.call('local', 'events.subscribe', {
+        kinds: [
+          'pane.created',
+          'pane.closed',
+          'tab.created',
+          'tab.closed',
+          'tab.renamed',
+          'tab.moved',
+          'workspace.created',
+          'workspace.closed',
+          'workspace.renamed',
+          'pane.moved',
+        ],
+      });
+      expect(sub.subscription_id).toBeTruthy();
 
-        // Long enough to surface a resubscribe-driven backlog replay
-        // (which, when it happened, delivered its whole burst well inside
-        // this window) without making the suite slow.
-        await new Promise((resolve) => setTimeout(resolve, 5_000));
+      // Long enough to surface a resubscribe-driven backlog replay
+      // (which, when it happened, delivered its whole burst well inside
+      // this window) without making the suite slow.
+      await new Promise((resolve) => setTimeout(resolve, 5_000));
 
-        const lifecycleEvents = client.eventsFor(
-          (e) =>
-            e.event === "pane.created" ||
-            e.event === "pane.closed" ||
-            e.event === "tab.created" ||
-            e.event === "tab.closed" ||
-            e.event === "tab.renamed" ||
-            e.event === "tab.moved" ||
-            e.event === "workspace.created" ||
-            e.event === "workspace.closed" ||
-            e.event === "workspace.renamed" ||
-            e.event === "pane.moved",
-        );
+      const lifecycleEvents = client.eventsFor(
+        (e) =>
+          e.event === 'pane.created' ||
+          e.event === 'pane.closed' ||
+          e.event === 'tab.created' ||
+          e.event === 'tab.closed' ||
+          e.event === 'tab.renamed' ||
+          e.event === 'tab.moved' ||
+          e.event === 'workspace.created' ||
+          e.event === 'workspace.closed' ||
+          e.event === 'workspace.renamed' ||
+          e.event === 'pane.moved'
+      );
 
-        const [currentPaneIds, currentTabIds, currentWorkspaceIds] = await Promise.all([
-          herdrPaneList().then((panes) => new Set(panes.map((p) => p.pane_id))),
-          herdrTabList().then((tabs) => new Set(tabs.map((t) => t.tab_id))),
-          herdrWorkspaceList().then((workspaces) => new Set(workspaces.map((w) => w.workspace_id))),
-        ]);
-        for (const event of lifecycleEvents) {
-          if (event.event === "pane.created") {
-            const id = (event.payload as { pane: { id: string } }).pane.id;
-            expect(currentPaneIds.has(id)).toBe(true);
-          } else if (event.event === "tab.created") {
-            const id = (event.payload as { tab: { id: string } }).tab.id;
-            expect(currentTabIds.has(id)).toBe(true);
-          } else if (event.event === "workspace.created") {
-            const id = (event.payload as { workspace: { id: string } }).workspace.id;
-            expect(currentWorkspaceIds.has(id)).toBe(true);
-          }
+      const [currentPaneIds, currentTabIds, currentWorkspaceIds] = await Promise.all([
+        herdrPaneList().then((panes) => new Set(panes.map((p) => p.pane_id))),
+        herdrTabList().then((tabs) => new Set(tabs.map((t) => t.tab_id))),
+        herdrWorkspaceList().then((workspaces) => new Set(workspaces.map((w) => w.workspace_id))),
+      ]);
+      for (const event of lifecycleEvents) {
+        if (event.event === 'pane.created') {
+          const id = (event.payload as { pane: { id: string } }).pane.id;
+          expect(currentPaneIds.has(id)).toBe(true);
+        } else if (event.event === 'tab.created') {
+          const id = (event.payload as { tab: { id: string } }).tab.id;
+          expect(currentTabIds.has(id)).toBe(true);
+        } else if (event.event === 'workspace.created') {
+          const id = (event.payload as { workspace: { id: string } }).workspace.id;
+          expect(currentWorkspaceIds.has(id)).toBe(true);
         }
-      } finally {
-        client.close();
       }
-    },
-    15_000,
-  );
+    } finally {
+      client.close();
+    }
+  }, 15_000);
 });

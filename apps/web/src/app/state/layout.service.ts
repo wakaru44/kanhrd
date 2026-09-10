@@ -1,4 +1,4 @@
-import { Injectable, signal } from "@angular/core";
+import { Injectable, signal } from '@angular/core';
 
 /**
  * TUI-presentation-only UI state (not shared/runtime state, per the
@@ -7,7 +7,7 @@ import { Injectable, signal } from "@angular/core";
  * (board.scss) with no toggle affordance; the header hamburger flips this
  * signal, and `Board`/`Rail` render an overlay drawer + backdrop off it.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class LayoutService {
   readonly railOpen = signal(false);
   /** Board's header `+` menu open state — lives here (not on `Board`) so `KeyboardService`'s `Escape` handling can close it without a component reference. */

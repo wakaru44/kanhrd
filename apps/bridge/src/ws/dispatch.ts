@@ -9,9 +9,9 @@ import type {
   ReadSource,
   WsRequest,
   WsResponse,
-} from "@kanhrd/schema";
-import { HerdrRequestError } from "../herdr/client.js";
-import { HostUnavailableError } from "../herdr/hosts.js";
+} from '@kanhrd/schema';
+import { HerdrRequestError } from '../herdr/client.js';
+import { HostUnavailableError } from '../herdr/hosts.js';
 
 /** Just enough of `HostRuntime` for dispatch to route tier-1 + tier-2 + tier-3 methods. */
 export interface DispatchHost {
@@ -22,25 +22,35 @@ export interface DispatchHost {
     format?: ReadFormat;
     lines?: number;
     strip_ansi?: boolean;
-  }): Promise<{ content: string; revision: number; truncated: boolean; format: ReadFormat; source: ReadSource }>;
+  }): Promise<{
+    content: string;
+    revision: number;
+    truncated: boolean;
+    format: ReadFormat;
+    source: ReadSource;
+  }>;
   paneSendKeys(params: { pane_id: string; keys: string[] }): Promise<void>;
   paneSendText(params: { pane_id: string; text: string }): Promise<void>;
 
   // --- Tier-3 (pane/tab/workspace lifecycle) ------------------------------
-  paneSplit(params: BridgeMethodParams["pane.split"]): Promise<BridgeMethodResult["pane.split"]>;
+  paneSplit(params: BridgeMethodParams['pane.split']): Promise<BridgeMethodResult['pane.split']>;
   paneClose(params: { pane_id: string }): Promise<void>;
-  paneMove(params: BridgeMethodParams["pane.move"]): Promise<BridgeMethodResult["pane.move"]>;
-  paneRename(params: BridgeMethodParams["pane.rename"]): Promise<BridgeMethodResult["pane.rename"]>;
-  tabCreate(params: BridgeMethodParams["tab.create"]): Promise<BridgeMethodResult["tab.create"]>;
-  tabRename(params: BridgeMethodParams["tab.rename"]): Promise<BridgeMethodResult["tab.rename"]>;
+  paneMove(params: BridgeMethodParams['pane.move']): Promise<BridgeMethodResult['pane.move']>;
+  paneRename(params: BridgeMethodParams['pane.rename']): Promise<BridgeMethodResult['pane.rename']>;
+  tabCreate(params: BridgeMethodParams['tab.create']): Promise<BridgeMethodResult['tab.create']>;
+  tabRename(params: BridgeMethodParams['tab.rename']): Promise<BridgeMethodResult['tab.rename']>;
   tabClose(params: { tab_id: string }): Promise<void>;
-  tabMove(params: BridgeMethodParams["tab.move"]): Promise<BridgeMethodResult["tab.move"]>;
-  workspaceCreate(params: BridgeMethodParams["workspace.create"]): Promise<BridgeMethodResult["workspace.create"]>;
-  workspaceRename(params: BridgeMethodParams["workspace.rename"]): Promise<BridgeMethodResult["workspace.rename"]>;
+  tabMove(params: BridgeMethodParams['tab.move']): Promise<BridgeMethodResult['tab.move']>;
+  workspaceCreate(
+    params: BridgeMethodParams['workspace.create']
+  ): Promise<BridgeMethodResult['workspace.create']>;
+  workspaceRename(
+    params: BridgeMethodParams['workspace.rename']
+  ): Promise<BridgeMethodResult['workspace.rename']>;
   workspaceClose(params: { workspace_id: string; close_group?: boolean }): Promise<void>;
 
   /** Bridge-process-local, cached — see `HostRuntime.getHostKeybinds()` doc. */
-  getHostKeybinds(): NonNullable<BridgeCapabilities["hostKeybinds"]>;
+  getHostKeybinds(): NonNullable<BridgeCapabilities['hostKeybinds']>;
 }
 
 export interface DispatchHostSource {
@@ -78,14 +88,14 @@ export interface DispatchContext {
   /** Mints a subscription id and records the (host, kinds) subscription. */
   onSubscribe: (host: string, kinds: EventKind[]) => string;
   /** Starts (or attaches to) a shared output poll loop and registers this connection as a subscriber. */
-  subscribeOutput: (host: string, params: BridgeMethodParams["pane.subscribe_output"]) => string;
+  subscribeOutput: (host: string, params: BridgeMethodParams['pane.subscribe_output']) => string;
   /** Deregisters a `pane.subscribe_output` subscription; stops the poll loop if it was the last one. */
   unsubscribeOutput: (subscriptionId: string) => void;
 }
 
 const NOT_SUPPORTED = {
-  code: "not_supported",
-  message: "herdr has no public PTY-resize API in this version",
+  code: 'not_supported',
+  message: 'herdr has no public PTY-resize API in this version',
 } as const;
 
 /**
@@ -116,67 +126,92 @@ export async function dispatch(request: WsRequest, ctx: DispatchContext): Promis
   const { id, host, method } = request;
 
   // Bridge-owned, no herdr host involved — answer even if `host` isn't configured.
-  if ((method as BridgeMethod) === "bridge.capabilities") {
+  if ((method as BridgeMethod) === 'bridge.capabilities') {
     return { id, host, ok: true, data: withHostKeybinds(CAPABILITIES, ctx.hosts) };
   }
 
   const runtime = ctx.hosts.get(host);
   if (!runtime) {
-    return { id, host, ok: false, error: { code: "unknown_host", message: `unknown host "${host}"` } };
+    return {
+      id,
+      host,
+      ok: false,
+      error: { code: 'unknown_host', message: `unknown host "${host}"` },
+    };
   }
 
   try {
     switch (method as BridgeMethod) {
-      case "pane.list": {
+      case 'pane.list': {
         const panes = await runtime.listPanes();
         return { id, host, ok: true, data: { panes } };
       }
-      case "events.subscribe": {
+      case 'events.subscribe': {
         const kinds = (request.params as { kinds?: EventKind[] } | undefined)?.kinds ?? [];
         const subscriptionId = ctx.onSubscribe(host, kinds);
         return { id, host, ok: true, data: { subscription_id: subscriptionId } };
       }
-      case "pane.read": {
-        const params = request.params as BridgeMethodParams["pane.read"] | undefined;
+      case 'pane.read': {
+        const params = request.params as BridgeMethodParams['pane.read'] | undefined;
         if (!params?.pane_id) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing pane_id' },
+          };
         }
         const data = await runtime.paneRead(params);
         return { id, host, ok: true, data };
       }
-      case "pane.subscribe_output": {
-        const params = request.params as BridgeMethodParams["pane.subscribe_output"] | undefined;
+      case 'pane.subscribe_output': {
+        const params = request.params as BridgeMethodParams['pane.subscribe_output'] | undefined;
         if (!params?.pane_id) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing pane_id' },
+          };
         }
         const subscriptionId = ctx.subscribeOutput(host, params);
         return { id, host, ok: true, data: { subscription_id: subscriptionId } };
       }
-      case "pane.unsubscribe_output": {
-        const params = request.params as BridgeMethodParams["pane.unsubscribe_output"] | undefined;
+      case 'pane.unsubscribe_output': {
+        const params = request.params as BridgeMethodParams['pane.unsubscribe_output'] | undefined;
         if (params?.subscription_id) ctx.unsubscribeOutput(params.subscription_id);
         return { id, host, ok: true, data: {} };
       }
-      case "pane.send_keys": {
-        const params = request.params as BridgeMethodParams["pane.send_keys"] | undefined;
+      case 'pane.send_keys': {
+        const params = request.params as BridgeMethodParams['pane.send_keys'] | undefined;
         if (!params?.pane_id || !params.keys) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id or keys" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing pane_id or keys' },
+          };
         }
         await runtime.paneSendKeys(params);
         return { id, host, ok: true, data: {} };
       }
-      case "pane.send_text": {
-        const params = request.params as BridgeMethodParams["pane.send_text"] | undefined;
+      case 'pane.send_text': {
+        const params = request.params as BridgeMethodParams['pane.send_text'] | undefined;
         if (!params?.pane_id || params.text === undefined) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id or text" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing pane_id or text' },
+          };
         }
         await runtime.paneSendText(params);
         return { id, host, ok: true, data: {} };
       }
-      case "pane.resize":
+      case 'pane.resize':
         return { id, host, ok: false, error: NOT_SUPPORTED };
-      case "pane.graphics.info":
-      case "pane.graphics.stream":
+      case 'pane.graphics.info':
+      case 'pane.graphics.stream':
         // Optional tier-2 capabilities this bridge build doesn't implement — see
         // CONTRACT-TIER2.md section 5. Dispatch entries kept so a future
         // implementation slots in cleanly without a client-facing shape change.
@@ -184,91 +219,139 @@ export async function dispatch(request: WsRequest, ctx: DispatchContext): Promis
           id,
           host,
           ok: false,
-          error: { code: "not_supported", message: "pane graphics streaming is not implemented in this bridge" },
+          error: {
+            code: 'not_supported',
+            message: 'pane graphics streaming is not implemented in this bridge',
+          },
         };
 
       // --- Tier-3 (pane/tab/workspace lifecycle) --------------------------
 
-      case "pane.split": {
-        const params = request.params as BridgeMethodParams["pane.split"] | undefined;
+      case 'pane.split': {
+        const params = request.params as BridgeMethodParams['pane.split'] | undefined;
         if (!params?.direction) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing direction" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing direction' },
+          };
         }
         const data = await runtime.paneSplit(params);
         return { id, host, ok: true, data };
       }
-      case "pane.close": {
-        const params = request.params as BridgeMethodParams["pane.close"] | undefined;
+      case 'pane.close': {
+        const params = request.params as BridgeMethodParams['pane.close'] | undefined;
         if (!params?.pane_id) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing pane_id' },
+          };
         }
         await runtime.paneClose(params);
         return { id, host, ok: true, data: {} };
       }
-      case "pane.move": {
-        const params = request.params as BridgeMethodParams["pane.move"] | undefined;
+      case 'pane.move': {
+        const params = request.params as BridgeMethodParams['pane.move'] | undefined;
         if (!params?.pane_id || !params.destination) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id or destination" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing pane_id or destination' },
+          };
         }
         const data = await runtime.paneMove(params);
         return { id, host, ok: true, data };
       }
-      case "pane.rename": {
-        const params = request.params as BridgeMethodParams["pane.rename"] | undefined;
+      case 'pane.rename': {
+        const params = request.params as BridgeMethodParams['pane.rename'] | undefined;
         if (!params?.pane_id) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing pane_id" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing pane_id' },
+          };
         }
         // `label` is intentionally NOT required: herdr's `PaneRenameParams`
         // requires only `pane_id`, and `null` is its explicit clear form.
         const data = await runtime.paneRename(params);
         return { id, host, ok: true, data };
       }
-      case "tab.create": {
-        const params = (request.params as BridgeMethodParams["tab.create"] | undefined) ?? {};
+      case 'tab.create': {
+        const params = (request.params as BridgeMethodParams['tab.create'] | undefined) ?? {};
         const data = await runtime.tabCreate(params);
         return { id, host, ok: true, data };
       }
-      case "tab.rename": {
-        const params = request.params as BridgeMethodParams["tab.rename"] | undefined;
+      case 'tab.rename': {
+        const params = request.params as BridgeMethodParams['tab.rename'] | undefined;
         if (!params?.tab_id || params.label === undefined) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing tab_id or label" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing tab_id or label' },
+          };
         }
         const data = await runtime.tabRename(params);
         return { id, host, ok: true, data };
       }
-      case "tab.close": {
-        const params = request.params as BridgeMethodParams["tab.close"] | undefined;
+      case 'tab.close': {
+        const params = request.params as BridgeMethodParams['tab.close'] | undefined;
         if (!params?.tab_id) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing tab_id" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing tab_id' },
+          };
         }
         await runtime.tabClose(params);
         return { id, host, ok: true, data: {} };
       }
-      case "tab.move": {
-        const params = request.params as BridgeMethodParams["tab.move"] | undefined;
+      case 'tab.move': {
+        const params = request.params as BridgeMethodParams['tab.move'] | undefined;
         if (!params?.tab_id || params.insert_index === undefined) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing tab_id or insert_index" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing tab_id or insert_index' },
+          };
         }
         const data = await runtime.tabMove(params);
         return { id, host, ok: true, data };
       }
-      case "workspace.create": {
-        const params = (request.params as BridgeMethodParams["workspace.create"] | undefined) ?? {};
+      case 'workspace.create': {
+        const params = (request.params as BridgeMethodParams['workspace.create'] | undefined) ?? {};
         const data = await runtime.workspaceCreate(params);
         return { id, host, ok: true, data };
       }
-      case "workspace.rename": {
-        const params = request.params as BridgeMethodParams["workspace.rename"] | undefined;
+      case 'workspace.rename': {
+        const params = request.params as BridgeMethodParams['workspace.rename'] | undefined;
         if (!params?.workspace_id || params.label === undefined) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing workspace_id or label" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing workspace_id or label' },
+          };
         }
         const data = await runtime.workspaceRename(params);
         return { id, host, ok: true, data };
       }
-      case "workspace.close": {
-        const params = request.params as BridgeMethodParams["workspace.close"] | undefined;
+      case 'workspace.close': {
+        const params = request.params as BridgeMethodParams['workspace.close'] | undefined;
         if (!params?.workspace_id) {
-          return { id, host, ok: false, error: { code: "invalid_params", message: "missing workspace_id" } };
+          return {
+            id,
+            host,
+            ok: false,
+            error: { code: 'invalid_params', message: 'missing workspace_id' },
+          };
         }
         await runtime.workspaceClose(params);
         return { id, host, ok: true, data: {} };
@@ -278,7 +361,7 @@ export async function dispatch(request: WsRequest, ctx: DispatchContext): Promis
           id,
           host,
           ok: false,
-          error: { code: "unknown_method", message: `unknown method "${String(method)}"` },
+          error: { code: 'unknown_method', message: `unknown method "${String(method)}"` },
         };
     }
   } catch (err) {
@@ -295,7 +378,7 @@ export async function dispatch(request: WsRequest, ctx: DispatchContext): Promis
       id,
       host,
       ok: false,
-      error: { code: "internal_error", message: err instanceof Error ? err.message : String(err) },
+      error: { code: 'internal_error', message: err instanceof Error ? err.message : String(err) },
     };
   }
 }

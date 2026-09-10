@@ -5,7 +5,9 @@
     [title]="copy.nav.toggleNav"
     [attr.aria-label]="copy.nav.toggleNav"
     (click)="toggleRail()"
-  ><svg lucideMenu class="icon"></svg></button>
+  >
+    <svg lucideMenu class="icon"></svg>
+  </button>
   <a routerLink="/" class="brand">ka<span class="crook-letter">n</span>hrd</a>
   <span class="header-spacer"></span>
   <button
@@ -22,7 +24,12 @@
       <svg lucideMoon class="icon"></svg>
     }
   </button>
-  <a routerLink="/settings" class="icon-btn" [title]="copy.nav.settings" [attr.aria-label]="copy.nav.settings">
+  <a
+    routerLink="/settings"
+    class="icon-btn"
+    [title]="copy.nav.settings"
+    [attr.aria-label]="copy.nav.settings"
+  >
     <svg lucideSettings class="icon"></svg>
   </a>
 </header>

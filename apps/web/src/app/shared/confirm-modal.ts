@@ -6,8 +6,8 @@ import {
   input,
   output,
   viewChild,
-} from "@angular/core";
-import { COPY } from "./copy";
+} from '@angular/core';
+import { COPY } from './copy';
 
 /** One row of a cascading-close preview list: what kind of thing goes, what it is called, and (optionally) its cardinality. */
 export interface ConfirmPreviewItem {
@@ -22,7 +22,7 @@ const FOCUSABLE =
 
 function focusable(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-    (el) => el.offsetParent !== null || el === document.activeElement,
+    (el) => el.offsetParent !== null || el === document.activeElement
   );
 }
 
@@ -44,22 +44,26 @@ export function containDialogFocus(dialog: HTMLElement): () => void {
   const invoker = document.activeElement as HTMLElement | null;
   const inerted: HTMLElement[] = [];
 
-  for (let node: HTMLElement | null = dialog; node && node !== document.body; node = node.parentElement) {
+  for (
+    let node: HTMLElement | null = dialog;
+    node && node !== document.body;
+    node = node.parentElement
+  ) {
     const parent = node.parentElement;
     if (!parent) {
       break;
     }
     for (const sibling of Array.from(parent.children)) {
       const el = sibling as HTMLElement;
-      if (el !== node && !el.hasAttribute("inert")) {
-        el.setAttribute("inert", "");
+      if (el !== node && !el.hasAttribute('inert')) {
+        el.setAttribute('inert', '');
         inerted.push(el);
       }
     }
   }
 
   const onKeydown = (event: KeyboardEvent): void => {
-    if (event.key !== "Tab") {
+    if (event.key !== 'Tab') {
       return;
     }
     const stops = focusable(dialog);
@@ -79,13 +83,13 @@ export function containDialogFocus(dialog: HTMLElement): () => void {
     }
   };
 
-  dialog.addEventListener("keydown", onKeydown);
+  dialog.addEventListener('keydown', onKeydown);
   (focusable(dialog)[0] ?? dialog).focus();
 
   return () => {
-    dialog.removeEventListener("keydown", onKeydown);
+    dialog.removeEventListener('keydown', onKeydown);
     for (const el of inerted) {
-      el.removeAttribute("inert");
+      el.removeAttribute('inert');
     }
     invoker?.focus?.();
   };
@@ -109,16 +113,16 @@ export function containDialogFocus(dialog: HTMLElement): () => void {
  * cannot be recovered.
  */
 @Component({
-  selector: "app-confirm-modal",
+  selector: 'app-confirm-modal',
   imports: [],
-  templateUrl: "./confirm-modal.html",
-  styleUrl: "./confirm-modal.scss",
+  templateUrl: './confirm-modal.html',
+  styleUrl: './confirm-modal.scss',
 })
 export class ConfirmModal implements AfterViewInit, OnDestroy {
   protected readonly copy = COPY;
 
   readonly title = input.required<string>();
-  readonly body = input<string>("");
+  readonly body = input<string>('');
   /** Care verb for the destructive action. Every call site passes one; the fallback is the gentlest verb in the vocabulary. */
   readonly confirmLabel = input<string>(COPY.confirm.closePaneAction);
   readonly cancelLabel = input<string>(COPY.confirm.cancel);
@@ -132,7 +136,7 @@ export class ConfirmModal implements AfterViewInit, OnDestroy {
   readonly confirmed = output<void>();
   readonly cancelled = output<void>();
 
-  private readonly dialog = viewChild.required<ElementRef<HTMLElement>>("dialog");
+  private readonly dialog = viewChild.required<ElementRef<HTMLElement>>('dialog');
   private release: (() => void) | null = null;
 
   ngAfterViewInit(): void {

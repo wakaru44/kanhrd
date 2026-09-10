@@ -1,14 +1,14 @@
-import { Component, inject } from "@angular/core";
-import type { AgentStatus } from "@kanhrd/schema";
-import { COPY } from "../shared/copy";
-import { PanesStore, STATUS_COLUMN_ORDER } from "../state/panes.store";
-import { WsClient } from "../state/ws-client";
+import { Component, inject } from '@angular/core';
+import type { AgentStatus } from '@kanhrd/schema';
+import { COPY } from '../shared/copy';
+import { PanesStore, STATUS_COLUMN_ORDER } from '../state/panes.store';
+import { WsClient } from '../state/ws-client';
 
 @Component({
-  selector: "app-filter-bar",
+  selector: 'app-filter-bar',
   imports: [],
-  templateUrl: "./filter-bar.html",
-  styleUrl: "./filter-bar.scss",
+  templateUrl: './filter-bar.html',
+  styleUrl: './filter-bar.scss',
 })
 export class FilterBar {
   protected readonly store = inject(PanesStore);

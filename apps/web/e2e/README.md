@@ -39,16 +39,19 @@ but it should not have been possible without an explicit opt-in.
    skips with a clear message (not a hard fail) if herdr isn't running or has
    no panes.
 2. Build the SPA and bridge (the suite does not build them for you):
+
    ```bash
    pnpm --filter @kanhrd/web build
    pnpm --filter @kanhrd/bridge build
    ```
+
    Playwright's `webServer` (see `playwright.config.ts`) spawns
    `node ../bridge/dist/main.js` from `apps/web/`, which serves the built SPA
    from `apps/web/dist/web/browser/` and proxies `/api` + `/ws` to herdr. If a
    bridge is already running on `127.0.0.1:5173`, the config reuses it
    (`reuseExistingServer: true`) instead of spawning a second one.
 3. First time only, install the Chromium browser Playwright drives:
+
    ```bash
    pnpm --filter @kanhrd/web test:e2e:install
    ```

@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page } from '@playwright/test';
 
 /**
  * Semantic selectors for kanhrd's SPA. Kept centralized so a markup change
@@ -8,23 +8,23 @@ import type { Locator, Page } from "@playwright/test";
  */
 
 export function brand(page: Page): Locator {
-  return page.locator(".brand");
+  return page.locator('.brand');
 }
 
 export function filterBar(page: Page): Locator {
-  return page.locator(".filter-bar");
+  return page.locator('.filter-bar');
 }
 
 export function hostChip(page: Page, host: string): Locator {
-  return filterBar(page).locator(".host-chip", { hasText: host });
+  return filterBar(page).locator('.host-chip', { hasText: host });
 }
 
 export function statusChip(page: Page, status: string): Locator {
-  return filterBar(page).locator(".status-chip", { hasText: status });
+  return filterBar(page).locator('.status-chip', { hasText: status });
 }
 
 export function allCards(page: Page): Locator {
-  return page.locator(".card");
+  return page.locator('.card');
 }
 
 export function columnByStatus(page: Page, status: string): Locator {
@@ -32,7 +32,7 @@ export function columnByStatus(page: Page, status: string): Locator {
 }
 
 export function cardsInColumn(page: Page, status: string): Locator {
-  return columnByStatus(page, status).locator(".card");
+  return columnByStatus(page, status).locator('.card');
 }
 
 /**
@@ -41,7 +41,7 @@ export function cardsInColumn(page: Page, status: string): Locator {
  * `.host-seal` (`src/app/board/card.html`).
  */
 export function cardHostChip(card: Locator): Locator {
-  return card.locator(".host-seal");
+  return card.locator('.host-seal');
 }
 
 /**
@@ -52,32 +52,32 @@ export function cardHostChip(card: Locator): Locator {
  * tier-1-only card, which is exactly what `card--static` means.
  */
 export function cardOpenLink(card: Locator): Locator {
-  return card.locator("a.card-open");
+  return card.locator('a.card-open');
 }
 
 /** The card's title text, link or not. */
 export function cardTitle(card: Locator): Locator {
-  return card.locator(".card-open");
+  return card.locator('.card-open');
 }
 
 /** The card's action cluster — visible on first render, never a hover reveal. */
 export function cardActions(card: Locator): Locator {
-  return card.locator(".card-actions");
+  return card.locator('.card-actions');
 }
 
 /** The always-visible `LucideMoreHorizontal` overflow trigger on a card. */
 export function cardOverflowTrigger(card: Locator): Locator {
-  return card.locator(".card-action.overflow-trigger");
+  return card.locator('.card-action.overflow-trigger');
 }
 
 /** The board's status-column strip — the mobile pager, a scrolling row on desktop. */
 export function boardStrip(page: Page): Locator {
-  return page.locator(".board-strip");
+  return page.locator('.board-strip');
 }
 
 /** The mobile status switcher (`role="tablist"`), rendered only below 900px. */
 export function statusSwitcher(page: Page): Locator {
-  return page.locator("app-status-switcher .switcher");
+  return page.locator('app-status-switcher .switcher');
 }
 
 /** The switcher's segments, in `STATUS_COLUMN_ORDER`. */
@@ -86,11 +86,11 @@ export function switcherSegments(page: Page): Locator {
 }
 
 export function terminalContainer(page: Page): Locator {
-  return page.locator(".terminal-container");
+  return page.locator('.terminal-container');
 }
 
 export function xtermElement(page: Page): Locator {
-  return page.locator(".xterm");
+  return page.locator('.xterm');
 }
 
 /**
@@ -101,6 +101,5 @@ export function xtermElement(page: Page): Locator {
  * trivially true even when the terminal itself has never rendered anything.
  */
 export function xtermRows(page: Page): Locator {
-  return page.locator(".xterm-rows");
+  return page.locator('.xterm-rows');
 }
-

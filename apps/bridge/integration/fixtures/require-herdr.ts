@@ -1,4 +1,4 @@
-import { herdrAvailable } from "./herdr-cli.js";
+import { herdrAvailable } from './herdr-cli.js';
 
 /**
  * Shared skip-gracefully guard for every integration test file. Mirrors the

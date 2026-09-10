@@ -1,6 +1,6 @@
-import { Injectable, computed, effect, inject, signal } from "@angular/core";
-import type { ITheme } from "@xterm/xterm";
-import { ThemeService } from "./theme.service";
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import type { ITheme } from '@xterm/xterm';
+import { ThemeService } from './theme.service';
 
 /**
  * Built-in xterm.js color palettes. Every terminal in the app renders with
@@ -9,13 +9,7 @@ import { ThemeService } from "./theme.service";
  * one that is.
  */
 export type TerminalThemeName =
-  | "auto"
-  | "washi"
-  | "sumi"
-  | "catppuccin-mocha"
-  | "monokai"
-  | "solarized-dark"
-  | "solarized-light";
+  'auto' | 'washi' | 'sumi' | 'catppuccin-mocha' | 'monokai' | 'solarized-dark' | 'solarized-light';
 
 /**
  * Pre-redesign palette names, kept readable from storage so an explicit
@@ -23,11 +17,11 @@ export type TerminalThemeName =
  * reverting to `auto`.
  */
 const LEGACY_NAMES: Record<string, TerminalThemeName> = {
-  "standard-light": "washi",
-  "standard-dark": "sumi",
+  'standard-light': 'washi',
+  'standard-dark': 'sumi',
 };
 
-const STORAGE_KEY = "kanhrd.terminal-theme";
+const STORAGE_KEY = 'kanhrd.terminal-theme';
 
 /**
  * Washi (light) — the brand light terminal palette from
@@ -37,26 +31,26 @@ const STORAGE_KEY = "kanhrd.terminal-theme";
  * properties, so these values are literal by necessity.
  */
 export const XTERM_THEME_WASHI: ITheme = {
-  background: "#f4ede0",
-  foreground: "#1a1815",
-  cursor: "#1a1815",
-  selectionBackground: "#ebe2d1",
-  black: "#1a1815",
-  red: "#b6412a",
-  green: "#5e6e41",
-  yellow: "#8f5e1e",
-  blue: "#2f4a6b",
-  magenta: "#8a4a6b",
-  cyan: "#2f6b6b",
-  white: "#4a463f",
-  brightBlack: "#6b6459",
-  brightRed: "#9c3522",
-  brightGreen: "#566a3a",
-  brightYellow: "#8a5b1d",
-  brightBlue: "#25405e",
-  brightMagenta: "#743a5a",
-  brightCyan: "#265c5c",
-  brightWhite: "#1a1815",
+  background: '#f4ede0',
+  foreground: '#1a1815',
+  cursor: '#1a1815',
+  selectionBackground: '#ebe2d1',
+  black: '#1a1815',
+  red: '#b6412a',
+  green: '#5e6e41',
+  yellow: '#8f5e1e',
+  blue: '#2f4a6b',
+  magenta: '#8a4a6b',
+  cyan: '#2f6b6b',
+  white: '#4a463f',
+  brightBlack: '#6b6459',
+  brightRed: '#9c3522',
+  brightGreen: '#566a3a',
+  brightYellow: '#8a5b1d',
+  brightBlue: '#25405e',
+  brightMagenta: '#743a5a',
+  brightCyan: '#265c5c',
+  brightWhite: '#1a1815',
 };
 
 /**
@@ -67,137 +61,139 @@ export const XTERM_THEME_WASHI: ITheme = {
  * dark-theme mapping on purpose.
  */
 export const XTERM_THEME_SUMI: ITheme = {
-  background: "#161311",
-  foreground: "#ece3d1",
-  cursor: "#ece3d1",
-  selectionBackground: "#2a2521",
-  black: "#8a7f70",
-  red: "#c9634d",
-  green: "#86975f",
-  yellow: "#d69746",
-  blue: "#6684a4",
-  magenta: "#b07a9a",
-  cyan: "#5f9d9d",
-  white: "#b4ab98",
-  brightBlack: "#8f8776",
-  brightRed: "#d9836c",
-  brightGreen: "#9aab72",
-  brightYellow: "#e0a75c",
-  brightBlue: "#7c97b5",
-  brightMagenta: "#c795b1",
-  brightCyan: "#7db5b5",
-  brightWhite: "#ece3d1",
+  background: '#161311',
+  foreground: '#ece3d1',
+  cursor: '#ece3d1',
+  selectionBackground: '#2a2521',
+  black: '#8a7f70',
+  red: '#c9634d',
+  green: '#86975f',
+  yellow: '#d69746',
+  blue: '#6684a4',
+  magenta: '#b07a9a',
+  cyan: '#5f9d9d',
+  white: '#b4ab98',
+  brightBlack: '#8f8776',
+  brightRed: '#d9836c',
+  brightGreen: '#9aab72',
+  brightYellow: '#e0a75c',
+  brightBlue: '#7c97b5',
+  brightMagenta: '#c795b1',
+  brightCyan: '#7db5b5',
+  brightWhite: '#ece3d1',
 };
 
 /** Catppuccin Mocha — https://github.com/catppuccin/catppuccin, standard 16-color mapping. */
 export const XTERM_THEME_CATPPUCCIN_MOCHA: ITheme = {
-  background: "#1e1e2e",
-  foreground: "#cdd6f4",
-  cursor: "#f5e0dc",
-  selectionBackground: "#585b70",
-  black: "#45475a",
-  red: "#f38ba8",
-  green: "#a6e3a1",
-  yellow: "#f9e2af",
-  blue: "#89b4fa",
-  magenta: "#f5c2e7",
-  cyan: "#94e2d5",
-  white: "#bac2de",
-  brightBlack: "#585b70",
-  brightRed: "#f38ba8",
-  brightGreen: "#a6e3a1",
-  brightYellow: "#f9e2af",
-  brightBlue: "#89b4fa",
-  brightMagenta: "#f5c2e7",
-  brightCyan: "#94e2d5",
-  brightWhite: "#a6adc8",
+  background: '#1e1e2e',
+  foreground: '#cdd6f4',
+  cursor: '#f5e0dc',
+  selectionBackground: '#585b70',
+  black: '#45475a',
+  red: '#f38ba8',
+  green: '#a6e3a1',
+  yellow: '#f9e2af',
+  blue: '#89b4fa',
+  magenta: '#f5c2e7',
+  cyan: '#94e2d5',
+  white: '#bac2de',
+  brightBlack: '#585b70',
+  brightRed: '#f38ba8',
+  brightGreen: '#a6e3a1',
+  brightYellow: '#f9e2af',
+  brightBlue: '#89b4fa',
+  brightMagenta: '#f5c2e7',
+  brightCyan: '#94e2d5',
+  brightWhite: '#a6adc8',
 };
 
 /** Monokai — the classic Sublime Text default scheme's standard xterm 16-color mapping. */
 export const XTERM_THEME_MONOKAI: ITheme = {
-  background: "#272822",
-  foreground: "#f8f8f2",
-  cursor: "#f8f8f0",
-  selectionBackground: "#49483e",
-  black: "#272822",
-  red: "#f92672",
-  green: "#a6e22e",
-  yellow: "#f4bf75",
-  blue: "#66d9ef",
-  magenta: "#ae81ff",
-  cyan: "#a1efe4",
-  white: "#f8f8f2",
-  brightBlack: "#75715e",
-  brightRed: "#f92672",
-  brightGreen: "#a6e22e",
-  brightYellow: "#f4bf75",
-  brightBlue: "#66d9ef",
-  brightMagenta: "#ae81ff",
-  brightCyan: "#a1efe4",
-  brightWhite: "#f9f8f5",
+  background: '#272822',
+  foreground: '#f8f8f2',
+  cursor: '#f8f8f0',
+  selectionBackground: '#49483e',
+  black: '#272822',
+  red: '#f92672',
+  green: '#a6e22e',
+  yellow: '#f4bf75',
+  blue: '#66d9ef',
+  magenta: '#ae81ff',
+  cyan: '#a1efe4',
+  white: '#f8f8f2',
+  brightBlack: '#75715e',
+  brightRed: '#f92672',
+  brightGreen: '#a6e22e',
+  brightYellow: '#f4bf75',
+  brightBlue: '#66d9ef',
+  brightMagenta: '#ae81ff',
+  brightCyan: '#a1efe4',
+  brightWhite: '#f9f8f5',
 };
 
 /** Solarized Dark — https://ethanschoonover.com/solarized/, standard 16-color xterm mapping. */
 export const XTERM_THEME_SOLARIZED_DARK: ITheme = {
-  background: "#002b36",
-  foreground: "#839496",
-  cursor: "#839496",
-  selectionBackground: "#073642",
-  black: "#073642",
-  red: "#dc322f",
-  green: "#859900",
-  yellow: "#b58900",
-  blue: "#268bd2",
-  magenta: "#d33682",
-  cyan: "#2aa198",
-  white: "#eee8d5",
-  brightBlack: "#002b36",
-  brightRed: "#cb4b16",
-  brightGreen: "#586e75",
-  brightYellow: "#657b83",
-  brightBlue: "#839496",
-  brightMagenta: "#6c71c4",
-  brightCyan: "#93a1a1",
-  brightWhite: "#fdf6e3",
+  background: '#002b36',
+  foreground: '#839496',
+  cursor: '#839496',
+  selectionBackground: '#073642',
+  black: '#073642',
+  red: '#dc322f',
+  green: '#859900',
+  yellow: '#b58900',
+  blue: '#268bd2',
+  magenta: '#d33682',
+  cyan: '#2aa198',
+  white: '#eee8d5',
+  brightBlack: '#002b36',
+  brightRed: '#cb4b16',
+  brightGreen: '#586e75',
+  brightYellow: '#657b83',
+  brightBlue: '#839496',
+  brightMagenta: '#6c71c4',
+  brightCyan: '#93a1a1',
+  brightWhite: '#fdf6e3',
 };
 
 /** Solarized Light — same 16 ANSI colors as Solarized Dark; only background/foreground/cursor flip. */
 export const XTERM_THEME_SOLARIZED_LIGHT: ITheme = {
   ...XTERM_THEME_SOLARIZED_DARK,
-  background: "#fdf6e3",
-  foreground: "#657b83",
-  cursor: "#657b83",
-  selectionBackground: "#eee8d5",
+  background: '#fdf6e3',
+  foreground: '#657b83',
+  cursor: '#657b83',
+  selectionBackground: '#eee8d5',
 };
 
-const PALETTES: Record<Exclude<TerminalThemeName, "auto">, ITheme> = {
+const PALETTES: Record<Exclude<TerminalThemeName, 'auto'>, ITheme> = {
   washi: XTERM_THEME_WASHI,
   sumi: XTERM_THEME_SUMI,
-  "catppuccin-mocha": XTERM_THEME_CATPPUCCIN_MOCHA,
+  'catppuccin-mocha': XTERM_THEME_CATPPUCCIN_MOCHA,
   monokai: XTERM_THEME_MONOKAI,
-  "solarized-dark": XTERM_THEME_SOLARIZED_DARK,
-  "solarized-light": XTERM_THEME_SOLARIZED_LIGHT,
+  'solarized-dark': XTERM_THEME_SOLARIZED_DARK,
+  'solarized-light': XTERM_THEME_SOLARIZED_LIGHT,
 };
 
 export const TERMINAL_THEME_OPTIONS: readonly { value: TerminalThemeName; label: string }[] = [
-  { value: "auto", label: "Auto (follows app theme)" },
-  { value: "washi", label: "Washi (light)" },
-  { value: "sumi", label: "Sumi (dark)" },
-  { value: "catppuccin-mocha", label: "Catppuccin Mocha" },
-  { value: "monokai", label: "Monokai" },
-  { value: "solarized-dark", label: "Solarized Dark" },
-  { value: "solarized-light", label: "Solarized Light" },
+  { value: 'auto', label: 'Auto (follows app theme)' },
+  { value: 'washi', label: 'Washi (light)' },
+  { value: 'sumi', label: 'Sumi (dark)' },
+  { value: 'catppuccin-mocha', label: 'Catppuccin Mocha' },
+  { value: 'monokai', label: 'Monokai' },
+  { value: 'solarized-dark', label: 'Solarized Dark' },
+  { value: 'solarized-light', label: 'Solarized Light' },
 ];
 
 function isTerminalThemeName(value: string | null): value is TerminalThemeName {
-  return value === "auto" || (value !== null && value in PALETTES);
+  return value === 'auto' || (value !== null && value in PALETTES);
 }
 
 /** Pure read, unit-testable without DI — mirrors `loadTheme` in theme.service.ts. */
-export function loadTerminalThemeName(storage: Pick<Storage, "getItem"> = localStorage): TerminalThemeName {
+export function loadTerminalThemeName(
+  storage: Pick<Storage, 'getItem'> = localStorage
+): TerminalThemeName {
   const raw = storage.getItem(STORAGE_KEY);
   if (isTerminalThemeName(raw)) return raw;
-  return (raw !== null && LEGACY_NAMES[raw]) || "auto";
+  return (raw !== null && LEGACY_NAMES[raw]) || 'auto';
 }
 
 /**
@@ -206,7 +202,7 @@ export function loadTerminalThemeName(storage: Pick<Storage, "getItem"> = localS
  * (the default) follows `ThemeService`'s dark/light SPA theme; any other
  * value pins a specific palette regardless of the SPA theme.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class TerminalThemeService {
   private readonly appTheme = inject(ThemeService);
 
@@ -214,8 +210,8 @@ export class TerminalThemeService {
 
   readonly theme = computed<ITheme>(() => {
     const name = this.name();
-    if (name === "auto") {
-      return this.appTheme.theme() === "light" ? XTERM_THEME_WASHI : XTERM_THEME_SUMI;
+    if (name === 'auto') {
+      return this.appTheme.theme() === 'light' ? XTERM_THEME_WASHI : XTERM_THEME_SUMI;
     }
     return PALETTES[name];
   });

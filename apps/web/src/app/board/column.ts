@@ -1,8 +1,8 @@
-import { Component, ElementRef, Signal, computed, inject, input, signal } from "@angular/core";
-import { ScrollingModule } from "@angular/cdk/scrolling";
-import type { AgentStatus, BridgeCapabilities, Pane } from "@kanhrd/schema";
-import { COPY } from "../shared/copy";
-import { Card } from "./card";
+import { Component, ElementRef, Signal, computed, inject, input, signal } from '@angular/core';
+import { ScrollingModule } from '@angular/cdk/scrolling';
+import type { AgentStatus, BridgeCapabilities, Pane } from '@kanhrd/schema';
+import { COPY } from '../shared/copy';
+import { Card } from './card';
 
 /**
  * The two density thresholds are DISTINCT (docs/UX-GUIDELINES.md, "Density
@@ -29,7 +29,7 @@ export function isVirtualized(count: number): boolean {
   return count > VIRTUALIZE_THRESHOLD;
 }
 
-const MOBILE_QUERY = "(max-width: 900px)";
+const MOBILE_QUERY = '(max-width: 900px)';
 let mobileViewport: Signal<boolean> | null = null;
 
 /**
@@ -43,9 +43,10 @@ let mobileViewport: Signal<boolean> | null = null;
  */
 export function mobileViewportSignal(): Signal<boolean> {
   if (!mobileViewport) {
-    const query = typeof window !== "undefined" && window.matchMedia ? window.matchMedia(MOBILE_QUERY) : null;
+    const query =
+      typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(MOBILE_QUERY) : null;
     const matches = signal(query?.matches ?? false);
-    query?.addEventListener("change", (event) => matches.set(event.matches));
+    query?.addEventListener('change', (event) => matches.set(event.matches));
     mobileViewport = matches.asReadonly();
   }
   return mobileViewport;
@@ -67,10 +68,10 @@ export function mobileViewportSignal(): Signal<boolean> {
 export function focusCard(
   root: HTMLElement | null,
   paneKey: string,
-  options?: FocusOptions,
+  options?: FocusOptions
 ): boolean {
   const card = root?.querySelector(`app-card[data-pane="${CSS.escape(paneKey)}"]`);
-  const focusable = card?.querySelector<HTMLElement>("a[href], button");
+  const focusable = card?.querySelector<HTMLElement>('a[href], button');
   if (!focusable) {
     return false;
   }
@@ -92,10 +93,10 @@ export function focusCard(
  * docs now forbid the affordance outright.
  */
 @Component({
-  selector: "app-column",
+  selector: 'app-column',
   imports: [Card, ScrollingModule],
-  templateUrl: "./column.html",
-  styleUrl: "./column.scss",
+  templateUrl: './column.html',
+  styleUrl: './column.scss',
 })
 export class Column {
   readonly status = input.required<AgentStatus>();
@@ -135,7 +136,7 @@ export class Column {
   protected onFocusIn(event: FocusEvent): void {
     this.focusLostToRecycling = false;
     this.focusedPaneKey =
-      (event.target as HTMLElement | null)?.closest("app-card")?.getAttribute("data-pane") ?? null;
+      (event.target as HTMLElement | null)?.closest('app-card')?.getAttribute('data-pane') ?? null;
   }
 
   protected onFocusOut(event: FocusEvent): void {

@@ -38,7 +38,7 @@ the identical call for the identical reason.
 
 ## Layout
 
-```
+```text
 fixtures/
   bridge.ts          spawns the real bridge (tsx src/main.ts --port 0), waits for
                       "Server listening at http://127.0.0.1:<port>", tears down after

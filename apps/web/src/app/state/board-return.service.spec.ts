@@ -1,75 +1,75 @@
-import { TestBed } from "@angular/core/testing";
-import { provideZonelessChangeDetection } from "@angular/core";
-import { NavigationEnd, Router } from "@angular/router";
-import { Subject } from "rxjs";
-import type { AgentStatus } from "@kanhrd/schema";
+import { TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import type { AgentStatus } from '@kanhrd/schema';
 import {
   BoardReturnService,
   RESTORE_GRACE_MS,
   isBoardUrl,
   returnFocusTarget,
   type BoardRestorePort,
-} from "./board-return.service";
+} from './board-return.service';
 
 /** One pump tick, written out here so the grace-period test reads as "past the deadline". */
 const RESTORE_RETRY_TICK = 50;
 
-describe("returnFocusTarget (pure)", () => {
-  const column = ["laptop:a", "laptop:b", "laptop:c"];
+describe('returnFocusTarget (pure)', () => {
+  const column = ['laptop:a', 'laptop:b', 'laptop:c'];
 
-  it("returns the opened card when it is still in its column", () => {
-    expect(returnFocusTarget("laptop:b", 1, column)).toBe("laptop:b");
+  it('returns the opened card when it is still in its column', () => {
+    expect(returnFocusTarget('laptop:b', 1, column)).toBe('laptop:b');
   });
 
-  it("returns the card now standing where it stood when it is gone", () => {
-    expect(returnFocusTarget("laptop:b", 1, ["laptop:a", "laptop:c", "laptop:d"])).toBe("laptop:c");
+  it('returns the card now standing where it stood when it is gone', () => {
+    expect(returnFocusTarget('laptop:b', 1, ['laptop:a', 'laptop:c', 'laptop:d'])).toBe('laptop:c');
   });
 
-  it("clamps to the last card when the column shrank past the remembered index", () => {
-    expect(returnFocusTarget("laptop:c", 2, ["laptop:a"])).toBe("laptop:a");
+  it('clamps to the last card when the column shrank past the remembered index', () => {
+    expect(returnFocusTarget('laptop:c', 2, ['laptop:a'])).toBe('laptop:a');
   });
 
-  it("finds the card even when it moved within its column", () => {
-    expect(returnFocusTarget("laptop:c", 0, column)).toBe("laptop:c");
+  it('finds the card even when it moved within its column', () => {
+    expect(returnFocusTarget('laptop:c', 0, column)).toBe('laptop:c');
   });
 
-  it("has no target for a column that emptied out", () => {
-    expect(returnFocusTarget("laptop:b", 1, [])).toBeNull();
+  it('has no target for a column that emptied out', () => {
+    expect(returnFocusTarget('laptop:b', 1, [])).toBeNull();
   });
 
-  it("falls back by index when the board was left without opening a card", () => {
-    expect(returnFocusTarget(null, 0, column)).toBe("laptop:a");
+  it('falls back by index when the board was left without opening a card', () => {
+    expect(returnFocusTarget(null, 0, column)).toBe('laptop:a');
   });
 
-  it("tolerates a negative or absurd index", () => {
-    expect(returnFocusTarget("gone", -3, column)).toBe("laptop:a");
-    expect(returnFocusTarget("gone", 99, column)).toBe("laptop:c");
+  it('tolerates a negative or absurd index', () => {
+    expect(returnFocusTarget('gone', -3, column)).toBe('laptop:a');
+    expect(returnFocusTarget('gone', 99, column)).toBe('laptop:c');
   });
 });
 
-describe("isBoardUrl", () => {
-  it("recognises the three board shapes and nothing else", () => {
-    expect(isBoardUrl("/")).toBe(true);
-    expect(isBoardUrl("/workspace/w6")).toBe(true);
-    expect(isBoardUrl("/workspace/w6/tab/w6:t2")).toBe(true);
+describe('isBoardUrl', () => {
+  it('recognises the three board shapes and nothing else', () => {
+    expect(isBoardUrl('/')).toBe(true);
+    expect(isBoardUrl('/workspace/w6')).toBe(true);
+    expect(isBoardUrl('/workspace/w6/tab/w6:t2')).toBe(true);
 
-    expect(isBoardUrl("/pane/local/w6:p1")).toBe(false);
-    expect(isBoardUrl("/settings")).toBe(false);
-    expect(isBoardUrl("/workspace")).toBe(false);
-    expect(isBoardUrl("/workspace/w6/tab")).toBe(false);
-    expect(isBoardUrl("/workspace/w6/tab/t1/extra")).toBe(false);
-    expect(isBoardUrl("/nonsense")).toBe(false);
+    expect(isBoardUrl('/pane/local/w6:p1')).toBe(false);
+    expect(isBoardUrl('/settings')).toBe(false);
+    expect(isBoardUrl('/workspace')).toBe(false);
+    expect(isBoardUrl('/workspace/w6/tab')).toBe(false);
+    expect(isBoardUrl('/workspace/w6/tab/t1/extra')).toBe(false);
+    expect(isBoardUrl('/nonsense')).toBe(false);
   });
 
-  it("ignores a query string or fragment", () => {
-    expect(isBoardUrl("/workspace/w6?q=1")).toBe(true);
-    expect(isBoardUrl("/#frag")).toBe(true);
+  it('ignores a query string or fragment', () => {
+    expect(isBoardUrl('/workspace/w6?q=1')).toBe(true);
+    expect(isBoardUrl('/#frag')).toBe(true);
   });
 });
 
 /** A drivable stand-in for the router: `url` now, plus the navigations that got there. */
 class FakeRouter {
-  url = "/";
+  url = '/';
   readonly events = new Subject<NavigationEnd>();
 
   go(url: string): void {
@@ -91,7 +91,7 @@ function scrollable(scrollLeft = 0, clientWidth = 900): HTMLElement {
  * `board.spec.ts`.
  */
 class FakePort implements BoardRestorePort {
-  url = "/workspace/w6";
+  url = '/workspace/w6';
   stripEl: HTMLElement | null = null;
   keys: readonly string[] = [];
   /** Cards the DOM has rendered so far; `focusCard` reports the rest as not there yet. */
@@ -129,7 +129,7 @@ class FakePort implements BoardRestorePort {
   }
 }
 
-describe("BoardReturnService", () => {
+describe('BoardReturnService', () => {
   let service: BoardReturnService;
   let router: FakeRouter;
 
@@ -145,40 +145,40 @@ describe("BoardReturnService", () => {
 
   // --- the URL half ------------------------------------------------------
 
-  describe("the board URL", () => {
+  describe('the board URL', () => {
     it("sends a pane's back control to / until a board has been remembered", () => {
-      expect(service.boardUrl()).toBe("/");
+      expect(service.boardUrl()).toBe('/');
     });
 
-    it("remembers the scoped URL the board was on", () => {
-      router.go("/workspace/w1/tab/t1");
+    it('remembers the scoped URL the board was on', () => {
+      router.go('/workspace/w1/tab/t1');
       service.rememberBoard(geometry);
-      expect(service.boardUrl()).toBe("/workspace/w1/tab/t1");
+      expect(service.boardUrl()).toBe('/workspace/w1/tab/t1');
     });
 
-    it("remembers the board it was ON, not the pane the router already moved to", () => {
+    it('remembers the board it was ON, not the pane the router already moved to', () => {
       // The router commits the navigation before the outgoing board is torn
       // down, so by `ngOnDestroy` `Router.url` already names the pane. The
       // board never hands a URL over for exactly this reason.
-      router.go("/workspace/w6");
-      router.go("/pane/local/w6:p2");
+      router.go('/workspace/w6');
+      router.go('/pane/local/w6:p2');
       service.rememberBoard(geometry);
 
-      expect(service.boardUrl()).toBe("/workspace/w6");
+      expect(service.boardUrl()).toBe('/workspace/w6');
     });
 
-    it("ignores every URL that is not a board", () => {
-      router.go("/workspace/w6");
-      router.go("/settings");
-      router.go("/nonsense");
+    it('ignores every URL that is not a board', () => {
+      router.go('/workspace/w6');
+      router.go('/settings');
+      router.go('/nonsense');
       service.rememberBoard(geometry);
 
-      expect(service.boardUrl()).toBe("/workspace/w6");
+      expect(service.boardUrl()).toBe('/workspace/w6');
     });
 
-    it("falls back to / when no board has been navigated to at all", () => {
+    it('falls back to / when no board has been navigated to at all', () => {
       const fresh = new FakeRouter();
-      fresh.url = "/pane/local/w6:p1"; // a deep link straight into a pane
+      fresh.url = '/pane/local/w6:p1'; // a deep link straight into a pane
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         providers: [provideZonelessChangeDetection(), { provide: Router, useValue: fresh }],
@@ -186,12 +186,12 @@ describe("BoardReturnService", () => {
       const cold = TestBed.inject(BoardReturnService);
       cold.rememberBoard(geometry);
 
-      expect(cold.boardUrl()).toBe("/");
+      expect(cold.boardUrl()).toBe('/');
     });
 
-    it("seeds from the URL the app came up on", () => {
+    it('seeds from the URL the app came up on', () => {
       const fresh = new FakeRouter();
-      fresh.url = "/workspace/w9";
+      fresh.url = '/workspace/w9';
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         providers: [provideZonelessChangeDetection(), { provide: Router, useValue: fresh }],
@@ -199,37 +199,37 @@ describe("BoardReturnService", () => {
       const cold = TestBed.inject(BoardReturnService);
       cold.rememberBoard(geometry);
 
-      expect(cold.boardUrl()).toBe("/workspace/w9");
+      expect(cold.boardUrl()).toBe('/workspace/w9');
     });
 
-    it("keeps only the most recent board position", () => {
-      router.go("/workspace/w1");
+    it('keeps only the most recent board position', () => {
+      router.go('/workspace/w1');
       service.rememberBoard(geometry);
-      router.go("/");
+      router.go('/');
       service.rememberBoard({ scrollLeft: 0, scrollTops: {} });
 
-      expect(service.boardUrl()).toBe("/");
+      expect(service.boardUrl()).toBe('/');
     });
 
-    it("clear() forgets the record", () => {
-      router.go("/workspace/w1");
+    it('clear() forgets the record', () => {
+      router.go('/workspace/w1');
       service.rememberBoard(geometry);
       service.clear();
 
-      expect(service.boardUrl()).toBe("/");
+      expect(service.boardUrl()).toBe('/');
     });
   });
 
   // --- the restore protocol ---------------------------------------------
 
-  describe("putting the user back", () => {
+  describe('putting the user back', () => {
     let port: FakePort;
 
     beforeEach(() => {
       jasmine.clock().install();
       jasmine.clock().mockDate(new Date(2026, 0, 1));
       port = new FakePort();
-      router.go("/workspace/w6");
+      router.go('/workspace/w6');
     });
 
     afterEach(() => {
@@ -238,7 +238,11 @@ describe("BoardReturnService", () => {
     });
 
     /** The state a board is left in when a card is opened from it. */
-    function leaveByCard(paneKey = "local:w6:p2", status: AgentStatus = "working", index = 1): void {
+    function leaveByCard(
+      paneKey = 'local:w6:p2',
+      status: AgentStatus = 'working',
+      index = 1
+    ): void {
       service.rememberCard(paneKey, status, index);
       service.rememberBoard(geometry);
     }
@@ -249,37 +253,37 @@ describe("BoardReturnService", () => {
       service.retryRestore();
     }
 
-    it("restores scroll and focus when the board comes up at the remembered URL", () => {
+    it('restores scroll and focus when the board comes up at the remembered URL', () => {
       leaveByCard();
       port.stripEl = scrollable();
-      port.keys = ["local:w6:p1", "local:w6:p2"];
-      port.rendered.add("local:w6:p2");
+      port.keys = ['local:w6:p1', 'local:w6:p2'];
+      port.rendered.add('local:w6:p2');
 
       comeBack();
 
       expect(port.stripEl.scrollLeft).toBe(780);
       expect(port.pages).toEqual([780]);
-      expect(port.scrollers.get("working")?.scrollTop).toBe(240);
-      expect(port.focused).toBe("local:w6:p2");
+      expect(port.scrollers.get('working')?.scrollTop).toBe(240);
+      expect(port.focused).toBe('local:w6:p2');
     });
 
-    it("restores the scroll before it restores focus", () => {
+    it('restores the scroll before it restores focus', () => {
       leaveByCard();
       port.stripEl = scrollable();
-      port.keys = ["local:w6:p1", "local:w6:p2"];
-      port.rendered.add("local:w6:p2");
+      port.keys = ['local:w6:p1', 'local:w6:p2'];
+      port.rendered.add('local:w6:p2');
 
       comeBack();
 
-      expect(port.log).toEqual(["scroll:working", "focus:local:w6:p2"]);
+      expect(port.log).toEqual(['scroll:working', 'focus:local:w6:p2']);
     });
 
-    it("restores nothing when the board comes up at a different URL", () => {
+    it('restores nothing when the board comes up at a different URL', () => {
       leaveByCard();
-      port.url = "/workspace/somewhere-else";
+      port.url = '/workspace/somewhere-else';
       port.stripEl = scrollable();
-      port.keys = ["local:w6:p2"];
-      port.rendered.add("local:w6:p2");
+      port.keys = ['local:w6:p2'];
+      port.rendered.add('local:w6:p2');
 
       comeBack();
       jasmine.clock().tick(200);
@@ -288,10 +292,10 @@ describe("BoardReturnService", () => {
       expect(port.stripEl.scrollLeft).toBe(0);
     });
 
-    it("keeps looking every 50ms until the card renders", () => {
+    it('keeps looking every 50ms until the card renders', () => {
       leaveByCard();
       port.stripEl = scrollable();
-      port.keys = ["local:w6:p1", "local:w6:p2"];
+      port.keys = ['local:w6:p1', 'local:w6:p2'];
 
       comeBack();
       expect(port.focused).toBeNull();
@@ -300,34 +304,34 @@ describe("BoardReturnService", () => {
       expect(port.focused).toBeNull();
 
       // `pane.list` lands, and the pump's next tick finds the card.
-      port.rendered.add("local:w6:p2");
+      port.rendered.add('local:w6:p2');
       jasmine.clock().tick(1);
-      expect(port.focused).toBe("local:w6:p2");
+      expect(port.focused).toBe('local:w6:p2');
     });
 
-    it("waits through a board that is still on the skeleton", () => {
+    it('waits through a board that is still on the skeleton', () => {
       leaveByCard();
-      port.keys = ["local:w6:p2"];
-      port.rendered.add("local:w6:p2");
+      port.keys = ['local:w6:p2'];
+      port.rendered.add('local:w6:p2');
 
       comeBack();
       expect(port.focused).toBeNull();
 
       port.stripEl = scrollable();
       jasmine.clock().tick(50);
-      expect(port.focused).toBe("local:w6:p2");
+      expect(port.focused).toBe('local:w6:p2');
     });
 
-    it("gives up once the grace period has run out, rather than jumping late", () => {
+    it('gives up once the grace period has run out, rather than jumping late', () => {
       leaveByCard();
-      port.keys = ["local:w6:p2"];
+      port.keys = ['local:w6:p2'];
 
       comeBack();
       jasmine.clock().tick(RESTORE_GRACE_MS + RESTORE_RETRY_TICK);
 
       // The data finally arrives, far too late to be anything but a surprise.
       port.stripEl = scrollable();
-      port.rendered.add("local:w6:p2");
+      port.rendered.add('local:w6:p2');
       jasmine.clock().tick(500);
 
       expect(port.focused).toBeNull();
@@ -335,36 +339,36 @@ describe("BoardReturnService", () => {
     });
 
     it("falls back to the card standing in the opened one's place", () => {
-      leaveByCard("local:w6:p2", "working", 1);
+      leaveByCard('local:w6:p2', 'working', 1);
       port.stripEl = scrollable();
       // That pane closed while the user was inside it; another took its slot.
-      port.keys = ["local:w6:p1", "local:w6:p3"];
-      port.rendered.add("local:w6:p3");
+      port.keys = ['local:w6:p1', 'local:w6:p3'];
+      port.rendered.add('local:w6:p3');
 
       comeBack();
 
-      expect(port.focused).toBe("local:w6:p3");
+      expect(port.focused).toBe('local:w6:p3');
     });
 
-    it("has nothing to focus in a column that emptied out, and stops looking", () => {
+    it('has nothing to focus in a column that emptied out, and stops looking', () => {
       leaveByCard();
       port.stripEl = scrollable();
       port.keys = [];
 
       comeBack();
-      port.keys = ["local:w6:p2"];
-      port.rendered.add("local:w6:p2");
+      port.keys = ['local:w6:p2'];
+      port.rendered.add('local:w6:p2');
       jasmine.clock().tick(500);
 
       expect(port.focused).toBeNull();
       expect(port.stripEl.scrollLeft).toBe(780);
     });
 
-    it("restores the scroll of a departure that opened no card, and asks for no focus", () => {
+    it('restores the scroll of a departure that opened no card, and asks for no focus', () => {
       service.rememberBoard(geometry);
       port.stripEl = scrollable();
-      port.keys = ["local:w6:p1"];
-      port.rendered.add("local:w6:p1");
+      port.keys = ['local:w6:p1'];
+      port.rendered.add('local:w6:p1');
 
       comeBack();
       jasmine.clock().tick(500);
@@ -373,13 +377,13 @@ describe("BoardReturnService", () => {
       expect(port.focused).toBeNull();
     });
 
-    it("leaves focus the user has already placed somewhere else alone, and stops looking", () => {
+    it('leaves focus the user has already placed somewhere else alone, and stops looking', () => {
       leaveByCard();
       port.stripEl = scrollable();
-      port.keys = ["local:w6:p2"];
+      port.keys = ['local:w6:p2'];
       // The port's own rule: the card is there, but focus was not taken.
-      port.rendered.add("local:w6:p2");
-      spyOn(port, "focusCard").and.returnValue(true);
+      port.rendered.add('local:w6:p2');
+      spyOn(port, 'focusCard').and.returnValue(true);
 
       comeBack();
       jasmine.clock().tick(500);
@@ -387,30 +391,30 @@ describe("BoardReturnService", () => {
       expect(port.focusCard).toHaveBeenCalledTimes(1);
     });
 
-    it("does not page the strip that is already where it was left", () => {
+    it('does not page the strip that is already where it was left', () => {
       leaveByCard();
       port.stripEl = scrollable(780);
-      port.keys = ["local:w6:p2"];
-      port.rendered.add("local:w6:p2");
+      port.keys = ['local:w6:p2'];
+      port.rendered.add('local:w6:p2');
 
       comeBack();
 
       expect(port.pages).toEqual([]);
     });
 
-    it("is good for exactly one return", () => {
+    it('is good for exactly one return', () => {
       leaveByCard();
       port.stripEl = scrollable();
-      port.keys = ["local:w6:p2"];
-      port.rendered.add("local:w6:p2");
+      port.keys = ['local:w6:p2'];
+      port.rendered.add('local:w6:p2');
       comeBack();
-      expect(port.focused).toBe("local:w6:p2");
+      expect(port.focused).toBe('local:w6:p2');
 
       // The user navigates away and back again by some other route.
       const second = new FakePort();
       second.stripEl = scrollable();
-      second.keys = ["local:w6:p2"];
-      second.rendered.add("local:w6:p2");
+      second.keys = ['local:w6:p2'];
+      second.rendered.add('local:w6:p2');
       service.restore(second);
       service.retryRestore();
       jasmine.clock().tick(500);
@@ -428,8 +432,8 @@ describe("BoardReturnService", () => {
       service.rememberBoard(geometry);
       const second = new FakePort();
       second.stripEl = scrollable();
-      second.keys = ["local:w6:p1", "local:w6:p2"];
-      second.rendered.add("local:w6:p2");
+      second.keys = ['local:w6:p1', 'local:w6:p2'];
+      second.rendered.add('local:w6:p2');
       service.restore(second);
       service.retryRestore();
       jasmine.clock().tick(500);
@@ -438,14 +442,14 @@ describe("BoardReturnService", () => {
       expect(second.stripEl.scrollLeft).toBe(780);
     });
 
-    it("stops the pump when the board it was restoring is torn down again", () => {
+    it('stops the pump when the board it was restoring is torn down again', () => {
       leaveByCard();
-      port.keys = ["local:w6:p2"];
+      port.keys = ['local:w6:p2'];
       comeBack();
 
       service.rememberBoard({ scrollLeft: 0, scrollTops: {} });
       port.stripEl = scrollable();
-      port.rendered.add("local:w6:p2");
+      port.rendered.add('local:w6:p2');
       jasmine.clock().tick(500);
 
       expect(port.focused).toBeNull();

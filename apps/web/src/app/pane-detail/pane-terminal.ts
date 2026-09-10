@@ -1,16 +1,16 @@
-import { Signal, computed, signal, untracked } from "@angular/core";
-import { createWatch } from "@angular/core/primitives/signals";
-import type { Watch } from "@angular/core/primitives/signals";
-import { Subscription, filter } from "rxjs";
-import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
-import type { BridgeEventPayload, WsEvent } from "@kanhrd/schema";
-import { WsClient } from "../state/ws-client";
-import { TerminalThemeService } from "../state/terminal-theme.service";
-import { TerminalFontSizeService } from "../state/terminal-font-size.service";
-import { ToastService } from "../state/toast.service";
-import { COPY, fill } from "../shared/copy";
-import { classifyInput } from "./key-mapping";
+import { Signal, computed, signal, untracked } from '@angular/core';
+import { createWatch } from '@angular/core/primitives/signals';
+import type { Watch } from '@angular/core/primitives/signals';
+import { Subscription, filter } from 'rxjs';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import type { BridgeEventPayload, WsEvent } from '@kanhrd/schema';
+import { WsClient } from '../state/ws-client';
+import { TerminalThemeService } from '../state/terminal-theme.service';
+import { TerminalFontSizeService } from '../state/terminal-font-size.service';
+import { ToastService } from '../state/toast.service';
+import { COPY, fill } from '../shared/copy';
+import { classifyInput } from './key-mapping';
 
 /**
  * xterm.js takes a font *string*, not a CSS custom property, so the
@@ -30,7 +30,7 @@ const XTERM_FONT_FAMILY =
  * host is in view is the view's knowledge, not the terminal's, so the
  * `unavailable` overlay is applied by `PaneDetail` on top of this state.
  */
-export type PaneTerminalState = "loading" | "failed" | "stale" | "empty" | "live";
+export type PaneTerminalState = 'loading' | 'failed' | 'stale' | 'empty' | 'live';
 
 /**
  * Everything `PaneTerminal` needs from the app. Passed in, never injected,
@@ -38,10 +38,10 @@ export type PaneTerminalState = "loading" | "failed" | "stale" | "empty" | "live
  * objects instead of standing up the real services.
  */
 export interface PaneTerminalDeps {
-  readonly ws: Pick<WsClient, "connected" | "events$" | "request">;
-  readonly terminalTheme: Pick<TerminalThemeService, "theme">;
-  readonly terminalFontSize: Pick<TerminalFontSizeService, "size">;
-  readonly toast: Pick<ToastService, "push">;
+  readonly ws: Pick<WsClient, 'connected' | 'events$' | 'request'>;
+  readonly terminalTheme: Pick<TerminalThemeService, 'theme'>;
+  readonly terminalFontSize: Pick<TerminalFontSizeService, 'size'>;
+  readonly toast: Pick<ToastService, 'push'>;
 }
 
 /**
@@ -62,10 +62,10 @@ export interface PaneTerminalDeps {
  * subscription lifecycle — is private to it.
  */
 export class PaneTerminal {
-  private readonly ws: PaneTerminalDeps["ws"];
-  private readonly terminalTheme: PaneTerminalDeps["terminalTheme"];
-  private readonly terminalFontSize: PaneTerminalDeps["terminalFontSize"];
-  private readonly toast: PaneTerminalDeps["toast"];
+  private readonly ws: PaneTerminalDeps['ws'];
+  private readonly terminalTheme: PaneTerminalDeps['terminalTheme'];
+  private readonly terminalFontSize: PaneTerminalDeps['terminalFontSize'];
+  private readonly toast: PaneTerminalDeps['toast'];
 
   constructor(deps: PaneTerminalDeps) {
     this.ws = deps.ws;
@@ -94,7 +94,7 @@ export class PaneTerminal {
   /** Client-observed wall clock of the most recent frame. Never presented as server time. */
   readonly lastPollAt: Signal<number | null> = this.lastPollAtSignal.asReadonly();
   /** herdr's own wording for the failed read, quoted verbatim and never rewritten. */
-  readonly failureReason: Signal<string> = computed(() => this.failure() ?? "");
+  readonly failureReason: Signal<string> = computed(() => this.failure() ?? '');
 
   /**
    * The single source of truth for what the terminal area shows. Order
@@ -105,15 +105,15 @@ export class PaneTerminal {
     if (this.hasContent()) {
       const settled = !this.loading();
       const lost = !this.ws.connected() || (settled && !this.subscribed());
-      return lost ? "stale" : "live";
+      return lost ? 'stale' : 'live';
     }
     if (this.failure() !== null) {
-      return "failed";
+      return 'failed';
     }
     if (this.loading() || !this.frameReceived()) {
-      return "loading";
+      return 'loading';
     }
-    return "empty";
+    return 'empty';
   });
 
   // --- terminal + DOM ownership ----------------------------------------
@@ -129,15 +129,15 @@ export class PaneTerminal {
   private subscriptionHost: string | null = null;
 
   /** The pane currently in view. Every in-flight response is checked against it. */
-  private currentHost = "";
-  private currentId = "";
+  private currentHost = '';
+  private currentId = '';
 
   /**
    * The last full snapshot written for the pane in view, so the next one
    * can be recognised as an append instead of repainted from scratch. Cleared
    * on every pane load — a snapshot of one pane is never a prefix of another's.
    */
-  private lastSnapshot = "";
+  private lastSnapshot = '';
 
   /**
    * Builds the xterm instance into `el` and claims everything that hangs off
@@ -164,13 +164,13 @@ export class PaneTerminal {
     this.resizeObserver = new ResizeObserver(() => this.fitToContainer());
     this.resizeObserver.observe(el);
 
-    el.addEventListener("touchstart", this.onTouchStart, { passive: true });
-    el.addEventListener("touchmove", this.onTouchMove, { passive: false });
-    el.addEventListener("touchend", this.onTouchEnd, { passive: true });
-    el.addEventListener("touchcancel", this.onTouchEnd, { passive: true });
+    el.addEventListener('touchstart', this.onTouchStart, { passive: true });
+    el.addEventListener('touchmove', this.onTouchMove, { passive: false });
+    el.addEventListener('touchend', this.onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', this.onTouchEnd, { passive: true });
 
     this.outputEventsSub = this.ws.events$
-      .pipe(filter((evt): evt is WsEvent<"pane.output"> => evt.event === "pane.output"))
+      .pipe(filter((evt): evt is WsEvent<'pane.output'> => evt.event === 'pane.output'))
       .subscribe((evt) => this.handleOutputEvent(evt));
 
     // Swaps the live terminal's colors immediately when the terminal theme
@@ -236,16 +236,16 @@ export class PaneTerminal {
     this.currentId = id;
     this.teardownSubscription();
     this.term.reset();
-    this.lastSnapshot = "";
+    this.lastSnapshot = '';
     this.frameReceived.set(false);
     this.hasContent.set(false);
     this.failure.set(null);
     this.loading.set(true);
     try {
-      const result = await this.ws.request(host, "pane.read", {
+      const result = await this.ws.request(host, 'pane.read', {
         pane_id: id,
-        format: "ansi",
-        source: "recent",
+        format: 'ansi',
+        source: 'recent',
       });
       if (this.isStale(host, id)) {
         return; // the pane moved on again while this request was in flight
@@ -262,18 +262,18 @@ export class PaneTerminal {
       // it suppresses a one-frame `stale` flash between the read landing
       // and the subscription being confirmed.
       try {
-        const sub = await this.ws.request(host, "pane.subscribe_output", {
+        const sub = await this.ws.request(host, 'pane.subscribe_output', {
           pane_id: id,
           // The same request the initial read above makes. `pane.output` is a
           // full snapshot painted over the whole terminal, so a live stream at
           // a narrower source than the first paint deletes this pane's
           // scrollback on the first poll.
-          source: "recent",
-          format: "ansi",
+          source: 'recent',
+          format: 'ansi',
         });
         if (this.isStale(host, id)) {
           if (sub) {
-            void this.ws.request(host, "pane.unsubscribe_output", {
+            void this.ws.request(host, 'pane.unsubscribe_output', {
               subscription_id: sub.subscription_id,
             });
           }
@@ -286,7 +286,7 @@ export class PaneTerminal {
         }
       } catch (err) {
         this.toast.push({
-          level: "error",
+          level: 'error',
           message: fill(COPY.toast.liveUpdatesUnavailable, {
             reason: err instanceof Error ? err.message : String(err),
           }),
@@ -326,10 +326,10 @@ export class PaneTerminal {
   dispose(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
-    this.el?.removeEventListener("touchstart", this.onTouchStart);
-    this.el?.removeEventListener("touchmove", this.onTouchMove);
-    this.el?.removeEventListener("touchend", this.onTouchEnd);
-    this.el?.removeEventListener("touchcancel", this.onTouchEnd);
+    this.el?.removeEventListener('touchstart', this.onTouchStart);
+    this.el?.removeEventListener('touchmove', this.onTouchMove);
+    this.el?.removeEventListener('touchend', this.onTouchEnd);
+    this.el?.removeEventListener('touchcancel', this.onTouchEnd);
     this.outputEventsSub?.unsubscribe();
     this.outputEventsSub = null;
     this.themeWatch?.destroy();
@@ -351,7 +351,7 @@ export class PaneTerminal {
 
   private teardownSubscription(): void {
     if (this.subscriptionId && this.subscriptionHost) {
-      void this.ws.request(this.subscriptionHost, "pane.unsubscribe_output", {
+      void this.ws.request(this.subscriptionHost, 'pane.unsubscribe_output', {
         subscription_id: this.subscriptionId,
       });
     }
@@ -360,11 +360,11 @@ export class PaneTerminal {
     this.subscribed.set(false);
   }
 
-  private handleOutputEvent(evt: WsEvent<"pane.output">): void {
+  private handleOutputEvent(evt: WsEvent<'pane.output'>): void {
     if (!this.term) {
       return;
     }
-    const payload = evt.payload as BridgeEventPayload["pane.output"];
+    const payload = evt.payload as BridgeEventPayload['pane.output'];
     if (payload.subscription_id !== this.subscriptionId) {
       return;
     }
@@ -436,7 +436,7 @@ export class PaneTerminal {
       .catch(() => undefined)
       .then(fn)
       .catch((err: unknown) => {
-        console.warn("pane-detail: send failed", err);
+        console.warn('pane-detail: send failed', err);
       });
   }
 
@@ -447,19 +447,19 @@ export class PaneTerminal {
       return;
     }
     const action = classifyInput(data);
-    if (action.kind === "keys" && action.keys) {
+    if (action.kind === 'keys' && action.keys) {
       const keys = action.keys;
-      this.enqueueSend(() => this.ws.request(host, "pane.send_keys", { pane_id: id, keys }));
+      this.enqueueSend(() => this.ws.request(host, 'pane.send_keys', { pane_id: id, keys }));
       return;
     }
     if (action.unmapped) {
       // eslint-disable-next-line no-console -- best-effort fallback, worth surfacing during development
       console.warn(
-        `pane-detail: unmapped control bytes in input, sending as text: ${JSON.stringify(data)}`,
+        `pane-detail: unmapped control bytes in input, sending as text: ${JSON.stringify(data)}`
       );
     }
-    const text = action.text ?? "";
-    this.enqueueSend(() => this.ws.request(host, "pane.send_text", { pane_id: id, text }));
+    const text = action.text ?? '';
+    this.enqueueSend(() => this.ws.request(host, 'pane.send_text', { pane_id: id, text }));
   }
 
   // --- geometry ---------------------------------------------------------
@@ -572,7 +572,7 @@ export class PaneTerminal {
   /** Rendered row height in CSS pixels, measured rather than assumed from the font size. */
   private rowHeightPx(): number {
     const rows = this.term?.rows ?? 0;
-    const screen = this.el?.querySelector(".xterm-screen");
+    const screen = this.el?.querySelector('.xterm-screen');
     if (!screen || rows <= 0) {
       return 0;
     }

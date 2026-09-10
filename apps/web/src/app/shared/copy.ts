@@ -70,7 +70,8 @@ export const COPY = {
   },
   confirm: {
     closePane: 'let this one rest?',
-    closePaneBody: 'closing ends this session. the terminal and anything running in it stop. this cannot be undone.',
+    closePaneBody:
+      'closing ends this session. the terminal and anything running in it stop. this cannot be undone.',
     closePaneAction: 'rest',
     keep: 'keep',
     cancel: 'cancel',
@@ -81,7 +82,8 @@ export const COPY = {
     closeWorkspaceBody: 'these sessions end and cannot be recovered:',
     closeWorkspaceAction: 'close workspace',
     closeLinkedWorkspaces: 'close every linked workspace?',
-    closeLinkedWorkspacesBody: 'this workspace shares a git worktree with others. all of them close, and every session inside them ends. this cannot be undone.',
+    closeLinkedWorkspacesBody:
+      'this workspace shares a git worktree with others. all of them close, and every session inside them ends. this cannot be undone.',
     closeLinkedWorkspacesAction: 'close all',
     lastTabNote: 'this is the last tab in its workspace. the workspace closes too.',
     previewHeading: 'this closes:',
@@ -198,58 +200,59 @@ export const COPY = {
    * place.
    */
   settings: {
-    appearance: "appearance",
-    theme: "theme",
-    density: "density",
-    comfortable: "comfortable",
-    compact: "compact",
-  
-    terminal: "terminal",
+    appearance: 'appearance',
+    theme: 'theme',
+    density: 'density',
+    comfortable: 'comfortable',
+    compact: 'compact',
+
+    terminal: 'terminal',
     terminalNote:
-      "one palette for every open terminal — cards are told apart by title, host seal and status, never by terminal colour.",
-    terminalTheme: "colour theme",
-    terminalFontSize: "text size",
-  
-    runtime: "runtime",
-    runtimeNote: "the output poll interval is bridge-owned. each connected host advertises its own cadence.",
-    noHostsConnected: "no hosts connected yet.",
-    pollOverride: "requested override (ms)",
+      'one palette for every open terminal — cards are told apart by title, host seal and status, never by terminal colour.',
+    terminalTheme: 'colour theme',
+    terminalFontSize: 'text size',
+
+    runtime: 'runtime',
+    runtimeNote:
+      'the output poll interval is bridge-owned. each connected host advertises its own cadence.',
+    noHostsConnected: 'no hosts connected yet.',
+    pollOverride: 'requested override (ms)',
     pollOverrideNote:
-      "not wired up yet — the bridge does not accept a per-subscription poll interval, so this is saved in this browser and changes nothing.",
-  
-    hosts: "hosts",
-    hostsNote: "the host list is bridge-owned. to add, remove or reconfigure a host, edit",
-    hostsNoteFile: "kanhrd.config.yaml",
-    hostsNoteTail: "on the machine running the bridge — this screen reads it, it never writes it.",
-    noHosts: "no hosts configured.",
-    connected: "connected",
-    notConnected: "not connected",
-  
-    keyboard: "keyboard",
+      'not wired up yet — the bridge does not accept a per-subscription poll interval, so this is saved in this browser and changes nothing.',
+
+    hosts: 'hosts',
+    hostsNote: 'the host list is bridge-owned. to add, remove or reconfigure a host, edit',
+    hostsNoteFile: 'kanhrd.config.yaml',
+    hostsNoteTail: 'on the machine running the bridge — this screen reads it, it never writes it.',
+    noHosts: 'no hosts configured.',
+    connected: 'connected',
+    notConnected: 'not connected',
+
+    keyboard: 'keyboard',
     keyboardNote:
-      "herdr-style prefix shortcuts: press the prefix, release, then the action key. rebinding is not available yet — only the prefix resets.",
-    colAction: "action",
-    colDefault: "default",
-    colCurrent: "current",
-    resetDefaults: "reset to defaults",
-  
-    data: "data",
-    dataNote: "everything kanhrd keeps in this browser. no host and no bridge is touched.",
-    clearData: "clear local data",
-    clearTitle: "clear what this browser remembers?",
+      'herdr-style prefix shortcuts: press the prefix, release, then the action key. rebinding is not available yet — only the prefix resets.',
+    colAction: 'action',
+    colDefault: 'default',
+    colCurrent: 'current',
+    resetDefaults: 'reset to defaults',
+
+    data: 'data',
+    dataNote: 'everything kanhrd keeps in this browser. no host and no bridge is touched.',
+    clearData: 'clear local data',
+    clearTitle: 'clear what this browser remembers?',
     clearBody:
       "this removes kanhrd's saved settings from this browser and reloads the page. no host, session or bridge is affected. this cannot be undone.",
-    clearAction: "clear",
-    clearKindSetting: "setting",
-    clearFilters: "board filters",
-    clearAppearance: "theme and density",
-    clearTerminal: "terminal palette",
-    clearTerminalFontSize: "terminal text size",
-    clearKeyboard: "keyboard prefix",
-  
+    clearAction: 'clear',
+    clearKindSetting: 'setting',
+    clearFilters: 'board filters',
+    clearAppearance: 'theme and density',
+    clearTerminal: 'terminal palette',
+    clearTerminalFontSize: 'terminal text size',
+    clearKeyboard: 'keyboard prefix',
+
     poll: {
-      unavailable: "n/a",
-      unit: "ms",
+      unavailable: 'n/a',
+      unit: 'ms',
     },
   },
   notShipped: 'not yet.',

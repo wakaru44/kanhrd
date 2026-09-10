@@ -7,26 +7,26 @@ import {
   input,
   signal,
   viewChild,
-} from "@angular/core";
-import { RouterLink } from "@angular/router";
-import { OverlayModule, type ConnectedPosition } from "@angular/cdk/overlay";
-import type { BridgeCapabilities, Pane, SplitDirection } from "@kanhrd/schema";
-import { PanesStore } from "../state/panes.store";
-import { ConfirmModal } from "../shared/confirm-modal";
-import { RenameModal } from "../shared/rename-modal";
-import { ClockTick, formatElapsed } from "../util/clock";
-import { paneSecondaryIdentity, paneTitle } from "../util/pane-title";
-import { pathTail } from "../util/path-tail";
-import { ToastService } from "../state/toast.service";
-import { BoardReturnService } from "../state/board-return.service";
-import { COPY, fill } from "../shared/copy";
+} from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { OverlayModule, type ConnectedPosition } from '@angular/cdk/overlay';
+import type { BridgeCapabilities, Pane, SplitDirection } from '@kanhrd/schema';
+import { PanesStore } from '../state/panes.store';
+import { ConfirmModal } from '../shared/confirm-modal';
+import { RenameModal } from '../shared/rename-modal';
+import { ClockTick, formatElapsed } from '../util/clock';
+import { paneSecondaryIdentity, paneTitle } from '../util/pane-title';
+import { pathTail } from '../util/path-tail';
+import { ToastService } from '../state/toast.service';
+import { BoardReturnService } from '../state/board-return.service';
+import { COPY, fill } from '../shared/copy';
 import {
   LucideArrowDown,
   LucideArrowRight,
   LucideMoreHorizontal,
   LucidePencil,
   LucideX,
-} from "../shared/icons";
+} from '../shared/icons';
 
 /**
  * The card's action labels, gathered from `shared/copy.ts` under the names
@@ -49,7 +49,7 @@ export const CARD_COPY = {
 let nextMenuId = 0;
 
 @Component({
-  selector: "app-card",
+  selector: 'app-card',
   imports: [
     RouterLink,
     OverlayModule,
@@ -61,11 +61,11 @@ let nextMenuId = 0;
     LucideMoreHorizontal,
     LucidePencil,
   ],
-  templateUrl: "./card.html",
-  styleUrl: "./card.scss",
+  templateUrl: './card.html',
+  styleUrl: './card.scss',
   host: {
-    "[class.compact]": "compact()",
-    "(document:click)": "onDocumentClick($event)",
+    '[class.compact]': 'compact()',
+    '(document:click)': 'onDocumentClick($event)',
   },
 })
 export class Card {
@@ -127,29 +127,29 @@ export class Card {
 
   /** The status word rendered beside the dot — colour is never the only carrier. */
   protected readonly statusLabel = computed(
-    () => COPY.status[this.pane().agent_status] ?? COPY.status.unknown,
+    () => COPY.status[this.pane().agent_status] ?? COPY.status.unknown
   );
 
   /** Whether this pane's host bridge supports the tier-2 terminal detail view. */
   protected readonly terminalAvailable = computed(
-    () => this.capabilities().get(this.pane().host)?.terminal === true,
+    () => this.capabilities().get(this.pane().host)?.terminal === true
   );
 
   /** Tier-3: whether `pane.close` will succeed on this pane's host. */
   protected readonly paneCloseAvailable = computed(
-    () => this.capabilities().get(this.pane().host)?.paneClose === true,
+    () => this.capabilities().get(this.pane().host)?.paneClose === true
   );
   /** Tier-3: whether `pane.split` will succeed on this pane's host. */
   protected readonly paneSplitAvailable = computed(
-    () => this.capabilities().get(this.pane().host)?.paneCreate === true,
+    () => this.capabilities().get(this.pane().host)?.paneCreate === true
   );
   /** Whether `pane.rename` will succeed on this pane's host — its own flag, not part of the tier-3 bundle. */
   protected readonly paneRenameAvailable = computed(
-    () => this.capabilities().get(this.pane().host)?.paneRename === true,
+    () => this.capabilities().get(this.pane().host)?.paneRename === true
   );
 
   protected readonly hasActions = computed(
-    () => this.paneSplitAvailable() || this.paneCloseAvailable() || this.paneRenameAvailable(),
+    () => this.paneSplitAvailable() || this.paneCloseAvailable() || this.paneRenameAvailable()
   );
 
   protected readonly showCloseConfirm = signal(false);
@@ -173,13 +173,13 @@ export class Card {
    * The gap is `.overflow-menu`'s own margin, so it stays a token.
    */
   protected readonly menuPositions: ConnectedPosition[] = [
-    { originX: "end", originY: "bottom", overlayX: "end", overlayY: "top" },
-    { originX: "end", originY: "top", overlayX: "end", overlayY: "bottom" },
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top' },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom' },
   ];
 
-  private readonly menuEl = viewChild<ElementRef<HTMLElement>>("menu");
-  private readonly menuTrigger = viewChild<ElementRef<HTMLButtonElement>>("menuTrigger");
-  private readonly actionsEl = viewChild<ElementRef<HTMLElement>>("actions");
+  private readonly menuEl = viewChild<ElementRef<HTMLElement>>('menu');
+  private readonly menuTrigger = viewChild<ElementRef<HTMLButtonElement>>('menuTrigger');
+  private readonly actionsEl = viewChild<ElementRef<HTMLElement>>('actions');
 
   // --- meta row ----------------------------------------------------------
   // Only data already on the `Pane` surface: the pane's own `agent_status`
@@ -190,13 +190,13 @@ export class Card {
   // no card ever fetches terminal output for decoration.
 
   private readonly statusSince = signal(Date.now());
-  private lastObservedStatus: Pane["agent_status"] | null = null;
+  private lastObservedStatus: Pane['agent_status'] | null = null;
 
   protected readonly elapsed = computed(() => formatElapsed(this.clock.now() - this.statusSince()));
 
   protected readonly lineCount = computed(() => {
     const snippet = this.pane().last_output_snippet;
-    return snippet ? snippet.split("\n").length : null;
+    return snippet ? snippet.split('\n').length : null;
   });
 
   constructor() {
@@ -229,8 +229,8 @@ export class Card {
         return;
       }
       const close = () => this.closeMenu(false);
-      document.addEventListener("scroll", close, true);
-      onCleanup(() => document.removeEventListener("scroll", close, true));
+      document.addEventListener('scroll', close, true);
+      onCleanup(() => document.removeEventListener('scroll', close, true));
     });
   }
 
@@ -244,7 +244,7 @@ export class Card {
     this.boardReturn.rememberCard(
       `${this.pane().host}:${this.pane().id}`,
       this.pane().agent_status,
-      this.indexInColumn(),
+      this.indexInColumn()
     );
   }
 
@@ -277,7 +277,7 @@ export class Card {
     if (!menu) {
       return;
     }
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
       this.closeMenu();
@@ -289,13 +289,13 @@ export class Card {
     }
     const current = items.indexOf(document.activeElement as HTMLButtonElement);
     let next: number | null = null;
-    if (event.key === "ArrowDown") {
+    if (event.key === 'ArrowDown') {
       next = (current + 1) % items.length;
-    } else if (event.key === "ArrowUp") {
+    } else if (event.key === 'ArrowUp') {
       next = (current <= 0 ? items.length : current) - 1;
-    } else if (event.key === "Home") {
+    } else if (event.key === 'Home') {
       next = 0;
-    } else if (event.key === "End") {
+    } else if (event.key === 'End') {
       next = items.length - 1;
     }
     if (next !== null) {
@@ -342,13 +342,13 @@ export class Card {
 
   protected async confirmClose(): Promise<void> {
     this.showCloseConfirm.set(false);
-    const notice = this.toast.progress(this.noticeKey("close"), COPY.toast.working);
+    const notice = this.toast.progress(this.noticeKey('close'), COPY.toast.working);
     try {
       await this.store.closePane(this.pane().host, this.pane().id);
       notice.resolve();
     } catch (err) {
       notice.fail(
-        fill(COPY.toast.closeFailed, { name: this.displayName(), reason: Card.reason(err) }),
+        fill(COPY.toast.closeFailed, { name: this.displayName(), reason: Card.reason(err) })
       );
     }
   }
@@ -384,7 +384,7 @@ export class Card {
   protected async onRenameSaved(label: string | null): Promise<void> {
     this.showRename.set(false);
     this.renameError.set(null);
-    const notice = this.toast.progress(this.noticeKey("rename"), COPY.toast.working);
+    const notice = this.toast.progress(this.noticeKey('rename'), COPY.toast.working);
     try {
       await this.store.renamePane(this.pane().host, this.pane().id, label);
       this.renameDraft.set(null);
@@ -392,7 +392,7 @@ export class Card {
     } catch (err) {
       const message = fill(COPY.toast.renameFailed, { reason: Card.reason(err) });
       notice.fail(message);
-      this.renameDraft.set(label ?? "");
+      this.renameDraft.set(label ?? '');
       this.renameError.set(message);
       this.showRename.set(true);
     }

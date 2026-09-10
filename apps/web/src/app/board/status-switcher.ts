@@ -1,6 +1,6 @@
-import { Component, ElementRef, computed, input, output, viewChildren } from "@angular/core";
-import type { AgentStatus } from "@kanhrd/schema";
-import { COPY, fill } from "../shared/copy";
+import { Component, ElementRef, computed, input, output, viewChildren } from '@angular/core';
+import type { AgentStatus } from '@kanhrd/schema';
+import { COPY, fill } from '../shared/copy';
 
 /**
  * The mobile status switcher: a persistent segmented control between the
@@ -14,10 +14,10 @@ import { COPY, fill } from "../shared/copy";
  * `--breakpoint-mobile`; the desktop board has side-by-side columns.
  */
 @Component({
-  selector: "app-status-switcher",
+  selector: 'app-status-switcher',
   imports: [],
-  templateUrl: "./status-switcher.html",
-  styleUrl: "./status-switcher.scss",
+  templateUrl: './status-switcher.html',
+  styleUrl: './status-switcher.scss',
 })
 export class StatusSwitcher {
   /** The visible statuses, already ordered by `STATUS_COLUMN_ORDER`. */
@@ -31,7 +31,7 @@ export class StatusSwitcher {
 
   protected readonly switcherLabel = COPY.nav.statusSwitcher;
 
-  private readonly segments = viewChildren<ElementRef<HTMLButtonElement>>("segment");
+  private readonly segments = viewChildren<ElementRef<HTMLButtonElement>>('segment');
 
   protected readonly selected = computed(() => this.selectedIndex());
 
@@ -53,7 +53,7 @@ export class StatusSwitcher {
 
   /** Left/right arrows move between segments; the strip follows via `select`. */
   protected onKeydown(event: KeyboardEvent): void {
-    const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    const delta = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
     if (delta === 0) {
       return;
     }

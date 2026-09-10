@@ -9,28 +9,28 @@ import {
   inject,
   signal,
   untracked,
-} from "@angular/core";
-import { toSignal } from "@angular/core/rxjs-interop";
-import { ActivatedRoute, RouterLink } from "@angular/router";
-import { map } from "rxjs";
-import { PanesStore, paneKey } from "../state/panes.store";
-import { WsClient } from "../state/ws-client";
-import { TerminalThemeService } from "../state/terminal-theme.service";
-import { TerminalFontSizeService } from "../state/terminal-font-size.service";
-import { ToastService } from "../state/toast.service";
-import { ClockTick, formatElapsed } from "../util/clock";
-import { COPY, fill } from "../shared/copy";
-import { RenameModal } from "../shared/rename-modal";
-import { paneTitle } from "../util/pane-title";
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { map } from 'rxjs';
+import { PanesStore, paneKey } from '../state/panes.store';
+import { WsClient } from '../state/ws-client';
+import { TerminalThemeService } from '../state/terminal-theme.service';
+import { TerminalFontSizeService } from '../state/terminal-font-size.service';
+import { ToastService } from '../state/toast.service';
+import { ClockTick, formatElapsed } from '../util/clock';
+import { COPY, fill } from '../shared/copy';
+import { RenameModal } from '../shared/rename-modal';
+import { paneTitle } from '../util/pane-title';
 import {
   LucideArrowLeft,
   LucidePencil,
   LucideRefreshCw,
   LucideTriangleAlert,
   LucideUnplug,
-} from "../shared/icons";
-import { BoardReturnService } from "../state/board-return.service";
-import { PaneTerminal } from "./pane-terminal";
+} from '../shared/icons';
+import { BoardReturnService } from '../state/board-return.service';
+import { PaneTerminal } from './pane-terminal';
 
 /**
  * The reliability states this view can be in. They are mutually exclusive
@@ -42,7 +42,7 @@ import { PaneTerminal } from "./pane-terminal";
  * connectivity is the only one this view knows about and the terminal does
  * not.
  */
-export type PaneViewState = "loading" | "failed" | "unavailable" | "stale" | "empty" | "live";
+export type PaneViewState = 'loading' | 'failed' | 'unavailable' | 'stale' | 'empty' | 'live';
 
 /**
  * Tier-2 terminal detail view: header, meta strip, rename flow, and the box
@@ -59,7 +59,7 @@ export type PaneViewState = "loading" | "failed" | "unavailable" | "stale" | "em
  * stay with the existing explicit prefix-shortcut mechanism.
  */
 @Component({
-  selector: "app-pane-detail",
+  selector: 'app-pane-detail',
   imports: [
     RouterLink,
     RenameModal,
@@ -69,8 +69,8 @@ export type PaneViewState = "loading" | "failed" | "unavailable" | "stale" | "em
     LucideTriangleAlert,
     LucideUnplug,
   ],
-  templateUrl: "./pane-detail.html",
-  styleUrl: "./pane-detail.scss",
+  templateUrl: './pane-detail.html',
+  styleUrl: './pane-detail.scss',
 })
 export class PaneDetail implements AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -109,20 +109,20 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
    */
   protected readonly backUrl = this.boardReturn.boardUrl();
 
-  @ViewChild("terminalContainer", { static: true })
+  @ViewChild('terminalContainer', { static: true })
   private readonly containerRef!: ElementRef<HTMLDivElement>;
 
   protected readonly host = toSignal(
-    this.route.paramMap.pipe(map((params) => params.get("host") ?? "")),
-    { initialValue: "" },
+    this.route.paramMap.pipe(map((params) => params.get('host') ?? '')),
+    { initialValue: '' }
   );
   protected readonly id = toSignal(
-    this.route.paramMap.pipe(map((params) => params.get("id") ?? "")),
-    { initialValue: "" },
+    this.route.paramMap.pipe(map((params) => params.get('id') ?? '')),
+    { initialValue: '' }
   );
 
   protected readonly pane = computed(() =>
-    this.store.panesSignal().get(paneKey(this.host(), this.id())),
+    this.store.panesSignal().get(paneKey(this.host(), this.id()))
   );
 
   /**
@@ -141,11 +141,11 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
 
   /** Whether `pane.rename` will succeed on this pane's host. */
   protected readonly paneRenameAvailable = computed(
-    () => this.store.capabilitiesSignal().get(this.host())?.paneRename === true,
+    () => this.store.capabilitiesSignal().get(this.host())?.paneRename === true
   );
 
   protected readonly showRename = signal(false);
-  protected readonly statusKey = computed(() => this.pane()?.agent_status ?? "unknown");
+  protected readonly statusKey = computed(() => this.pane()?.agent_status ?? 'unknown');
   protected readonly statusLabel = computed(() => {
     const key = this.statusKey();
     return key in COPY.status ? COPY.status[key as keyof typeof COPY.status] : COPY.status.unknown;
@@ -178,12 +178,12 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
    */
   protected readonly revisionLabel = computed(() => {
     const rev = this.terminal.revision();
-    return rev === null ? "rev —" : `rev ${rev}`;
+    return rev === null ? 'rev —' : `rev ${rev}`;
   });
   protected readonly lastPollLabel = computed(() => {
     const at = this.terminal.lastPollAt();
     if (at === null) {
-      return "updated —";
+      return 'updated —';
     }
     return `updated ${formatElapsed(this.clock.now() - at)} ago`;
   });
@@ -197,7 +197,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
    * everything else.
    */
   protected readonly viewState = computed<PaneViewState>(() =>
-    this.hostInSight() ? this.terminal.state() : "unavailable",
+    this.hostInSight() ? this.terminal.state() : 'unavailable'
   );
 
   constructor() {
@@ -241,7 +241,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       await this.store.renamePane(this.host(), this.id(), label);
     } catch (err) {
       this.toast.push({
-        level: "error",
+        level: 'error',
         message: fill(COPY.toast.renameFailed, {
           reason: err instanceof Error ? err.message : String(err),
         }),

@@ -4,14 +4,14 @@
  * server-assigned color or a stored preference.
  */
 const PALETTE = [
-  "#e06c75",
-  "#98c379",
-  "#e5c07b",
-  "#61afef",
-  "#c678dd",
-  "#56b6c2",
-  "#d19a66",
-  "#be5046",
+  '#e06c75',
+  '#98c379',
+  '#e5c07b',
+  '#61afef',
+  '#c678dd',
+  '#56b6c2',
+  '#d19a66',
+  '#be5046',
 ] as const;
 
 export function hostColor(host: string): string {

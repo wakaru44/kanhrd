@@ -1,7 +1,7 @@
-import { Injectable, signal } from "@angular/core";
+import { Injectable, signal } from '@angular/core';
 
 /** Shared 1s tick so every stats badge re-renders its elapsed-time text off one timer instead of one `setInterval` per card. */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class ClockTick {
   readonly now = signal(Date.now());
 
@@ -13,7 +13,7 @@ export class ClockTick {
 /** Pure, unit-testable duration formatter: `0s`/`42s`/`3m`/`2h`. */
 export function formatElapsed(ms: number): string {
   if (ms < 1000) {
-    return "0s";
+    return '0s';
   }
   const seconds = Math.floor(ms / 1000);
   if (seconds < 60) {

@@ -5,8 +5,8 @@ import type {
   Pane,
   TabSummary,
   WorkspaceSummary,
-} from "@kanhrd/schema";
-import type { WorkspaceTabNameCache } from "./names.js";
+} from '@kanhrd/schema';
+import type { WorkspaceTabNameCache } from './names.js';
 
 /**
  * Assemble a bridge-projected `Pane` from herdr's raw `PaneInfo`, the
@@ -29,7 +29,7 @@ export function projectPane(host: string, pane: HerdrPaneInfo, names: WorkspaceT
   // `pane.list` response; the field is set only when it is a non-empty
   // string, so a cleared label (`null`) and an empty one both read as
   // "absent" downstream rather than as a name that renders as nothing.
-  if (typeof pane.label === "string" && pane.label !== "") projected.label = pane.label;
+  if (typeof pane.label === 'string' && pane.label !== '') projected.label = pane.label;
   if (pane.title !== undefined) projected.title = pane.title;
   if (agentName !== undefined) projected.agent = { name: agentName };
 

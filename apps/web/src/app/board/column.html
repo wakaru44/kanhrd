@@ -1,19 +1,39 @@
-<section class="column" (focusin)="onFocusIn($event)" (focusout)="onFocusOut($event)" [attr.data-status]="status()" [class.compact]="compact()">
+<section
+  class="column"
+  (focusin)="onFocusIn($event)"
+  (focusout)="onFocusOut($event)"
+  [attr.data-status]="status()"
+  [class.compact]="compact()"
+>
   <header class="column-header">
     <h2 class="column-title">{{ label() }}</h2>
     <span class="count">{{ panes().length }}</span>
   </header>
   <div class="column-body" [class.is-empty]="panes().length === 0">
     @if (virtualized()) {
-      <cdk-virtual-scroll-viewport [itemSize]="itemSize" class="virtual-viewport" (scroll)="onViewportScroll()">
+      <cdk-virtual-scroll-viewport
+        [itemSize]="itemSize"
+        class="virtual-viewport"
+        (scroll)="onViewportScroll()"
+      >
         <app-card
           *cdkVirtualFor="let pane of panes(); trackBy: trackPane; let i = index"
           [attr.data-pane]="trackPane(0, pane)"
-          [pane]="pane" [capabilities]="capabilities()" [compact]="compact()" [indexInColumn]="i" />
+          [pane]="pane"
+          [capabilities]="capabilities()"
+          [compact]="compact()"
+          [indexInColumn]="i"
+        />
       </cdk-virtual-scroll-viewport>
     } @else {
       @for (pane of panes(); track trackPane($index, pane)) {
-        <app-card [attr.data-pane]="trackPane($index, pane)" [pane]="pane" [capabilities]="capabilities()" [compact]="compact()" [indexInColumn]="$index" />
+        <app-card
+          [attr.data-pane]="trackPane($index, pane)"
+          [pane]="pane"
+          [capabilities]="capabilities()"
+          [compact]="compact()"
+          [indexInColumn]="$index"
+        />
       }
     }
   </div>

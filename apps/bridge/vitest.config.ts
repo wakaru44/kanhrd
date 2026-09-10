@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from 'vitest/config';
 
 /**
  * Default unit-test config: fast, hermetic, no real herdr/network involved
@@ -9,7 +9,7 @@ import { defineConfig } from "vitest/config";
  */
 export default defineConfig({
   test: {
-    include: ["src/**/*.test.ts"],
-    exclude: ["integration/**", "node_modules/**", "dist/**"],
+    include: ['src/**/*.test.ts'],
+    exclude: ['integration/**', 'node_modules/**', 'dist/**'],
   },
 });

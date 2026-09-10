@@ -1,18 +1,23 @@
-import { Component, computed, inject, signal } from "@angular/core";
-import { RouterLink } from "@angular/router";
-import { PanesStore } from "../state/panes.store";
-import { ThemeService } from "../state/theme.service";
-import { SettingsService, type Density } from "../state/settings.service";
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { PanesStore } from '../state/panes.store';
+import { ThemeService } from '../state/theme.service';
+import { SettingsService, type Density } from '../state/settings.service';
 import {
   TERMINAL_THEME_OPTIONS,
   TerminalThemeService,
   type TerminalThemeName,
-} from "../state/terminal-theme.service";
-import { TERMINAL_FONT_SIZES, TerminalFontSizeService } from "../state/terminal-font-size.service";
-import { DEFAULT_PREFIX, KeyboardService, formatBinding, type ShortcutBinding } from "../state/keyboard.service";
-import { ConfirmModal, type ConfirmPreviewItem } from "../shared/confirm-modal";
-import { LucideArrowLeft } from "../shared/icons";
-import { COPY } from "../shared/copy";
+} from '../state/terminal-theme.service';
+import { TERMINAL_FONT_SIZES, TerminalFontSizeService } from '../state/terminal-font-size.service';
+import {
+  DEFAULT_PREFIX,
+  KeyboardService,
+  formatBinding,
+  type ShortcutBinding,
+} from '../state/keyboard.service';
+import { ConfirmModal, type ConfirmPreviewItem } from '../shared/confirm-modal';
+import { LucideArrowLeft } from '../shared/icons';
+import { COPY } from '../shared/copy';
 
 /**
  * `/settings` — appearance (theme + density), terminal palette, runtime
@@ -25,10 +30,10 @@ import { COPY } from "../shared/copy";
  * the first focusable element on the screen.
  */
 @Component({
-  selector: "app-settings",
+  selector: 'app-settings',
   imports: [RouterLink, ConfirmModal, LucideArrowLeft],
-  templateUrl: "./settings.html",
-  styleUrl: "./settings.scss",
+  templateUrl: './settings.html',
+  styleUrl: './settings.scss',
 })
 export class Settings {
   protected readonly store = inject(PanesStore);
@@ -48,12 +53,12 @@ export class Settings {
   protected readonly capabilities = this.store.capabilitiesSignal;
   protected readonly density = computed(() => this.settingsService.settings().density);
   protected readonly requestedPollIntervalMs = computed(
-    () => this.settingsService.settings().requestedOutputPollIntervalMs,
+    () => this.settingsService.settings().requestedOutputPollIntervalMs
   );
 
   /** Same control, same words, as the shell's theme toggle — one pair of keys, not two. */
   protected themeLabel(): string {
-    return this.themeService.theme() === "dark" ? COPY.nav.toWashi : COPY.nav.toSumi;
+    return this.themeService.theme() === 'dark' ? COPY.nav.toWashi : COPY.nav.toSumi;
   }
 
   protected toggleTheme(): void {
@@ -73,8 +78,10 @@ export class Settings {
   }
 
   protected onRequestedPollIntervalInput(value: string): void {
-    const parsed = value.trim() === "" ? null : Number(value);
-    this.settingsService.setRequestedPollIntervalMs(parsed !== null && Number.isFinite(parsed) ? parsed : null);
+    const parsed = value.trim() === '' ? null : Number(value);
+    this.settingsService.setRequestedPollIntervalMs(
+      parsed !== null && Number.isFinite(parsed) ? parsed : null
+    );
   }
 
   /** Data readout, not copy: the advertised cadence in ms, or `n/a` when the host advertises none. */
@@ -90,12 +97,12 @@ export class Settings {
   protected readonly prefixSource = this.keyboardService.prefixSource;
   protected readonly prefixSourceLabel = computed(() => {
     switch (this.prefixSource()) {
-      case "override":
-        return "your override";
-      case "herdr-config":
-        return "from herdr config";
+      case 'override':
+        return 'your override';
+      case 'herdr-config':
+        return 'from herdr config';
       default:
-        return "default";
+        return 'default';
     }
   });
 

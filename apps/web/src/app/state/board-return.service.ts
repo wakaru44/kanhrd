@@ -1,8 +1,8 @@
-import { Injectable, inject } from "@angular/core";
-import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { NavigationEnd, Router } from "@angular/router";
-import { filter, map } from "rxjs";
-import type { AgentStatus } from "@kanhrd/schema";
+import { Injectable, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router } from '@angular/router';
+import { filter, map } from 'rxjs';
+import type { AgentStatus } from '@kanhrd/schema';
 
 /** Where the board was, and what was focused on it, when a card was opened. */
 export interface BoardReturn {
@@ -89,7 +89,7 @@ export interface BoardRestorePort {
 export function returnFocusTarget(
   paneKey: string | null,
   index: number,
-  columnKeys: readonly string[],
+  columnKeys: readonly string[]
 ): string | null {
   if (paneKey !== null && columnKeys.includes(paneKey)) {
     return paneKey;
@@ -129,7 +129,7 @@ export function returnFocusTarget(
  * Deliberately in-memory only: this is one navigation's worth of state, not
  * a preference. A reload starts fresh, which is what a reload should do.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class BoardReturnService {
   private readonly router = inject(Router);
 
@@ -138,7 +138,7 @@ export class BoardReturnService {
   private clickedCard: { paneKey: string; status: AgentStatus; index: number } | null = null;
 
   /** The last URL that was a board. Never a pane's, whatever the router is doing now. */
-  private lastBoardUrl = this.router.url && isBoardUrl(this.router.url) ? this.router.url : "/";
+  private lastBoardUrl = this.router.url && isBoardUrl(this.router.url) ? this.router.url : '/';
 
   // --- the restore in flight, if any ------------------------------------
   private restoring: BoardReturn | null = null;
@@ -152,7 +152,7 @@ export class BoardReturnService {
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
         map((event) => event.urlAfterRedirects),
         filter(isBoardUrl),
-        takeUntilDestroyed(),
+        takeUntilDestroyed()
       )
       .subscribe((url) => (this.lastBoardUrl = url));
   }
@@ -184,7 +184,7 @@ export class BoardReturnService {
 
   /** Where a pane's back control should go. `/` when there is nothing remembered. */
   boardUrl(): string {
-    return this.pending?.url ?? "/";
+    return this.pending?.url ?? '/';
   }
 
   /**

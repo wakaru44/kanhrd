@@ -1,5 +1,9 @@
-import type { HerdrTabInfo, HerdrWorkspaceDetail, HerdrWorkspaceWorktreeInfo } from "@kanhrd/schema";
-import type { HerdrClient } from "./client.js";
+import type {
+  HerdrTabInfo,
+  HerdrWorkspaceDetail,
+  HerdrWorkspaceWorktreeInfo,
+} from '@kanhrd/schema';
+import type { HerdrClient } from './client.js';
 
 /** A pane's current (workspace, tab) location, tracked so nested cache purges know what to drop. */
 export interface PanePlacement {
@@ -44,14 +48,14 @@ export class WorkspaceTabNameCache {
       // has always returned whole `WorkspaceInfo` objects (`worktree` and
       // `tokens` included); the trim to `HerdrWorkspaceInfo` was ours, at
       // the type and at this Map's value. No new request is made.
-      client.request<{ workspaces: HerdrWorkspaceDetail[] }>("workspace.list"),
-      client.request<{ tabs: HerdrTabInfo[] }>("tab.list"),
+      client.request<{ workspaces: HerdrWorkspaceDetail[] }>('workspace.list'),
+      client.request<{ tabs: HerdrTabInfo[] }>('tab.list'),
     ]);
     this.workspaces = new Map(
       workspaceResult.workspaces.map((w) => [
         w.workspace_id,
         w.worktree === undefined ? { label: w.label } : { label: w.label, worktree: w.worktree },
-      ]),
+      ])
     );
     this.tabs = new Map(tabResult.tabs.map((t) => [t.tab_id, t.label]));
     this.tabWorkspace = new Map(tabResult.tabs.map((t) => [t.tab_id, t.workspace_id]));

@@ -57,7 +57,7 @@ main {
   line-height: 1;
 
   &::before {
-    content: "";
+    content: '';
     position: absolute;
     left: 50%;
     /* Tuned against Shippori Mincho's real metrics: its baseline sits
@@ -69,8 +69,8 @@ main {
     height: 0.46em;
     transform: translateX(-50%);
     background: var(--ochre);
-    mask: url("/mark/crook.svg") no-repeat center / contain;
-    -webkit-mask: url("/mark/crook.svg") no-repeat center / contain;
+    mask: url('/mark/crook.svg') no-repeat center / contain;
+    -webkit-mask: url('/mark/crook.svg') no-repeat center / contain;
   }
 }
 

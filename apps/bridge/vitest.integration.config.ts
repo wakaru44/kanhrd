@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from 'vitest/config';
 
 /**
  * Integration-test config (`pnpm test:int`). Spawns the real bridge as a
@@ -13,8 +13,8 @@ import { defineConfig } from "vitest/config";
  */
 export default defineConfig({
   test: {
-    include: ["integration/**/*.test.ts"],
-    exclude: ["node_modules/**", "dist/**"],
+    include: ['integration/**/*.test.ts'],
+    exclude: ['node_modules/**', 'dist/**'],
     fileParallelism: false,
     testTimeout: 20_000,
     hookTimeout: 20_000,

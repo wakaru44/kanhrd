@@ -10,23 +10,29 @@ import {
   signal,
   viewChild,
   viewChildren,
-} from "@angular/core";
-import { toSignal } from "@angular/core/rxjs-interop";
-import { ActivatedRoute, Router } from "@angular/router";
-import { map } from "rxjs";
-import type { AgentStatus } from "@kanhrd/schema";
-import { LucidePlus, LucideRefreshCw, LucideTriangleAlert, LucideUnplug, LucideX } from "../shared/icons";
-import { COPY } from "../shared/copy";
-import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from "../state/panes.store";
-import { Column, focusCard, mobileViewportSignal } from "./column";
-import { FilterBar } from "./filter-bar";
-import { StatusSwitcher } from "./status-switcher";
-import { Rail } from "../rail/rail";
-import { LayoutService } from "../state/layout.service";
-import { ToastService } from "../state/toast.service";
-import { BoardReturnService, type BoardRestorePort } from "../state/board-return.service";
-import { ClockTick } from "../util/clock";
-import { EmptyState } from "./empty-state";
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
+import { map } from 'rxjs';
+import type { AgentStatus } from '@kanhrd/schema';
+import {
+  LucidePlus,
+  LucideRefreshCw,
+  LucideTriangleAlert,
+  LucideUnplug,
+  LucideX,
+} from '../shared/icons';
+import { COPY } from '../shared/copy';
+import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from '../state/panes.store';
+import { Column, focusCard, mobileViewportSignal } from './column';
+import { FilterBar } from './filter-bar';
+import { StatusSwitcher } from './status-switcher';
+import { Rail } from '../rail/rail';
+import { LayoutService } from '../state/layout.service';
+import { ToastService } from '../state/toast.service';
+import { BoardReturnService, type BoardRestorePort } from '../state/board-return.service';
+import { ClockTick } from '../util/clock';
+import { EmptyState } from './empty-state';
 
 /**
  * How long a `/workspace/:id` in the URL may stay unresolved before the
@@ -58,7 +64,7 @@ export const SKELETON_ROWS = [0, 1, 2] as const;
  */
 export function nearestVisibleStatus(
   previous: AgentStatus,
-  visible: readonly AgentStatus[],
+  visible: readonly AgentStatus[]
 ): AgentStatus | null {
   if (visible.includes(previous)) {
     return previous;
@@ -74,7 +80,7 @@ export function nearestVisibleStatus(
 }
 
 @Component({
-  selector: "app-board",
+  selector: 'app-board',
   imports: [
     Column,
     FilterBar,
@@ -87,8 +93,8 @@ export function nearestVisibleStatus(
     LucideTriangleAlert,
     LucideUnplug,
   ],
-  templateUrl: "./board.html",
-  styleUrl: "./board.scss",
+  templateUrl: './board.html',
+  styleUrl: './board.scss',
 })
 export class Board implements OnDestroy {
   protected readonly store = inject(PanesStore);
@@ -116,8 +122,8 @@ export class Board implements OnDestroy {
   // `currentStatus` from `Math.round(scrollLeft / clientWidth)`, a tap writes
   // it directly and scrolls the strip to match.
 
-  private readonly strip = viewChild<ElementRef<HTMLElement>>("strip");
-  private readonly columnEls = viewChildren("columnEl", { read: ElementRef });
+  private readonly strip = viewChild<ElementRef<HTMLElement>>('strip');
+  private readonly columnEls = viewChildren('columnEl', { read: ElementRef });
 
   /** Visible status columns, always in `STATUS_COLUMN_ORDER`. Paging never reorders. */
   protected readonly visibleStatuses = computed<readonly AgentStatus[]>(() => {
@@ -127,7 +133,7 @@ export class Board implements OnDestroy {
 
   /** Card count per visible status, index-aligned with `visibleStatuses`. */
   protected readonly visibleCounts = computed(() =>
-    this.visibleStatuses().map((status) => this.columns()[status].length),
+    this.visibleStatuses().map((status) => this.columns()[status].length)
   );
 
   private readonly currentStatus = signal<AgentStatus>(STATUS_COLUMN_ORDER[0]);
@@ -142,7 +148,7 @@ export class Board implements OnDestroy {
 
   /** Hosts that are configured but currently unreachable — content stays, marked stale. */
   protected readonly staleHosts = computed(() =>
-    this.store.hostsSignal().filter((host) => !host.connected),
+    this.store.hostsSignal().filter((host) => !host.connected)
   );
 
   protected isStatusHidden(status: AgentStatus): boolean {
@@ -165,12 +171,12 @@ export class Board implements OnDestroy {
       return;
     }
     const reduced =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
     element.scrollIntoView({
-      inline: "start",
-      block: "nearest",
-      behavior: reduced ? "auto" : "smooth",
+      inline: 'start',
+      block: 'nearest',
+      behavior: reduced ? 'auto' : 'smooth',
     });
   }
 
@@ -206,12 +212,12 @@ export class Board implements OnDestroy {
   // hosts in practice.
 
   protected readonly routeWorkspaceId = toSignal(
-    this.route.paramMap.pipe(map((params) => params.get("workspaceId"))),
-    { initialValue: null },
+    this.route.paramMap.pipe(map((params) => params.get('workspaceId'))),
+    { initialValue: null }
   );
   protected readonly routeTabId = toSignal(
-    this.route.paramMap.pipe(map((params) => params.get("tabId"))),
-    { initialValue: null },
+    this.route.paramMap.pipe(map((params) => params.get('tabId'))),
+    { initialValue: null }
   );
 
   private readonly resolvedWorkspace = computed(() => {
@@ -246,7 +252,7 @@ export class Board implements OnDestroy {
 
   /** A scoped URL whose workspace hasn't resolved yet: still loading, not yet a verdict. */
   protected readonly scopePending = computed(
-    () => !!this.routeWorkspaceId() && !this.resolvedWorkspace(),
+    () => !!this.routeWorkspaceId() && !this.resolvedWorkspace()
   );
 
   /** A scoped URL whose workspace never resolved: say so, don't fall back to the previous scope. */
@@ -260,7 +266,7 @@ export class Board implements OnDestroy {
 
   /** Static skeleton columns, never a spinner over the wordmark. */
   protected readonly showSkeleton = computed(
-    () => this.loading() || (this.scopePending() && !this.scopeUnavailable()),
+    () => this.loading() || (this.scopePending() && !this.scopeUnavailable())
   );
 
   constructor() {
@@ -346,7 +352,7 @@ export class Board implements OnDestroy {
   // for the bug that shipped.
 
   private readonly restorePort: BoardRestorePort = {
-    currentUrl: () => this.router.url || "/",
+    currentUrl: () => this.router.url || '/',
     strip: () => this.strip()?.nativeElement ?? null,
     showPage: (scrollLeft) => {
       const element = this.strip()?.nativeElement;
@@ -359,8 +365,7 @@ export class Board implements OnDestroy {
       }
     },
     scroller: (status) => this.columnScroller(status),
-    columnKeys: (status) =>
-      (this.columns()[status] ?? []).map((pane) => `${pane.host}:${pane.id}`),
+    columnKeys: (status) => (this.columns()[status] ?? []).map((pane) => `${pane.host}:${pane.id}`),
     // `preventScroll` so restoring focus cannot undo the scroll just restored.
     focusCard: (paneKey) =>
       focusCard(this.strip()?.nativeElement ?? null, paneKey, { preventScroll: true }),
@@ -372,8 +377,8 @@ export class Board implements OnDestroy {
       const element = ref.nativeElement as HTMLElement;
       if (element.querySelector(`.column[data-status="${status}"]`)) {
         return (
-          element.querySelector<HTMLElement>("cdk-virtual-scroll-viewport") ??
-          element.querySelector<HTMLElement>(".column-body")
+          element.querySelector<HTMLElement>('cdk-virtual-scroll-viewport') ??
+          element.querySelector<HTMLElement>('.column-body')
         );
       }
     }
@@ -403,7 +408,7 @@ export class Board implements OnDestroy {
   });
 
   protected clearScope(): void {
-    void this.router.navigate(["/"]);
+    void this.router.navigate(['/']);
   }
 
   /**
@@ -437,16 +442,17 @@ export class Board implements OnDestroy {
   });
 
   protected readonly newPaneAvailable = computed(
-    () => !!this.primaryHost() && this.capabilities().get(this.primaryHost()!)?.paneCreate === true,
+    () => !!this.primaryHost() && this.capabilities().get(this.primaryHost()!)?.paneCreate === true
   );
   protected readonly newTabAvailable = computed(
-    () => !!this.primaryHost() && this.capabilities().get(this.primaryHost()!)?.tabCrud === true,
+    () => !!this.primaryHost() && this.capabilities().get(this.primaryHost()!)?.tabCrud === true
   );
   protected readonly newWorkspaceAvailable = computed(
-    () => !!this.primaryHost() && this.capabilities().get(this.primaryHost()!)?.workspaceCrud === true,
+    () =>
+      !!this.primaryHost() && this.capabilities().get(this.primaryHost()!)?.workspaceCrud === true
   );
   protected readonly plusMenuAvailable = computed(
-    () => this.newPaneAvailable() || this.newTabAvailable() || this.newWorkspaceAvailable(),
+    () => this.newPaneAvailable() || this.newTabAvailable() || this.newWorkspaceAvailable()
   );
 
   protected readonly plusMenuOpen = this.layout.plusMenuOpen;
@@ -462,9 +468,12 @@ export class Board implements OnDestroy {
       return;
     }
     try {
-      await this.store.splitPane(host, { direction: "right" });
+      await this.store.splitPane(host, { direction: 'right' });
     } catch (err) {
-      this.toast.push({ level: "error", message: `Could not create a new pane: ${describeError(err)}` });
+      this.toast.push({
+        level: 'error',
+        message: `Could not create a new pane: ${describeError(err)}`,
+      });
     }
   }
 
@@ -477,10 +486,13 @@ export class Board implements OnDestroy {
     try {
       const result = await this.store.createTab(host, {});
       if (result) {
-        this.store.requestPendingRename("tab", host, result.tab.id);
+        this.store.requestPendingRename('tab', host, result.tab.id);
       }
     } catch (err) {
-      this.toast.push({ level: "error", message: `Could not create a new tab: ${describeError(err)}` });
+      this.toast.push({
+        level: 'error',
+        message: `Could not create a new tab: ${describeError(err)}`,
+      });
     }
   }
 
@@ -493,10 +505,13 @@ export class Board implements OnDestroy {
     try {
       const result = await this.store.createWorkspace(host, {});
       if (result) {
-        this.store.requestPendingRename("workspace", host, result.workspace.id);
+        this.store.requestPendingRename('workspace', host, result.workspace.id);
       }
     } catch (err) {
-      this.toast.push({ level: "error", message: `Could not create a new workspace: ${describeError(err)}` });
+      this.toast.push({
+        level: 'error',
+        message: `Could not create a new workspace: ${describeError(err)}`,
+      });
     }
   }
 }

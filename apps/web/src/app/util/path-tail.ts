@@ -15,12 +15,12 @@ const TAIL_SEGMENTS = 2;
  * route.
  */
 export function pathTail(path: string): string {
-  const segments = path.split("/").filter((segment) => segment !== "");
+  const segments = path.split('/').filter((segment) => segment !== '');
   if (segments.length === 0) return path;
 
   const tail = segments.slice(-TAIL_SEGMENTS);
   const dropped = segments.length > tail.length;
   // A path that never had a leading slash keeps not having one.
-  const lead = dropped ? "…/" : path.startsWith("/") ? "/" : "";
-  return `${lead}${tail.join("/")}`;
+  const lead = dropped ? '…/' : path.startsWith('/') ? '/' : '';
+  return `${lead}${tail.join('/')}`;
 }

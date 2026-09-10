@@ -1,12 +1,12 @@
-import { test, expect, type Page } from "@playwright/test";
-import type { GetHostsResponse, Pane } from "@kanhrd/schema";
+import { test, expect, type Page } from '@playwright/test';
+import type { GetHostsResponse, Pane } from '@kanhrd/schema';
 import {
   buildHostSummaries,
   buildPopulatedSmall,
   buildSixHundredPanes,
   panesForHost,
   HOSTS,
-} from "./fixtures/six-hundred-panes";
+} from './fixtures/six-hundred-panes';
 
 /**
  * Task 17.10 (`add-l-brand-neo-shepherd-redesign`) — capture the neo-shepherd
@@ -29,27 +29,21 @@ import {
 // 900 breakpoint) and docs/DESIGN-SYSTEM.md (side-by-side ≥ 900). Two desktop
 // widths bracket the range operators actually run kanhrd at.
 const VIEWPORTS = [
-  { name: "mobile-390", width: 390, height: 844 },
-  { name: "small-900", width: 900, height: 720 },
-  { name: "desktop-1280", width: 1280, height: 800 },
-  { name: "wide-1920", width: 1920, height: 1080 },
+  { name: 'mobile-390', width: 390, height: 844 },
+  { name: 'small-900', width: 900, height: 720 },
+  { name: 'desktop-1280', width: 1280, height: 800 },
+  { name: 'wide-1920', width: 1920, height: 1080 },
 ] as const;
 
-type StateName =
-  | "empty"
-  | "populated-small"
-  | "populated-600"
-  | "scoped"
-  | "error"
-  | "offline";
+type StateName = 'empty' | 'populated-small' | 'populated-600' | 'scoped' | 'error' | 'offline';
 
 const STATES: readonly StateName[] = [
-  "empty",
-  "populated-small",
-  "populated-600",
-  "scoped",
-  "error",
-  "offline",
+  'empty',
+  'populated-small',
+  'populated-600',
+  'scoped',
+  'error',
+  'offline',
 ];
 
 /**
@@ -87,7 +81,7 @@ function parseRgb(css: string): [number, number, number] | null {
  */
 async function sampleColorPair(
   page: Page,
-  selector: string,
+  selector: string
 ): Promise<{ fg: [number, number, number]; bg: [number, number, number] } | null> {
   return page.evaluate((sel) => {
     const el = document.querySelector(sel) as HTMLElement | null;
@@ -126,22 +120,26 @@ async function installMock(page: Page, opts: MockOptions): Promise<void> {
   const state = opts.state;
 
   // --- HTTP: /api/hosts ---------------------------------------------------
-  await page.route("**/api/hosts", async (route) => {
-    if (state === "error") {
-      await route.fulfill({ status: 500, contentType: "text/plain", body: "forced e2e error" });
+  await page.route('**/api/hosts', async (route) => {
+    if (state === 'error') {
+      await route.fulfill({ status: 500, contentType: 'text/plain', body: 'forced e2e error' });
       return;
     }
-    if (state === "offline") {
-      await route.fulfill({ status: 503, contentType: "text/plain", body: "forced e2e offline" });
+    if (state === 'offline') {
+      await route.fulfill({ status: 503, contentType: 'text/plain', body: 'forced e2e offline' });
       return;
     }
     // `empty` cell: zero hosts → the empty-state onboarding renders (the
     // board's `noHostsConfigured` branch). Every other populated/scoped
     // cell advertises the full 3-host fixture so pane.list has hosts to
     // reply for.
-    const hosts = state === "empty" ? [] : buildHostSummaries();
+    const hosts = state === 'empty' ? [] : buildHostSummaries();
     const body: GetHostsResponse = { hosts };
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    });
   });
 
   // --- WS: /ws ------------------------------------------------------------
@@ -149,21 +147,21 @@ async function installMock(page: Page, opts: MockOptions): Promise<void> {
   // empty pane.list; `populated-small` yields 6; `populated-600`/`scoped`
   // yield the full 600.
   const allPanes: Pane[] =
-    state === "populated-small"
+    state === 'populated-small'
       ? buildPopulatedSmall()
-      : state === "populated-600" || state === "scoped"
+      : state === 'populated-600' || state === 'scoped'
         ? buildSixHundredPanes()
         : [];
 
   await page.routeWebSocket(/\/ws$/, (ws) => {
-    if (state === "offline") {
+    if (state === 'offline') {
       // Close before the app can send anything. The reconnect backoff kicks
       // in but never lands during the test window.
-      ws.close({ code: 1011, reason: "forced e2e offline" });
+      ws.close({ code: 1011, reason: 'forced e2e offline' });
       return;
     }
     ws.onMessage((raw) => {
-      const text = typeof raw === "string" ? raw : raw.toString();
+      const text = typeof raw === 'string' ? raw : raw.toString();
       let msg: { id?: string; host?: string; method?: string } | null = null;
       try {
         msg = JSON.parse(text) as { id?: string; host?: string; method?: string };
@@ -172,27 +170,25 @@ async function installMock(page: Page, opts: MockOptions): Promise<void> {
       }
       if (!msg?.id || !msg.host || !msg.method) return;
       const { id, host, method } = msg;
-      if (method === "pane.list") {
+      if (method === 'pane.list') {
         ws.send(
-          JSON.stringify({ id, host, ok: true, data: { panes: panesForHost(allPanes, host) } }),
+          JSON.stringify({ id, host, ok: true, data: { panes: panesForHost(allPanes, host) } })
         );
         return;
       }
-      if (method === "events.subscribe") {
-        ws.send(
-          JSON.stringify({ id, host, ok: true, data: { subscription_id: `${host}-sub` } }),
-        );
+      if (method === 'events.subscribe') {
+        ws.send(JSON.stringify({ id, host, ok: true, data: { subscription_id: `${host}-sub` } }));
         return;
       }
-      if (method === "bridge.capabilities") {
+      if (method === 'bridge.capabilities') {
         // Tier-1 fallback — mirrors `fallbackCapabilities()` in panes.store.ts.
         ws.send(
           JSON.stringify({
             id,
             host,
             ok: false,
-            error: { code: "unsupported", message: "tier-1 bridge in mock" },
-          }),
+            error: { code: 'unsupported', message: 'tier-1 bridge in mock' },
+          })
         );
         return;
       }
@@ -202,8 +198,8 @@ async function installMock(page: Page, opts: MockOptions): Promise<void> {
           id,
           host,
           ok: false,
-          error: { code: "unsupported_operation", message: `mock does not implement ${method}` },
-        }),
+          error: { code: 'unsupported_operation', message: `mock does not implement ${method}` },
+        })
       );
     });
   });
@@ -211,16 +207,16 @@ async function installMock(page: Page, opts: MockOptions): Promise<void> {
 
 /** URL the cell should navigate to. `scoped` boots straight into a workspace URL. */
 function urlForState(state: StateName): string {
-  if (state === "scoped") {
+  if (state === 'scoped') {
     // First workspace of the first host — see the fixture id shape.
     return `/workspace/${HOSTS[0]}-ws1`;
   }
-  return "/";
+  return '/';
 }
 
 // --- fixture sanity check --------------------------------------------------
 
-test("fixture — buildSixHundredPanes returns exactly 600 panes", () => {
+test('fixture — buildSixHundredPanes returns exactly 600 panes', () => {
   const panes = buildSixHundredPanes();
   expect(panes.length).toBe(600);
   // Basic schema shape: every pane has the load-bearing fields the board reads.
@@ -248,9 +244,9 @@ for (const vp of VIEWPORTS) {
       // least one settled paint surface follows — cards, the empty state,
       // the error banner, or the boot skeleton (for `offline`, whose
       // httpResource can legitimately stay in loading while retrying).
-      await expect(page.locator("main")).toBeVisible({ timeout: 10_000 });
+      await expect(page.locator('main')).toBeVisible({ timeout: 10_000 });
       const shellSurface = page.locator(
-        ".card, .empty-state, .state.state-failed, .board-skeleton",
+        '.card, .empty-state, .state.state-failed, .board-skeleton'
       );
       await expect
         .poll(async () => await shellSurface.count(), {
@@ -260,50 +256,50 @@ for (const vp of VIEWPORTS) {
         .toBeGreaterThan(0);
       const firstShellMs = Date.now() - t0;
       test.info().annotations.push({
-        type: "first-shell-ms",
+        type: 'first-shell-ms',
         description: `${vp.name}/${state}: ${firstShellMs}ms`,
       });
       // eslint-disable-next-line no-console
       console.log(`[viewport-matrix] ${vp.name}/${state} first-shell=${firstShellMs}ms`);
 
       // --- state-specific "did the right screen render" assertion ---------
-      if (state === "empty") {
+      if (state === 'empty') {
         // No hosts advertise cards — filter bar has no host chips.
-        await expect(page.locator(".card")).toHaveCount(0);
-      } else if (state === "populated-small") {
-        await expect(page.locator(".card").first()).toBeVisible({ timeout: 10_000 });
-        const count = await page.locator(".card").count();
+        await expect(page.locator('.card')).toHaveCount(0);
+      } else if (state === 'populated-small') {
+        await expect(page.locator('.card').first()).toBeVisible({ timeout: 10_000 });
+        const count = await page.locator('.card').count();
         expect(count).toBeGreaterThan(0);
         expect(count).toBeLessThanOrEqual(6);
-      } else if (state === "populated-600" || state === "scoped") {
+      } else if (state === 'populated-600' || state === 'scoped') {
         // Cards are virtualized above ~200 rows; assert at least one is
         // materialised. The store still holds 600 (or the workspace's 50)
         // regardless of what the DOM materialises.
-        await expect(page.locator(".card").first()).toBeVisible({ timeout: 10_000 });
-      } else if (state === "error") {
+        await expect(page.locator('.card').first()).toBeVisible({ timeout: 10_000 });
+      } else if (state === 'error') {
         // Either the explicit failure banner or the skeleton/state.loading —
         // whichever Angular's httpResource surfaces. Both are acceptable
         // shell-paint surfaces for a bridge that errored on /api/hosts.
-        const failedOrSkeleton = page.locator(".state.state-failed, .board-skeleton");
+        const failedOrSkeleton = page.locator('.state.state-failed, .board-skeleton');
         await expect(failedOrSkeleton.first()).toBeVisible({ timeout: 10_000 });
-      } else if (state === "offline") {
+      } else if (state === 'offline') {
         // Bridge unreachable — the loading state resolves to an empty board;
         // the "bridge disconnected" toast may or may not be flushed inside
         // the shell window depending on retry timing, so we don't assert on
         // it here. What matters is the shell painted without hanging.
-        await expect(page.locator(".card")).toHaveCount(0);
+        await expect(page.locator('.card')).toHaveCount(0);
       }
 
       // --- contrast probe -------------------------------------------------
       // Sample the brand wordmark and, when present, the first card's title.
       const contrastFindings: Array<{ label: string; ratio: number }> = [];
       const probes: Array<{ selector: string; label: string }> = [
-        { selector: ".brand", label: "brand-wordmark" },
+        { selector: '.brand', label: 'brand-wordmark' },
       ];
-      if (state === "populated-small" || state === "populated-600" || state === "scoped") {
-        probes.push({ selector: ".card .card-open", label: "card-title" });
-      } else if (state === "error") {
-        probes.push({ selector: ".state-text", label: "error-text" });
+      if (state === 'populated-small' || state === 'populated-600' || state === 'scoped') {
+        probes.push({ selector: '.card .card-open', label: 'card-title' });
+      } else if (state === 'error') {
+        probes.push({ selector: '.state-text', label: 'error-text' });
       }
       for (const probe of probes) {
         const pair = await sampleColorPair(page, probe.selector);
@@ -316,9 +312,10 @@ for (const vp of VIEWPORTS) {
         expect(ratio, `contrast ${probe.label} at ${vp.name}/${state}`).toBeGreaterThanOrEqual(3.0);
       }
       test.info().annotations.push({
-        type: "contrast",
-        description: `${vp.name}/${state}: ` +
-          contrastFindings.map((f) => `${f.label}=${f.ratio.toFixed(2)}`).join(", "),
+        type: 'contrast',
+        description:
+          `${vp.name}/${state}: ` +
+          contrastFindings.map((f) => `${f.label}=${f.ratio.toFixed(2)}`).join(', '),
       });
 
       // --- keyboard probe -------------------------------------------------
@@ -326,17 +323,17 @@ for (const vp of VIEWPORTS) {
       // from the element's resting state. Escape returns focus to <body>
       // (nothing higher is trapping it at boot).
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur?.());
-      await page.locator("body").click({ position: { x: 1, y: 1 } });
+      await page.locator('body').click({ position: { x: 1, y: 1 } });
       let focusStopsChecked = 0;
       let focusStopsWithIndicator = 0;
       for (let i = 0; i < 5; i++) {
-        await page.keyboard.press("Tab");
+        await page.keyboard.press('Tab');
         const info = await page.evaluate(() => {
           const el = document.activeElement as HTMLElement | null;
           if (!el || el === document.body) return null;
           const cs = getComputedStyle(el);
-          const hasOutline = cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) > 0;
-          const hasBoxShadow = cs.boxShadow !== "none";
+          const hasOutline = cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0;
+          const hasBoxShadow = cs.boxShadow !== 'none';
           const tag = el.tagName.toLowerCase();
           return { tag, hasOutline, hasBoxShadow };
         });
@@ -349,17 +346,17 @@ for (const vp of VIEWPORTS) {
       if (focusStopsChecked > 0) {
         expect(
           focusStopsWithIndicator,
-          `every keyboard stop at ${vp.name}/${state} shows a focus indicator`,
+          `every keyboard stop at ${vp.name}/${state} shows a focus indicator`
         ).toBe(focusStopsChecked);
       }
-      await page.keyboard.press("Escape");
+      await page.keyboard.press('Escape');
       test.info().annotations.push({
-        type: "keyboard",
+        type: 'keyboard',
         description: `${vp.name}/${state}: ${focusStopsWithIndicator}/${focusStopsChecked} stops indicated`,
       });
       // eslint-disable-next-line no-console
       console.log(
-        `[viewport-matrix] ${vp.name}/${state} keyboard=${focusStopsWithIndicator}/${focusStopsChecked}`,
+        `[viewport-matrix] ${vp.name}/${state} keyboard=${focusStopsWithIndicator}/${focusStopsChecked}`
       );
     });
   }

@@ -1,5 +1,12 @@
-import WebSocket from "ws";
-import type { BridgeMethod, BridgeMethodParams, BridgeMethodResult, WsEvent, WsRequest, WsResponse } from "@kanhrd/schema";
+import WebSocket from 'ws';
+import type {
+  BridgeMethod,
+  BridgeMethodParams,
+  BridgeMethodResult,
+  WsEvent,
+  WsRequest,
+  WsResponse,
+} from '@kanhrd/schema';
 
 let nextId = 0;
 
@@ -12,16 +19,22 @@ let nextId = 0;
  */
 export class IntegrationClient {
   private readonly socket: WebSocket;
-  private readonly pending = new Map<string, { resolve: (r: WsResponse) => void; reject: (e: Error) => void }>();
+  private readonly pending = new Map<
+    string,
+    { resolve: (r: WsResponse) => void; reject: (e: Error) => void }
+  >();
   private readonly received: WsEvent[] = [];
-  private readonly waiters: Array<{ match: (e: WsEvent) => boolean; resolve: (e: WsEvent) => void }> = [];
+  private readonly waiters: Array<{
+    match: (e: WsEvent) => boolean;
+    resolve: (e: WsEvent) => void;
+  }> = [];
   private closed = false;
 
   private constructor(socket: WebSocket) {
     this.socket = socket;
-    socket.on("message", (raw: Buffer) => {
-      const msg = JSON.parse(raw.toString("utf8")) as WsResponse | WsEvent;
-      if ("id" in msg) {
+    socket.on('message', (raw: Buffer) => {
+      const msg = JSON.parse(raw.toString('utf8')) as WsResponse | WsEvent;
+      if ('id' in msg) {
         const waiter = this.pending.get(msg.id);
         if (waiter) {
           this.pending.delete(msg.id);
@@ -37,9 +50,10 @@ export class IntegrationClient {
         }
       }
     });
-    socket.on("close", () => {
+    socket.on('close', () => {
       this.closed = true;
-      for (const [, waiter] of this.pending) waiter.reject(new Error("WebSocket closed while a request was pending"));
+      for (const [, waiter] of this.pending)
+        waiter.reject(new Error('WebSocket closed while a request was pending'));
       this.pending.clear();
     });
   }
@@ -47,15 +61,20 @@ export class IntegrationClient {
   static async connect(url: string): Promise<IntegrationClient> {
     const socket = new WebSocket(url);
     await new Promise<void>((resolvePromise, reject) => {
-      socket.once("open", () => resolvePromise());
-      socket.once("error", reject);
+      socket.once('open', () => resolvePromise());
+      socket.once('error', reject);
     });
     return new IntegrationClient(socket);
   }
 
   /** Sends one `WsRequest` and resolves with its correlated `WsResponse` (success or error — callers assert `ok`). */
-  request<M extends BridgeMethod>(host: string, method: M, params?: BridgeMethodParams[M], timeoutMs = 5_000): Promise<WsResponse<M>> {
-    if (this.closed) return Promise.reject(new Error("IntegrationClient is closed"));
+  request<M extends BridgeMethod>(
+    host: string,
+    method: M,
+    params?: BridgeMethodParams[M],
+    timeoutMs = 5_000
+  ): Promise<WsResponse<M>> {
+    if (this.closed) return Promise.reject(new Error('IntegrationClient is closed'));
     const id = `int-${++nextId}`;
     const req: WsRequest<M> = { id, host, method, params };
     return new Promise<WsResponse<M>>((resolvePromise, reject) => {
@@ -82,7 +101,7 @@ export class IntegrationClient {
     host: string,
     method: M,
     params?: BridgeMethodParams[M],
-    timeoutMs?: number,
+    timeoutMs?: number
   ): Promise<BridgeMethodResult[M]> {
     const res = await this.request(host, method, params, timeoutMs);
     if (!res.ok) throw new Error(`"${method}" failed: ${res.error.code} — ${res.error.message}`);

@@ -49,7 +49,7 @@
       <span class="pane-id">{{ id() }}</span>
       <span class="revision">{{ revisionLabel() }}</span>
       <span class="updated">{{ lastPollLabel() }}</span>
-      @if (viewState() === "stale") {
+      @if (viewState() === 'stale') {
         <span class="stale-marker">
           <svg lucideUnplug class="icon" aria-hidden="true"></svg>
           {{ copy.state.stale }}
@@ -60,17 +60,22 @@
 
   <div class="detail-body">
     <div class="terminal-wrap">
-      <div class="terminal-container" #terminalContainer role="group" [attr.aria-label]="title()"></div>
+      <div
+        class="terminal-container"
+        #terminalContainer
+        role="group"
+        [attr.aria-label]="title()"
+      ></div>
 
       <div class="terminal-status" aria-live="polite">
         @switch (viewState()) {
-          @case ("loading") {
+          @case ('loading') {
             <div class="terminal-state terminal-loading">
               <span class="pulse-dot" aria-hidden="true"></span>
               <span>{{ copy.loading.pane }}</span>
             </div>
           }
-          @case ("failed") {
+          @case ('failed') {
             <div class="terminal-state terminal-failed">
               <p class="state-line">
                 <svg lucideTriangleAlert class="icon" aria-hidden="true"></svg>
@@ -85,7 +90,7 @@
               </div>
             </div>
           }
-          @case ("unavailable") {
+          @case ('unavailable') {
             <div class="terminal-state terminal-unavailable">
               <p class="state-line">
                 <svg lucideUnplug class="icon" aria-hidden="true"></svg>
@@ -96,7 +101,7 @@
               </div>
             </div>
           }
-          @case ("empty") {
+          @case ('empty') {
             <div class="terminal-state terminal-empty">
               <p class="state-line">{{ copy.emptyState.hostEmpty }}</p>
             </div>

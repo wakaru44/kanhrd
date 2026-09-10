@@ -1,10 +1,10 @@
-import { randomUUID } from "node:crypto";
-import websocketPlugin from "@fastify/websocket";
-import type { FastifyInstance } from "fastify";
-import type { EventKind, WsEvent, WsRequest } from "@kanhrd/schema";
-import type { HostRegistry, HostRuntime } from "../herdr/hosts.js";
-import { OutputPoller } from "../output/poller.js";
-import { dispatch, OUTPUT_POLL_INTERVAL_MS } from "./dispatch.js";
+import { randomUUID } from 'node:crypto';
+import websocketPlugin from '@fastify/websocket';
+import type { FastifyInstance } from 'fastify';
+import type { EventKind, WsEvent, WsRequest } from '@kanhrd/schema';
+import type { HostRegistry, HostRuntime } from '../herdr/hosts.js';
+import { OutputPoller } from '../output/poller.js';
+import { dispatch, OUTPUT_POLL_INTERVAL_MS } from './dispatch.js';
 
 interface Subscription {
   kinds: Set<EventKind>;
@@ -25,7 +25,7 @@ export async function registerWebSocket(app: FastifyInstance, hosts: HostRegistr
 
   const poller = new OutputPoller(hosts, OUTPUT_POLL_INTERVAL_MS);
 
-  app.get("/ws", { websocket: true }, (socket) => {
+  app.get('/ws', { websocket: true }, (socket) => {
     const connectionId = randomUUID();
     const subscriptions = new Map<string, Subscription>();
 
@@ -41,13 +41,13 @@ export async function registerWebSocket(app: FastifyInstance, hosts: HostRegistr
           if (kinds.has(event.event)) send(event);
         };
         sub = { kinds, listener };
-        runtime.on("bridge-event", listener);
+        runtime.on('bridge-event', listener);
         subscriptions.set(host, sub);
       }
       return sub;
     };
 
-    socket.on("message", (raw: Buffer | string) => {
+    socket.on('message', (raw: Buffer | string) => {
       void (async () => {
         let request: WsRequest;
         try {
@@ -67,7 +67,14 @@ export async function registerWebSocket(app: FastifyInstance, hosts: HostRegistr
             return randomUUID();
           },
           subscribeOutput: (host, params) =>
-            poller.subscribe(host, params.pane_id, params.source, params.format, connectionId, send),
+            poller.subscribe(
+              host,
+              params.pane_id,
+              params.source,
+              params.format,
+              connectionId,
+              send
+            ),
           unsubscribeOutput: (subscriptionId) => poller.unsubscribe(subscriptionId),
         });
 
@@ -75,9 +82,9 @@ export async function registerWebSocket(app: FastifyInstance, hosts: HostRegistr
       })();
     });
 
-    socket.on("close", () => {
+    socket.on('close', () => {
       for (const [host, sub] of subscriptions) {
-        hosts.get(host)?.off("bridge-event", sub.listener);
+        hosts.get(host)?.off('bridge-event', sub.listener);
       }
       subscriptions.clear();
       poller.dropConnection(connectionId);

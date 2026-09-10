@@ -25,7 +25,7 @@
  * Source: src/api/schema/common.rs:160-166. This is the wire value used
  * verbatim by every layer (herdr, bridge, browser) — no projection needed.
  */
-export type AgentStatus = "idle" | "working" | "blocked" | "done" | "unknown";
+export type AgentStatus = 'idle' | 'working' | 'blocked' | 'done' | 'unknown';
 
 /**
  * herdr's `EventKind` enum (src/api/schema/events.rs:194-221), narrowed to
@@ -37,20 +37,20 @@ export type AgentStatus = "idle" | "working" | "blocked" | "done" | "unknown";
  * CONTRACT.md.
  */
 export type EventKind =
-  | "pane.created"
-  | "pane.closed"
-  | "pane.agent_status_changed"
-  | "pane.output"
-  | "pane.graphics_frame"
-  | "workspace.created"
-  | "workspace.closed"
-  | "workspace.renamed"
-  | "tab.created"
-  | "tab.closed"
-  | "tab.renamed"
-  | "tab.moved"
-  | "pane.moved"
-  | "pane.updated";
+  | 'pane.created'
+  | 'pane.closed'
+  | 'pane.agent_status_changed'
+  | 'pane.output'
+  | 'pane.graphics_frame'
+  | 'workspace.created'
+  | 'workspace.closed'
+  | 'workspace.renamed'
+  | 'tab.created'
+  | 'tab.closed'
+  | 'tab.renamed'
+  | 'tab.moved'
+  | 'pane.moved'
+  | 'pane.updated';
 
 /**
  * `pane.output` and `pane.graphics_frame` are BRIDGE-SYNTHESIZED and have no
@@ -71,7 +71,7 @@ export type EventKind =
  * bridge implements `pane.output` by polling `pane.read` per subscribed
  * pane instead. See CONTRACT-TIER2.md section 5.
  */
-export type Tier2SynthesizedEventKind = "pane.output" | "pane.graphics_frame";
+export type Tier2SynthesizedEventKind = 'pane.output' | 'pane.graphics_frame';
 
 /**
  * Raw `PaneInfo` fields the bridge reads off herdr, trimmed to what feeds a
@@ -154,12 +154,12 @@ export type HerdrSubscriptionStarted = Record<string, never>;
  * tagged `{ "type": ... }`), trimmed to the three tier-1 event payloads.
  */
 export type HerdrEventEnvelope =
-  | { event: "pane.created"; data: { type: "pane_created"; pane: HerdrPaneInfo } }
-  | { event: "pane.closed"; data: { type: "pane_closed"; pane_id: string; workspace_id: string } }
+  | { event: 'pane.created'; data: { type: 'pane_created'; pane: HerdrPaneInfo } }
+  | { event: 'pane.closed'; data: { type: 'pane_closed'; pane_id: string; workspace_id: string } }
   | {
-      event: "pane.agent_status_changed";
+      event: 'pane.agent_status_changed';
       data: {
-        type: "pane_agent_status_changed";
+        type: 'pane_agent_status_changed';
         pane_id: string;
         workspace_id: string;
         agent_status: AgentStatus;
@@ -173,25 +173,28 @@ export type HerdrEventEnvelope =
   // are herdr's `EventData` variants under `#[serde(tag = "type", rename_all
   // = "snake_case")]` (src/api/schema/events.rs:420-421), matching the
   // tier-1/tier-2 convention above exactly.
-  | { event: "workspace.created"; data: { type: "workspace_created"; workspace: HerdrWorkspaceDetail } }
   | {
-      event: "workspace.closed";
-      data: { type: "workspace_closed"; workspace_id: string; workspace?: HerdrWorkspaceDetail };
+      event: 'workspace.created';
+      data: { type: 'workspace_created'; workspace: HerdrWorkspaceDetail };
     }
   | {
-      event: "workspace.renamed";
-      data: { type: "workspace_renamed"; workspace_id: string; label: string };
-    }
-  | { event: "tab.created"; data: { type: "tab_created"; tab: HerdrTabDetail } }
-  | { event: "tab.closed"; data: { type: "tab_closed"; tab_id: string; workspace_id: string } }
-  | {
-      event: "tab.renamed";
-      data: { type: "tab_renamed"; tab_id: string; workspace_id: string; label: string };
+      event: 'workspace.closed';
+      data: { type: 'workspace_closed'; workspace_id: string; workspace?: HerdrWorkspaceDetail };
     }
   | {
-      event: "tab.moved";
+      event: 'workspace.renamed';
+      data: { type: 'workspace_renamed'; workspace_id: string; label: string };
+    }
+  | { event: 'tab.created'; data: { type: 'tab_created'; tab: HerdrTabDetail } }
+  | { event: 'tab.closed'; data: { type: 'tab_closed'; tab_id: string; workspace_id: string } }
+  | {
+      event: 'tab.renamed';
+      data: { type: 'tab_renamed'; tab_id: string; workspace_id: string; label: string };
+    }
+  | {
+      event: 'tab.moved';
       data: {
-        type: "tab_moved";
+        type: 'tab_moved';
         tab_id: string;
         workspace_id: string;
         insert_index: number;
@@ -199,9 +202,9 @@ export type HerdrEventEnvelope =
       };
     }
   | {
-      event: "pane.moved";
+      event: 'pane.moved';
       data: {
-        type: "pane_moved";
+        type: 'pane_moved';
         previous_pane_id: string;
         previous_workspace_id: string;
         previous_tab_id: string;
@@ -220,7 +223,7 @@ export type HerdrEventEnvelope =
    * fixed. See the `pane.rename` round trip in
    * `openspec/changes/add-pane-workdir-and-task-title/design.md`.
    */
-  | { event: "pane.updated"; data: { type: "pane_updated"; pane: HerdrPaneInfo } };
+  | { event: 'pane.updated'; data: { type: 'pane_updated'; pane: HerdrPaneInfo } };
 
 /**
  * Bridge-projected pane, one per kanban card. This is NOT a herdr wire
@@ -298,13 +301,13 @@ export interface HostSummary {
  * - `detection`: the narrow buffer herdr's own agent-status detector reads;
  *   not meant for human display, listed here only for completeness.
  */
-export type ReadSource = "visible" | "recent" | "recent_unwrapped" | "detection";
+export type ReadSource = 'visible' | 'recent' | 'recent_unwrapped' | 'detection';
 
 /**
  * herdr's `ReadFormat` enum, `#[serde(rename_all = "snake_case")]`.
  * Source: src/api/schema/common.rs:93-101. Default is `text`.
  */
-export type ReadFormat = "text" | "ansi";
+export type ReadFormat = 'text' | 'ansi';
 
 /**
  * `Method::PaneRead` params. Source: src/api/schema/panes.rs:355-367.
@@ -371,7 +374,7 @@ export interface HerdrPaneSendKeysParams {
  */
 export interface HerdrPaneResizeParams {
   pane_id?: string;
-  direction: "up" | "down" | "left" | "right";
+  direction: 'up' | 'down' | 'left' | 'right';
   amount?: number;
 }
 
@@ -403,7 +406,7 @@ export interface HerdrPaneGraphicsInfoResult {
 /**
  * herdr's `PaneGraphicsFormat` enum. Source: src/api/schema/panes.rs:369-376.
  */
-export type PaneGraphicsFormat = "png" | "rgb" | "rgba" | "bgra";
+export type PaneGraphicsFormat = 'png' | 'rgb' | 'rgba' | 'bgra';
 
 /**
  * herdr's private (non-schema, hand-parsed) `FrameHeader` JSON line that a
@@ -479,7 +482,7 @@ export type PaneGraphicsInfoData = HerdrPaneGraphicsInfoResult;
  * or above (contrast with the four-way `PaneDirection` used by `pane.swap`/
  * navigation, which is NOT the direction type `pane.split` takes).
  */
-export type SplitDirection = "right" | "down";
+export type SplitDirection = 'right' | 'down';
 
 /**
  * `Method::PaneSplit` params. Source: src/api/schema/panes.rs:27-43.
@@ -508,9 +511,9 @@ export interface HerdrPaneSplitParams {
  * conflate the two when consuming this contract.
  */
 export type HerdrPaneMoveDestination =
-  | { type: "tab"; tab_id: string; target_pane_id?: string; split: SplitDirection; ratio?: number }
-  | { type: "new_tab"; workspace_id?: string; label?: string }
-  | { type: "new_workspace"; label?: string; tab_label?: string };
+  | { type: 'tab'; tab_id: string; target_pane_id?: string; split: SplitDirection; ratio?: number }
+  | { type: 'new_tab'; workspace_id?: string; label?: string }
+  | { type: 'new_workspace'; label?: string; tab_label?: string };
 
 /** `Method::PaneMove` params. Source: src/api/schema/panes.rs:84-89. */
 export interface HerdrPaneMoveParams {
@@ -525,7 +528,7 @@ export interface HerdrPaneMoveParams {
  * `changed: false` — the move was a no-op (already in that tab, or the
  * source tab is zoomed and can't be torn down mid-move).
  */
-export type HerdrPaneMoveReason = "same_tab" | "zoomed_tab";
+export type HerdrPaneMoveReason = 'same_tab' | 'zoomed_tab';
 
 /**
  * `ResponseResult::PaneMove` → `PaneMoveResult`. Source:

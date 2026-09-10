@@ -30,10 +30,12 @@
 
     <div class="modal-actions">
       <button type="button" class="btn" (click)="onCancel()">{{ copy.confirm.cancel }}</button>
-      @if (initialValue() !== "") {
+      @if (initialValue() !== '') {
         <button type="button" class="btn" (click)="onClear()">{{ copy.card.renameClear }}</button>
       }
-      <button type="button" class="btn primary" (click)="onSave()">{{ copy.card.renameSave }}</button>
+      <button type="button" class="btn primary" (click)="onSave()">
+        {{ copy.card.renameSave }}
+      </button>
     </div>
   </div>
 </div>

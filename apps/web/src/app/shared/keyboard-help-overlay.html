@@ -22,7 +22,9 @@
           <svg lucideX class="icon"></svg>
         </button>
       </div>
-      <p class="prefix-note"><kbd>{{ keyboard.prefix() }}</kbd> {{ copy.help.prefixNote }}</p>
+      <p class="prefix-note">
+        <kbd>{{ keyboard.prefix() }}</kbd> {{ copy.help.prefixNote }}
+      </p>
 
       @for (group of groups(); track group.category) {
         <section class="shortcut-group">
@@ -30,7 +32,9 @@
           <dl>
             @for (binding of group.bindings; track binding.action) {
               <div class="shortcut-row">
-                <dt><kbd>{{ keysLabel(binding) }}</kbd></dt>
+                <dt>
+                  <kbd>{{ keysLabel(binding) }}</kbd>
+                </dt>
                 <dd>{{ binding.description }}</dd>
               </div>
             }

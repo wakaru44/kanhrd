@@ -1,19 +1,19 @@
-import type { Type } from "@angular/core";
-import { App } from "../app";
-import { Board } from "../board/board";
-import { Card } from "../board/card";
-import { Column } from "../board/column";
-import { EmptyState } from "../board/empty-state";
-import { FilterBar } from "../board/filter-bar";
-import { StatusSwitcher } from "../board/status-switcher";
-import { NotFound } from "../not-found/not-found";
-import { PaneDetail } from "../pane-detail/pane-detail";
-import { Rail } from "../rail/rail";
-import { Settings } from "../settings/settings";
-import { ConfirmModal } from "./confirm-modal";
-import { KeyboardHelpOverlay } from "./keyboard-help-overlay";
-import { RenameModal } from "./rename-modal";
-import { ToastHost } from "./toast-host";
+import type { Type } from '@angular/core';
+import { App } from '../app';
+import { Board } from '../board/board';
+import { Card } from '../board/card';
+import { Column } from '../board/column';
+import { EmptyState } from '../board/empty-state';
+import { FilterBar } from '../board/filter-bar';
+import { StatusSwitcher } from '../board/status-switcher';
+import { NotFound } from '../not-found/not-found';
+import { PaneDetail } from '../pane-detail/pane-detail';
+import { Rail } from '../rail/rail';
+import { Settings } from '../settings/settings';
+import { ConfirmModal } from './confirm-modal';
+import { KeyboardHelpOverlay } from './keyboard-help-overlay';
+import { RenameModal } from './rename-modal';
+import { ToastHost } from './toast-host';
 
 /**
  * The design-token and icon-set gates, asserted against what the Angular
@@ -45,9 +45,46 @@ const HEX = /#[0-9a-fA-F]{3,8}\b/g;
  * (copy punctuation) and `·` are text, not chrome.
  */
 const ENTITY_GLYPHS = [
-  "✎", "✏", "×", "✕", "✖", "⨯", "✓", "✔", "✗", "☰", "⚙", "☀", "☾", "☽", "🌙",
-  "⟶", "→", "←", "↑", "↓", "▸", "▾", "▴", "◂", "›", "‹", "»", "«", "●", "○",
-  "◦", "★", "☆", "⋯", "⌄", "⚠", "ℹ", "＋", "➕", "❌",
+  '✎',
+  '✏',
+  '×',
+  '✕',
+  '✖',
+  '⨯',
+  '✓',
+  '✔',
+  '✗',
+  '☰',
+  '⚙',
+  '☀',
+  '☾',
+  '☽',
+  '🌙',
+  '⟶',
+  '→',
+  '←',
+  '↑',
+  '↓',
+  '▸',
+  '▾',
+  '▴',
+  '◂',
+  '›',
+  '‹',
+  '»',
+  '«',
+  '●',
+  '○',
+  '◦',
+  '★',
+  '☆',
+  '⋯',
+  '⌄',
+  '⚠',
+  'ℹ',
+  '＋',
+  '➕',
+  '❌',
 ] as const;
 
 interface CompiledComponent {
@@ -92,22 +129,24 @@ function compiled(component: Type<unknown>): CompiledComponent {
  */
 function templateSource(component: Type<unknown>): string {
   const def = compiled(component);
-  const consts = typeof def.consts === "function" ? (def.consts as () => unknown)() : def.consts;
-  const source = String(def.template ?? "") + JSON.stringify(consts ?? null);
+  const consts = typeof def.consts === 'function' ? (def.consts as () => unknown)() : def.consts;
+  const source = String(def.template ?? '') + JSON.stringify(consts ?? null);
   return source.replace(/\\u\{?([0-9a-fA-F]{1,6})\}?/g, (_match, code: string) =>
-    String.fromCodePoint(Number.parseInt(code, 16)),
+    String.fromCodePoint(Number.parseInt(code, 16))
   );
 }
 
-describe("style lint: components carry no raw values", () => {
-  it("covers every component that ships a template or a stylesheet", () => {
+describe('style lint: components carry no raw values', () => {
+  it('covers every component that ships a template or a stylesheet', () => {
     expect(COMPONENTS.length).toBe(15);
     for (const component of COMPONENTS) {
-      expect(() => compiled(component)).withContext(component.name).not.toThrow();
+      expect(() => compiled(component))
+        .withContext(component.name)
+        .not.toThrow();
     }
   });
 
-  it("declares no raw hex colour in any component stylesheet", () => {
+  it('declares no raw hex colour in any component stylesheet', () => {
     const offenders: string[] = [];
     for (const component of COMPONENTS) {
       for (const sheet of compiled(component).styles ?? []) {
@@ -117,19 +156,19 @@ describe("style lint: components carry no raw values", () => {
       }
     }
     expect(offenders)
-      .withContext("raw hex belongs in shared/tokens.scss; components read var(--token)")
+      .withContext('raw hex belongs in shared/tokens.scss; components read var(--token)')
       .toEqual([]);
   });
 
-  it("actually reads the compiled stylesheets (guards the assertion above)", () => {
+  it('actually reads the compiled stylesheets (guards the assertion above)', () => {
     // If `ɵcmp.styles` were ever empty the hex test would pass vacuously.
     const total = COMPONENTS.reduce((sum, c) => sum + (compiled(c).styles?.length ?? 0), 0);
     expect(total).toBeGreaterThanOrEqual(COMPONENTS.length);
-    const anySheet = (compiled(Card).styles ?? []).join("");
-    expect(anySheet).toContain("--");
+    const anySheet = (compiled(Card).styles ?? []).join('');
+    expect(anySheet).toContain('--');
   });
 
-  it("renders no HTML entity glyph as UI chrome in any template", () => {
+  it('renders no HTML entity glyph as UI chrome in any template', () => {
     const offenders: string[] = [];
     for (const component of COMPONENTS) {
       const source = templateSource(component);
@@ -140,14 +179,14 @@ describe("style lint: components carry no raw values", () => {
       }
     }
     expect(offenders)
-      .withContext("use a lucide component from shared/icons.ts, not a literal glyph")
+      .withContext('use a lucide component from shared/icons.ts, not a literal glyph')
       .toEqual([]);
   });
 
-  it("actually reads the compiled templates (guards the assertion above)", () => {
+  it('actually reads the compiled templates (guards the assertion above)', () => {
     // The glyph scan is only meaningful if the template text is visible here.
-    expect(templateSource(ConfirmModal)).toContain("modal-title");
-    expect(templateSource(Card)).toContain("status-dot");
+    expect(templateSource(ConfirmModal)).toContain('modal-title');
+    expect(templateSource(Card)).toContain('status-dot');
   });
 
   /**
@@ -157,9 +196,9 @@ describe("style lint: components carry no raw values", () => {
    * `{{ copy.* }}` leaves no literal behind, so their absence here is the
    * regression guard.
    */
-  it("renders no inlined chrome literal in the board template", () => {
+  it('renders no inlined chrome literal in the board template', () => {
     const source = templateSource(Board);
-    for (const literal of ["Create", "New pane", "New tab", "New workspace", "Clear scope"]) {
+    for (const literal of ['Create', 'New pane', 'New tab', 'New workspace', 'Clear scope']) {
       // Quoted, so the compiler's own instruction names (`conditionalCreate`)
       // cannot masquerade as an inlined "Create".
       for (const quoted of [`'${literal}'`, `"${literal}"`]) {
@@ -168,15 +207,15 @@ describe("style lint: components carry no raw values", () => {
     }
   });
 
-  it("would catch a literal that a template really did inline", () => {
+  it('would catch a literal that a template really did inline', () => {
     // The guard above is only worth having if a quoted static string is
     // visible in the compiled output at all. `app-filter-bar` is a static
     // element name in the same template, quoted the same way.
     expect(templateSource(Board)).toContain("'app-filter-bar'");
   });
 
-  it("catches a glyph that a template did render, so the scan is not vacuous", () => {
-    const planted = "a close control spelled ×";
+  it('catches a glyph that a template did render, so the scan is not vacuous', () => {
+    const planted = 'a close control spelled ×';
     expect(ENTITY_GLYPHS.some((glyph) => planted.includes(glyph))).toBeTrue();
   });
 });

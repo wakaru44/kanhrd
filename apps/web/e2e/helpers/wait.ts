@@ -1,4 +1,4 @@
-import type { Locator } from "@playwright/test";
+import type { Locator } from '@playwright/test';
 
 /**
  * Small polling helper for assertions that need to reach outside
@@ -7,7 +7,7 @@ import type { Locator } from "@playwright/test";
  */
 export async function waitFor(
   check: () => Promise<boolean> | boolean,
-  options: { timeoutMs?: number; intervalMs?: number; message?: string } = {},
+  options: { timeoutMs?: number; intervalMs?: number; message?: string } = {}
 ): Promise<void> {
   const timeoutMs = options.timeoutMs ?? 5000;
   const intervalMs = options.intervalMs ?? 150;
@@ -33,7 +33,7 @@ export async function waitFor(
  */
 export async function waitForStableCount(
   locator: Locator,
-  options: { timeoutMs?: number; intervalMs?: number } = {},
+  options: { timeoutMs?: number; intervalMs?: number } = {}
 ): Promise<number> {
   const intervalMs = options.intervalMs ?? 200;
   let previous = await locator.count();
@@ -49,7 +49,7 @@ export async function waitForStableCount(
       }
       return stable >= 1;
     },
-    { timeoutMs: options.timeoutMs ?? 5000, intervalMs, message: "pane count never stabilized" },
+    { timeoutMs: options.timeoutMs ?? 5000, intervalMs, message: 'pane count never stabilized' }
   );
   return previous;
 }

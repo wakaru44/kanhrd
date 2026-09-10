@@ -1,4 +1,4 @@
-import type { AgentStatus, HostSummary, Pane } from "@kanhrd/schema";
+import type { AgentStatus, HostSummary, Pane } from '@kanhrd/schema';
 
 /**
  * Six-hundred-pane synthetic dataset for the viewport/state matrix
@@ -14,7 +14,7 @@ import type { AgentStatus, HostSummary, Pane } from "@kanhrd/schema";
  *     3     ×      4     ×  5   ×   10       =  600
  */
 
-export const HOSTS = ["local", "remote-a", "remote-b"] as const;
+export const HOSTS = ['local', 'remote-a', 'remote-b'] as const;
 export type FixtureHost = (typeof HOSTS)[number];
 
 const WORKSPACES_PER_HOST = 4;
@@ -23,22 +23,22 @@ const PANES_PER_TAB = 10;
 
 /** Realistic status mix. `working` first so the busiest column loads first. */
 const STATUS_CYCLE: AgentStatus[] = [
-  "working",
-  "working",
-  "idle",
-  "idle",
-  "blocked",
-  "done",
-  "done",
-  "unknown",
-  "working",
-  "idle",
+  'working',
+  'working',
+  'idle',
+  'idle',
+  'blocked',
+  'done',
+  'done',
+  'unknown',
+  'working',
+  'idle',
 ];
 
 /** Agents kanhrd surfaces today; `undefined` slots produce agent-less panes. */
-const AGENT_CYCLE: (string | undefined)[] = ["claude", "codex", "gemini", undefined];
+const AGENT_CYCLE: (string | undefined)[] = ['claude', 'codex', 'gemini', undefined];
 
-const TAB_NAMES = ["main", "review", "spike", "hotfix", "docs"];
+const TAB_NAMES = ['main', 'review', 'spike', 'hotfix', 'docs'];
 
 export function buildHostSummaries(): HostSummary[] {
   return HOSTS.map((name) => ({ name, connected: true }));
