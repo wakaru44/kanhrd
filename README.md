@@ -77,6 +77,8 @@ Two web UIs for herdr already exist — [`herdr-web`](https://github.com/eyalev/
 - **herdr JSON socket** — each herdr host's existing local API (`~/.config/herdr/herdr.sock`); the bridge is a client of it, not a fork of it.
 - **SSH tunnels** — how a remote herdr socket becomes reachable to the bridge as if it were local. See [ADR-0001](docs/adr/0001-hub-bridge-ssh-tunnels.md) and [`docs/OPERATING.md`](docs/OPERATING.md).
 
+The SPA's visual layer is governed by three design docs, binding on any change to `apps/web`: [`docs/BRAND.md`](docs/BRAND.md) (identity and voice), [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) (the token contract), and [`docs/UX-GUIDELINES.md`](docs/UX-GUIDELINES.md) (interaction patterns).
+
 ## Getting started
 
 You need a running herdr on the same machine, Node with `pnpm`, and Git LFS (screenshots live in LFS).

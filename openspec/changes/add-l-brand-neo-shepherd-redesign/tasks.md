@@ -193,12 +193,12 @@
 
 ## 16. Documentation and release notes
 
-- [ ] 16.1 Update `docs/CONTEXT.md` glossary with the pen/field/lane
+- [x] 16.1 Update `docs/CONTEXT.md` glossary with the pen/field/lane
       copy-layer rename (with the caveat that code and wire keep the
       herdr terms)
-- [ ] 16.2 Update `README.md` architecture section to reference the
+- [x] 16.2 Update `README.md` architecture section to reference the
       three new design docs
-- [ ] 16.3 Prepare a release note entry for the next preview build
+- [x] 16.3 Prepare a release note entry for the next preview build
       calling out the new default theme
 
 ## 17. Spec reconciliation and interaction quality

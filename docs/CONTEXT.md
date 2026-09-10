@@ -17,6 +17,24 @@ contract), and [`UX-GUIDELINES.md`](UX-GUIDELINES.md) (interaction
 patterns). The renames there are copy-only — the terms in this glossary
 remain the wire and code vocabulary.
 
+## Copy-layer rename
+
+The user-facing brand (see [`BRAND.md`](BRAND.md)) renames these domain
+terms in every string, label, and doc aimed at people. Code, wire, API
+surfaces, event names, and this glossary keep the herdr terms.
+
+| wire / code (this glossary) | user-facing copy |
+| --- | --- |
+| host                        | pen              |
+| workspace                   | field            |
+| tab                         | lane             |
+| pane                        | card             |
+
+Rule: never mix the two vocabularies in the same surface. Rust, TypeScript,
+JSON schemas, socket messages, logs, and this file stay on host / workspace
+/ tab / pane. UI copy, empty states, toasts, confirms, and marketing stay on
+pen / field / lane / card. Board groupings are `status column`, not `lane`.
+
 ## Terms
 
 ### Card
