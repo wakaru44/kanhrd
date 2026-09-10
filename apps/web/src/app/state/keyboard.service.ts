@@ -308,16 +308,23 @@ export class KeyboardService {
     if (this.chordArmedSignal()) {
       this.disarmChord();
       this.dispatchChordAction(event);
-      return;
-    }
-
-    if (matchesPrefix(this.prefix(), event)) {
+    } else if (matchesPrefix(this.prefix(), event)) {
       event.preventDefault();
       this.armChord();
-      return;
+    } else {
+      this.dispatchNonChordAction(event);
     }
 
-    this.dispatchNonChordAction(event);
+    // `App` now attaches this in the CAPTURE phase at `window` specifically
+    // so this can win a race against a page-level browser extension's own
+    // capture-phase listener (e.g. Vimium binding `Ctrl+B` to scroll-up —
+    // see openspec's fix-keyboard-shortcut-suppression). Only stop
+    // propagation for a key we actually recognized (every branch above
+    // that acts on the event calls `preventDefault()` first) — an
+    // unrecognized key must reach the page/terminal/extension untouched.
+    if (event.defaultPrevented) {
+      event.stopPropagation();
+    }
   }
 
   private armChord(): void {

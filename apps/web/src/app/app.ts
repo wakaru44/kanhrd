@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject } from "@angular/core";
+import { Component, DestroyRef, computed, inject } from "@angular/core";
 import { RouterLink, RouterOutlet } from "@angular/router";
 import { LucideMenu, LucideMoon, LucideSettings, LucideSun } from "./shared/icons";
 import { COPY } from "./shared/copy";
@@ -70,6 +70,23 @@ export class App {
     this.layout.toggleRail();
   }
 
+  constructor() {
+    // Attached in the CAPTURE phase at `window` — not `@HostListener`,
+    // which is bubble-phase-only — so the prefix and any bound action key
+    // are seen before a page-level browser extension's own capture-phase
+    // keydown listener (e.g. Vimium/Vimium C binding `Ctrl+B` to "scroll up
+    // a page") can consume it first. Capture-phase dispatch across
+    // different nodes always runs ancestor-to-descendant by DOM position
+    // (`window` before `document`), independent of listener registration
+    // order, so this wins regardless of extension load timing. See
+    // openspec/changes/fix-keyboard-shortcut-suppression (or its archive)
+    // for the full root-cause writeup and a deterministic karma repro.
+    window.addEventListener("keydown", this.onKeydown, { capture: true });
+    inject(DestroyRef).onDestroy(() => {
+      window.removeEventListener("keydown", this.onKeydown, { capture: true });
+    });
+  }
+
   /**
    * The single global keydown entry point for herdr-style prefix shortcuts
    * (suppression, chording and dispatch all live in `KeyboardService`).
@@ -80,8 +97,7 @@ export class App {
    * runs inside a card. Help is reached through the prefix chord and through
    * visible controls; Escape dismisses only chrome that is actually open.
    */
-  @HostListener("window:keydown", ["$event"])
-  protected onKeydown(event: KeyboardEvent): void {
+  private readonly onKeydown = (event: KeyboardEvent): void => {
     if (isUnmodified(event, "?")) {
       return;
     }
@@ -89,5 +105,5 @@ export class App {
       return;
     }
     this.keyboard.handleKeydown(event, document.activeElement);
-  }
+  };
 }
