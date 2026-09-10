@@ -17,15 +17,15 @@ read from yet): Node `22`, pnpm `10`, set once via `env:` at the top of the
 file. Update these in one place if the repo later adds `packageManager` to
 `package.json`.
 
-| job | depends on | what it runs | notes |
-| --- | --- | --- | --- |
-| `lint-and-typecheck` | — | `pnpm typecheck` (schema, bridge, web); lint | lint step no-ops with a visible `::warning::` — no package currently declares a `lint` script |
-| `unit-tests` | `lint-and-typecheck` | `pnpm --filter @kanhrd/bridge test`, `pnpm --filter @kanhrd/web test` | installs `google-chrome-stable` for `karma-chrome-launcher`; JUnit artifact step is a no-op until apps/** wire up reporters (see below) |
-| `build` | `lint-and-typecheck` | builds schema, web, bridge | uploads `web-dist` (`apps/web/dist/web/browser/`) and `bridge-dist` (`apps/bridge/dist/`) artifacts |
-| `integration-tests` | `build` | `pnpm test:int` | herdr-dependent, see below |
-| `e2e-tests` | `build` | `pnpm test:e2e` | herdr-dependent, see below; uploads `apps/web/test-results/` on failure |
-| `docker-build` | `build` | `docker build -t kanhrd/bridge:$SHA .` | no-ops with a visible `::warning::` until a root `Dockerfile` exists (L-DOCKER); no registry push wired up yet, image stays local to the runner |
-| `coverage` | `unit-tests` | web coverage via `ng test --code-coverage` | bridge coverage no-ops (no coverage provider devDependency in `apps/bridge`); uploads `coverage-lcov` artifact |
+| job                  | depends on           | what it runs                                                          | notes                                                                                                                                           |
+| -------------------- | -------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lint-and-typecheck` | —                    | `pnpm typecheck` (schema, bridge, web); lint                          | lint step no-ops with a visible `::warning::` — no package currently declares a `lint` script                                                   |
+| `unit-tests`         | `lint-and-typecheck` | `pnpm --filter @kanhrd/bridge test`, `pnpm --filter @kanhrd/web test` | installs `google-chrome-stable` for `karma-chrome-launcher`; JUnit artifact step is a no-op until apps/** wire up reporters (see below)         |
+| `build`              | `lint-and-typecheck` | builds schema, web, bridge                                            | uploads `web-dist` (`apps/web/dist/web/browser/`) and `bridge-dist` (`apps/bridge/dist/`) artifacts                                             |
+| `integration-tests`  | `build`              | `pnpm test:int`                                                       | herdr-dependent, see below                                                                                                                      |
+| `e2e-tests`          | `build`              | `pnpm test:e2e`                                                       | herdr-dependent, see below; uploads `apps/web/test-results/` on failure                                                                         |
+| `docker-build`       | `build`              | `docker build -t kanhrd/bridge:$SHA .`                                | no-ops with a visible `::warning::` until a root `Dockerfile` exists (L-DOCKER); no registry push wired up yet, image stays local to the runner |
+| `coverage`           | `unit-tests`         | web coverage via `ng test --code-coverage`                            | bridge coverage no-ops (no coverage provider devDependency in `apps/bridge`); uploads `coverage-lcov` artifact                                  |
 
 ### `workflows/nightly.yml`
 
@@ -53,13 +53,13 @@ either way.
 
 ## Artifacts
 
-| name | produced by | contents | retention |
-| --- | --- | --- | --- |
-| `web-dist` | `build` | `apps/web/dist/web/browser/` | 7 days |
-| `bridge-dist` | `build` | `apps/bridge/dist/` | 7 days |
-| `junit-results` | `unit-tests` | `apps/{bridge,web}/junit.xml` (currently never produced, see below) | default |
-| `playwright-test-results` | `e2e-tests`, on failure only | `apps/web/test-results/` | default |
-| `coverage-lcov` | `coverage` | `apps/web/coverage/`, `apps/bridge/coverage/` (bridge currently never produced, see below) | 14 days |
+| name                      | produced by                  | contents                                                                                   | retention |
+| ------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------ | --------- |
+| `web-dist`                | `build`                      | `apps/web/dist/web/browser/`                                                               | 7 days    |
+| `bridge-dist`             | `build`                      | `apps/bridge/dist/`                                                                        | 7 days    |
+| `junit-results`           | `unit-tests`                 | `apps/{bridge,web}/junit.xml` (currently never produced, see below)                        | default   |
+| `playwright-test-results` | `e2e-tests`, on failure only | `apps/web/test-results/`                                                                   | default   |
+| `coverage-lcov`           | `coverage`                   | `apps/web/coverage/`, `apps/bridge/coverage/` (bridge currently never produced, see below) | 14 days   |
 
 ## Known gaps (require apps/** changes, out of scope for this lane)
 
@@ -73,13 +73,13 @@ either way.
   at `apps/web/junit.xml`.
 - **Bridge lcov coverage.** `apps/bridge/package.json` has no
   `@vitest/coverage-v8` (or `-istanbul`) devDependency, so `vitest run
-  --coverage` isn't runnable. The `coverage` job detects this and skips the
+--coverage` isn't runnable. The `coverage` job detects this and skips the
   bridge half with a visible warning. To activate it: add
   `@vitest/coverage-v8` as a devDependency and (optionally) a `coverage`
   block in `apps/bridge/vitest.config.ts` (`reporter: ["lcov", "text"]`) so
   output lands in `apps/bridge/coverage/lcov.info`.
 - **Web coverage is already possible without an apps/** change** — `ng test
-  --code-coverage` uses the `karma-coverage` devDependency that's already
+--code-coverage` uses the `karma-coverage` devDependency that's already
   installed, via Angular's built-in default karma config (no
   `karma.conf.js` exists in the repo, so Angular's own default applies).
   Output lands in `apps/web/coverage/`.

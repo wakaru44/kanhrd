@@ -230,6 +230,16 @@ user shares a URL, the recipient sees the same board. If the scoped
 entity no longer exists, show the unavailable state — never silently
 resolve to something else.
 
+The rule governs **scope**, not arrangement. A short, closed list of
+per-browser preferences stays out of the URL and therefore does not
+travel with a shared link: the status filter chips (`kanhrd.filters`),
+board density, terminal palette and text size, the keybind prefix
+(`kanhrd.keyboard`), and user-defined columns (`kanhrd.parked-columns`).
+Each is a view preference the recipient is entitled to their own answer
+to; none changes _which_ cards a link resolves to. Anything that selects
+which entities are shown belongs in the URL. (Maintainer decision Q5,
+2026-09-10.)
+
 ## Empty states as tutorials
 
 Every **page-level** empty state is a next step, not a message.
@@ -592,8 +602,9 @@ width` (already asserted).
 - **21.** Hiding every status replaces the switcher and the strip with the
   `nothing matches these filters.` empty state and its
   `clear filters` action.
-- **22.** No element in the board carries `cdkDrag` enabled, a drag handle, or
-  `cursor: grab`.
+- **22.** On a board with no user-defined columns, no element carries
+  `cdkDrag` enabled, a drag handle, or `cursor: grab`. On any board, no
+  status column is a drop target and no drag changes a card's status.
 
 #### Assertions — board, empty
 
@@ -660,7 +671,9 @@ width` (already asserted).
 - A traffic-light bar of five status counts at equal weight.
 - Calling a tab a "lane" — a lane is a swimlane.
 - The display serif on a repeated identifier.
-- Any drag affordance on a status column.
+- Any drop target on a status column, or any drag that changes a card's
+  status. (A card may be a drag _source_ into a user-defined column once
+  one exists — Q1, 2026-09-10.)
 - A global unmodified `Escape` or `?` binding.
 - Per-pane terminal themes; the terminal palette is app-wide.
 - Fabricated data for decoration — a duration measured from something

@@ -252,15 +252,15 @@ column's name as the segment label. The status switcher's contract
 widens from "one segment per visible **status**" to "per visible
 **column**".
 
-## Open question — still outstanding
+### Q5 — browser-local arrangement vs "URL is state" → ACCEPT, and say so
 
-- **Q5. Is a browser-local board arrangement in tension with "URL is
-  state"?** Restated plainly: parked columns live in this browser's
-  `localStorage`, not in the URL. Copy the board URL, send it to someone
-  else, and they see no parked columns — the cards sit in their status
-  columns instead. The doc's rule is about **scope**, and parking is not
-  scope, so the proposal keeps parking out of the URL. Recommended:
-  accept it and say so in the doc — density and filter chips already
-  have exactly this property. The alternative is encoding column
-  definitions and membership into the URL, which makes links long and
-  imposes one operator's arrangement on the recipient.
+Parked columns live in this browser's `localStorage`, not in the URL, so
+a shared board link renders without them for the recipient. Accepted, on
+the precedent already set: `kanhrd.filters` and the density setting have
+exactly this property today, and parking is arrangement rather than
+scope — the thing the URL rule exists to protect. Encoding column
+definitions and membership into the URL would make links long and impose
+one operator's arrangement on whoever opens them.
+
+`docs/UX-GUIDELINES.md`'s URL-is-state rule gains a sentence naming the
+browser-local exceptions, so the next reader does not re-litigate this.

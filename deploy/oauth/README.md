@@ -7,11 +7,11 @@ bridge so it is never reachable without a delegated, authenticated identity
 
 ## Files
 
-| File | Purpose |
-| --- | --- |
+| File                        | Purpose                                                                                                                                                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `docker-compose.oauth.yaml` | Compose overlay. Adds `oauth2-proxy` and `nginx` services, and reconfigures the base `bridge` service to bind only the internal Docker network instead of a host port. Layer it on top of the root `docker-compose.yaml`. |
-| `nginx.conf` | Public-facing reverse proxy: TLS termination, `auth_request` gate against oauth2-proxy, `X-Forwarded-User` header injection, WebSocket upgrade for `/ws`. |
-| `oauth2-proxy.cfg` | oauth2-proxy config (example, non-secret values only). Provider, access restriction, upstream. |
+| `nginx.conf`                | Public-facing reverse proxy: TLS termination, `auth_request` gate against oauth2-proxy, `X-Forwarded-User` header injection, WebSocket upgrade for `/ws`.                                                                 |
+| `oauth2-proxy.cfg`          | oauth2-proxy config (example, non-secret values only). Provider, access restriction, upstream.                                                                                                                            |
 
 Why nginx and not Caddy: `docs/OPERATING.md`'s existing cloud-hub recipe
 already documents an nginx config for this exact shape, so this overlay
@@ -44,10 +44,10 @@ Set these in a repo-root `.env` file (git-ignored, sourced from your own
 secrets manager — see `docker-compose.oauth.yaml`'s `env_file:`). Never put
 real values in `oauth2-proxy.cfg`, which is committed to the repo.
 
-| Variable | Used by | Notes |
-| --- | --- | --- |
-| `OAUTH2_PROXY_CLIENT_ID` | oauth2-proxy | OAuth App client ID from your provider. |
-| `OAUTH2_PROXY_CLIENT_SECRET` | oauth2-proxy | OAuth App client secret. |
+| Variable                     | Used by      | Notes                                                                  |
+| ---------------------------- | ------------ | ---------------------------------------------------------------------- |
+| `OAUTH2_PROXY_CLIENT_ID`     | oauth2-proxy | OAuth App client ID from your provider.                                |
+| `OAUTH2_PROXY_CLIENT_SECRET` | oauth2-proxy | OAuth App client secret.                                               |
 | `OAUTH2_PROXY_COOKIE_SECRET` | oauth2-proxy | 32 random bytes, base64: `openssl rand -base64 32 \| tr -- '+/' '-_'`. |
 
 ## Placeholders

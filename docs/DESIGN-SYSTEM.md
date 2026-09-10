@@ -391,28 +391,36 @@ the ochre crook glyph in the wordmark and favicon.
 Verified against `@lucide/angular@1.43.0`. Component class ← selector ←
 purpose:
 
-| Component              | Template selector           | Used for                                            |
-| ---------------------- | --------------------------- | --------------------------------------------------- |
-| `LucideMenu`           | `svg[lucideMenu]`           | rail / mobile-drawer toggle                         |
-| `LucideX`              | `svg[lucideX]`              | close pane, close dialog, clear scope, clear filter |
-| `LucidePlus`           | `svg[lucidePlus]`           | create menu (pane / tab / workspace)                |
-| `LucideSettings`       | `svg[lucideSettings]`       | settings link                                       |
-| `LucideSun`            | `svg[lucideSun]`            | switch to washi                                     |
-| `LucideMoon`           | `svg[lucideMoon]`           | switch to sumi                                      |
-| `LucidePencil`         | `svg[lucidePencil]`         | rename workspace / tab                              |
-| `LucideArrowRight`     | `svg[lucideArrowRight]`     | split right                                         |
-| `LucideArrowDown`      | `svg[lucideArrowDown]`      | split down                                          |
-| `LucideArrowLeft`      | `svg[lucideArrowLeft]`      | back to board                                       |
-| `LucideChevronRight`   | `svg[lucideChevronRight]`   | rail disclosure, scope breadcrumb                   |
-| `LucideMoreHorizontal` | `svg[lucideMoreHorizontal]` | overflow menu trigger                               |
-| `LucideTriangleAlert`  | `svg[lucideTriangleAlert]`  | error toast, failed state                           |
-| `LucideCheck`          | `svg[lucideCheck]`          | success toast, confirmed selection                  |
-| `LucideInfo`           | `svg[lucideInfo]`           | info toast                                          |
-| `LucideCopy`           | `svg[lucideCopy]`           | copy config snippet / command                       |
-| `LucideRefreshCw`      | `svg[lucideRefreshCw]`      | retry a failed load                                 |
-| `LucideUnplug`         | `svg[lucideUnplug]`         | disconnected host, stale marker                     |
+| Component                     | Template selector                  | Used for                                            |
+| ----------------------------- | ---------------------------------- | --------------------------------------------------- |
+| `LucideMenu`                  | `svg[lucideMenu]`                  | rail / mobile-drawer toggle                         |
+| `LucideX`                     | `svg[lucideX]`                     | close pane, close dialog, clear scope, clear filter |
+| `LucidePlus`                  | `svg[lucidePlus]`                  | create menu (pane / tab / workspace)                |
+| `LucideSettings`              | `svg[lucideSettings]`              | settings link                                       |
+| `LucideSun`                   | `svg[lucideSun]`                   | switch to washi                                     |
+| `LucideMoon`                  | `svg[lucideMoon]`                  | switch to sumi                                      |
+| `LucidePencil`                | `svg[lucidePencil]`                | rename workspace / tab                              |
+| `LucideArrowRight`            | `svg[lucideArrowRight]`            | split right                                         |
+| `LucideArrowDown`             | `svg[lucideArrowDown]`             | split down                                          |
+| `LucideArrowLeft`             | `svg[lucideArrowLeft]`             | back to board                                       |
+| `LucideChevronRight`          | `svg[lucideChevronRight]`          | rail disclosure, scope breadcrumb                   |
+| `LucideMoreHorizontal`        | `svg[lucideMoreHorizontal]`        | overflow menu trigger                               |
+| `LucideTriangleAlert`         | `svg[lucideTriangleAlert]`         | error toast, failed state                           |
+| `LucideCheck`                 | `svg[lucideCheck]`                 | success toast, confirmed selection                  |
+| `LucideInfo`                  | `svg[lucideInfo]`                  | info toast                                          |
+| `LucideCopy`                  | `svg[lucideCopy]`                  | copy config snippet / command                       |
+| `LucideRefreshCw`             | `svg[lucideRefreshCw]`             | retry a failed load                                 |
+| `LucideUnplug`                | `svg[lucideUnplug]`                | disconnected host, stale marker                     |
+| `LucideGalleryHorizontal`     | `svg[lucideGalleryHorizontal]`     | card switcher on the terminal bar                   |
+| `LucideSquareSplitHorizontal` | `svg[lucideSquareSplitHorizontal]` | next-card button on the terminal bar                |
 
-Eighteen icons. Adding a nineteenth is a change to this document first.
+Twenty icons. Adding a twenty-first is a change to this document first.
+
+The last two were added by maintainer decision D4 (2026-09-10, see
+`openspec/changes/add-terminal-top-bar`). `LucideSquareSplitHorizontal`
+reads as a window divided into two panes; it marks _navigating to_ the
+other card sharing a tab, not splitting one — splits stay on
+`LucideArrowRight` / `LucideArrowDown`.
 
 `LucideMoreHorizontal` is an alias of `LucideEllipsis` and
 `LucideTriangleAlert` supersedes the deprecated `LucideAlertTriangle`;
@@ -481,9 +489,13 @@ The vertical grouping by `agent_status` is a **status column**, never a
 - Emphasis order: `blocked` strongest, `working` next; `done`, `idle`,
   `unknown` are quiet labels with small indicators. No column is
   colour-filled and no five-badge equal-weight summary bar exists.
-- **No drag affordance.** Status membership is herdr-owned. No drag
-  handle, no grab cursor, no drop target, no `cdkDrag` enabled on a
-  status column. `pane.move` targets a tab or workspace, not a status.
+- **Never a drop target.** Status membership is herdr-owned and is never
+  changed by a drag: a status column accepts no drop, carries no drop
+  affordance, and `pane.move` targets a tab or workspace, not a status.
+  A card may be a drag **source**, but only once at least one
+  user-defined column exists — with none, the board is byte-for-byte the
+  drag-free board this document described before. (Maintainer decision
+  Q1, 2026-09-10; see `openspec/changes/add-parked-columns`.)
 
 ### Host seal (hanko)
 
