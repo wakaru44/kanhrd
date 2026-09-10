@@ -101,3 +101,26 @@
 .status-chip[data-status='unknown'] .status-dot {
   background: var(--status-unknown);
 }
+
+/*
+ * Group by. Same chip as the other two rows, with the row's own label in
+ * front of it so the chips are not left to explain themselves. Selection is
+ * weight plus an ochre boundary — never a fill, and never colour alone. The
+ * unchosen chips are NOT struck through: this row is an exclusive choice,
+ * not five independent on/off filters.
+ */
+.row-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  color: var(--ink-mute);
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+}
+
+.group-chip.selected {
+  border-color: var(--ochre-line);
+  color: var(--ink);
+  font-weight: var(--fw-semi);
+}

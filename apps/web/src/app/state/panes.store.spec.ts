@@ -13,6 +13,7 @@ import {
   defaultFilters,
   fallbackCapabilities,
   groupByStatus,
+  groupIntoSwimlanes,
   isWorkspaceGroupCloseRequiredError,
   PanesStore,
   paneKey,
@@ -20,6 +21,7 @@ import {
   type PaneMap,
 } from "./panes.store";
 import { WsClient } from "./ws-client";
+import { SettingsService } from "./settings.service";
 
 function pane(overrides: Partial<Pane> = {}): Pane {
   return {
@@ -175,6 +177,168 @@ describe("groupByStatus", () => {
       hiddenStatuses: new Set(["working"]),
     });
     expect(groups.working).toEqual([]);
+  });
+});
+
+describe("groupIntoSwimlanes", () => {
+  const noFilters = defaultFilters();
+
+  function keys(lanes: readonly { key: string }[]): string[] {
+    return lanes.map((l) => l.key);
+  }
+
+  it('yields one "all" band with today\'s columns when the dimension is none', () => {
+    const panes = [
+      pane({ id: "a", agent_status: "working", host: "laptop" }),
+      pane({ id: "b", agent_status: "idle", host: "desktop" }),
+    ];
+    const lanes = groupIntoSwimlanes(panes, noFilters, "none");
+
+    expect(lanes.length).toBe(1);
+    expect(lanes[0].key).toBe("all");
+    expect(lanes[0].label).toBe("");
+    // The point of the `none` band: byte-identical to the ungrouped board.
+    expect(lanes[0].columns).toEqual(groupByStatus(panes, noFilters));
+  });
+
+  it('keeps the single "all" band even when every column is empty', () => {
+    expect(keys(groupIntoSwimlanes([], noFilters, "none"))).toEqual(["all"]);
+  });
+
+  it("bands by host", () => {
+    const lanes = groupIntoSwimlanes(
+      [pane({ id: "a", host: "laptop" }), pane({ id: "b", host: "desktop" }), pane({ id: "c", host: "laptop" })],
+      noFilters,
+      "host",
+    );
+    expect(keys(lanes)).toEqual(["desktop", "laptop"]);
+    expect(lanes.map((l) => l.label)).toEqual(["desktop", "laptop"]);
+    expect(lanes[1].columns.idle.map((p) => p.id)).toEqual(["a", "c"]);
+  });
+
+  it("bands by repository, holding linked worktrees of one repo together", () => {
+    const lanes = groupIntoSwimlanes(
+      [
+        pane({ id: "a", project: { repo_name: "kanhrd", checkout_path: "~/kanhrd", is_linked_worktree: false } }),
+        pane({ id: "b", project: { repo_name: "kanhrd", checkout_path: "~/kanhrd-wt2", is_linked_worktree: true } }),
+        pane({ id: "c", project: { repo_name: "herdr", checkout_path: "~/herdr", is_linked_worktree: false } }),
+      ],
+      noFilters,
+      "repository",
+    );
+    expect(keys(lanes)).toEqual(["herdr", "kanhrd"]);
+    expect(lanes[1].columns.idle.map((p) => p.id)).toEqual(["a", "b"]);
+  });
+
+  it("bands by checkout path, separating those same worktrees", () => {
+    const lanes = groupIntoSwimlanes(
+      [
+        pane({ id: "a", project: { repo_name: "kanhrd", checkout_path: "~/kanhrd", is_linked_worktree: false } }),
+        pane({ id: "b", project: { repo_name: "kanhrd", checkout_path: "~/kanhrd-wt2", is_linked_worktree: true } }),
+      ],
+      noFilters,
+      "checkout",
+    );
+    expect(keys(lanes)).toEqual(["~/kanhrd", "~/kanhrd-wt2"]);
+    expect(lanes.every((l) => l.columns.idle.length === 1)).toBe(true);
+  });
+
+  it("bands by tab, keyed host:tabId so two hosts' tabs never collide", () => {
+    const lanes = groupIntoSwimlanes(
+      [
+        pane({ id: "a", host: "laptop", tab: { id: "t1", name: "build" } }),
+        pane({ id: "b", host: "desktop", tab: { id: "t1", name: "review" } }),
+      ],
+      noFilters,
+      "tab",
+    );
+    expect(keys(lanes)).toEqual(["laptop:t1", "desktop:t1"]);
+    expect(lanes.map((l) => l.label)).toEqual(["build", "review"]);
+  });
+
+  it("applies filters before banding, so a filtered-out pane cannot keep a band alive", () => {
+    const lanes = groupIntoSwimlanes(
+      [
+        pane({ id: "a", host: "laptop", agent_status: "working" }),
+        pane({ id: "b", host: "desktop", agent_status: "working" }),
+      ],
+      { excludedHosts: new Set(["desktop"]), hiddenStatuses: new Set() },
+      "host",
+    );
+    expect(keys(lanes)).toEqual(["laptop"]);
+  });
+
+  it("does not return a band whose every column is empty", () => {
+    const lanes = groupIntoSwimlanes(
+      [
+        pane({ id: "a", host: "laptop", agent_status: "working" }),
+        pane({ id: "b", host: "desktop", agent_status: "blocked" }),
+      ],
+      { excludedHosts: new Set(), hiddenStatuses: new Set(["blocked"]) },
+      "host",
+    );
+    // desktop's only card sat in a hidden status column: the band goes too.
+    expect(keys(lanes)).toEqual(["laptop"]);
+  });
+
+  it("puts panes with no project in a single ungrouped band under repository and checkout", () => {
+    const panes = [
+      pane({ id: "a", project: { repo_name: "kanhrd", checkout_path: "~/kanhrd", is_linked_worktree: false } }),
+      pane({ id: "b" }),
+      pane({ id: "c" }),
+    ];
+    for (const dimension of ["repository", "checkout"] as const) {
+      const lanes = groupIntoSwimlanes(panes, noFilters, dimension);
+      const ungrouped = lanes.find((l) => l.key === "ungrouped");
+      expect(ungrouped).toBeDefined();
+      // Lane B renders `copy.swimlane.ungrouped` for this band's heading.
+      expect(ungrouped?.label).toBe("");
+      expect(ungrouped?.columns.idle.map((p) => p.id)).toEqual(["b", "c"]);
+    }
+  });
+
+  it("never produces an ungrouped band for host or tab", () => {
+    const panes = [pane({ id: "a" }), pane({ id: "b" })];
+    expect(keys(groupIntoSwimlanes(panes, noFilters, "host"))).not.toContain("ungrouped");
+    expect(keys(groupIntoSwimlanes(panes, noFilters, "tab"))).not.toContain("ungrouped");
+  });
+
+  it("sorts the ungrouped band last however its label would otherwise order", () => {
+    const lanes = groupIntoSwimlanes(
+      [
+        pane({ id: "a" }),
+        pane({ id: "b", project: { repo_name: "zebra", checkout_path: "~/z", is_linked_worktree: false } }),
+        pane({ id: "c", project: { repo_name: "alpha", checkout_path: "~/a", is_linked_worktree: false } }),
+      ],
+      noFilters,
+      "repository",
+    );
+    expect(keys(lanes)).toEqual(["alpha", "zebra", "ungrouped"]);
+  });
+
+  it("orders bands by label, numerically and case-insensitively", () => {
+    const lanes = groupIntoSwimlanes(
+      [pane({ id: "a", host: "box10" }), pane({ id: "b", host: "Box2" }), pane({ id: "c", host: "box1" })],
+      noFilters,
+      "host",
+    );
+    expect(keys(lanes)).toEqual(["box1", "Box2", "box10"]);
+  });
+
+  it("does not reshuffle bands when a card moves between statuses", () => {
+    const before = [
+      pane({ id: "a", host: "zeta", agent_status: "idle" }),
+      pane({ id: "b", host: "alpha", agent_status: "working" }),
+    ];
+    const after = [
+      pane({ id: "a", host: "zeta", agent_status: "blocked" }),
+      pane({ id: "b", host: "alpha", agent_status: "working" }),
+    ];
+    expect(keys(groupIntoSwimlanes(after, noFilters, "host"))).toEqual(
+      keys(groupIntoSwimlanes(before, noFilters, "host")),
+    );
+    // ...and the moved card really did change column.
+    expect(groupIntoSwimlanes(after, noFilters, "host")[1].columns.blocked.map((p) => p.id)).toEqual(["a"]);
   });
 });
 
@@ -367,6 +531,68 @@ describe("PanesStore.statusCountsSignal", () => {
       done: 0,
       unknown: 0,
     });
+  });
+});
+
+describe("PanesStore.swimlanesSignal", () => {
+  function setUp(): PanesStore {
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: new FakeWsClient() },
+      ],
+    });
+    return TestBed.inject(PanesStore);
+  }
+
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true });
+    localStorage.removeItem("kanhrd.filters");
+    localStorage.removeItem("kanhrd.settings");
+  });
+
+  function seed(store: PanesStore): void {
+    let panes: PaneMap = new Map();
+    panes = applyPaneCreated(panes, pane({ id: "a", host: "laptop", agent_status: "working" }));
+    panes = applyPaneCreated(panes, pane({ id: "b", host: "desktop", agent_status: "blocked" }));
+    panes = applyPaneCreated(
+      panes,
+      pane({ id: "c", host: "laptop", workspace: { id: "w2", name: "w2" }, agent_status: "idle" }),
+    );
+    store.panesSignal.set(panes);
+  }
+
+  it("defaults to a single all band whose columns match columnsSignal", () => {
+    const store = setUp();
+    seed(store);
+
+    expect(store.swimlanesSignal().length).toBe(1);
+    expect(store.swimlanesSignal()[0].key).toBe("all");
+    expect(store.swimlanesSignal()[0].columns).toEqual(store.columnsSignal());
+  });
+
+  it("bands by the persisted dimension and honours the same scope columnsSignal uses", () => {
+    const store = setUp();
+    seed(store);
+    TestBed.inject(SettingsService).setSwimlaneDimension("host");
+
+    expect(store.swimlanesSignal().map((l) => l.key)).toEqual(["desktop", "laptop"]);
+
+    // Scope drops desktop's pane and laptop's other workspace: one band left.
+    store.setScope("laptop", "w1", null);
+    expect(store.swimlanesSignal().map((l) => l.key)).toEqual(["laptop"]);
+    expect(store.swimlanesSignal()[0].columns.working.map((p) => p.id)).toEqual(["a"]);
+  });
+
+  it("honours the filter bar's host exclusion", () => {
+    const store = setUp();
+    seed(store);
+    TestBed.inject(SettingsService).setSwimlaneDimension("host");
+    store.filtersSignal.set({ excludedHosts: new Set(["desktop"]), hiddenStatuses: new Set() });
+
+    expect(store.swimlanesSignal().map((l) => l.key)).toEqual(["laptop"]);
   });
 });
 

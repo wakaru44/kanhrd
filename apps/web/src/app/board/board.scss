@@ -245,6 +245,18 @@
   overflow: hidden;
 }
 
+/*
+ * The stack of bands. The board region is viewport-bounded, so the stack —
+ * not the page — is what scrolls vertically; each band bounds its own
+ * height and each column inside it scrolls its cards.
+ */
+.swimlanes {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
 .skeleton-column {
   display: flex;
   flex-direction: column;

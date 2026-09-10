@@ -118,6 +118,7 @@ export class Settings {
   /** What disappears, one row each — the preview-list pattern, so "cannot be undone" is backed by a list rather than a promise. */
   protected readonly clearPreview: readonly ConfirmPreviewItem[] = [
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearFilters },
+    { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearSwimlane },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearAppearance },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminal },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminalFontSize },
