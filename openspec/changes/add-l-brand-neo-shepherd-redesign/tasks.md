@@ -12,36 +12,36 @@
 
 ## 2. Token layer
 
-- [ ] 2.1 `apps/web/src/app/shared/tokens.scss` — CSS custom properties
+- [x] 2.1 `apps/web/src/app/shared/tokens.scss` — CSS custom properties
       for colour (light + dark), spacing, radii, motion, icon sizes
-- [ ] 2.2 `apps/web/src/app/shared/typography.scss` — `@font-face` for
+- [x] 2.2 `apps/web/src/app/shared/typography.scss` — `@font-face` for
       Shippori Mincho, Inter, JetBrains Mono; fs-scale
       helpers
-- [ ] 2.3 Rewrite `apps/web/src/styles.scss` to import tokens +
+- [x] 2.3 Rewrite `apps/web/src/styles.scss` to import tokens +
       typography and hold only resets + document defaults
-- [ ] 2.4 Add `.scss` lint rule (extend precommit-lint-gate) that
+- [x] 2.4 Add `.scss` lint rule (extend precommit-lint-gate) that
       forbids raw hex outside `tokens.scss` and raw non-tokenized
       `rem` values outside `typography.scss`
 
 ## 3. Palette and theming
 
-- [ ] 3.1 Light theme (default) uses washi paper `#f4ede0` +
+- [x] 3.1 Light theme (default) uses washi paper `#f4ede0` +
       sumi ink `#1a1815` + ochre `#c8842a` per `DESIGN-SYSTEM.md`
-- [ ] 3.2 Dark theme uses sumi `#161311` + lifted ink, separately
+- [x] 3.2 Dark theme uses sumi `#161311` + lifted ink, separately
       tuned (not an inversion)
-- [ ] 3.3 `ThemeService` default changes: when no valid `kanhrd.theme` is
+- [x] 3.3 `ThemeService` default changes: when no valid `kanhrd.theme` is
       stored, use sumi if the OS prefers dark, otherwise washi
-- [ ] 3.4 Status → token mapping: `--status-working|blocked|done|idle|unknown`
-- [ ] 3.5 Terminal themes: add **Washi** and **Sumi** to
+- [x] 3.4 Status → token mapping: `--status-working|blocked|done|idle|unknown`
+- [x] 3.5 Terminal themes: add **Washi** and **Sumi** to
       `apps/web/src/app/state/terminal-theme.service.ts`, both WCAG-AA
       compliant on 16px
 
 ## 4. Wordmark and marks
 
-- [ ] 4.1 Add `apps/web/public/mark/crook.svg` (ochre brushstroke crook)
-- [ ] 4.2 Add `apps/web/public/favicon.svg` (crook on cream) and a
+- [x] 4.1 Add `apps/web/public/mark/crook.svg` (ochre brushstroke crook)
+- [x] 4.2 Add `apps/web/public/favicon.svg` (crook on cream) and a
       dark-mode variant; retire `favicon.ico`
-- [ ] 4.3 Update `apps/web/index.html` `<title>` to
+- [x] 4.3 Update `apps/web/index.html` `<title>` to
       `kanhrd — a shepherd's console` and reference the new favicons
 - [ ] 4.4 `app.html` wordmark: display-serif `kanhrd`, crook glyph
       over the `n`; remove hover underline and letterspacing hack
@@ -49,8 +49,8 @@
 
 ## 5. Icon set
 
-- [ ] 5.1 Reuse the installed `@lucide/angular` dependency; do not install `lucide-angular`
-- [ ] 5.2 `apps/web/src/app/shared/icons.ts` re-exports the icons the
+- [x] 5.1 Reuse the installed `@lucide/angular` dependency; do not install `lucide-angular`
+- [x] 5.2 `apps/web/src/app/shared/icons.ts` re-exports the icons the
       app uses (menu, sun, moon, settings, plus, chevron-right, x,
       edit-3, more-horizontal, dot, alert-triangle, check)
 - [ ] 5.3 Replace every HTML entity glyph in templates: `app.html`,
@@ -60,10 +60,10 @@
 
 ## 6. Voice source of truth
 
-- [ ] 6.1 `apps/web/src/app/shared/copy.ts` — export string constants
+- [x] 6.1 `apps/web/src/app/shared/copy.ts` — export string constants
       for empty states, lifecycle confirms, error toasts,
       disconnect/reconnect toasts, 404, and the setup snippet
-- [ ] 6.2 Rewrite copy per `BRAND.md` care-verb table (`no pens yet`,
+- [x] 6.2 Rewrite copy per `BRAND.md` care-verb table (`no pens yet`,
       `let this one rest?`, `lost sight of X. retrying.`, etc.)
 - [ ] 6.3 Replace inline lifecycle/empty/error strings in templates
       with references to `copy.ts`
