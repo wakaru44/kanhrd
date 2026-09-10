@@ -1,0 +1,66 @@
+kanhrd
+Copyright 2026 wakaru44
+
+This product includes software developed by wakaru44 and the kanhrd
+contributors, licensed under the Apache License, Version 2.0. See the LICENSE
+file in the root of this repository for the full terms.
+
+
+-------------------------------------------------------------------------------
+THIRD-PARTY FONTS
+-------------------------------------------------------------------------------
+
+This repository redistributes the font files listed below under
+apps/web/public/fonts/. They are NOT covered by this project's Apache-2.0
+LICENSE and are NOT relicensed by it. Each remains under the SIL Open Font
+License, Version 1.1 ("OFL 1.1"), which is a separate licence with its own
+terms and its own attribution and redistribution obligations.
+
+The full, unmodified OFL 1.1 text for each family is vendored alongside the
+binaries as apps/web/public/fonts/LICENSE-*.txt, and must continue to travel
+with the fonts in any redistribution. Provenance (upstream URL, release,
+archive checksum, and any repackaging or subsetting performed) is recorded in
+apps/web/public/fonts/README.md.
+
+1. Inter
+   File:     apps/web/public/fonts/inter-variable.woff2
+   Version:  Inter Variable 4.001 (upstream release v4.1)
+   Source:   https://github.com/rsms/inter
+   Copyright (c) 2016 The Inter Project Authors
+             (https://github.com/rsms/inter)
+   Licence:  SIL Open Font License 1.1 -
+             apps/web/public/fonts/LICENSE-inter.txt
+   Changes:  none - taken verbatim from the upstream release
+             (web/InterVariable.woff2), no re-compression, no subsetting.
+
+2. JetBrains Mono
+   File:     apps/web/public/fonts/jetbrains-mono-variable.woff2
+   Version:  2.304
+   Source:   https://github.com/JetBrains/JetBrainsMono
+   Copyright 2020 The JetBrains Mono Project Authors
+             (https://github.com/JetBrains/JetBrainsMono)
+   Licence:  SIL Open Font License 1.1 -
+             apps/web/public/fonts/LICENSE-jetbrains-mono.txt
+   Changes:  container format only - the upstream variable TTF
+             (fonts/variable/JetBrainsMono[wght].ttf) was repackaged to WOFF2
+             with fontTools 4.60.2. No glyph, table or axis was altered.
+
+3. Shippori Mincho
+   Files:    apps/web/public/fonts/shippori-mincho-400.woff2
+             apps/web/public/fonts/shippori-mincho-600.woff2
+   Version:  3.110 (Regular, SemiBold)
+   Source:   https://github.com/google/fonts/tree/main/ofl/shipporimincho
+   Copyright 2021 The Shippori Mincho Project Authors
+             (https://github.com/fontdasu/ShipporiMincho)
+   Licence:  SIL Open Font License 1.1 -
+             apps/web/public/fonts/LICENSE-shippori-mincho.txt
+   Changes:  SUBSET. Reduced to Latin coverage with pyftsubset (fontTools
+             4.60.2) and converted to WOFF2; the full CJK faces are ~8 MB
+             each. The exact --unicodes range and command are recorded in
+             apps/web/public/fonts/README.md.
+
+Note on OFL naming: none of the three upstream licence texts declares a
+Reserved Font Name, so the repackaged and subset files above are distributed
+under their original family names. Anyone redistributing them must keep the
+matching LICENSE-*.txt with the font files, and must not distribute them
+under the OFL alone as a standalone font product for sale.
