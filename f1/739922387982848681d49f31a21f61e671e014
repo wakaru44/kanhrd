@@ -1,0 +1,67 @@
+apps/web/src/app/shared/keyboard-help-overlay.html
+  s_a62153c2b8328e::t_d985145dd80ecc 18-19,25,29
+apps/web/src/app/shared/copy.spec.ts
+  s_a62153c2b8328e::t_1dd21c9bf8b2ab 50,100-130
+  s_f8e4251c591816::t_20fdaedc61a7b0 55-99
+  s_f8e4251c591816::t_5957a2c2770975 49,51-54
+apps/web/src/app/state/keyboard.service.ts
+  s_a62153c2b8328e::t_d985145dd80ecc 7,46-64,68,75,82,89,96,103,110,117,124,131
+apps/web/src/app/app.ts
+  s_a62153c2b8328e::t_b916727c279ad3 57
+apps/web/src/app/board/card.ts
+  s_a62153c2b8328e::t_b916727c279ad3 31-37,40-41,43
+apps/web/src/app/board/card.spec.ts
+  s_f8e4251c591816::t_20fdaedc61a7b0 590-599
+apps/web/src/app/shared/toast-host.ts
+  s_a62153c2b8328e::t_71ddbec1ee042b 3,30
+apps/web/src/app/shared/keyboard-help-overlay.ts
+  s_a62153c2b8328e::t_d985145dd80ecc 67-73
+  s_f8e4251c591816::t_147901c98db4bd 74-75
+apps/web/src/app/rail/rail.ts
+  s_a62153c2b8328e::t_b916727c279ad3 505
+  s_a62153c2b8328e::t_71ddbec1ee042b 71
+apps/web/e2e/keyboard.spec.ts
+  s_a62153c2b8328e::t_c7289a7e1cf212 5,85-90
+apps/web/src/app/settings/settings.ts
+  s_a62153c2b8328e::t_124553a6be5cbc 44-45,54,56
+  s_a62153c2b8328e::t_71ddbec1ee042b 120-124
+apps/web/src/app/shared/copy.ts
+  s_a62153c2b8328e::t_85bae6db5bd5ed 55-67,198-265
+  s_f8e4251c591816::t_20fdaedc61a7b0 267
+  s_a62153c2b8328e::t_ca36199c833fa9 101-102,127-131
+  s_a62153c2b8328e::t_c8fa04504b547c 152-197,266
+apps/web/src/app/state/keyboard.service.spec.ts
+  s_a62153c2b8328e::t_cfefe46272485c 20,196-221
+  s_f8e4251c591816::t_26df3a020c0109 222
+apps/web/src/app/shared/toast-host.html
+  s_a62153c2b8328e::t_71ddbec1ee042b 20-21
+apps/web/src/app/shared/keyboard-help-overlay.spec.ts
+  s_a62153c2b8328e::t_d647106e82e891 83-88
+  s_a62153c2b8328e::t_c47611a7a5f5f2 102
+apps/web/src/app/rail/rail.html
+  s_a62153c2b8328e::t_b916727c279ad3 39,102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f1739922387982848681d49f31a21f61e671e014",
+  "prompts": {},
+  "sessions": {
+    "s_a62153c2b8328e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fae23786-fdaa-46af-b39c-69a564a2b7c2",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    },
+    "s_f8e4251c591816": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d12f5dab-ef42-467f-8f5f-833d86b7562a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
