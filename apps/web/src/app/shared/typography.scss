@@ -11,17 +11,37 @@
  * no network dependency — a missing font file degrades to the fallback
  * stack and MUST NOT block the board, so these @font-face rules use
  * root-absolute URLs (not bundler-resolved relative ones) on purpose.
+ *
+ * The binaries and their provenance live in `apps/web/public/fonts/`.
  */
 
 /* ── Faces ────────────────────────────────────────────────────────── */
 
-/* Display serif — wordmark, headings, modal titles. Never per-card. */
+/*
+ * Provenance, versions, licences and the exact subsetting command live in
+ * `apps/web/public/fonts/README.md`. All three families are SIL OFL 1.1 and
+ * the licence text ships beside the binaries.
+ */
+
+/*
+ * Display serif — wordmark, headings, modal titles. Never per-card.
+ *
+ * Two static faces (Shippori Mincho has no variable axis), subset to Latin
+ * from the 8 MB upstream CJK originals. `unicode-range` mirrors the subset
+ * exactly, so a character outside it falls to Georgia per-glyph instead of
+ * being requested from a face that cannot draw it.
+ */
+$shippori-range: U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F,
+  U+1EF2-1EFF, U+2000-206F, U+20A0-20CF, U+2113, U+2122, U+2190-2193, U+2212,
+  U+2215, U+FB00-FB04, U+FEFF, U+FFFD;
+
 @font-face {
   font-family: 'Shippori Mincho';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
   src: url('/fonts/shippori-mincho-400.woff2') format('woff2');
+  unicode-range: $shippori-range;
 }
 
 @font-face {
@@ -30,24 +50,33 @@
   font-weight: 600;
   font-display: swap;
   src: url('/fonts/shippori-mincho-600.woff2') format('woff2');
+  unicode-range: $shippori-range;
 }
 
-/* UI sans — everything else, including repeated agent titles. */
+/*
+ * UI sans — everything else, including repeated agent titles. Inter Variable
+ * carries `wght` 100-900 and an `opsz` 14-32 axis; the declared range is the
+ * face's real range, not the subset of it this app happens to use. Not
+ * subset: this face renders herdr-supplied names and paths.
+ */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
-  font-weight: 400 600;
+  font-weight: 100 900;
   font-display: swap;
-  src: url('/fonts/inter-variable.woff2') format('woff2-variations');
+  src: url('/fonts/inter-variable.woff2') format('woff2');
 }
 
-/* Mono — terminal, ids, counts, durations. */
+/*
+ * Mono — terminal, ids, counts, durations. `wght` 100-800. Not subset: the
+ * terminal renders arbitrary program output.
+ */
 @font-face {
   font-family: 'JetBrains Mono';
   font-style: normal;
-  font-weight: 400 600;
+  font-weight: 100 800;
   font-display: swap;
-  src: url('/fonts/jetbrains-mono-variable.woff2') format('woff2-variations');
+  src: url('/fonts/jetbrains-mono-variable.woff2') format('woff2');
 }
 
 /* ── Tokens ───────────────────────────────────────────────────────── */
