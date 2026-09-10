@@ -222,7 +222,7 @@
       bottom-right stack, mobile top stack; reconnect removes by id
 - [x] 17.9 Hide status drag affordances; do not map status changes to
       pane.move. Relocation is outside this change
-- [ ] 17.10 Capture the spec's viewport/state matrix and 600-pane fixture;
+- [x] 17.10 Capture the spec's viewport/state matrix and 600-pane fixture;
       record local first-shell timing, contrast and keyboard checks
 - [x] 17.11 Make closing consequences explicit; initial confirm focus on
       keep/cancel; preserve entered text on failed edits
