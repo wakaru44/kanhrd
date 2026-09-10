@@ -155,14 +155,14 @@
 
 ## 14. Tests
 
-- [ ] 14.1 Verify rendered lifecycle/error copy preserves user names and wire
+- [x] 14.1 Verify rendered lifecycle/error copy preserves user names and wire
       errors verbatim; verify visible non-colour status identification
-- [ ] 14.2 Component test: card exposes actions without a hover
+- [x] 14.2 Component test: card exposes actions without a hover
       simulation (overflow trigger is visible on initial render; opening it exposes
       capability-supported actions)
-- [ ] 14.3 Component test: cascading `ConfirmModal` renders a
+- [x] 14.3 Component test: cascading `ConfirmModal` renders a
       preview list when `preview.length > 0` and no list otherwise
-- [ ] 14.4 Style-lint test: no raw hex outside `tokens.scss`; no HTML
+- [x] 14.4 Style-lint test: no raw hex outside `tokens.scss`; no HTML
       entity glyph in templates
 - [ ] 14.5 Playwright: empty state renders sample config + start
       command; open a scoped URL, confirm scope pill and clear action
@@ -181,11 +181,11 @@
 
 ## 15. Migration and cutover
 
-- [ ] 15.1 `ThemeService` migration: existing `kanhrd.theme = 'light'`
+- [x] 15.1 `ThemeService` migration: existing `kanhrd.theme = 'light'`
       users land on washi; `kanhrd.theme = 'dark'` users land on
       sumi; missing key follows OS `prefers-color-scheme` (default
       light on absence of signal)
-- [ ] 15.2 `kanhrd.settings` `density` key preserved; no data loss
+- [x] 15.2 `kanhrd.settings` `density` key preserved; no data loss
 - [ ] 15.3 Screenshot review: capture before/after of board (empty +
       populated), pane detail, settings, mobile drawer and the mobile
       board pager (first, middle and last status column) under both
@@ -203,30 +203,30 @@
 
 ## 17. Spec reconciliation and interaction quality
 
-- [ ] 17.1 Synchronize the three design docs with the reconciliation table
+- [x] 17.1 Synchronize the three design docs with the reconciliation table
       in the revised spec before UI implementation; use `status column`
       for board groupings and `lane` only for tabs
-- [ ] 17.2 Preserve global terminal theme storage and existing selections;
+- [x] 17.2 Preserve global terminal theme storage and existing selections;
       map auto to washi/sumi, with no per-pane preference migration
-- [ ] 17.3 Add contrast-safe semantic foreground/focus tokens; verify
+- [x] 17.3 Add contrast-safe semantic foreground/focus tokens; verify
       enabled muted controls, button states and both themes
-- [ ] 17.4 Implement board/card hierarchy and stable empty column slots;
+- [x] 17.4 Implement board/card hierarchy and stable empty column slots;
       verify long names and accessible truncation
-- [ ] 17.5 Virtualize above 50 cards with matching compact row geometry;
+- [x] 17.5 Virtualize above 50 cards with matching compact row geometry;
       test 20/21 and 50/51 boundaries and keyboard focus recycling
 - [ ] 17.6 Add keyboard/menu/dialog/drawer focus behavior and board return
       restoration; preserve raw terminal Escape, arrows and question mark
-- [ ] 17.7 Distinguish loading, no pens, no matches, stale data and invalid
+- [x] 17.7 Distinguish loading, no pens, no matches, stale data and invalid
       scope; add recovery and capability-aware creation paths
 - [ ] 17.8 Deduplicate error/progress/connection notices; one desktop
       bottom-right stack, mobile top stack; reconnect removes by id
-- [ ] 17.9 Hide status drag affordances; do not map status changes to
+- [x] 17.9 Hide status drag affordances; do not map status changes to
       pane.move. Relocation is outside this change
 - [ ] 17.10 Capture the spec's viewport/state matrix and 600-pane fixture;
       record local first-shell timing, contrast and keyboard checks
 - [ ] 17.11 Make closing consequences explicit; initial confirm focus on
       keep/cancel; preserve entered text on failed edits
-- [ ] 17.12 Local font assets with swap/fallbacks; structural CSS values
+- [x] 17.12 Local font assets with swap/fallbacks; structural CSS values
       and documented breakpoints are exempt from design-token linting
 
 ## 18. Archive
