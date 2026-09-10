@@ -52,7 +52,21 @@ describe("loadSettings (pure): the stored key is read, never reset", () => {
 
   it("keeps a stored poll-interval request alongside density", () => {
     const loaded = loadSettings(stored('{"density":"compact","requestedOutputPollIntervalMs":250}'));
-    expect(loaded).toEqual({ density: "compact", requestedOutputPollIntervalMs: 250 });
+    expect(loaded).toEqual({
+      density: "compact",
+      requestedOutputPollIntervalMs: 250,
+      swimlaneDimension: "none",
+    });
+  });
+
+  it("loads settings stored before swimlanes existed as ungrouped", () => {
+    // Exactly what the pre-swimlane build wrote: no `swimlaneDimension` key.
+    const loaded = loadSettings(stored('{"density":"compact","requestedOutputPollIntervalMs":250}'));
+    expect(loaded.swimlaneDimension).toBe("none");
+  });
+
+  it("preserves a stored swimlane dimension", () => {
+    expect(loadSettings(stored('{"swimlaneDimension":"checkout"}')).swimlaneDimension).toBe("checkout");
   });
 
   it("falls back to the defaults on unparseable content rather than throwing", () => {
@@ -77,6 +91,7 @@ describe("kanhrd.settings round trip: no data loss", () => {
     expect(JSON.parse(localStorage.getItem(KEY) ?? "{}")).toEqual({
       density: "compact",
       requestedOutputPollIntervalMs: 250,
+      swimlaneDimension: "none",
     });
   });
 
@@ -101,7 +116,37 @@ describe("kanhrd.settings round trip: no data loss", () => {
     expect(JSON.parse(localStorage.getItem(KEY) ?? "{}")).toEqual({
       density: "compact",
       requestedOutputPollIntervalMs: 250,
+      swimlaneDimension: "none",
     });
+  });
+
+  it("persists a chosen swimlane dimension under the same key, keeping the rest", async () => {
+    localStorage.setItem(KEY, '{"density":"compact","requestedOutputPollIntervalMs":250}');
+    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });
+    const service = TestBed.inject(SettingsService);
+    service.setSwimlaneDimension("repository");
+    await settle();
+
+    expect(service.settings().swimlaneDimension).toBe("repository");
+    expect(JSON.parse(localStorage.getItem(KEY) ?? "{}")).toEqual({
+      density: "compact",
+      requestedOutputPollIntervalMs: 250,
+      swimlaneDimension: "repository",
+    });
+    // Structure, not tokens: swimlanes never stamp the document element.
+    expect(document.documentElement.hasAttribute("data-swimlane-dimension")).toBe(false);
+  });
+
+  it("clearing local data returns grouping to none", () => {
+    localStorage.setItem(KEY, '{"density":"compact","swimlaneDimension":"host"}');
+    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });
+    const service = TestBed.inject(SettingsService);
+    expect(service.settings().swimlaneDimension).toBe("host");
+
+    service.clearLocalData();
+
+    // A reload is the caller's job; what the next boot reads is `none`.
+    expect(loadSettings().swimlaneDimension).toBe("none");
   });
 
   it("clearLocalData removes every kanhrd key and nothing else", () => {

@@ -35,4 +35,26 @@
       </button>
     }
   </div>
+
+  <!--
+    Group by. A visible third chip row beside the host and status rows —
+    never an overflow menu and never hover-only: the operator changes the
+    board's arrangement while reading the board (docs/UX-GUIDELINES.md,
+    "Visible affordances"). Exclusive, so the chosen chip is marked
+    selected rather than the others being struck through.
+  -->
+  <div class="chip-row group-row" role="group" [attr.aria-label]="copy.swimlane.groupBy">
+    <span class="row-label">{{ copy.swimlane.groupBy }}</span>
+    @for (dimension of dimensions; track dimension) {
+      <button
+        type="button"
+        class="chip group-chip"
+        [class.selected]="isGroupedBy(dimension)"
+        [attr.aria-pressed]="isGroupedBy(dimension)"
+        (click)="groupBy(dimension)"
+      >
+        <span class="chip-label">{{ dimensionLabel(dimension) }}</span>
+      </button>
+    }
+  </div>
 </div>

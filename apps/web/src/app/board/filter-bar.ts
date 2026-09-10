@@ -2,7 +2,20 @@ import { Component, inject } from "@angular/core";
 import type { AgentStatus } from "@kanhrd/schema";
 import { COPY } from "../shared/copy";
 import { PanesStore, STATUS_COLUMN_ORDER } from "../state/panes.store";
+import { SettingsService, type SwimlaneDimension } from "../state/settings.service";
 import { WsClient } from "../state/ws-client";
+
+/**
+ * The grouping dimensions, in the order the chips render. `none` leads
+ * because it is the default and the way back to the plain board.
+ */
+export const SWIMLANE_DIMENSIONS: readonly SwimlaneDimension[] = [
+  "none",
+  "host",
+  "repository",
+  "checkout",
+  "tab",
+];
 
 @Component({
   selector: "app-filter-bar",
@@ -13,8 +26,22 @@ import { WsClient } from "../state/ws-client";
 export class FilterBar {
   protected readonly store = inject(PanesStore);
   protected readonly ws = inject(WsClient);
+  protected readonly settings = inject(SettingsService);
   protected readonly statusOrder = STATUS_COLUMN_ORDER;
+  protected readonly dimensions = SWIMLANE_DIMENSIONS;
   protected readonly copy = COPY;
+
+  protected dimensionLabel(dimension: SwimlaneDimension): string {
+    return COPY.swimlane[dimension];
+  }
+
+  protected isGroupedBy(dimension: SwimlaneDimension): boolean {
+    return this.settings.settings().swimlaneDimension === dimension;
+  }
+
+  protected groupBy(dimension: SwimlaneDimension): void {
+    this.settings.setSwimlaneDimension(dimension);
+  }
 
   protected statusLabel(status: AgentStatus): string {
     return COPY.status[status];

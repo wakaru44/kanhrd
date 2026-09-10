@@ -116,6 +116,10 @@ test-int: ## Bridge integration tests (spawns real bridge; skips if herdr absent
 test-e2e: build-web build-bridge ## Playwright E2E suite (desktop + mobile; needs herdr).
 	pnpm test:e2e
 
+.PHONY: screenshots
+screenshots: build-web build-bridge ## Regenerate docs/screenshots/*.png (LFS binaries; not run by tests or CI).
+	pnpm --filter @kanhrd/web screenshots
+
 .PHONY: test-e2e-install
 test-e2e-install: ## One-time Playwright browser install.
 	pnpm --filter @kanhrd/web test:e2e:install

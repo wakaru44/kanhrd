@@ -1,0 +1,91 @@
+/*
+ * Swimlane — one horizontal band cutting across every visible column
+ * (openspec change `add-swimlane-grouping`). docs/DESIGN-SYSTEM.md has no
+ * band entry yet, so this follows the status column's rules one level out:
+ * no fill, no shadow, a hairline separating one band from the next, and a
+ * label quieter than the column titles it sits above so the two headings
+ * never compete.
+ *
+ * Nothing here is draggable: membership is derived from the pane, so the
+ * band carries no handle, no grab cursor and no drop target.
+ */
+
+:host {
+  display: block;
+
+  /*
+   * A band is a bounded box: its columns scroll internally, exactly as the
+   * single-strip board's do, and the stack of bands scrolls vertically.
+   * Unbounded bands would collapse the virtual scroller's viewport, which
+   * needs a real height to know what is visible.
+   */
+  --swimlane-height: calc(var(--sp-12) * 8);
+}
+
+:host + :host {
+  border-top: 1px solid var(--rule-strong);
+}
+
+.swimlane-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: calc(var(--sp-3) * var(--density-scale, 1)) var(--sp-4) 0;
+}
+
+.swimlane-title {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  font-weight: var(--fw-semi);
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.swimlane-count {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-mute);
+}
+
+/*
+ * The band's own paging strip. Same geometry as the board's single strip
+ * (board.scss `.board-grid`), bounded in height because several bands share
+ * the board region's vertical space.
+ */
+.swimlane-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(var(--column-min-width), 1fr);
+  grid-auto-rows: 100%;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+  align-items: stretch;
+  height: var(--swimlane-height);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+@media (max-width: 900px) {
+  /* Band first, then the pager inside it: one column per screen, no peek. */
+  .swimlane-strip {
+    display: flex;
+    gap: 0;
+    padding: 0 0 var(--sp-4);
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+  }
+
+  .swimlane-strip > app-column {
+    flex: 0 0 100%;
+    min-width: 0;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+}

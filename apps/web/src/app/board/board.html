@@ -89,7 +89,7 @@
           </p>
         }
 
-        @if (noMatches()) {
+        @if (noMatches() || noBands()) {
           <app-empty-state variant="noMatches" (clearFilters)="clearFilters()" />
         } @else {
           @if (mobile()) {
@@ -97,22 +97,44 @@
               [statuses]="visibleStatuses()"
               [counts]="visibleCounts()"
               [selectedIndex]="currentIndex()"
+              [controlsPanels]="!grouped()"
               (select)="selectStatus($event)"
             />
           }
-          <div class="board-grid board-strip" #strip (scroll)="onStripScroll()">
-            @for (status of visibleStatuses(); track status) {
-              <app-column
-                #columnEl
-                role="tabpanel"
-                [attr.id]="'column-panel-' + status"
-                [attr.aria-labelledby]="'switcher-tab-' + status"
-                [status]="status"
-                [panes]="columns()[status]"
-                [capabilities]="capabilities()"
-              />
-            }
-          </div>
+          <!--
+            Grouping off is not a band of one: it renders the board's own
+            single strip, with no band chrome and no extra wrapper, so the
+            DOM below the header is what it has always been.
+          -->
+          @if (grouped()) {
+            <div class="swimlanes">
+              @for (band of bands(); track band.lane.key) {
+                <app-swimlane
+                  [lane]="band.lane"
+                  [label]="band.label"
+                  [title]="band.title"
+                  [statuses]="visibleStatuses()"
+                  [capabilities]="capabilities()"
+                  [selectedIndex]="currentIndex()"
+                  (page)="selectStatus($event)"
+                />
+              }
+            </div>
+          } @else {
+            <div class="board-grid board-strip" #strip (scroll)="onStripScroll()">
+              @for (status of visibleStatuses(); track status) {
+                <app-column
+                  #columnEl
+                  role="tabpanel"
+                  [attr.id]="'column-panel-' + status"
+                  [attr.aria-labelledby]="'switcher-tab-' + status"
+                  [status]="status"
+                  [panes]="columns()[status]"
+                  [capabilities]="capabilities()"
+                />
+              }
+            </div>
+          }
         }
       </div>
     </div>
