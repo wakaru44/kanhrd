@@ -17,10 +17,14 @@ shell access.
 
 The bridge owns no credentials of its own. Identity is delegated to a
 reverse proxy placed in front of it — Tailscale Funnel, oauth2-proxy,
-Cloudflare Access, or equivalent — which authenticates the user and passes
-a trusted identity header (e.g. `X-Forwarded-User`) through to the bridge.
-The bridge binds `127.0.0.1` by default; binding on any other interface
-requires an explicit `--i-know-what-im-doing` CLI flag. Safe operational
+Cloudflare Access, or equivalent — which authenticates the user before
+any request reaches the bridge. The bridge itself reads no auth headers
+today; it trusts that whatever reaches it has already been authorised
+by the proxy. Identity headers such as `X-Forwarded-User` may be added
+by the proxy for downstream logging or a future audit trail, but the
+bridge does not consume them. The bridge binds `127.0.0.1` by default;
+binding on any other interface requires an explicit
+`--i-know-what-im-doing` CLI flag. Safe operational
 recipes for each placement are a required part of the documentation, not an
 afterthought (see `docs/OPERATING.md`).
 
@@ -48,3 +52,7 @@ afterthought (see `docs/OPERATING.md`).
   the risk this ADR exists to close.
 - Revisit if a genuine password-only user emerges who cannot install or
   operate a reverse proxy in front of their bridge.
+- Because the bridge does not read the proxy's identity header, per-user
+  audit trails have to come from the proxy's own logs, not the bridge.
+  Loopback loses its safety net once the bind is opened without a proxy
+  in front — `--i-know-what-im-doing` is the only guard.
