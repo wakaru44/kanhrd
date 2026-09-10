@@ -1,90 +1,126 @@
 ## Why
 
 A card today shows the agent name, `field / lane`, a status word and an
-elapsed time. That is not enough to tell two cards apart. Ten Claude
-Code cards named `claude` across three checkouts are indistinguishable,
-and the one fact that actually separates them — **which directory the
-agent is working in** — is discarded by the bridge even though herdr
-sends it on every `pane.list` response.
+elapsed time. Ten `claude` cards across three checkouts are
+indistinguishable, and there is no way to say what any of them is
+working on.
 
-Two identity layers are missing:
+The first framing of this change assumed both fixes needed new
+plumbing: a per-pane `cwd` field and a per-pane task title in browser
+storage. Investigation of the installed herdr 0.8.2 says otherwise.
+**Almost everything this feature wants already exists in herdr and is
+already arriving on the bridge's existing calls — the bridge throws it
+away.**
 
-1. **Where** the agent is working. herdr's `PaneInfo` carries `cwd` and
-   `foreground_cwd`; the bridge's trimmed projection drops both, so the
-   board cannot show a location and the user cannot tell a checkout from
-   its worktree.
-2. **What** the agent is working on. herdr's `label` / `title` are
-   herdr's own facts (a shell name, an agent-reported title) and change
-   under the user's feet. There is no place for a human sentence like
-   `fix the subscription backlog storm` that survives an agent restart
-   and belongs to the operator, not to herdr.
+Three facts drive the reframe:
 
-Both are cheap. Neither requires a new bridge subsystem.
+1. **herdr has a first-class, user-authored pane rename.**
+   `herdr pane rename <pane_id> <label>|--clear` — `PaneRenameParams` is
+   `{ pane_id, label?: string | null }`, only `pane_id` required. It is
+   persistent, cross-device, survives restarts and broadcasts on a
+   requestable `Subscription::PaneUpdated`. The user's ask — "an easy way
+   of renaming the panels in a task-based fashion" — is a herdr feature
+   we are not exposing.
+2. **The bridge already receives the pane's `label` and drops it.**
+   `pane.list` returns whole `PaneInfo` objects;
+   `apps/bridge/src/herdr/project.ts:20-31` builds `Pane` from a fixed
+   field list that omits `label`. Rename a pane in herdr today and the
+   card does not change.
+3. **Project identity already exists at workspace level.**
+   `WorkspaceInfo.worktree` is
+   `{ repo_key, repo_name, repo_root, checkout_path, is_linked_worktree }`
+   — structured git provenance, already returned by the `workspace.list`
+   call the bridge makes on every connect, and already discarded by a
+   name cache that keeps only `workspace_id → label`.
+
+So the feature is mostly a rendering and projection job, not a storage
+job. No new browser storage, no new bridge state, no new herdr calls
+beyond one rename write and one subscription kind.
 
 ## What Changes
 
-### Subfeature 1 — pane working directory (wire-visible)
+### Layer 1 — render the identity herdr already sends
 
-- `packages/schema` models the two `PaneInfo` fields the bridge already
-  receives and throws away: `cwd` and `foreground_cwd`.
-- The bridge-projected `Pane` gains one optional field, `cwd`, resolved
-  as `cwd ?? foreground_cwd` — the same "prefer the display value, fall
-  back to the raw one" precedence `projectPane` already uses for
-  `display_agent ?? agent`.
-- The card renders the workdir as a compact monospace location line; the
-  pane-detail header renders the full absolute path.
-- No new bridge state, no new herdr call, no new capability flag. A host
-  running a herdr too old to send `cwd` simply yields no field and the
-  card renders no location line.
+- `Pane` gains `label?: string` (herdr's user-authored pane name) and
+  `project?: { repo_name, checkout_path, is_linked_worktree }` (from the
+  owning workspace's `worktree`).
+- `projectPane` forwards `label`; the workspace name cache widens from
+  `Map<id, string>` to `Map<id, { label, worktree? }>` so the join can
+  reach `worktree`. Both values already arrive on existing calls.
+- The card's title becomes `label ?? display_agent ?? agent ?? title ??
+  pane-id prefix`. When `label` wins, the agent identity drops to the
+  meta row in `--ink-mute` so neither is lost.
+- The card renders the project as `repo_name`, with `checkout_path`
+  truncated beside `field / lane`. Pane detail shows the full path.
+- `Pane.title` needs no plumbing — it is already projected. It is herdr's
+  display-only metadata slot, written by user hooks or agent
+  integrations via `pane.report_metadata`, and today the card only falls
+  back to it when a pane has no agent at all. Its precedence is stated
+  rather than changed.
 
-### Subfeature 2 — user-defined task title (client-only)
+### Layer 2 — expose herdr's native rename on the card
 
-- A new per-device store, `localStorage['kanhrd.task-titles']`, holds an
-  operator-authored task title per `(pen, card)` pair.
-- herdr's own label / title / agent name is **never written to and never
-  replaced**. When a task title exists it becomes the card's primary
-  title and herdr's name drops to the meta row in `--ink-mute`; both stay
-  visible, so the two layers can disagree without either being lost.
-- The rename entry point is a visible overflow-menu item on the card and
-  a visible control in the pane-detail header — never a hover-only
-  pencil.
-- Card titles stay `--font-ui` at weight `500` per
-  `docs/DESIGN-SYSTEM.md` § Typography. The display serif does not land
-  on a repeated per-card identifier.
+- New wire method `pane.rename` (`{ pane_id, label?: string | null }`),
+  a `paneRename` capability flag, bridge dispatch, and a
+  `Subscription::PaneUpdated` subscription so a rename made anywhere —
+  our board, herdr's TUI, another client — reaches every board.
+- The rename entry point is a visible card overflow-menu item, mirroring
+  the rail's existing field/lane rename. `label: null` clears.
+- `tab.rename` and `workspace.rename` need **no work**: they are already
+  plumbed end to end (wire method, `tabCrud` / `workspaceCrud`
+  capability, dispatch, store event handling, inline rail rename, and a
+  `rename-tab` keyboard shortcut). Naming a task at lane or field level
+  is a shipped feature; only the card level was missing.
+
+### Layer 3 — our own storage: not needed, and dropped
+
+The original per-pane `localStorage['kanhrd.task-titles']` layer is
+**obsolete** and is not part of this change. herdr's `pane.rename`
+delivers the same capability with better properties: shared across
+devices, durable, event-broadcast, and visible in herdr's own sidebar
+next to the operator's other names. `design.md` records it as the
+rejected fallback and the one condition that would revive it.
 
 ## Impact
 
-- `packages/schema/src/herdr.ts` — `HerdrPaneInfo` gains `cwd` and
-  `foreground_cwd`; `Pane` gains `cwd`.
-- `apps/bridge/src/herdr/project.ts` — `projectPane` resolves and
-  forwards `cwd`.
-- `apps/web/src/app/board/card.ts` / `card.html` / `card.scss` — location
-  line, title resolution, overflow-menu rename item.
-- `apps/web/src/app/pane-detail/**` — full path in the header, rename
-  control.
-- New: `apps/web/src/app/state/task-title.service.ts` and a rename
-  modal component.
-- `apps/web/src/app/shared/copy.ts` — new copy keys (the seam introduced
-  by `add-l-brand-neo-shepherd-redesign`).
-- Depends on `add-l-brand-neo-shepherd-redesign` for the card's overflow
-  menu, compact density and copy seam. Subfeature 1 is independent of
-  that change and can land first.
+- `packages/schema/src/herdr.ts` — `HerdrPaneInfo` gains `label` in the
+  projection's consumed set; add `HerdrPaneRenameParams`; `Pane` gains
+  `label` and `project`; `HerdrWorkspaceDetail.tokens` corrected to
+  optional.
+- `packages/schema/src/wire.ts` — `pane.rename` method, params, result;
+  `paneRename` capability; `pane.updated` event payload.
+- `apps/bridge/src/herdr/names.ts` — cache value widens to carry
+  `worktree`; new `workspaceWorktree(id)` accessor.
+- `apps/bridge/src/herdr/project.ts` — forward `label`, join `project`.
+- `apps/bridge/src/herdr/hosts.ts` — `paneRename` method,
+  `pane.updated` in the subscription spec set and event handler.
+- `apps/bridge/src/ws/dispatch.ts` — `pane.rename` case, capability.
+- `apps/web/src/app/board/card.*` — title precedence, project line,
+  overflow rename item.
+- `apps/web/src/app/pane-detail/**` — full checkout path, rename control.
+- `apps/web/src/app/shared/copy.ts` — rename copy keys.
+- Depends on `add-l-brand-neo-shepherd-redesign` for the card overflow
+  menu and the `copy.ts` seam. Layer 1 does not.
 
 ## Non-goals
 
-- **No bridge-side persistence.** The bridge stays stateless; task
-  titles are not stored server-side, so they do not follow the operator
-  to a second browser or device. See `design.md` for the migration path
-  if that becomes a requirement.
-- **No writes to herdr.** `pane.rename` and `pane.report_metadata` are
-  not called. herdr's label stays herdr's; the agent-authority metadata
-  channel stays the agents'.
-- **No filtering, searching, sorting or grouping** by workdir or task
-  title. Follow-on.
-- **No project inference.** No git repo detection, no repo-name
-  derivation, no `~` collapsing, no monorepo-package guessing. The
-  workdir is displayed as herdr reports it.
-- **No new capability flag.** Absence of `cwd` on a pane is the signal;
-  a per-host feature gate is not introduced for one optional string.
-- **No status-column, drag or lifecycle change.** Status membership
-  remains herdr's fact.
+- **No new browser storage.** No `kanhrd.*` key is added.
+- **No new bridge state.** The bridge stays stateless; identity stays
+  herdr's.
+- **No per-pane `cwd`.** herdr does expose `PaneInfo.cwd` and
+  `foreground_cwd` (evidence in `design.md`), but workspace
+  `worktree.checkout_path` covers "which project, where" for the common
+  one-workspace-per-checkout case. Deferred to a follow-on, which
+  matters only when panes in one workspace sit in different directories
+  (reachable via `pane.split --cwd`).
+- **No use of herdr's `tokens` metadata bag.** It is writable and
+  general-purpose (`design.md`), but `pane.rename` is the purpose-built
+  surface and `tokens` is display-only with a 24h TTL ceiling.
+- **No writes to `pane.report_metadata`.** `title`, `display_agent` and
+  `state_labels` stay read-only facts owned by hooks and integrations.
+- **No `terminal_title` rendering.** herdr's OSC-derived terminal title
+  is a separate field we do not model; adding it is not in scope.
+- **No filtering, searching, sorting or grouping** by name or project.
+- **No git inference of our own.** No repo detection, no `~`
+  collapsing, no monorepo-package guessing.
+- **No status-column, drag or lifecycle change.**

@@ -1,68 +1,102 @@
-## 1. Subfeature 1 — schema and bridge (workdir)
+## 1. Layer 1 — project herdr's pane label
 
-- [ ] 1.1 `packages/schema/src/herdr.ts` — add `cwd?: string | null` and
-      `foreground_cwd?: string | null` to `HerdrPaneInfo`, with a comment
-      citing herdr's `PaneInfo` and the difference between the two
-- [ ] 1.2 `packages/schema/src/herdr.ts` — add `cwd?: string` to the
-      bridge-projected `Pane`, documented as the resolved workdir
-- [ ] 1.3 `apps/bridge/src/herdr/project.ts` — resolve
-      `pane.cwd ?? pane.foreground_cwd` in `projectPane` and set `cwd`
-      only when it is a non-empty string
-- [ ] 1.4 `apps/bridge/src/herdr/project.test.ts` — cases: both present,
-      `cwd: null` with `foreground_cwd` set, both null/absent, empty
-      string
+- [ ] 1.1 `packages/schema/src/herdr.ts` — add `label?: string` to the
+      bridge-projected `Pane`, documented as herdr's user-authored pane
+      name set by `pane.rename`
+- [ ] 1.2 `apps/bridge/src/herdr/project.ts` — forward
+      `HerdrPaneInfo.label` in `projectPane`, only when non-empty
+- [ ] 1.3 `apps/bridge/src/herdr/project.test.ts` — label present, null,
+      absent, empty string
 
-## 2. Subfeature 1 — web rendering (workdir)
+## 2. Layer 1 — project git provenance
 
-- [ ] 2.1 `apps/web/src/app/util/` — add a pure `workdirLabel(path)`
-      helper returning the last two segments with a `…/` prefix when
-      segments were dropped, plus its unit test
-- [ ] 2.2 `apps/web/src/app/board/card.ts` — expose a `workdir` computed
-      (label + full path), absent when the pane has no `cwd`
-- [ ] 2.3 `apps/web/src/app/board/card.html` — render the location line
-      only when `workdir` exists, with the full path in `title`
-- [ ] 2.4 `apps/web/src/app/board/card.scss` — mono/caption/`--ink-mute`
-      tokens, single line, ellipsis, no page-level horizontal overflow
-- [ ] 2.5 `apps/web/src/app/pane-detail/` — render the full absolute path
-      in the metadata strip; omit the row when absent
-- [ ] 2.6 `apps/web/src/app/board/card.spec.ts` — location line present
-      with `cwd`, absent without it, truncated form correct
+- [ ] 2.1 `packages/schema/src/herdr.ts` — add
+      `project?: { repo_name, checkout_path, is_linked_worktree }` to
+      `Pane`; fix `HerdrWorkspaceDetail.tokens` to optional to match
+      herdr's `required` list
+- [ ] 2.2 `apps/bridge/src/herdr/names.ts` — type `refresh()`'s
+      `workspace.list` response as `HerdrWorkspaceDetail[]`; widen the
+      cache value to `{ label, worktree? }`; keep `workspaceName()`
+      behaviour identical
+- [ ] 2.3 `apps/bridge/src/herdr/names.ts` — add `workspaceWorktree(id)`;
+      make `setWorkspace` preserve a stored `worktree` on a label-only
+      update
+- [ ] 2.4 `apps/bridge/src/herdr/project.ts` — join `project` from the
+      cache; absent when the workspace has no `worktree`
+- [ ] 2.5 `apps/bridge/src/herdr/names.test.ts` — worktree cached,
+      absent, preserved across `workspace.renamed`, unknown id
 
-## 3. Subfeature 2 — task-title store
+## 3. Layer 1 — card and pane-detail rendering
 
-- [ ] 3.1 `apps/web/src/app/state/task-title.service.ts` — signals-based
-      service over `localStorage['kanhrd.task-titles']`, shape
-      `{ host: { pane_id: title } }`, modelled on `theme.service.ts`
-- [ ] 3.2 Trim, cap at 80 chars, delete on empty, drop pens whose map
-      empties
-- [ ] 3.3 Guard every read and write; treat throw or corrupt JSON as
-      "no titles"
-- [ ] 3.4 Prune titles for a pen only when that pen is connected and its
-      pane list has been received
-- [ ] 3.5 `task-title.service.spec.ts` — set, clear, cap, corrupt JSON,
-      throwing storage, prune-on-connected, no-prune-on-disconnected
+- [ ] 3.1 `apps/web/src/app/util/` — pure `pathTail(path)` helper (last
+      two segments, `…/` prefix when truncated) plus its unit test
+- [ ] 3.2 `apps/web/src/app/board/card.ts` — title precedence
+      `label ?? display_agent ?? agent ?? title ?? id prefix`; expose the
+      secondary agent identity only when `label` won
+- [ ] 3.3 `apps/web/src/app/board/card.ts` — expose a `project` computed
+      (repo name + path tail + full path), absent without `project`
+- [ ] 3.4 `apps/web/src/app/board/card.html` — render the project line
+      only when present, full path in `title`; secondary identity row in
+      the meta row
+- [ ] 3.5 `apps/web/src/app/board/card.scss` — `--font-mono`,
+      `--fs-caption`, `--ink-mute`; single line, ellipsis, no page-level
+      horizontal overflow; title stays `--font-ui` `--fw-medium`
+- [ ] 3.6 `apps/web/src/app/pane-detail/` — repo name and full checkout
+      path in the metadata strip; omit both rows when absent
+- [ ] 3.7 `apps/web/src/app/board/card.spec.ts` — each title-precedence
+      branch, project line present/absent, path-tail form
 
-## 4. Subfeature 2 — rename UI
+## 4. Layer 2 — the `pane.rename` round trip
 
-- [ ] 4.1 `apps/web/src/app/shared/copy.ts` — add the six
-      `card.taskTitle*` keys with the strings fixed in the spec
-- [ ] 4.2 Rename modal component — single text input seeded with the
-      current title, save / clear / cancel, `--font-display` modal title,
-      `Escape` cancels, `Enter` submits
-- [ ] 4.3 `apps/web/src/app/board/card.html` — add the rename item to the
-      overflow menu; keep it outside the card's `<a>`
-- [ ] 4.4 Pane detail — visible rename control in the header
-- [ ] 4.5 Return focus to the originating overflow trigger on modal close
-- [ ] 4.6 `--fw-medium` `--font-ui` title slot: render the task title
-      when set, move herdr's name to the meta row in `--ink-mute`
-- [ ] 4.7 Close-confirmation copy names the task title when one is set
+- [ ] 4.1 `packages/schema/src/herdr.ts` — add `HerdrPaneRenameParams`
+      (`{ pane_id, label?: string | null }`, only `pane_id` required),
+      citing herdr's `PaneRenameParams`
+- [ ] 4.2 `packages/schema/src/wire.ts` — `pane.rename` method, params
+      `{ pane_id, label?: string | null }`, result `{ pane: Pane }`
+- [ ] 4.3 `packages/schema/src/wire.ts` — add `paneRename` to
+      `BridgeCapabilities`, separate from `paneCreate` / `paneClose` /
+      `paneMove`
+- [ ] 4.4 `apps/bridge/src/herdr/hosts.ts` — `paneRename()` via the
+      existing per-pane write queue
+- [ ] 4.5 `apps/bridge/src/ws/dispatch.ts` — `pane.rename` case and the
+      capability advertisement
+- [ ] 4.6 `apps/bridge/src/ws/dispatch.test.ts` — success, `label: null`
+      clear, herdr error passthrough, capability gate
 
-## 5. Verification
+## 5. Layer 2 — push updates
 
-- [ ] 5.1 Touch targets: overflow trigger and every menu item ≥ 40x40
+- [ ] 5.1 `packages/schema/src/herdr.ts` — model the `pane.updated`
+      event (`EventData::PaneUpdated`, full `PaneInfo`) and add it to the
+      subscribable event kinds
+- [ ] 5.2 `packages/schema/src/wire.ts` — `pane.updated` browser event
+      payload carrying the projected `Pane`
+- [ ] 5.3 `apps/bridge/src/herdr/hosts.ts` — add `pane.updated` to
+      `buildSubscriptionSpecs()` and handle it; confirm the spec set
+      stays fixed (the subscription is global, no `pane_id`)
+- [ ] 5.4 `apps/web/src/app/state/panes.store.ts` — apply `pane.updated`
+      to the card in place
+- [ ] 5.5 `apps/bridge/src/herdr/hosts.test.ts` — `pane.updated`
+      subscribed and relayed; agent-status poll unchanged
+
+## 6. Layer 2 — rename UI
+
+- [ ] 6.1 `apps/web/src/app/shared/copy.ts` — add the five
+      `card.rename*` keys with the strings fixed in the spec
+- [ ] 6.2 Rename modal — single input seeded with the current `label`,
+      save / clear / cancel, `--font-display` modal title, `Escape`
+      cancels, `Enter` submits, empty-after-trim sends `label: null`
+- [ ] 6.3 `apps/web/src/app/board/card.html` — overflow-menu rename item,
+      kept outside the card's `<a>`, gated on `paneRename`
+- [ ] 6.4 Pane detail — visible rename control in the header
+- [ ] 6.5 Return focus to the originating overflow trigger on close
+- [ ] 6.6 Failure path — reuse the existing `renameFailed` toast copy
+
+## 7. Verification
+
+- [ ] 7.1 Touch targets: overflow trigger and every menu item ≥ 40x40
       under `pointer: coarse` at 390px
-- [ ] 5.2 Mobile check at 390px: card location line truncates, page
-      horizontal scroll width does not exceed viewport width
-- [ ] 5.3 `pnpm -r test` and the lint/format gate pass
-- [ ] 5.4 Confirm no herdr write is issued by any rename path (no
-      `pane.rename` / `pane.report_metadata` call added anywhere)
+- [ ] 7.2 Mobile check at 390px: project line truncates and the page's
+      horizontal scroll width does not exceed the viewport
+- [ ] 7.3 Confirm no `pane.report_metadata` / `tokens` write exists on
+      any rename path, and no `kanhrd.*` storage key was added
+- [ ] 7.4 `pnpm -r test` and the lint/format gate pass
