@@ -1,0 +1,129 @@
+.forgejo/README.md
+  s_cc22a38b40f3d3::t_5ac9071a52300a 20-28,56-62,76,82
+.pre-commit-config.yaml
+  s_e465e30f266fa2::t_a7de6f515a8d96 20-21,23
+.prettierignore
+  s_e465e30f266fa2::t_490376af336aa2 4-5,8-11
+apps/bridge/README.md
+  s_e465e30f266fa2::t_4690aeb2aaf8ee 28-34,39,41,43-46
+apps/bridge/integration/README.md
+  s_e465e30f266fa2::t_61171f46ccaaa7 68,86-93
+apps/bridge/src/herdr/hosts.test.ts
+  s_e465e30f266fa2::t_650cf4272a84ca 319-423
+apps/bridge/src/herdr/hosts.ts
+  s_e465e30f266fa2::t_a6e05c34f208c2 99-112,191,285,323,345,375,437,477-503,507-515,557-560,562,598-602,613-619,623-634,638,704,729,872
+apps/bridge/src/herdr/project.test.ts
+  s_e465e30f266fa2::t_70e694ad504b49 131-143
+apps/bridge/src/herdr/project.ts
+  s_e465e30f266fa2::t_5a8667de440fc2 16-20,22-27,45
+apps/web/e2e/README.md
+  s_e465e30f266fa2::t_563b631070d36b 53,85,88
+apps/web/public/fonts/README.md
+  s_e465e30f266fa2::t_1c01d9e569ac08 18-23,57,86
+apps/web/src/app/board/card.html
+  s_e465e30f266fa2::t_2479d2a87280aa 31-36
+apps/web/src/app/board/card.scss
+  s_e465e30f266fa2::t_60ca7b06c41be7 178-179,194-199
+apps/web/src/app/board/card.spec.ts
+  s_e465e30f266fa2::t_021bc7ad6d6937 579-628
+apps/web/src/app/board/card.ts
+  s_e465e30f266fa2::t_cc468a1c6fd1df 186-204
+apps/web/src/app/board/filter-bar.html
+  s_e465e30f266fa2::t_230ed662f9fac8 34
+apps/web/src/app/board/filter-bar.scss
+  s_e465e30f266fa2::t_8a92b731df8b3b 41-44,48-51,59-67
+apps/web/src/app/board/filter-bar.spec.ts
+  s_e465e30f266fa2::t_3fc3129ff096ed 1-108
+apps/web/src/app/board/filter-bar.ts
+  s_e465e30f266fa2::t_d483ce281edd8f 23-32
+apps/web/src/app/state/panes.store.spec.ts
+  s_e465e30f266fa2::t_646491a17a4801 89-111,301-370
+apps/web/src/app/state/panes.store.ts
+  s_e465e30f266fa2::t_1625a4e30e9916 117,125-133,525-552
+deploy/oauth/README.md
+  s_e465e30f266fa2::t_fe141f129341d5 10-11,13-14,47-50
+docs/DESIGN-SYSTEM.md
+  s_e465e30f266fa2::t_99bcd7caa45acf 437-447
+docs/UX-GUIDELINES.md
+  s_e465e30f266fa2::t_b3354f356d7507 380-393,666-670
+docs/adr/0006-remote-herdr-hosts.md
+  s_e465e30f266fa2::t_bb8aaaeb1ebcab 25,27-28,118-119,123,167,197-198
+docs/research/agent-vendor-icons.md
+  s_e465e30f266fa2::t_c4a3eb88f2ba50 3,235
+docs/review/neo-shepherd-redesign/README.md
+  s_e465e30f266fa2::t_afb75db5c45f6b 1-79
+docs/review/neo-shepherd-redesign/board-empty-sumi.jpg
+  s_e465e30f266fa2::t_295eefcb42749a 1-3
+docs/review/neo-shepherd-redesign/board-empty-washi.jpg
+  s_e465e30f266fa2::t_22544a2e726799 1-3
+docs/review/neo-shepherd-redesign/board-populated-sumi.jpg
+  s_e465e30f266fa2::t_13529a5ba35be9 1-3
+docs/review/neo-shepherd-redesign/board-populated-washi.jpg
+  s_e465e30f266fa2::t_8ecc89326f505a 1-3
+docs/review/neo-shepherd-redesign/mobile-drawer-sumi.jpg
+  s_e465e30f266fa2::t_24a639239d2498 1-3
+docs/review/neo-shepherd-redesign/mobile-drawer-washi.jpg
+  s_e465e30f266fa2::t_126decb4ed20c0 1-3
+docs/review/neo-shepherd-redesign/mobile-pager-first-sumi.jpg
+  s_e465e30f266fa2::t_3e0ef6f757d734 1-3
+docs/review/neo-shepherd-redesign/mobile-pager-first-washi.jpg
+  s_e465e30f266fa2::t_89134c6028df36 1-3
+docs/review/neo-shepherd-redesign/mobile-pager-last-washi.jpg
+  s_e465e30f266fa2::t_2a89858bb604f4 1-3
+docs/review/neo-shepherd-redesign/mobile-pager-middle-washi.jpg
+  s_e465e30f266fa2::t_e40750eae19991 1-3
+docs/review/neo-shepherd-redesign/pane-detail-sumi-header.jpg
+  s_e465e30f266fa2::t_e2b6a2b31f2259 1-3
+docs/review/neo-shepherd-redesign/settings-sumi.jpg
+  s_e465e30f266fa2::t_812e9c02420d43 1-3
+docs/review/neo-shepherd-redesign/settings-washi.jpg
+  s_e465e30f266fa2::t_6914e49c03df43 1-3
+openspec/changes/add-swimlane-grouping/proposal.md
+  s_e465e30f266fa2::t_88d71717a1fe8d 24-25,48-88,100-102
+openspec/changes/add-swimlane-grouping/specs/board-swimlanes/spec.md
+  s_e465e30f266fa2::t_78dce5c5751ce5 5-6,8-21,27-37,60-63
+openspec/changes/add-swimlane-grouping/tasks.md
+  s_e465e30f266fa2::t_155242c336a45b 1-55
+openspec/changes/archive/2026-09-10-add-l-brand-neo-shepherd-redesign/tasks.md
+  s_e465e30f266fa2::t_0336377e88167a 168-174,182-192,196-205,214-226,267-269
+openspec/changes/archive/2026-09-10-add-pane-status-since/tasks.md
+  s_e465e30f266fa2::t_52b1dc03fbbc8a 3,7,10,13,15,21,24,30,33-34,38,45,48,54-55,57-68
+openspec/changes/archive/2026-09-10-fix-card-menu-stacking/tasks.md
+  s_e465e30f266fa2::t_f696e9d37c9c6c 48-58
+openspec/specs/board-card-actions/spec.md
+  s_e465e30f266fa2::t_498aa3b02487ef 1-46
+openspec/specs/domain-vocabulary/spec.md
+  s_e465e30f266fa2::t_3e130d5981b67e 1-73
+openspec/specs/l-brand-neo-shepherd-redesign/spec.md
+  s_e465e30f266fa2::t_061412447e45f1 1-484
+openspec/specs/pane-status-since/spec.md
+  s_e465e30f266fa2::t_37e63ac26c25e5 1-85
+packages/schema/src/herdr.ts
+  s_e465e30f266fa2::t_801164e9a5f750 261-279
+packages/schema/src/wire.ts
+  s_e465e30f266fa2::t_7a0a2840897740 368-380
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "404f3a2eb1ac4a1fe0dee52a9cd877deaab9d6dc",
+  "prompts": {},
+  "sessions": {
+    "s_cc22a38b40f3d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93fe3ed2-366b-4659-9492-d600bcf7a5d9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    },
+    "s_e465e30f266fa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2c5b23d5-95a9-4f8a-9e19-5ebcf3fb7297",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
