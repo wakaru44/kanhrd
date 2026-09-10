@@ -1,7 +1,7 @@
-import { Injectable, effect, inject } from "@angular/core";
-import { COPY, fill } from "../shared/copy";
-import { PanesStore } from "./panes.store";
-import { ToastService } from "./toast.service";
+import { Injectable, effect, inject } from '@angular/core';
+import { COPY, fill } from '../shared/copy';
+import { PanesStore } from './panes.store';
+import { ToastService } from './toast.service';
 
 /** One notice per host, keyed by the host's own name — see `ToastService.push`'s `key`. */
 export function hostNoticeKey(host: string): string {
@@ -27,7 +27,7 @@ export function hostNoticeKey(host: string): string {
  *    host, so a flapping host updates its own notice instead of stacking, and
  *    five hosts dropping at once produce five notices, not fifty.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class HostNoticeService {
   private readonly store = inject(PanesStore);
   private readonly toast = inject(ToastService);
@@ -49,14 +49,14 @@ export class HostNoticeService {
         if (previous === true && !host.connected) {
           this.announced.add(host.name);
           this.toast.push({
-            level: "warn",
+            level: 'warn',
             message: fill(COPY.toast.hostDisconnected, { host: host.name }),
             persistent: true,
             key: hostNoticeKey(host.name),
           });
         } else if (host.connected && this.announced.delete(host.name)) {
           this.toast.dismissByKey(hostNoticeKey(host.name));
-          this.toast.push({ level: "info", message: COPY.toast.hostReconnected });
+          this.toast.push({ level: 'info', message: COPY.toast.hostReconnected });
         }
       }
 

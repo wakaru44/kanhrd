@@ -17,7 +17,7 @@ export class PaneWriteQueue {
     const result = prior.then(task);
     const settled = result.then(
       () => undefined,
-      () => undefined,
+      () => undefined
     );
     this.tails.set(key, settled);
     void settled.then(() => {
@@ -58,7 +58,7 @@ export class HostMutationQueue {
     const result = prior.then(task);
     const settled = result.then(
       () => undefined,
-      () => undefined,
+      () => undefined
     );
     this.tails.set(host, settled);
     void settled.then(() => {

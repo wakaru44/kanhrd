@@ -8,11 +8,7 @@
       <!-- No tabpanel role here: with bands there are many columns per
            status, so a single switcher tab cannot control one panel. The
            switcher drops its `aria-controls` while grouping is on. -->
-      <app-column
-        [status]="status"
-        [panes]="panesFor(status)"
-        [capabilities]="capabilities()"
-      />
+      <app-column [status]="status" [panes]="panesFor(status)" [capabilities]="capabilities()" />
     }
   </div>
 </section>

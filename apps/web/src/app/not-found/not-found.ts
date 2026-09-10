@@ -1,7 +1,7 @@
-import { Component, inject } from "@angular/core";
-import { RouterLink } from "@angular/router";
-import { COPY } from "../shared/copy";
-import { BoardReturnService } from "../state/board-return.service";
+import { Component, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { COPY } from '../shared/copy';
+import { BoardReturnService } from '../state/board-return.service';
 
 /**
  * The `**` route. Reached by a stale bookmark, a typo, or a link to a
@@ -14,10 +14,10 @@ import { BoardReturnService } from "../state/board-return.service";
  * table carries no body line for this surface, so none is invented here.
  */
 @Component({
-  selector: "app-not-found",
+  selector: 'app-not-found',
   imports: [RouterLink],
-  templateUrl: "./not-found.html",
-  styleUrl: "./not-found.scss",
+  templateUrl: './not-found.html',
+  styleUrl: './not-found.scss',
 })
 export class NotFound {
   private readonly boardReturn = inject(BoardReturnService);

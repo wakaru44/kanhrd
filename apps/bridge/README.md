@@ -25,25 +25,25 @@ instead of failing.
 
 ## CLI flags
 
-| Flag | Default | Notes |
-|---|---|---|
-| `--config <path>` | `kanhrd.config.yaml` in cwd | falls back to built-in defaults if the file is absent |
-| `--port <n>` | `5173` | overrides config file |
-| `--bind <addr>` | `127.0.0.1` | non-loopback addresses are refused unless paired with `--i-know-what-im-doing` |
-| `--i-know-what-im-doing` | off | required to bind a non-loopback address |
-| `--spa-dir <path>` | `../web/dist` | resolved relative to the process cwd |
+| Flag                     | Default                     | Notes                                                                          |
+| ------------------------ | --------------------------- | ------------------------------------------------------------------------------ |
+| `--config <path>`        | `kanhrd.config.yaml` in cwd | falls back to built-in defaults if the file is absent                          |
+| `--port <n>`             | `5173`                      | overrides config file                                                          |
+| `--bind <addr>`          | `127.0.0.1`                 | non-loopback addresses are refused unless paired with `--i-know-what-im-doing` |
+| `--i-know-what-im-doing` | off                         | required to bind a non-loopback address                                        |
+| `--spa-dir <path>`       | `../web/dist`               | resolved relative to the process cwd                                           |
 
 ## Config file
 
 ```yaml
-bind: "127.0.0.1"
+bind: '127.0.0.1'
 port: 5173
-spa_dir: "../web/dist"
+spa_dir: '../web/dist'
 hosts:
-  - name: "local"
-    socket: "~/.config/herdr/herdr.sock"
-  - name: "cloud"
-    socket: "/run/user/1000/herdr-cloud.sock"
+  - name: 'local'
+    socket: '~/.config/herdr/herdr.sock'
+  - name: 'cloud'
+    socket: '/run/user/1000/herdr-cloud.sock'
 ```
 
 `socket` paths support `~` expansion. Each host gets its own herdr socket

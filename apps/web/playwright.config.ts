@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices } from '@playwright/test';
 
 /**
  * E2E suite for kanhrd's tiered contracts (tier-1 kanban board, tier-2
@@ -8,45 +8,45 @@ import { defineConfig, devices } from "@playwright/test";
  * `e2e/README.md` for the full run sequence.
  */
 export default defineConfig({
-  testDir: "./e2e",
+  testDir: './e2e',
   timeout: 30_000,
   expect: { timeout: 5_000 },
   fullyParallel: false,
-  forbidOnly: !!process.env["CI"],
-  retries: process.env["CI"] ? 1 : 0,
+  forbidOnly: !!process.env['CI'],
+  retries: process.env['CI'] ? 1 : 0,
   workers: 1,
-  reporter: "list",
+  reporter: 'list',
   use: {
-    baseURL: "http://127.0.0.1:5173",
-    trace: "on-first-retry",
-    screenshot: "only-on-failure",
+    baseURL: 'http://127.0.0.1:5173',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
   },
   projects: [
     {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
       testIgnore: [/mobile\.spec\.ts$/, /capture\.spec\.ts$/],
     },
     {
-      name: "mobile",
+      name: 'mobile',
       // devices['iPhone 13'] defaults to WebKit; only Chromium is installed
       // (test:e2e:install), and the brief asks for mobile *Chromium*, so
       // force the browser while keeping the device's viewport/UA/touch bits.
-      use: { ...devices["iPhone 13"], browserName: "chromium" },
+      use: { ...devices['iPhone 13'], browserName: 'chromium' },
       testMatch: /mobile\.spec\.ts$/,
     },
     {
       // Documentation captures. Writes committed LFS binaries, so it is NOT
       // part of `make test-e2e` and never runs in CI — `make screenshots`
       // selects it explicitly with `--project=capture`.
-      name: "capture",
-      use: { ...devices["Desktop Chrome"] },
+      name: 'capture',
+      use: { ...devices['Desktop Chrome'] },
       testMatch: /capture\.spec\.ts$/,
     },
   ],
   webServer: {
-    command: "node ../bridge/dist/main.js",
-    url: "http://127.0.0.1:5173/api/hosts",
+    command: 'node ../bridge/dist/main.js',
+    url: 'http://127.0.0.1:5173/api/hosts',
     reuseExistingServer: true,
     timeout: 15_000,
   },

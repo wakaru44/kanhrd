@@ -9,16 +9,16 @@ import {
   OnDestroy,
   signal,
   untracked,
-} from "@angular/core";
-import { KeyValuePipe } from "@angular/common";
-import { Router } from "@angular/router";
-import type { TabSummary, WorkspaceSummary } from "@kanhrd/schema";
-import { LucideMoreHorizontal } from "../shared/icons";
-import { COPY, fill } from "../shared/copy";
-import { isWorkspaceGroupCloseRequiredError, paneKey, PanesStore } from "../state/panes.store";
-import { LayoutService } from "../state/layout.service";
-import { ToastService } from "../state/toast.service";
-import { ConfirmModal } from "../shared/confirm-modal";
+} from '@angular/core';
+import { KeyValuePipe } from '@angular/common';
+import { Router } from '@angular/router';
+import type { TabSummary, WorkspaceSummary } from '@kanhrd/schema';
+import { LucideMoreHorizontal } from '../shared/icons';
+import { COPY, fill } from '../shared/copy';
+import { isWorkspaceGroupCloseRequiredError, paneKey, PanesStore } from '../state/panes.store';
+import { LayoutService } from '../state/layout.service';
+import { ToastService } from '../state/toast.service';
+import { ConfirmModal } from '../shared/confirm-modal';
 
 interface WorkspaceGroup {
   workspace: WorkspaceSummary;
@@ -30,9 +30,9 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** `--breakpoint-mobile` (900px) as a media query; at or above it the rail is inline. */
-const DESKTOP_QUERY = "(min-width: 900px)";
+const DESKTOP_QUERY = '(min-width: 900px)';
 
-type RowKind = "workspace" | "tab";
+type RowKind = 'workspace' | 'tab';
 
 /**
  * Rail = navigator (decision locked): per host, a workspace list, each
@@ -51,12 +51,12 @@ type RowKind = "workspace" | "tab";
  * the terminal owns unmodified Escape.
  */
 @Component({
-  selector: "app-rail",
+  selector: 'app-rail',
   imports: [ConfirmModal, KeyValuePipe, LucideMoreHorizontal],
-  templateUrl: "./rail.html",
-  styleUrl: "./rail.scss",
+  templateUrl: './rail.html',
+  styleUrl: './rail.scss',
   host: {
-    "(keydown.escape)": "onEscape($any($event))",
+    '(keydown.escape)': 'onEscape($any($event))',
   },
 })
 export class Rail implements OnDestroy {
@@ -120,23 +120,23 @@ export class Rail implements OnDestroy {
   /** Escape inside an open menu closes it and returns focus to its trigger, without touching the drawer. */
   protected onMenuKeydown(event: KeyboardEvent): void {
     const menu = event.currentTarget as HTMLElement;
-    if (event.key === "Escape") {
+    if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
       this.closeMenu();
-      (menu.parentElement?.querySelector<HTMLElement>(".row-menu-trigger"))?.focus();
+      menu.parentElement?.querySelector<HTMLElement>('.row-menu-trigger')?.focus();
       return;
     }
-    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
       return;
     }
     event.preventDefault();
-    const items = Array.from(menu.querySelectorAll<HTMLElement>(".row-menu-item"));
+    const items = Array.from(menu.querySelectorAll<HTMLElement>('.row-menu-item'));
     if (items.length === 0) {
       return;
     }
     const current = items.indexOf(document.activeElement as HTMLElement);
-    const step = event.key === "ArrowDown" ? 1 : -1;
+    const step = event.key === 'ArrowDown' ? 1 : -1;
     const next = (current + step + items.length) % items.length;
     items[next]!.focus();
   }
@@ -154,7 +154,7 @@ export class Rail implements OnDestroy {
   // --- inline rename -------------------------------------------------
 
   protected readonly editing = signal<{ kind: RowKind; host: string; id: string } | null>(null);
-  protected readonly editingValue = signal("");
+  protected readonly editingValue = signal('');
   /** True while a rename is in flight: the field stays mounted and holds what was typed. */
   protected readonly renamePending = signal(false);
   /** Why the last attempt was refused, shown beside the field it belongs to. */
@@ -169,7 +169,7 @@ export class Rail implements OnDestroy {
     event.stopPropagation();
     this.closeMenu();
     this.renameError.set(null);
-    this.editing.set({ kind: "workspace", host: workspace.host, id: workspace.id });
+    this.editing.set({ kind: 'workspace', host: workspace.host, id: workspace.id });
     this.editingValue.set(workspace.name);
   }
 
@@ -177,7 +177,7 @@ export class Rail implements OnDestroy {
     event.stopPropagation();
     this.closeMenu();
     this.renameError.set(null);
-    this.editing.set({ kind: "tab", host: tab.host, id: tab.id });
+    this.editing.set({ kind: 'tab', host: tab.host, id: tab.id });
     this.editingValue.set(tab.name);
   }
 
@@ -222,10 +222,10 @@ export class Rail implements OnDestroy {
     this.renamePending.set(true);
     const notice = this.toast.progress(
       `rename:${target.host}:${target.kind}:${target.id}`,
-      COPY.toast.working,
+      COPY.toast.working
     );
     try {
-      if (target.kind === "workspace") {
+      if (target.kind === 'workspace') {
         await this.store.renameWorkspace(target.host, target.id, value);
       } else {
         await this.store.renameTab(target.host, target.id, value);
@@ -248,19 +248,19 @@ export class Rail implements OnDestroy {
   private focusEditInput(): void {
     afterNextRender(
       () => {
-        const input = this.hostEl.querySelector<HTMLInputElement>(".edit-input");
+        const input = this.hostEl.querySelector<HTMLInputElement>('.edit-input');
         input?.focus();
         input?.select();
       },
-      { injector: this.injector },
+      { injector: this.injector }
     );
   }
 
   protected onEditKeydown(event: KeyboardEvent): void {
-    if (event.key === "Enter") {
+    if (event.key === 'Enter') {
       event.preventDefault();
       void this.confirmRename();
-    } else if (event.key === "Escape") {
+    } else if (event.key === 'Escape') {
       // `preventDefault` doubles as the signal to `onEscape` that this Escape
       // was consumed by the rename field and must not close the drawer.
       event.preventDefault();
@@ -280,17 +280,18 @@ export class Rail implements OnDestroy {
         return;
       }
       const key = paneKey(pending.host, pending.id);
-      const workspace = pending.kind === "workspace" ? this.store.workspacesSignal().get(key) : undefined;
-      const tab = pending.kind === "tab" ? this.store.tabsSignal().get(key) : undefined;
+      const workspace =
+        pending.kind === 'workspace' ? this.store.workspacesSignal().get(key) : undefined;
+      const tab = pending.kind === 'tab' ? this.store.tabsSignal().get(key) : undefined;
       if (!workspace && !tab) {
         return;
       }
       untracked(() => {
         if (workspace) {
-          this.editing.set({ kind: "workspace", host: workspace.host, id: workspace.id });
+          this.editing.set({ kind: 'workspace', host: workspace.host, id: workspace.id });
           this.editingValue.set(workspace.name);
         } else if (tab) {
-          this.editing.set({ kind: "tab", host: tab.host, id: tab.id });
+          this.editing.set({ kind: 'tab', host: tab.host, id: tab.id });
           this.editingValue.set(tab.name);
         }
         this.store.consumePendingRename();
@@ -321,13 +322,13 @@ export class Rail implements OnDestroy {
       untracked(() => (open ? this.onDrawerOpened() : this.onDrawerClosed()));
     });
 
-    this.desktopQuery?.addEventListener("change", this.onDesktopChange);
+    this.desktopQuery?.addEventListener('change', this.onDesktopChange);
   }
 
   // --- mobile overlay drawer --------------------------------------------
 
   private readonly desktopQuery: MediaQueryList | null =
-    typeof window !== "undefined" && typeof window.matchMedia === "function"
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
       ? window.matchMedia(DESKTOP_QUERY)
       : null;
 
@@ -349,7 +350,7 @@ export class Rail implements OnDestroy {
   };
 
   private navEl(): HTMLElement | null {
-    return this.hostEl.querySelector<HTMLElement>("nav.rail");
+    return this.hostEl.querySelector<HTMLElement>('nav.rail');
   }
 
   private onDrawerOpened(): void {
@@ -372,7 +373,7 @@ export class Rail implements OnDestroy {
     this.closeMenu();
     const restore = this.focusInlineRailOnClose
       ? this.navEl()
-      : (this.restoreFocusTo ?? document.querySelector<HTMLElement>(".hamburger"));
+      : (this.restoreFocusTo ?? document.querySelector<HTMLElement>('.hamburger'));
     this.focusInlineRailOnClose = false;
     this.restoreFocusTo = null;
     if (restore?.isConnected) {
@@ -396,7 +397,7 @@ export class Rail implements OnDestroy {
         if (sibling === node || !(sibling instanceof HTMLElement) || sibling.inert) {
           continue;
         }
-        if (sibling.classList.contains("rail-backdrop")) {
+        if (sibling.classList.contains('rail-backdrop')) {
           continue;
         }
         sibling.inert = true;
@@ -428,7 +429,7 @@ export class Rail implements OnDestroy {
 
   /** Tab/Shift+Tab wrap inside the open drawer. */
   protected onDrawerKeydown(event: KeyboardEvent): void {
-    if (event.key !== "Tab" || !this.layout.railOpen()) {
+    if (event.key !== 'Tab' || !this.layout.railOpen()) {
       return;
     }
     const nav = this.navEl();
@@ -454,7 +455,7 @@ export class Rail implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.desktopQuery?.removeEventListener("change", this.onDesktopChange);
+    this.desktopQuery?.removeEventListener('change', this.onDesktopChange);
     this.clearInert();
     // The drawer never persists across a route change to pane detail.
     this.layout.closeRail();
@@ -477,18 +478,18 @@ export class Rail implements OnDestroy {
     // re-renders under it.
     this.layout.closeRail();
     if (this.isTabFilterActive(tab.host, tab.id)) {
-      void this.router.navigate(["/"]);
+      void this.router.navigate(['/']);
     } else {
-      void this.router.navigate(["/workspace", tab.workspace.id, "tab", tab.id]);
+      void this.router.navigate(['/workspace', tab.workspace.id, 'tab', tab.id]);
     }
   }
 
   protected onWorkspaceClick(workspace: WorkspaceSummary): void {
     this.layout.closeRail();
     if (this.isWorkspaceScopeActive(workspace.id)) {
-      void this.router.navigate(["/"]);
+      void this.router.navigate(['/']);
     } else {
-      void this.router.navigate(["/workspace", workspace.id]);
+      void this.router.navigate(['/workspace', workspace.id]);
     }
   }
 
@@ -502,7 +503,9 @@ export class Rail implements OnDestroy {
     if (!target) {
       return null;
     }
-    return this.store.workspaceCountForHost(target.host) <= 1 ? COPY.rail.lastWorkspaceRefusal : null;
+    return this.store.workspaceCountForHost(target.host) <= 1
+      ? COPY.rail.lastWorkspaceRefusal
+      : null;
   });
 
   /**

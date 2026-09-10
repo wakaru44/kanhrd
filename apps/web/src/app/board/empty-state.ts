@@ -1,15 +1,24 @@
-import { Component, computed, effect, inject, input, output, signal, untracked } from "@angular/core";
-import type { HostSummary } from "@kanhrd/schema";
-import { COPY } from "../shared/copy";
-import { LucideCopy } from "../shared/icons";
-import { ClockTick } from "../util/clock";
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  untracked,
+} from '@angular/core';
+import type { HostSummary } from '@kanhrd/schema';
+import { COPY } from '../shared/copy';
+import { LucideCopy } from '../shared/icons';
+import { ClockTick } from '../util/clock';
 
 const ALL_DISCONNECTED_GRACE_MS = 5000;
 
 /** Where `docs/OPERATING.md` lives for a user who is not reading the checkout. */
-const OPERATING_GUIDE_URL = "https://github.com/wakaru44/kanhrd/blob/main/docs/OPERATING.md";
+const OPERATING_GUIDE_URL = 'https://github.com/wakaru44/kanhrd/blob/main/docs/OPERATING.md';
 
-export type EmptyStateVariant = "hosts" | "noMatches";
+export type EmptyStateVariant = 'hosts' | 'noMatches';
 
 /**
  * Page-level board empty states — a next step, never a message
@@ -26,16 +35,16 @@ export type EmptyStateVariant = "hosts" | "noMatches";
  * plus a mono `0`, no prose (see `column.html`).
  */
 @Component({
-  selector: "app-empty-state",
+  selector: 'app-empty-state',
   imports: [LucideCopy],
-  templateUrl: "./empty-state.html",
-  styleUrl: "./empty-state.scss",
+  templateUrl: './empty-state.html',
+  styleUrl: './empty-state.scss',
 })
 export class EmptyState {
   private readonly clock = inject(ClockTick);
 
   readonly hosts = input<readonly HostSummary[]>([]);
-  readonly variant = input<EmptyStateVariant>("hosts");
+  readonly variant = input<EmptyStateVariant>('hosts');
 
   readonly clearFilters = output<void>();
 
@@ -46,7 +55,7 @@ export class EmptyState {
   - name: local
     socket: ~/.config/herdr/herdr.sock
 `;
-  protected readonly startCommand = "pnpm --filter @kanhrd/bridge dev";
+  protected readonly startCommand = 'pnpm --filter @kanhrd/bridge dev';
 
   protected readonly copied = signal(false);
 
@@ -70,7 +79,7 @@ export class EmptyState {
 
   /** Public (not `protected`): `Board`'s template reads this via a `#ref` template variable to decide whether to also render the board. */
   readonly show = computed(() => {
-    if (this.variant() === "noMatches") {
+    if (this.variant() === 'noMatches') {
       return true;
     }
     if (this.noHostsConfigured()) {

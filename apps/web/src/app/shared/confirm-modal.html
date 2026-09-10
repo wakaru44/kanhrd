@@ -24,7 +24,7 @@
       @if (previewItems().length > 0) {
         <p class="preview-heading">{{ copy.confirm.previewHeading }}</p>
         <ul class="preview-list">
-          @for (item of previewItems(); track item.kind + "/" + item.name) {
+          @for (item of previewItems(); track item.kind + '/' + item.name) {
             <li class="preview-row">
               <span class="preview-kind">{{ item.kind }}</span>
               <span class="preview-name">{{ item.name }}</span>

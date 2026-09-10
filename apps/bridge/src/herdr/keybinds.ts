@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
-import { homedir, platform } from "node:os";
-import { join } from "node:path";
-import { parse as parseToml } from "smol-toml";
+import { readFileSync } from 'node:fs';
+import { homedir, platform } from 'node:os';
+import { join } from 'node:path';
+import { parse as parseToml } from 'smol-toml';
 
 /**
  * Mirrors herdr's own `config_dir()` (`src/config/io.rs` in the herdr
@@ -16,20 +16,21 @@ import { parse as parseToml } from "smol-toml";
  * hosts today are local Unix-domain-socket hosts.
  */
 export function herdrConfigDir(env: NodeJS.ProcessEnv = process.env): string {
-  const appDirName = "herdr";
+  const appDirName = 'herdr';
   if (env.XDG_CONFIG_HOME) {
     return join(env.XDG_CONFIG_HOME, appDirName);
   }
-  if (platform() === "win32") {
-    const appData = env.APPDATA ?? (env.USERPROFILE ? join(env.USERPROFILE, "AppData", "Roaming") : undefined);
+  if (platform() === 'win32') {
+    const appData =
+      env.APPDATA ?? (env.USERPROFILE ? join(env.USERPROFILE, 'AppData', 'Roaming') : undefined);
     if (appData) {
       return join(appData, appDirName);
     }
   }
-  return join(homedir(), ".config", appDirName);
+  return join(homedir(), '.config', appDirName);
 }
 
-export type HostKeybindsSource = "herdr-api" | "herdr-cli" | "config-file" | "default";
+export type HostKeybindsSource = 'herdr-api' | 'herdr-cli' | 'config-file' | 'default';
 
 export interface HostKeybinds {
   prefix: string;
@@ -37,7 +38,7 @@ export interface HostKeybinds {
 }
 
 /** herdr's own compiled-in default (`KeysConfig::default()` in `src/config/model.rs`) — used whenever the file, section, or field can't be read. */
-export const DEFAULT_HERDR_PREFIX_RAW = "ctrl+b";
+export const DEFAULT_HERDR_PREFIX_RAW = 'ctrl+b';
 
 /**
  * Normalizes herdr's raw, lowercase, `+`-joined prefix string (e.g.
@@ -54,11 +55,11 @@ export const DEFAULT_HERDR_PREFIX_RAW = "ctrl+b";
  */
 export function normalizePrefixDisplay(raw: string): string {
   return raw
-    .split("+")
+    .split('+')
     .map((segment) => segment.trim())
     .filter(Boolean)
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase())
-    .join("+");
+    .join('+');
 }
 
 interface RawHerdrConfig {
@@ -75,22 +76,22 @@ interface RawHerdrConfig {
 export function resolveHostKeybinds(configDir: string): HostKeybinds {
   let raw: string;
   try {
-    raw = readFileSync(join(configDir, "config.toml"), "utf8");
+    raw = readFileSync(join(configDir, 'config.toml'), 'utf8');
   } catch {
-    return { prefix: normalizePrefixDisplay(DEFAULT_HERDR_PREFIX_RAW), source: "default" };
+    return { prefix: normalizePrefixDisplay(DEFAULT_HERDR_PREFIX_RAW), source: 'default' };
   }
 
   let parsed: RawHerdrConfig;
   try {
     parsed = parseToml(raw) as RawHerdrConfig;
   } catch {
-    return { prefix: normalizePrefixDisplay(DEFAULT_HERDR_PREFIX_RAW), source: "default" };
+    return { prefix: normalizePrefixDisplay(DEFAULT_HERDR_PREFIX_RAW), source: 'default' };
   }
 
   const prefix = parsed.keys?.prefix;
-  if (typeof prefix !== "string" || !prefix.trim()) {
-    return { prefix: normalizePrefixDisplay(DEFAULT_HERDR_PREFIX_RAW), source: "default" };
+  if (typeof prefix !== 'string' || !prefix.trim()) {
+    return { prefix: normalizePrefixDisplay(DEFAULT_HERDR_PREFIX_RAW), source: 'default' };
   }
 
-  return { prefix: normalizePrefixDisplay(prefix), source: "config-file" };
+  return { prefix: normalizePrefixDisplay(prefix), source: 'config-file' };
 }

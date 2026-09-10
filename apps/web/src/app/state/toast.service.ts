@@ -1,6 +1,6 @@
-import { Injectable, signal } from "@angular/core";
+import { Injectable, signal } from '@angular/core';
 
-export type ToastLevel = "info" | "warn" | "error";
+export type ToastLevel = 'info' | 'warn' | 'error';
 
 export interface Toast {
   readonly id: number;
@@ -57,7 +57,7 @@ export const PROGRESS_DELAY_MS = 300;
  * what keeps repeated failures (a bridge retry loop, five hosts dropping at
  * once) from stacking into a wall the user has to dismiss one at a time.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class ToastService {
   private nextId = 0;
   private readonly timers = new Map<number, ReturnType<typeof setTimeout>>();
@@ -83,7 +83,7 @@ export class ToastService {
     };
 
     this.toasts.update((list) =>
-      existing ? list.map((item) => (item.key === key ? toast : item)) : [...list, toast],
+      existing ? list.map((item) => (item.key === key ? toast : item)) : [...list, toast]
     );
 
     // A replacement restarts the clock: the notice is as fresh as its
@@ -92,7 +92,7 @@ export class ToastService {
     if (!persistent) {
       this.timers.set(
         toast.id,
-        setTimeout(() => this.dismiss(toast.id), options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+        setTimeout(() => this.dismiss(toast.id), options.timeoutMs ?? DEFAULT_TIMEOUT_MS)
       );
     }
     return toast.id;
@@ -135,7 +135,7 @@ export class ToastService {
     const timer = setTimeout(() => {
       if (!settled) {
         shown = true;
-        this.push({ level: "info", message, persistent: true, key });
+        this.push({ level: 'info', message, persistent: true, key });
       }
     }, PROGRESS_DELAY_MS);
 
@@ -156,7 +156,7 @@ export class ToastService {
       },
       fail: (failure: string) => {
         if (settle()) {
-          this.push({ level: "error", message: failure, key });
+          this.push({ level: 'error', message: failure, key });
         }
       },
     };

@@ -1,27 +1,27 @@
-import { Component, inject } from "@angular/core";
-import type { AgentStatus } from "@kanhrd/schema";
-import { COPY } from "../shared/copy";
-import { PanesStore, STATUS_COLUMN_ORDER } from "../state/panes.store";
-import { SettingsService, type SwimlaneDimension } from "../state/settings.service";
-import { WsClient } from "../state/ws-client";
+import { Component, inject } from '@angular/core';
+import type { AgentStatus } from '@kanhrd/schema';
+import { COPY } from '../shared/copy';
+import { PanesStore, STATUS_COLUMN_ORDER } from '../state/panes.store';
+import { SettingsService, type SwimlaneDimension } from '../state/settings.service';
+import { WsClient } from '../state/ws-client';
 
 /**
  * The grouping dimensions, in the order the chips render. `none` leads
  * because it is the default and the way back to the plain board.
  */
 export const SWIMLANE_DIMENSIONS: readonly SwimlaneDimension[] = [
-  "none",
-  "host",
-  "repository",
-  "checkout",
-  "tab",
+  'none',
+  'host',
+  'repository',
+  'checkout',
+  'tab',
 ];
 
 @Component({
-  selector: "app-filter-bar",
+  selector: 'app-filter-bar',
   imports: [],
-  templateUrl: "./filter-bar.html",
-  styleUrl: "./filter-bar.scss",
+  templateUrl: './filter-bar.html',
+  styleUrl: './filter-bar.scss',
 })
 export class FilterBar {
   protected readonly store = inject(PanesStore);

@@ -136,7 +136,9 @@ describe('shared/copy', () => {
 
   it('reserves lane for the swimlane, never for a tab', () => {
     for (const [path, value] of strings(COPY)) {
-      expect(value).withContext(path).not.toMatch(/\blanes?\b/);
+      expect(value)
+        .withContext(path)
+        .not.toMatch(/\blanes?\b/);
     }
   });
 });

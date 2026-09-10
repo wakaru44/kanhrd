@@ -15,12 +15,12 @@ licence text for each is vendored alongside the binaries
 
 ## Inventory
 
-| File | Bytes | Family | Weights | Subset |
-| ---- | ----- | ------ | ------- | ------ |
-| `inter-variable.woff2` | 352,240 | Inter Variable 4.001 | `wght` 100–900, `opsz` 14–32 | no — shipped as published |
-| `jetbrains-mono-variable.woff2` | 113,592 | JetBrains Mono 2.304 | `wght` 100–800 | no — repackaged TTF → WOFF2 only |
-| `shippori-mincho-400.woff2` | 33,700 | Shippori Mincho 3.110 Regular | 400 (static) | yes — Latin |
-| `shippori-mincho-600.woff2` | 35,920 | Shippori Mincho 3.110 SemiBold | 600 (static) | yes — Latin |
+| File                            | Bytes   | Family                         | Weights                      | Subset                           |
+| ------------------------------- | ------- | ------------------------------ | ---------------------------- | -------------------------------- |
+| `inter-variable.woff2`          | 352,240 | Inter Variable 4.001           | `wght` 100–900, `opsz` 14–32 | no — shipped as published        |
+| `jetbrains-mono-variable.woff2` | 113,592 | JetBrains Mono 2.304           | `wght` 100–800               | no — repackaged TTF → WOFF2 only |
+| `shippori-mincho-400.woff2`     | 33,700  | Shippori Mincho 3.110 Regular  | 400 (static)                 | yes — Latin                      |
+| `shippori-mincho-600.woff2`     | 35,920  | Shippori Mincho 3.110 SemiBold | 600 (static)                 | yes — Latin                      |
 
 ## Provenance
 
@@ -54,6 +54,7 @@ licence text for each is vendored alongside the binaries
 
   This is a container change only — every table, glyph and axis is carried
   through unaltered (303,144 B TTF → 113,592 B WOFF2, Brotli).
+
 - Licence: SIL OFL 1.1 — `LICENSE-jetbrains-mono.txt` (the archive's `OFL.txt`)
 - Not subset on purpose: the mono face backs the terminal, which renders
   arbitrary program output — box drawing, block elements, arrows, symbols.
@@ -82,6 +83,7 @@ licence text for each is vendored alongside the binaries
   `unicode-range` descriptor in `typography.scss`, so anything outside it
   falls to the Georgia fallback per-glyph rather than being rendered from a
   half-covered face.
+
 - Sizes: 8,255,752 B → 33,700 B (Regular), 8,180,588 B → 35,920 B (SemiBold).
 - Losslessness check: every distinct printable character appearing anywhere
   in `apps/web/src/**/*.{ts,html}` (101 of them, `copy.ts` included) is

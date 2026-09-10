@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn } from 'node:child_process';
 
 /**
  * Thin wrapper around the local `herdr` CLI, used so integration tests can
@@ -21,13 +21,13 @@ export interface HerdrResult {
 
 export function herdr(args: string[]): Promise<HerdrResult> {
   return new Promise((resolvePromise, reject) => {
-    const proc = spawn("herdr", args, { stdio: ["ignore", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-    proc.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString("utf8")));
-    proc.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString("utf8")));
-    proc.on("error", reject);
-    proc.on("close", (code) => resolvePromise({ stdout, stderr, code }));
+    const proc = spawn('herdr', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    proc.stdout.on('data', (chunk: Buffer) => (stdout += chunk.toString('utf8')));
+    proc.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString('utf8')));
+    proc.on('error', reject);
+    proc.on('close', (code) => resolvePromise({ stdout, stderr, code }));
   });
 }
 
@@ -51,7 +51,7 @@ export interface HerdrWorkspaceSummary {
 
 /** `herdr pane list` — parses the JSON-RPC-shaped stdout into the pane array. */
 export async function herdrPaneList(): Promise<HerdrPaneSummary[]> {
-  const { stdout, code } = await herdr(["pane", "list"]);
+  const { stdout, code } = await herdr(['pane', 'list']);
   if (code !== 0) return [];
   const parsed = JSON.parse(stdout) as { result?: { panes?: HerdrPaneSummary[] } };
   return parsed.result?.panes ?? [];
@@ -59,7 +59,7 @@ export async function herdrPaneList(): Promise<HerdrPaneSummary[]> {
 
 /** `herdr tab list`. */
 export async function herdrTabList(): Promise<HerdrTabSummary[]> {
-  const { stdout, code } = await herdr(["tab", "list"]);
+  const { stdout, code } = await herdr(['tab', 'list']);
   if (code !== 0) return [];
   const parsed = JSON.parse(stdout) as { result?: { tabs?: HerdrTabSummary[] } };
   return parsed.result?.tabs ?? [];
@@ -67,7 +67,7 @@ export async function herdrTabList(): Promise<HerdrTabSummary[]> {
 
 /** `herdr workspace list`. */
 export async function herdrWorkspaceList(): Promise<HerdrWorkspaceSummary[]> {
-  const { stdout, code } = await herdr(["workspace", "list"]);
+  const { stdout, code } = await herdr(['workspace', 'list']);
   if (code !== 0) return [];
   const parsed = JSON.parse(stdout) as { result?: { workspaces?: HerdrWorkspaceSummary[] } };
   return parsed.result?.workspaces ?? [];
@@ -75,23 +75,41 @@ export async function herdrWorkspaceList(): Promise<HerdrWorkspaceSummary[]> {
 
 /** `herdr pane read <id>` — returns the raw text content of the pane (detection-friendly format). */
 export async function herdrPaneRead(paneId: string): Promise<string> {
-  const { stdout } = await herdr(["pane", "read", paneId, "--format", "text", "--source", "recent"]);
+  const { stdout } = await herdr([
+    'pane',
+    'read',
+    paneId,
+    '--format',
+    'text',
+    '--source',
+    'recent',
+  ]);
   return stdout;
 }
 
 /** `herdr pane send-text <id> <text>` — types text into the real pane, bypassing the bridge. */
 export async function herdrPaneSendText(paneId: string, text: string): Promise<void> {
-  await herdr(["pane", "send-text", paneId, text]);
+  await herdr(['pane', 'send-text', paneId, text]);
 }
 
 /** `herdr pane send-keys <id> <key...>` — sends named keys (e.g. "Enter", "Backspace") to the real pane. */
 export async function herdrPaneSendKeys(paneId: string, keys: string[]): Promise<void> {
-  await herdr(["pane", "send-keys", paneId, ...keys]);
+  await herdr(['pane', 'send-keys', paneId, ...keys]);
 }
 
 /** `herdr pane split <target-pane-id> --direction <right|down>` — returns the new pane's id, or undefined on failure. */
-export async function herdrPaneSplit(targetPaneId: string, direction: "right" | "down" = "right"): Promise<string | undefined> {
-  const { stdout, code } = await herdr(["pane", "split", targetPaneId, "--direction", direction, "--no-focus"]);
+export async function herdrPaneSplit(
+  targetPaneId: string,
+  direction: 'right' | 'down' = 'right'
+): Promise<string | undefined> {
+  const { stdout, code } = await herdr([
+    'pane',
+    'split',
+    targetPaneId,
+    '--direction',
+    direction,
+    '--no-focus',
+  ]);
   if (code !== 0) return undefined;
   const parsed = JSON.parse(stdout) as { result?: { pane?: { pane_id?: string } } };
   return parsed.result?.pane?.pane_id;
@@ -99,12 +117,23 @@ export async function herdrPaneSplit(targetPaneId: string, direction: "right" | 
 
 /** `herdr pane close <id>` — best-effort, swallows failure (id may already be gone). */
 export async function herdrPaneClose(paneId: string): Promise<void> {
-  await herdr(["pane", "close", paneId]);
+  await herdr(['pane', 'close', paneId]);
 }
 
 /** `herdr tab create --workspace <id> --label <label> --no-focus` — returns the new tab's id, or undefined on failure. */
-export async function herdrTabCreate(workspaceId: string, label: string): Promise<string | undefined> {
-  const { stdout, code } = await herdr(["tab", "create", "--workspace", workspaceId, "--label", label, "--no-focus"]);
+export async function herdrTabCreate(
+  workspaceId: string,
+  label: string
+): Promise<string | undefined> {
+  const { stdout, code } = await herdr([
+    'tab',
+    'create',
+    '--workspace',
+    workspaceId,
+    '--label',
+    label,
+    '--no-focus',
+  ]);
   if (code !== 0) return undefined;
   const parsed = JSON.parse(stdout) as { result?: { tab?: { tab_id?: string } } };
   return parsed.result?.tab?.tab_id;
@@ -112,7 +141,7 @@ export async function herdrTabCreate(workspaceId: string, label: string): Promis
 
 /** `herdr tab close <id>` — best-effort, swallows failure (id may already be gone). */
 export async function herdrTabClose(tabId: string): Promise<void> {
-  await herdr(["tab", "close", tabId]);
+  await herdr(['tab', 'close', tabId]);
 }
 
 /**
@@ -123,13 +152,19 @@ export async function herdrTabClose(tabId: string): Promise<void> {
  * `test.skip` the whole file when `ok` is false.
  */
 export async function herdrAvailable(): Promise<{ ok: true } | { ok: false; reason: string }> {
-  const { code, stderr } = await herdr(["pane", "list"]);
+  const { code, stderr } = await herdr(['pane', 'list']);
   if (code !== 0) {
-    return { ok: false, reason: `herdr CLI unavailable or server unreachable: ${stderr || `exit ${code}`}` };
+    return {
+      ok: false,
+      reason: `herdr CLI unavailable or server unreachable: ${stderr || `exit ${code}`}`,
+    };
   }
   const panes = await herdrPaneList();
   if (panes.length === 0) {
-    return { ok: false, reason: "herdr server reachable but has zero panes; open at least one pane to run this suite" };
+    return {
+      ok: false,
+      reason: 'herdr server reachable but has zero panes; open at least one pane to run this suite',
+    };
   }
   return { ok: true };
 }

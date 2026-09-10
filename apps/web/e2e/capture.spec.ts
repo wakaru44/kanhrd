@@ -1,7 +1,7 @@
-import { test, expect, type Page } from "@playwright/test";
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { installMock, urlForState, type StateName } from "./helpers/mock-bridge";
+import { test, expect, type Page } from '@playwright/test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { installMock, urlForState, type StateName } from './helpers/mock-bridge';
 
 /**
  * Documentation captures for `README.md`'s gallery.
@@ -38,7 +38,7 @@ import { installMock, urlForState, type StateName } from "./helpers/mock-bridge"
  */
 
 /** Fixed wall-clock instant every capture boots at. Arbitrary, but pinned. */
-const FROZEN_EPOCH = new Date("2026-01-15T09:00:00.000Z");
+const FROZEN_EPOCH = new Date('2026-01-15T09:00:00.000Z');
 
 /**
  * How far the clock advances after load before the shot is taken. Chosen so
@@ -46,7 +46,7 @@ const FROZEN_EPOCH = new Date("2026-01-15T09:00:00.000Z");
  */
 const ADVANCE_MS = 7 * 60 * 1000;
 
-const SCREENSHOTS_DIR = resolve(__dirname, "../../../docs/screenshots");
+const SCREENSHOTS_DIR = resolve(__dirname, '../../../docs/screenshots');
 
 interface Capture {
   /** Output basename, snake_case to match `docs/screenshots/`. */
@@ -73,12 +73,12 @@ interface Capture {
  * gallery would be showing washi or sumi twice under a third name.
  */
 const PALETTES: readonly { value: string; label: string }[] = [
-  { value: "washi", label: "washi" },
-  { value: "sumi", label: "sumi" },
-  { value: "catppuccin-mocha", label: "catppuccin mocha" },
-  { value: "monokai", label: "monokai" },
-  { value: "solarized-dark", label: "solarized dark" },
-  { value: "solarized-light", label: "solarized light" },
+  { value: 'washi', label: 'washi' },
+  { value: 'sumi', label: 'sumi' },
+  { value: 'catppuccin-mocha', label: 'catppuccin mocha' },
+  { value: 'monokai', label: 'monokai' },
+  { value: 'solarized-dark', label: 'solarized dark' },
+  { value: 'solarized-light', label: 'solarized light' },
 ];
 
 /**
@@ -87,16 +87,16 @@ const PALETTES: readonly { value: string; label: string }[] = [
  * nothing, because a live stream would repaint mid-capture.
  */
 const TERMINAL_CONTENT = [
-  "$ pnpm --filter @kanhrd/bridge dev",
-  "",
-  "  bridge listening on 127.0.0.1:5173",
-  "  host local  -> ~/.config/herdr/herdr.sock  connected",
-  "  host remote-a -> ssh://remote-a           connected",
-  "  host remote-b -> ssh://remote-b           connected",
-  "",
-  "  watching 3 hosts, 6 panes",
-  "$ ",
-].join("\r\n");
+  '$ pnpm --filter @kanhrd/bridge dev',
+  '',
+  '  bridge listening on 127.0.0.1:5173',
+  '  host local  -> ~/.config/herdr/herdr.sock  connected',
+  '  host remote-a -> ssh://remote-a           connected',
+  '  host remote-b -> ssh://remote-b           connected',
+  '',
+  '  watching 3 hosts, 6 panes',
+  '$ ',
+].join('\r\n');
 
 /**
  * The committed set, deliberately small. The 4 × 6 viewport/state matrix in
@@ -112,56 +112,56 @@ const TERMINAL_CONTENT = [
  */
 const CAPTURES: readonly Capture[] = [
   {
-    file: "desktop_board.png",
-    state: "populated-small",
+    file: 'desktop_board.png',
+    state: 'populated-small',
     // Wide enough that all five status columns fit without the board's
     // horizontal scroll clipping `unknown` — at 1280 the last column is cut.
     width: 1680,
     height: 500,
-    why: "the headline shot — a realistic board with every status column visible",
+    why: 'the headline shot — a realistic board with every status column visible',
   },
   {
-    file: "desktop_board_scoped.png",
-    state: "scoped",
+    file: 'desktop_board_scoped.png',
+    state: 'scoped',
     width: 1680,
     height: 900,
-    why: "URL-is-state: the rail scoped into one workspace, linkable",
+    why: 'URL-is-state: the rail scoped into one workspace, linkable',
   },
   {
-    file: "desktop_board_dense.png",
-    state: "populated-600",
+    file: 'desktop_board_dense.png',
+    state: 'populated-600',
     width: 1920,
     height: 1080,
-    why: "600 panes across 3 hosts — density the board is expected to survive",
+    why: '600 panes across 3 hosts — density the board is expected to survive',
   },
   {
-    file: "empty_state.png",
-    state: "empty",
+    file: 'empty_state.png',
+    state: 'empty',
     width: 1280,
     height: 620,
-    why: "empty states are next steps, not messages (docs/UX-GUIDELINES.md)",
+    why: 'empty states are next steps, not messages (docs/UX-GUIDELINES.md)',
   },
   {
-    file: "terminal_detail.png",
-    state: "populated-small",
+    file: 'terminal_detail.png',
+    state: 'populated-small',
     width: 1280,
     height: 560,
     why: "the live terminal per card — tier-2's headline capability",
-    path: "/pane/local/local-ws1-tab1-p1",
+    path: '/pane/local/local-ws1-tab1-p1',
     tier3: true,
-    waitFor: ".xterm-screen",
+    waitFor: '.xterm-screen',
   },
   {
-    file: "settings.png",
-    state: "populated-small",
+    file: 'settings.png',
+    state: 'populated-small',
     width: 1280,
     height: 1000,
-    why: "theme, density, terminal font size and the six terminal palettes",
-    path: "/settings",
+    why: 'theme, density, terminal font size and the six terminal palettes',
+    path: '/settings',
     // tier-3 so the runtime section shows a real advertised poll cadence
     // instead of the `0ms` the tier-1 fallback renders.
     tier3: true,
-    waitFor: "main",
+    waitFor: 'main',
   },
 ];
 
@@ -184,12 +184,12 @@ async function bootFrozen(page: Page, capture: Capture): Promise<void> {
   });
 
   await page.goto(capture.path ?? urlForState(capture.state));
-  await expect(page.locator("main")).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('main')).toBeVisible({ timeout: 10_000 });
 
   if (capture.waitFor) {
     await expect(page.locator(capture.waitFor).first()).toBeVisible({ timeout: 10_000 });
   } else {
-    const shellSurface = page.locator(".card, .empty-state, .state.state-failed, .board-skeleton");
+    const shellSurface = page.locator('.card, .empty-state, .state.state-failed, .board-skeleton');
     await expect
       .poll(async () => await shellSurface.count(), {
         timeout: 10_000,
@@ -211,14 +211,14 @@ for (const capture of CAPTURES) {
   test(`capture — ${capture.file}`, async ({ page }) => {
     await bootFrozen(page, capture);
 
-    const first = await page.screenshot({ fullPage: false, animations: "disabled" });
-    const second = await page.screenshot({ fullPage: false, animations: "disabled" });
+    const first = await page.screenshot({ fullPage: false, animations: 'disabled' });
+    const second = await page.screenshot({ fullPage: false, animations: 'disabled' });
 
     expect(
       first.equals(second),
       `${capture.file} is not reproducible: two consecutive shots differ, so committing it ` +
         `would churn an LFS blob on every regeneration. Something on this screen is still ` +
-        `moving — an unfrozen timer, an animation, or a live subscription.`,
+        `moving — an unfrozen timer, an animation, or a live subscription.`
     ).toBe(true);
 
     const out = resolve(SCREENSHOTS_DIR, capture.file);
@@ -241,7 +241,7 @@ for (const capture of CAPTURES) {
  * the browser keeps the whole thing dependency-free — no image library — and
  * inherits the same frozen clock and determinism gate as every other capture.
  */
-test("capture — terminal_palettes.png", async ({ browser }) => {
+test('capture — terminal_palettes.png', async ({ browser }) => {
   const tiles: { label: string; dataUri: string }[] = [];
 
   for (const palette of PALETTES) {
@@ -256,7 +256,7 @@ test("capture — terminal_palettes.png", async ({ browser }) => {
       const shot = await captureTerminalTile(tilePage, palette.value);
       tiles.push({
         label: palette.label,
-        dataUri: `data:image/png;base64,${shot.toString("base64")}`,
+        dataUri: `data:image/png;base64,${shot.toString('base64')}`,
       });
     } finally {
       await context.close();
@@ -270,24 +270,24 @@ test("capture — terminal_palettes.png", async ({ browser }) => {
     // Short viewport + fullPage so the shot grows to the grid and stops,
     // instead of padding the bottom with empty paper.
     await page.setViewportSize({ width: 1280, height: 400 });
-    await page.setContent(compositeHtml(tiles), { waitUntil: "load" });
+    await page.setContent(compositeHtml(tiles), { waitUntil: 'load' });
     // Every tile is a data URI, so nothing is fetched; still, wait for decode
     // so a half-painted tile cannot reach the shot.
     await page.evaluate(async () => {
       await Promise.all(Array.from(document.images).map((img) => img.decode()));
     });
-    return await page.screenshot({ fullPage: true, animations: "disabled" });
+    return await page.screenshot({ fullPage: true, animations: 'disabled' });
   };
 
   const first = await compose();
   const second = await compose();
   expect(
     first.equals(second),
-    "terminal_palettes.png is not reproducible: two consecutive composites differ.",
+    'terminal_palettes.png is not reproducible: two consecutive composites differ.'
   ).toBe(true);
 
   await mkdir(SCREENSHOTS_DIR, { recursive: true });
-  await writeFile(resolve(SCREENSHOTS_DIR, "terminal_palettes.png"), first);
+  await writeFile(resolve(SCREENSHOTS_DIR, 'terminal_palettes.png'), first);
   await context.close();
 
   // eslint-disable-next-line no-console
@@ -298,42 +298,42 @@ test("capture — terminal_palettes.png", async ({ browser }) => {
 async function captureTerminalTile(page: Page, palette: string): Promise<Buffer> {
   await bootFrozen(page, {
     file: `palette-${palette}`,
-    state: "populated-small",
+    state: 'populated-small',
     width: 900,
     height: 380,
-    why: "one tile of the palette composite",
-    path: "/pane/local/local-ws1-tab1-p1",
+    why: 'one tile of the palette composite',
+    path: '/pane/local/local-ws1-tab1-p1',
     tier3: true,
-    waitFor: ".xterm-screen",
+    waitFor: '.xterm-screen',
     storage: {
-      "kanhrd.terminal-theme": palette,
+      'kanhrd.terminal-theme': palette,
       // Pin the app theme too: `washi`/`sumi` render the same either way, but
       // the chrome around the terminal would otherwise follow the OS.
-      "kanhrd.theme": palette === "sumi" ? "sumi" : "washi",
+      'kanhrd.theme': palette === 'sumi' ? 'sumi' : 'washi',
     },
   });
 
-  const terminal = page.locator(".terminal-wrap");
+  const terminal = page.locator('.terminal-wrap');
   await expect(terminal).toBeVisible({ timeout: 10_000 });
 
   // Guard the failure this composite hit once already: chrome painted, text
   // absent. An empty tile makes the gallery actively misleading, so fail
   // rather than publish a coloured rectangle.
   await expect(
-    page.locator(".xterm-rows"),
-    `palette ${palette}: terminal painted no text, so the tile would be a blank swatch`,
-  ).toContainText("watching 3 hosts", { timeout: 10_000 });
+    page.locator('.xterm-rows'),
+    `palette ${palette}: terminal painted no text, so the tile would be a blank swatch`
+  ).toContainText('watching 3 hosts', { timeout: 10_000 });
 
-  return await terminal.screenshot({ animations: "disabled" });
+  return await terminal.screenshot({ animations: 'disabled' });
 }
 
 /** The composite page: a 2 x 3 grid of labelled tiles on the brand's paper cream. */
 function compositeHtml(tiles: readonly { label: string; dataUri: string }[]): string {
   const cells = tiles
     .map(
-      (t) => `<figure><img src="${t.dataUri}" alt=""><figcaption>${t.label}</figcaption></figure>`,
+      (t) => `<figure><img src="${t.dataUri}" alt=""><figcaption>${t.label}</figcaption></figure>`
     )
-    .join("");
+    .join('');
   // Colours are the two the design system names for paper and ink. This page
   // is a capture jig, not a shipped surface, so it carries no token imports.
   return `<!doctype html><meta charset="utf-8"><style>

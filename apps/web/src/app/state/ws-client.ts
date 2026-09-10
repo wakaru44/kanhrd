@@ -1,5 +1,5 @@
-import { Injectable, inject, signal } from "@angular/core";
-import { Subject } from "rxjs";
+import { Injectable, inject, signal } from '@angular/core';
+import { Subject } from 'rxjs';
 import type {
   BridgeMethod,
   BridgeMethodParams,
@@ -7,9 +7,9 @@ import type {
   WsEvent,
   WsRequest,
   WsServerMessage,
-} from "@kanhrd/schema";
-import { COPY } from "../shared/copy";
-import { ToastService } from "./toast.service";
+} from '@kanhrd/schema';
+import { COPY } from '../shared/copy';
+import { ToastService } from './toast.service';
 
 const INITIAL_BACKOFF_MS = 500;
 const MAX_BACKOFF_MS = 30_000;
@@ -25,7 +25,7 @@ interface PendingRequest {
  * (id-correlated, Promise-based) and unsolicited events (Observable) over
  * one socket, and auto-reconnects with exponential backoff.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class WsClient {
   private readonly toast = inject(ToastService);
 
@@ -40,7 +40,7 @@ export class WsClient {
    * stacking another (docs/UX-GUIDELINES.md, "quiet under load"), and
    * reconnecting removes it by this key.
    */
-  private static readonly CONNECTION_NOTICE_KEY = "bridge:connection";
+  private static readonly CONNECTION_NOTICE_KEY = 'bridge:connection';
 
   /** Whether the connection notice is currently showing, so reconnect only announces a real outage. */
   private connectionLost = false;
@@ -73,7 +73,7 @@ export class WsClient {
   request<M extends BridgeMethod>(
     host: string,
     method: M,
-    params?: BridgeMethodParams[M],
+    params?: BridgeMethodParams[M]
   ): Promise<BridgeMethodResult[M] | undefined> {
     return new Promise((resolve, reject) => {
       if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
@@ -91,29 +91,29 @@ export class WsClient {
   }
 
   private open(): void {
-    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const socket = new WebSocket(`${proto}://${location.host}/ws`);
     this.socket = socket;
 
-    socket.addEventListener("open", () => {
+    socket.addEventListener('open', () => {
       this.reconnectAttempt = 0;
       this.lastError.set(null);
       this.connected.set(true);
       if (this.connectionLost) {
         this.connectionLost = false;
         this.toast.dismissByKey(WsClient.CONNECTION_NOTICE_KEY);
-        this.toast.push({ level: "info", message: COPY.toast.bridgeReconnected });
+        this.toast.push({ level: 'info', message: COPY.toast.bridgeReconnected });
       }
     });
 
-    socket.addEventListener("message", (ev) => {
+    socket.addEventListener('message', (ev) => {
       this.handleMessage(ev.data as string);
     });
 
-    socket.addEventListener("close", () => {
+    socket.addEventListener('close', () => {
       const wasConnected = this.connected();
       this.connected.set(false);
-      this.rejectAllPending(new Error("ws connection closed"));
+      this.rejectAllPending(new Error('ws connection closed'));
       this.scheduleReconnect();
       // Only surface the "connection lost" notice once per outage, not on
       // every retry that also fails to connect. The key makes that true
@@ -121,7 +121,7 @@ export class WsClient {
       if (wasConnected && !this.connectionLost) {
         this.connectionLost = true;
         this.toast.push({
-          level: "warn",
+          level: 'warn',
           message: COPY.toast.bridgeDisconnected,
           persistent: true,
           key: WsClient.CONNECTION_NOTICE_KEY,
@@ -129,8 +129,8 @@ export class WsClient {
       }
     });
 
-    socket.addEventListener("error", () => {
-      this.lastError.set("websocket error");
+    socket.addEventListener('error', () => {
+      this.lastError.set('websocket error');
     });
   }
 
@@ -148,7 +148,7 @@ export class WsClient {
     } catch {
       return;
     }
-    if ("id" in msg) {
+    if ('id' in msg) {
       const pending = this.pending.get(msg.id);
       if (!pending) {
         return;

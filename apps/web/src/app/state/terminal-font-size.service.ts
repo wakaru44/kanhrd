@@ -1,4 +1,4 @@
-import { Injectable, effect, signal } from "@angular/core";
+import { Injectable, effect, signal } from '@angular/core';
 
 /**
  * The sizes a terminal may be rendered at, in CSS pixels, smallest first.
@@ -26,7 +26,7 @@ export const TERMINAL_FONT_SIZES: readonly number[] = [12, 13, 15, 17, 20];
 /** `--fs-small`, and the size every terminal rendered at before this preference existed. */
 export const DEFAULT_TERMINAL_FONT_SIZE = 13;
 
-const STORAGE_KEY = "kanhrd.terminal-font-size";
+const STORAGE_KEY = 'kanhrd.terminal-font-size';
 
 const MIN_SIZE = TERMINAL_FONT_SIZES[0];
 const MAX_SIZE = TERMINAL_FONT_SIZES[TERMINAL_FONT_SIZES.length - 1];
@@ -55,9 +55,9 @@ function nearestStep(size: number): number {
  * absent, unparseable and out-of-range values fall back to the default,
  * and an in-range off-ladder value snaps to the nearest step.
  */
-export function loadTerminalFontSize(storage: Pick<Storage, "getItem"> = localStorage): number {
+export function loadTerminalFontSize(storage: Pick<Storage, 'getItem'> = localStorage): number {
   const raw = storage.getItem(STORAGE_KEY);
-  if (raw === null || raw.trim() === "") {
+  if (raw === null || raw.trim() === '') {
     return DEFAULT_TERMINAL_FONT_SIZE;
   }
   const parsed = Number(raw);
@@ -80,7 +80,7 @@ export function loadTerminalFontSize(storage: Pick<Storage, "getItem"> = localSt
  * A size change is not just a repaint — it changes cell geometry, so the
  * consuming terminal must refit. See `PaneDetail`'s font-size effect.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class TerminalFontSizeService {
   readonly size = signal<number>(loadTerminalFontSize());
 

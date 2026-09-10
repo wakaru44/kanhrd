@@ -29,7 +29,7 @@ import type {
   SplitDirection,
   TabSummary,
   WorkspaceSummary,
-} from "./herdr.js";
+} from './herdr.js';
 
 /** Every wire message — either direction — carries the host it concerns. */
 interface WithHost {
@@ -66,8 +66,7 @@ export interface WsErrorBody {
 }
 
 export type WsResponse<M extends BridgeMethod = BridgeMethod> =
-  | WsResponseSuccess<M>
-  | WsResponseError;
+  WsResponseSuccess<M> | WsResponseError;
 
 /**
  * Server → client event frame. Unlike responses, events are unsolicited and
@@ -94,17 +93,17 @@ export type WsServerMessage = WsResponse | WsEvent;
  * Probe `"bridge.capabilities"` before assuming any of the three works.
  */
 export type BridgeMethod =
-  | "pane.list"
-  | "events.subscribe"
-  | "bridge.capabilities"
-  | "pane.read"
-  | "pane.subscribe_output"
-  | "pane.unsubscribe_output"
-  | "pane.send_keys"
-  | "pane.send_text"
-  | "pane.resize"
-  | "pane.graphics.info"
-  | "pane.graphics.stream"
+  | 'pane.list'
+  | 'events.subscribe'
+  | 'bridge.capabilities'
+  | 'pane.read'
+  | 'pane.subscribe_output'
+  | 'pane.unsubscribe_output'
+  | 'pane.send_keys'
+  | 'pane.send_text'
+  | 'pane.resize'
+  | 'pane.graphics.info'
+  | 'pane.graphics.stream'
   // --- Tier-3 (pane/tab/workspace lifecycle), added by lane LC3. See
   // CONTRACT-TIER3.md for the full method table and herdr source
   // cross-references. All ten are REQUIRED-capability methods in the sense
@@ -112,17 +111,17 @@ export type BridgeMethod =
   // advertise the relevant `bridge.capabilities` flag (`paneCreate`,
   // `paneClose`, `paneMove`, `tabCrud`, `workspaceCrud`) — unlike tier-2's
   // `pane.resize`, none of these are "defined but always rejected."
-  | "pane.split"
-  | "pane.close"
-  | "pane.move"
-  | "pane.rename"
-  | "tab.create"
-  | "tab.rename"
-  | "tab.close"
-  | "tab.move"
-  | "workspace.create"
-  | "workspace.rename"
-  | "workspace.close";
+  | 'pane.split'
+  | 'pane.close'
+  | 'pane.move'
+  | 'pane.rename'
+  | 'tab.create'
+  | 'tab.rename'
+  | 'tab.close'
+  | 'tab.move'
+  | 'workspace.create'
+  | 'workspace.rename'
+  | 'workspace.close';
 
 /**
  * Per-method params, keyed the same way as `BridgeMethod`. `host` is never
@@ -132,11 +131,11 @@ export type BridgeMethod =
  * that listed `host` inline are folded into the envelope the same way.
  */
 export interface BridgeMethodParams {
-  "pane.list": Record<string, never>;
-  "events.subscribe": { kinds: EventKind[] };
+  'pane.list': Record<string, never>;
+  'events.subscribe': { kinds: EventKind[] };
   /** No params; returns what this bridge build supports. See `BridgeCapabilities`. */
-  "bridge.capabilities": Record<string, never>;
-  "pane.read": {
+  'bridge.capabilities': Record<string, never>;
+  'pane.read': {
     pane_id: string;
     /** Default `"recent"` — see `BridgeMethodResult["pane.read"]` doc for why. */
     source?: ReadSource;
@@ -152,34 +151,34 @@ export interface BridgeMethodParams {
    * current viewport size) so each poll/push is cheap — pass `"recent"` to
    * also pick up scrollback on first push, at higher per-poll cost.
    */
-  "pane.subscribe_output": {
+  'pane.subscribe_output': {
     pane_id: string;
     source?: ReadSource;
     format?: ReadFormat;
   };
-  "pane.unsubscribe_output": { subscription_id: string };
-  "pane.send_keys": { pane_id: string; keys: string[] };
-  "pane.send_text": { pane_id: string; text: string };
+  'pane.unsubscribe_output': { subscription_id: string };
+  'pane.send_keys': { pane_id: string; keys: string[] };
+  'pane.send_text': { pane_id: string; text: string };
   /**
    * OPTIONAL / currently always rejected. herdr has no public API to set a
    * pane's PTY dimensions from an external client — see
    * CONTRACT-TIER2.md section 5. Shape kept so L2/L3 can compile against it
    * and flip it on without a wire change if herdr ever adds the primitive.
    */
-  "pane.resize": { pane_id: string; cols: number; rows: number };
+  'pane.resize': { pane_id: string; cols: number; rows: number };
   /** OPTIONAL. Config/capability metadata for the graphics-overlay path — not pane content. */
-  "pane.graphics.info": { pane_id: string };
+  'pane.graphics.info': { pane_id: string };
   /**
    * OPTIONAL. Starts forwarding this pane's graphics-overlay layer state as
    * `pane.graphics_frame` events. NOT a way to view an agent's own
    * kitty-graphics/sixel output — see CONTRACT-TIER2.md section 5.
    */
-  "pane.graphics.stream": { pane_id: string; layer_id?: string; z_index?: number };
+  'pane.graphics.stream': { pane_id: string; layer_id?: string; z_index?: number };
 
   // --- Tier-3 (pane/tab/workspace lifecycle) ------------------------------
 
   /** Splits an existing pane. `direction` is herdr's `SplitDirection` — only `"right"`/`"down"` exist, there is no `"left"`/`"up"` split. */
-  "pane.split": {
+  'pane.split': {
     workspace_id?: string;
     target_pane_id?: string;
     direction: SplitDirection;
@@ -189,48 +188,48 @@ export interface BridgeMethodParams {
     env?: Record<string, string>;
   };
   /** Closes (terminates) a pane by id. herdr has no separate "kill" — this is the only pane-termination method. */
-  "pane.close": { pane_id: string };
+  'pane.close': { pane_id: string };
   /**
    * Reparents a pane into a different tab, a brand-new tab, or a brand-new
    * workspace. `destination` is herdr's tagged `PaneMoveDestination` union
    * verbatim (see `HerdrPaneMoveDestination` in herdr.ts) — NOT the same
    * operation as `tab.move`/reordering.
    */
-  "pane.move": { pane_id: string; destination: HerdrPaneMoveDestination; focus?: boolean };
+  'pane.move': { pane_id: string; destination: HerdrPaneMoveDestination; focus?: boolean };
   /**
    * Sets herdr's user-authored `PaneInfo.label`. Mirrors herdr's
    * `PaneRenameParams` (see `HerdrPaneRenameParams`): only `pane_id` is
    * required and `label` is nullable, so `null` CLEARS the name — unlike
    * `tab.rename`/`workspace.rename`, which have no unset form.
    */
-  "pane.rename": { pane_id: string; label?: string | null };
+  'pane.rename': { pane_id: string; label?: string | null };
   /** Creates a new tab. Omitting `workspace_id` creates it in the currently-focused workspace on that host. */
-  "tab.create": {
+  'tab.create': {
     workspace_id?: string;
     cwd?: string;
     focus?: boolean;
     label?: string;
     env?: Record<string, string>;
   };
-  "tab.rename": { tab_id: string; label: string };
+  'tab.rename': { tab_id: string; label: string };
   /**
    * Closes a tab. If it is the last tab in its workspace, closing it closes
    * the whole workspace too (see CONTRACT-TIER3.md section 5/6) — there is
    * no separate "closing the last tab is rejected" behavior to design
    * around; the wire contract just does what herdr does.
    */
-  "tab.close": { tab_id: string };
+  'tab.close': { tab_id: string };
   /** Reorders a tab within its workspace's tab list by index. Not a reparent — see `pane.move` for that. */
-  "tab.move": { tab_id: string; insert_index: number };
+  'tab.move': { tab_id: string; insert_index: number };
   /** Creates a new workspace. Omitting `source_workspace_id` skips seeding cwd from another workspace's focused pane. */
-  "workspace.create": {
+  'workspace.create': {
     source_workspace_id?: string;
     cwd?: string;
     focus?: boolean;
     label?: string;
     env?: Record<string, string>;
   };
-  "workspace.rename": { workspace_id: string; label: string };
+  'workspace.rename': { workspace_id: string; label: string };
   /**
    * Closes a workspace. `close_group` is required `true` when this
    * workspace shares a linked git worktree with >=1 other open workspace —
@@ -241,7 +240,7 @@ export interface BridgeMethodParams {
    * herdr itself doesn't have; L3C should add a UI-level confirmation
    * instead (see CONTRACT-TIER3.md section 6).
    */
-  "workspace.close": { workspace_id: string; close_group?: boolean };
+  'workspace.close': { workspace_id: string; close_group?: boolean };
 }
 
 /** Bridge-reported feature set. Result of `"bridge.capabilities"`. */
@@ -290,15 +289,15 @@ export interface BridgeCapabilities {
   hostKeybinds?: {
     /** Human-readable display string, e.g. `"Ctrl+B"`, `"Ctrl+Space"`, `"F12"`. */
     prefix: string;
-    source: "herdr-api" | "herdr-cli" | "config-file" | "default";
+    source: 'herdr-api' | 'herdr-cli' | 'config-file' | 'default';
   };
 }
 
 /** Per-method success `data`, keyed the same way as `BridgeMethod`. */
 export interface BridgeMethodResult {
-  "pane.list": { panes: Pane[] };
-  "events.subscribe": { subscription_id: string };
-  "bridge.capabilities": BridgeCapabilities;
+  'pane.list': { panes: Pane[] };
+  'events.subscribe': { subscription_id: string };
+  'bridge.capabilities': BridgeCapabilities;
   /**
    * `content`/`revision`/`truncated`/`format`/`source` are herdr's
    * `PaneReadResult` (see `HerdrPaneReadResult` in herdr.ts) with `pane_id`/
@@ -306,27 +305,27 @@ export interface BridgeMethodResult {
    * already known to the browser) and `text` renamed `content` for
    * consistency with `pane.output`'s payload below.
    */
-  "pane.read": {
+  'pane.read': {
     content: string;
     revision: number;
     truncated: boolean;
     format: ReadFormat;
     source: ReadSource;
   };
-  "pane.subscribe_output": { subscription_id: string };
-  "pane.unsubscribe_output": Record<string, never>;
-  "pane.send_keys": Record<string, never>;
-  "pane.send_text": Record<string, never>;
+  'pane.subscribe_output': { subscription_id: string };
+  'pane.unsubscribe_output': Record<string, never>;
+  'pane.send_keys': Record<string, never>;
+  'pane.send_text': Record<string, never>;
   /** Never resolves successfully in the current tier-2 bridge — see `BridgeMethodParams["pane.resize"]`. */
-  "pane.resize": Record<string, never>;
-  "pane.graphics.info": PaneGraphicsInfoData;
-  "pane.graphics.stream": { subscription_id: string };
+  'pane.resize': Record<string, never>;
+  'pane.graphics.info': PaneGraphicsInfoData;
+  'pane.graphics.stream': { subscription_id: string };
 
   // --- Tier-3 (pane/tab/workspace lifecycle) ------------------------------
 
-  "pane.split": { pane: Pane };
+  'pane.split': { pane: Pane };
   /** Empty on success — herdr's `pane.close` returns `ResponseResult::Ok {}`; the browser relies on the paired `pane.closed` event for confirmation. */
-  "pane.close": Record<string, never>;
+  'pane.close': Record<string, never>;
   /**
    * Mirrors herdr's `PaneMoveResult` (see `HerdrPaneMoveResult` in
    * herdr.ts), trimmed to the bridge-projected `Pane`/`WorkspaceSummary`/
@@ -334,7 +333,7 @@ export interface BridgeMethodResult {
    * `changed: false` (with `reason` set) means the move was a no-op — e.g.
    * the pane was already in that tab.
    */
-  "pane.move": {
+  'pane.move': {
     changed: boolean;
     reason?: HerdrPaneMoveReason;
     pane: Pane;
@@ -346,17 +345,17 @@ export interface BridgeMethodResult {
     closed_tab_id?: string;
   };
   /** The updated pane, so the caller can apply the new `label` without waiting for the paired `pane.updated` broadcast. */
-  "pane.rename": { pane: Pane };
-  "tab.create": { tab: TabSummary; pane: Pane };
-  "tab.rename": { tab: TabSummary };
+  'pane.rename': { pane: Pane };
+  'tab.create': { tab: TabSummary; pane: Pane };
+  'tab.rename': { tab: TabSummary };
   /** Empty on success, same rationale as `pane.close` — rely on the paired `tab.closed` event. */
-  "tab.close": Record<string, never>;
+  'tab.close': Record<string, never>;
   /** herdr's `tab.move` returns the WHOLE reordered tab list for the workspace, not just the moved tab — mirrored here unchanged. */
-  "tab.move": { tabs: TabSummary[] };
-  "workspace.create": { workspace: WorkspaceSummary; tab: TabSummary; pane: Pane };
-  "workspace.rename": { workspace: WorkspaceSummary };
+  'tab.move': { tabs: TabSummary[] };
+  'workspace.create': { workspace: WorkspaceSummary; tab: TabSummary; pane: Pane };
+  'workspace.rename': { workspace: WorkspaceSummary };
   /** Empty on success, same rationale as `pane.close`/`tab.close` — rely on the paired `workspace.closed` event(s); see CONTRACT-TIER3.md section 6 for how many you get when `close_group: true`. */
-  "workspace.close": Record<string, never>;
+  'workspace.close': Record<string, never>;
 }
 
 /**
@@ -364,8 +363,8 @@ export interface BridgeMethodResult {
  * events are unchanged.
  */
 export interface BridgeEventPayload {
-  "pane.created": { pane: Pane };
-  "pane.closed": { id: string; host: string; workspace: { id: string } };
+  'pane.created': { pane: Pane };
+  'pane.closed': { id: string; host: string; workspace: { id: string } };
   /**
    * `status_since` is the bridge's observation time for the NEW status — the
    * same value the pane now carries in `pane.list`, so a client patching a
@@ -373,10 +372,10 @@ export interface BridgeEventPayload {
    * of the status it just left. Optional for the same reason it is optional
    * on `Pane`: an older bridge omits it.
    */
-  "pane.agent_status_changed": {
+  'pane.agent_status_changed': {
     id: string;
     host: string;
-    agent_status: Pane["agent_status"];
+    agent_status: Pane['agent_status'];
     status_since?: number;
   };
   /**
@@ -393,7 +392,7 @@ export interface BridgeEventPayload {
    * every event; a smarter diff-and-patch is a bridge-local optimization
    * that doesn't change this wire shape.
    */
-  "pane.output": {
+  'pane.output': {
     subscription_id: string;
     pane_id: string;
     revision: number;
@@ -409,7 +408,7 @@ export interface BridgeEventPayload {
    * subscription is sent). See CONTRACT-TIER2.md section 5 for the full
    * correlation protocol and the base64 fallback shape.
    */
-  "pane.graphics_frame": {
+  'pane.graphics_frame': {
     subscription_id: string;
     pane_id: string;
     layer_id?: string;
@@ -433,15 +432,15 @@ export interface BridgeEventPayload {
   // arrive for implicitly-destroyed resources. See CONTRACT-TIER3.md
   // section 6.
 
-  "workspace.created": { workspace: WorkspaceSummary };
+  'workspace.created': { workspace: WorkspaceSummary };
   /** `workspace` is included only when herdr still had it in memory at emit time (best-effort; may be absent). */
-  "workspace.closed": { id: string; host: string; workspace?: WorkspaceSummary };
-  "workspace.renamed": { id: string; host: string; name: string };
-  "tab.created": { tab: TabSummary };
-  "tab.closed": { id: string; host: string; workspace: { id: string } };
-  "tab.renamed": { id: string; host: string; workspace: { id: string }; name: string };
+  'workspace.closed': { id: string; host: string; workspace?: WorkspaceSummary };
+  'workspace.renamed': { id: string; host: string; name: string };
+  'tab.created': { tab: TabSummary };
+  'tab.closed': { id: string; host: string; workspace: { id: string } };
+  'tab.renamed': { id: string; host: string; workspace: { id: string }; name: string };
   /** Carries the WHOLE reordered tab list for the workspace, same shape as `tab.move`'s method result. */
-  "tab.moved": { workspace: { id: string }; host: string; tabs: TabSummary[] };
+  'tab.moved': { workspace: { id: string }; host: string; tabs: TabSummary[] };
   /**
    * Fired for every successful `pane.move`, from any client (not just this
    * one) — the same reparent-with-cascading-side-effects shape as the
@@ -454,8 +453,8 @@ export interface BridgeEventPayload {
    * interface, or from another client — carrying the WHOLE pane, so the
    * store applies it as a plain upsert.
    */
-  "pane.updated": { pane: Pane };
-  "pane.moved": {
+  'pane.updated': { pane: Pane };
+  'pane.moved': {
     pane: Pane;
     previous_workspace_id: string;
     previous_tab_id: string;

@@ -1,9 +1,15 @@
-import { test, expect } from "./fixtures/kanhrd";
-import { herdr, herdrAvailable } from "./fixtures/herdr";
-import { allCards, cardActions, cardOverflowTrigger, xtermElement, xtermRows } from "./helpers/selectors";
-import { COPY } from "../src/app/shared/copy";
-import { waitFor, waitForStableCount } from "./helpers/wait";
-import type { Locator, Page } from "@playwright/test";
+import { test, expect } from './fixtures/kanhrd';
+import { herdr, herdrAvailable } from './fixtures/herdr';
+import {
+  allCards,
+  cardActions,
+  cardOverflowTrigger,
+  xtermElement,
+  xtermRows,
+} from './helpers/selectors';
+import { COPY } from '../src/app/shared/copy';
+import { waitFor, waitForStableCount } from './helpers/wait';
+import type { Locator, Page } from '@playwright/test';
 
 /**
  * Tier-3: pane/tab/workspace lifecycle CRUD (split/close pane, tab CRUD,
@@ -30,39 +36,41 @@ import type { Locator, Page } from "@playwright/test";
 // --- local selectors (tier-3 markup only) ---------------------------------
 
 function plusButton(page: Page): Locator {
-  return page.locator(".plus-button");
+  return page.locator('.plus-button');
 }
 
 function plusMenuItem(page: Page, label: string): Locator {
-  return page.locator(".plus-menu button", { hasText: label });
+  return page.locator('.plus-menu button', { hasText: label });
 }
 
 function rail(page: Page): Locator {
-  return page.locator(".rail");
+  return page.locator('.rail');
 }
 
 function tabRowByName(page: Page, name: string): Locator {
-  return rail(page).locator(".tab-row", { hasText: name });
+  return rail(page).locator('.tab-row', { hasText: name });
 }
 
 function tabRowInEditMode(page: Page): Locator {
-  return rail(page).locator(".tab-row").filter({ has: page.locator(".edit-input") });
+  return rail(page)
+    .locator('.tab-row')
+    .filter({ has: page.locator('.edit-input') });
 }
 
 function railEditInput(page: Page): Locator {
-  return rail(page).locator(".edit-input");
+  return rail(page).locator('.edit-input');
 }
 
 function workspaceRowByName(page: Page, name: string): Locator {
-  return rail(page).locator(".workspace-row", { hasText: name });
+  return rail(page).locator('.workspace-row', { hasText: name });
 }
 
 function modal(page: Page): Locator {
-  return page.locator(".modal");
+  return page.locator('.modal');
 }
 
 function modalTitle(page: Page): Locator {
-  return modal(page).locator(".modal-title");
+  return modal(page).locator('.modal-title');
 }
 
 /**
@@ -73,30 +81,30 @@ function modalTitle(page: Page): Locator {
  * which both carry.
  */
 function modalConfirm(page: Page): Locator {
-  return modal(page).locator(".modal-actions .btn.primary");
+  return modal(page).locator('.modal-actions .btn.primary');
 }
 
 function modalCancelButton(page: Page): Locator {
   // The non-primary button in the two-button (non-refusal) modal layout.
-  return modal(page).locator(".modal-actions .btn:not(.primary)");
+  return modal(page).locator('.modal-actions .btn:not(.primary)');
 }
 
 function modalRefusalBody(page: Page): Locator {
-  return modal(page).locator(".modal-body.refusal");
+  return modal(page).locator('.modal-body.refusal');
 }
 
 function cardCloseButton(card: Locator): Locator {
-  return card.locator(".card-action.close");
+  return card.locator('.card-action.close');
 }
 
 /** A rail row's overflow-menu trigger — rail row actions are never hover-revealed. */
 function rowMenuTrigger(row: Locator): Locator {
-  return row.locator(".row-menu-trigger");
+  return row.locator('.row-menu-trigger');
 }
 
 /** An item inside an open rail row overflow menu. */
 function rowMenuItem(row: Locator, label: string): Locator {
-  return row.locator(".row-menu .row-menu-item", { hasText: label });
+  return row.locator('.row-menu .row-menu-item', { hasText: label });
 }
 
 /** Opens a rail row's overflow menu and clicks one of its items. No hover involved. */
@@ -115,7 +123,7 @@ interface HerdrTabSummary {
 }
 
 async function herdrTabList(): Promise<HerdrTabSummary[]> {
-  const { stdout, code } = await herdr(["tab", "list"]);
+  const { stdout, code } = await herdr(['tab', 'list']);
   if (code !== 0) return [];
   const parsed = JSON.parse(stdout) as { result?: { tabs?: HerdrTabSummary[] } };
   return parsed.result?.tabs ?? [];
@@ -127,7 +135,7 @@ interface HerdrWorkspaceSummary {
 }
 
 async function herdrWorkspaceList(): Promise<HerdrWorkspaceSummary[]> {
-  const { stdout, code } = await herdr(["workspace", "list"]);
+  const { stdout, code } = await herdr(['workspace', 'list']);
   if (code !== 0) return [];
   const parsed = JSON.parse(stdout) as { result?: { workspaces?: HerdrWorkspaceSummary[] } };
   return parsed.result?.workspaces ?? [];
@@ -137,7 +145,7 @@ async function herdrWorkspaceList(): Promise<HerdrWorkspaceSummary[]> {
 async function herdrCloseTabIfPresent(tabId: string | undefined): Promise<void> {
   if (!tabId) return;
   try {
-    await herdr(["tab", "close", tabId]);
+    await herdr(['tab', 'close', tabId]);
   } catch {
     // best-effort; a leaked throwaway tab is logged by name for manual cleanup, not fatal to the run
   }
@@ -170,21 +178,22 @@ test("cold-loading a pane detail URL directly mounts a live terminal (L-E2E's ga
 
   await expect(xtermElement(app)).toBeVisible({ timeout: 3_000 });
 
-  await waitFor(async () => ((await xtermRows(app).textContent()) ?? "").trim().length > 0, {
+  await waitFor(async () => ((await xtermRows(app).textContent()) ?? '').trim().length > 0, {
     timeoutMs: 3_000,
-    message: "cold-loaded pane detail never rendered non-empty terminal content — pane.read likely never fired",
+    message:
+      'cold-loaded pane detail never rendered non-empty terminal content — pane.read likely never fired',
   });
 });
 
 // --- capability gating ------------------------------------------------------
 
-test("card split and close affordances are visible on first render, no hover", async ({ app }) => {
+test('card split and close affordances are visible on first render, no hover', async ({ app }) => {
   const cards = allCards(app);
   await expect(cards.first()).toBeVisible({ timeout: 10_000 });
-  const card = cards.filter({ has: app.locator(".card-actions") }).first();
+  const card = cards.filter({ has: app.locator('.card-actions') }).first();
   test.skip(
     (await card.count()) === 0,
-    "no host advertises a pane lifecycle capability — no card renders an action cluster",
+    'no host advertises a pane lifecycle capability — no card renders an action cluster'
   );
 
   const actions = cardActions(card);
@@ -193,10 +202,10 @@ test("card split and close affordances are visible on first render, no hover", a
   // (docs/UX-GUIDELINES.md, "Visible affordances"). The split control also
   // split in two: `.split-right` and `.split-down`.
   await expect(actions).toBeVisible();
-  await expect(actions).toHaveCSS("opacity", "1");
-  await expect(actions.locator(".card-action.split-right")).toHaveCount(1);
-  await expect(actions.locator(".card-action.split-down")).toHaveCount(1);
-  await expect(actions.locator(".card-action.close")).toHaveCount(1);
+  await expect(actions).toHaveCSS('opacity', '1');
+  await expect(actions.locator('.card-action.split-right')).toHaveCount(1);
+  await expect(actions.locator('.card-action.split-down')).toHaveCount(1);
+  await expect(actions.locator('.card-action.close')).toHaveCount(1);
 
   // The overflow trigger is rendered but `display: none` at comfortable
   // density on a fine pointer — it is the compact/touch path, and the
@@ -208,7 +217,7 @@ test("card split and close affordances are visible on first render, no hover", a
 
 // --- tab CRUD lifecycle (throwaway tab) -------------------------------------
 
-test.describe("tab CRUD lifecycle", () => {
+test.describe('tab CRUD lifecycle', () => {
   let createdTabId: string | undefined;
 
   test.afterEach(async () => {
@@ -216,26 +225,28 @@ test.describe("tab CRUD lifecycle", () => {
     createdTabId = undefined;
   });
 
-  test("create (via + menu, inline rename) then close (via rail ×) a throwaway tab", async ({ app }) => {
+  test('create (via + menu, inline rename) then close (via rail ×) a throwaway tab', async ({
+    app,
+  }) => {
     const before = await herdrTabList();
     // The rail renders once `pane.list` lands, so an instantaneous count
     // right after the fixture's navigation can snapshot an empty rail.
-    const beforeCount = await waitForStableCount(rail(app).locator(".tab-row"));
+    const beforeCount = await waitForStableCount(rail(app).locator('.tab-row'));
 
     await plusButton(app).click();
     await expect(plusMenuItem(app, COPY.create.tab)).toBeVisible();
     await plusMenuItem(app, COPY.create.tab).click();
 
     // The new tab shows up in the rail within 2s.
-    await expect(rail(app).locator(".tab-row")).toHaveCount(beforeCount + 1, { timeout: 2_000 });
+    await expect(rail(app).locator('.tab-row')).toHaveCount(beforeCount + 1, { timeout: 2_000 });
 
     // Immediately in inline-rename mode (create-then-rename UX, per L3C's notes).
-    const editInput = tabRowInEditMode(app).locator(".edit-input");
+    const editInput = tabRowInEditMode(app).locator('.edit-input');
     await expect(editInput).toBeVisible({ timeout: 2_000 });
 
     const name = `kanhrd-e2e-${Date.now()}`;
     await editInput.fill(name);
-    await editInput.press("Enter");
+    await editInput.press('Enter');
 
     await expect(tabRowByName(app, name)).toBeVisible({ timeout: 2_000 });
     await expect(railEditInput(app)).toHaveCount(0);
@@ -244,11 +255,13 @@ test.describe("tab CRUD lifecycle", () => {
     await waitFor(
       async () => {
         const tabs = await herdrTabList();
-        const created = tabs.find((t) => t.label === name && !before.some((b) => b.tab_id === t.tab_id));
+        const created = tabs.find(
+          (t) => t.label === name && !before.some((b) => b.tab_id === t.tab_id)
+        );
         if (created) createdTabId = created.tab_id;
         return created !== undefined;
       },
-      { timeoutMs: 3_000, message: `tab "${name}" never appeared in herdr's own tab list` },
+      { timeoutMs: 3_000, message: `tab "${name}" never appeared in herdr's own tab list` }
     );
 
     // Close it via the rail: visible overflow trigger -> menu item -> confirm.
@@ -270,15 +283,15 @@ test.describe("tab CRUD lifecycle", () => {
 
 // --- workspace close guardrail (negative test, no destruction) -------------
 
-test("closing the only open workspace shows a refusal with no confirm button (does not close it)", async ({
+test('closing the only open workspace shows a refusal with no confirm button (does not close it)', async ({
   app,
 }) => {
   const workspaces = await herdrWorkspaceList();
   test.skip(
     workspaces.length !== 1,
     `this host has ${workspaces.length} open workspace(s); the last-workspace guardrail can only be safely ` +
-      "exercised (without destroying a real workspace) when there is exactly one open — skipping rather than " +
-      "closing any of the user's real workspaces to force the scenario",
+      'exercised (without destroying a real workspace) when there is exactly one open — skipping rather than ' +
+      "closing any of the user's real workspaces to force the scenario"
   );
   const target = workspaces[0]!;
 
@@ -290,9 +303,9 @@ test("closing the only open workspace shows a refusal with no confirm button (do
   await expect(modalRefusalBody(app)).toBeVisible();
   // Refusal mode renders no confirm button at all — only a dismiss action.
   await expect(modalConfirm(app)).toHaveCount(0);
-  await expect(modal(app).locator(".modal-actions .btn")).toHaveCount(1);
+  await expect(modal(app).locator('.modal-actions .btn')).toHaveCount(1);
 
-  await modal(app).locator(".modal-actions .btn").click();
+  await modal(app).locator('.modal-actions .btn').click();
   await expect(modal(app)).toHaveCount(0);
 
   // Still open — the workspace was never actually closed.
@@ -310,26 +323,28 @@ test("closing a pane's card shows a danger-styled confirmation; cancel keeps it,
     const before = await herdrTabList();
     await plusButton(app).click();
     await plusMenuItem(app, COPY.create.tab).click();
-    const editInput = tabRowInEditMode(app).locator(".edit-input");
+    const editInput = tabRowInEditMode(app).locator('.edit-input');
     await expect(editInput).toBeVisible({ timeout: 2_000 });
     const name = `kanhrd-e2e-${Date.now()}`;
     await editInput.fill(name);
-    await editInput.press("Enter");
+    await editInput.press('Enter');
     await waitFor(
       async () => {
         const tabs = await herdrTabList();
-        const created = tabs.find((t) => t.label === name && !before.some((b) => b.tab_id === t.tab_id));
+        const created = tabs.find(
+          (t) => t.label === name && !before.some((b) => b.tab_id === t.tab_id)
+        );
         if (created) createdTabId = created.tab_id;
         return created !== undefined;
       },
-      { timeoutMs: 3_000, message: `throwaway tab "${name}" never appeared on herdr's side` },
+      { timeoutMs: 3_000, message: `throwaway tab "${name}" never appeared on herdr's side` }
     );
 
     // The new tab auto-creates one pane; its card renders on the board.
     const cards = allCards(app);
     await expect(cards.first()).toBeVisible({ timeout: 5_000 });
     // Locate the specific card belonging to the new tab via its path text ("<workspace> / <tab name>").
-    const targetCard = app.locator(".card", { hasText: name });
+    const targetCard = app.locator('.card', { hasText: name });
     await expect(targetCard).toHaveCount(1, { timeout: 3_000 });
 
     await cardCloseButton(targetCard).click();
@@ -337,18 +352,18 @@ test("closing a pane's card shows a danger-styled confirmation; cancel keeps it,
     await expect(modalTitle(app)).toHaveText(COPY.confirm.closePane);
     await expect(modalConfirm(app)).toBeVisible();
     // The care prompt is always paired with the honest body naming what ends.
-    await expect(modal(app).locator(".modal-body")).toHaveText(COPY.confirm.closePaneBody);
+    await expect(modal(app).locator('.modal-body')).toHaveText(COPY.confirm.closePaneBody);
 
     // Cancel first — pane must still be there.
     await modalCancelButton(app).click();
     await expect(modal(app)).toHaveCount(0);
-    await expect(app.locator(".card", { hasText: name })).toHaveCount(1);
+    await expect(app.locator('.card', { hasText: name })).toHaveCount(1);
 
     // Now actually confirm — safe, this is a throwaway tab/pane.
     await cardCloseButton(targetCard).click();
     await modalConfirm(app).click();
 
-    await expect(app.locator(".card", { hasText: name })).toHaveCount(0, { timeout: 3_000 });
+    await expect(app.locator('.card', { hasText: name })).toHaveCount(0, { timeout: 3_000 });
 
     // Closing the tab's only pane cascades to closing the tab itself
     // (CONTRACT-TIER3.md section 5.6) — verify herdr agrees, which also
@@ -365,7 +380,7 @@ test("closing a pane's card shows a danger-styled confirmation; cancel keeps it,
 
 // --- cascade purge -----------------------------------------------------------
 
-test("closing a tab cascades to purge its pane from the board client-side, even with no pane.closed on the wire", async ({
+test('closing a tab cascades to purge its pane from the board client-side, even with no pane.closed on the wire', async ({
   app,
 }) => {
   let createdTabId: string | undefined;
@@ -373,22 +388,24 @@ test("closing a tab cascades to purge its pane from the board client-side, even 
     const before = await herdrTabList();
     await plusButton(app).click();
     await plusMenuItem(app, COPY.create.tab).click();
-    const editInput = tabRowInEditMode(app).locator(".edit-input");
+    const editInput = tabRowInEditMode(app).locator('.edit-input');
     await expect(editInput).toBeVisible({ timeout: 2_000 });
     const name = `kanhrd-e2e-${Date.now()}`;
     await editInput.fill(name);
-    await editInput.press("Enter");
+    await editInput.press('Enter');
     await waitFor(
       async () => {
         const tabs = await herdrTabList();
-        const created = tabs.find((t) => t.label === name && !before.some((b) => b.tab_id === t.tab_id));
+        const created = tabs.find(
+          (t) => t.label === name && !before.some((b) => b.tab_id === t.tab_id)
+        );
         if (created) createdTabId = created.tab_id;
         return created !== undefined;
       },
-      { timeoutMs: 3_000, message: `throwaway tab "${name}" never appeared on herdr's side` },
+      { timeoutMs: 3_000, message: `throwaway tab "${name}" never appeared on herdr's side` }
     );
 
-    const targetCard = app.locator(".card", { hasText: name });
+    const targetCard = app.locator('.card', { hasText: name });
     await expect(targetCard).toHaveCount(1, { timeout: 3_000 });
 
     // Close the TAB (not the pane) via the rail — per CONTRACT-TIER3.md
@@ -402,7 +419,7 @@ test("closing a tab cascades to purge its pane from the board client-side, even 
     await modalConfirm(app).click();
 
     await expect(tabRowByName(app, name)).toHaveCount(0, { timeout: 2_000 });
-    await expect(app.locator(".card", { hasText: name })).toHaveCount(0, { timeout: 2_000 });
+    await expect(app.locator('.card', { hasText: name })).toHaveCount(0, { timeout: 2_000 });
 
     await waitFor(async () => !(await herdrTabList()).some((t) => t.tab_id === createdTabId), {
       timeoutMs: 3_000,

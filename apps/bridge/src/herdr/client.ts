@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto";
-import { createConnection, type Socket } from "node:net";
-import { EventEmitter } from "node:events";
-import type { EventKind } from "@kanhrd/schema";
-import type { RawHerdrLine } from "../types.js";
+import { randomUUID } from 'node:crypto';
+import { createConnection, type Socket } from 'node:net';
+import { EventEmitter } from 'node:events';
+import type { EventKind } from '@kanhrd/schema';
+import type { RawHerdrLine } from '../types.js';
 
 /** One event frame herdr pushed on a subscribed socket. `event` is already normalized to the bridge/`EventKind` dot form — see `herdrEventKindToDotName`. */
 export interface HerdrPushedEvent {
@@ -36,7 +36,7 @@ export interface HerdrPushedEvent {
  * `pane.agent_status_changed`.
  */
 export function herdrEventKindToDotName(raw: string): string {
-  const underscoreIndex = raw.indexOf("_");
+  const underscoreIndex = raw.indexOf('_');
   if (underscoreIndex === -1) return raw;
   return `${raw.slice(0, underscoreIndex)}.${raw.slice(underscoreIndex + 1)}`;
 }
@@ -62,7 +62,7 @@ export interface HerdrSubscriptionSpec {
  */
 export interface HerdrSubscription {
   close(): void;
-  on(event: "disconnect", listener: (err?: Error) => void): this;
+  on(event: 'disconnect', listener: (err?: Error) => void): this;
 }
 
 /**
@@ -76,10 +76,10 @@ export interface HerdrSubscription {
 export class HerdrRequestError extends Error {
   constructor(
     readonly code: string,
-    message: string,
+    message: string
   ) {
     super(message);
-    this.name = "HerdrRequestError";
+    this.name = 'HerdrRequestError';
   }
 }
 
@@ -111,20 +111,20 @@ export class HerdrClient {
   request<T = unknown>(method: string, params: Record<string, unknown> = {}): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const socket = createConnection(this.socketPath);
-      let buffer = "";
+      let buffer = '';
       let settled = false;
 
-      socket.setEncoding("utf8");
+      socket.setEncoding('utf8');
 
-      socket.once("connect", () => {
+      socket.once('connect', () => {
         const line = JSON.stringify({ id: randomUUID(), method, params });
         socket.write(`${line}\n`);
       });
 
-      socket.on("data", (chunk: string) => {
+      socket.on('data', (chunk: string) => {
         if (settled) return;
         buffer += chunk;
-        const newlineIndex = buffer.indexOf("\n");
+        const newlineIndex = buffer.indexOf('\n');
         if (newlineIndex === -1) return;
 
         settled = true;
@@ -140,22 +140,27 @@ export class HerdrClient {
         }
 
         if (parsed.ok === false) {
-          reject(new HerdrRequestError(parsed.error?.code ?? "herdr_error", parsed.error?.message ?? "herdr request failed"));
+          reject(
+            new HerdrRequestError(
+              parsed.error?.code ?? 'herdr_error',
+              parsed.error?.message ?? 'herdr request failed'
+            )
+          );
         } else {
           resolve(parsed.result as T);
         }
       });
 
-      socket.once("error", (err) => {
+      socket.once('error', (err) => {
         if (settled) return;
         settled = true;
         reject(err);
       });
 
-      socket.once("close", () => {
+      socket.once('close', () => {
         if (settled) return;
         settled = true;
-        reject(new Error("herdr connection closed before a response arrived"));
+        reject(new Error('herdr connection closed before a response arrived'));
       });
     });
   }
@@ -170,33 +175,33 @@ export class HerdrClient {
    */
   subscribe(
     specs: HerdrSubscriptionSpec[],
-    onEvent: (event: HerdrPushedEvent) => void,
+    onEvent: (event: HerdrPushedEvent) => void
   ): Promise<HerdrSubscription> {
     return new Promise<HerdrSubscription>((resolve, reject) => {
       const socket = createConnection(this.socketPath);
       const handle = new HerdrSubscriptionHandle(socket);
-      let buffer = "";
+      let buffer = '';
       let settled = false;
       let sawAck = false;
 
-      socket.setEncoding("utf8");
+      socket.setEncoding('utf8');
 
-      socket.once("connect", () => {
+      socket.once('connect', () => {
         const line = JSON.stringify({
           id: randomUUID(),
-          method: "events.subscribe",
+          method: 'events.subscribe',
           params: { subscriptions: specs },
         });
         socket.write(`${line}\n`);
       });
 
-      socket.on("data", (chunk: string) => {
+      socket.on('data', (chunk: string) => {
         buffer += chunk;
-        let newlineIndex = buffer.indexOf("\n");
+        let newlineIndex = buffer.indexOf('\n');
         while (newlineIndex !== -1) {
           const rawLine = buffer.slice(0, newlineIndex);
           buffer = buffer.slice(newlineIndex + 1);
-          newlineIndex = buffer.indexOf("\n");
+          newlineIndex = buffer.indexOf('\n');
           if (rawLine.trim().length === 0) continue;
 
           let parsed: RawHerdrLine;
@@ -216,7 +221,12 @@ export class HerdrClient {
               // `pane_not_found` (one stale per-pane subscription spec,
               // herdr rejects the WHOLE subscribe call) from a real
               // connection failure. See `HostRuntime.subscribeWithPaneRecovery`.
-              reject(new HerdrRequestError(parsed.error.code ?? "herdr_error", parsed.error.message ?? "events.subscribe failed"));
+              reject(
+                new HerdrRequestError(
+                  parsed.error.code ?? 'herdr_error',
+                  parsed.error.message ?? 'events.subscribe failed'
+                )
+              );
               return;
             }
             settled = true;
@@ -224,28 +234,28 @@ export class HerdrClient {
             continue; // the ack itself (`SubscriptionStarted {}`) carries no event
           }
 
-          if (typeof parsed.event === "string") {
+          if (typeof parsed.event === 'string') {
             onEvent({ event: herdrEventKindToDotName(parsed.event), data: parsed.data });
           }
         }
       });
 
-      socket.once("error", (err) => {
+      socket.once('error', (err) => {
         if (!settled) {
           settled = true;
           reject(err);
           return;
         }
-        handle.emit("disconnect", err);
+        handle.emit('disconnect', err);
       });
 
-      socket.once("close", () => {
+      socket.once('close', () => {
         if (!settled) {
           settled = true;
-          reject(new Error("herdr connection closed before subscribing"));
+          reject(new Error('herdr connection closed before subscribing'));
           return;
         }
-        handle.emit("disconnect");
+        handle.emit('disconnect');
       });
     });
   }

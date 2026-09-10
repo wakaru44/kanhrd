@@ -1,6 +1,6 @@
-import { test, expect } from "./fixtures/kanhrd";
-import { herdrAvailable } from "./fixtures/herdr";
-import { waitForStableCount } from "./helpers/wait";
+import { test, expect } from './fixtures/kanhrd';
+import { herdrAvailable } from './fixtures/herdr';
+import { waitForStableCount } from './helpers/wait';
 import {
   brand,
   filterBar,
@@ -10,7 +10,7 @@ import {
   cardHostChip,
   columnByStatus,
   cardsInColumn,
-} from "./helpers/selectors";
+} from './helpers/selectors';
 
 /**
  * Tier-1: kanban board rendering, real cards from local herdr, host/status
@@ -32,35 +32,35 @@ test.beforeEach(() => {
   test.skip(!!preflightReason, `herdr pre-flight failed: ${preflightReason}`);
 });
 
-test("board loads and shows the kanhrd brand", async ({ app }) => {
+test('board loads and shows the kanhrd brand', async ({ app }) => {
   await expect(brand(app)).toBeVisible();
   await expect(brand(app)).toHaveText(/kanhrd/i);
 });
 
-test("filter bar renders one host chip per configured host (local)", async ({ app }) => {
+test('filter bar renders one host chip per configured host (local)', async ({ app }) => {
   await expect(filterBar(app)).toBeVisible();
-  await expect(hostChip(app, "local")).toBeVisible();
+  await expect(hostChip(app, 'local')).toBeVisible();
 });
 
-test("at least one real pane renders as a card", async ({ app }) => {
+test('at least one real pane renders as a card', async ({ app }) => {
   const cards = allCards(app);
   await expect(cards.first()).toBeVisible({ timeout: 10_000 });
   expect(await cards.count()).toBeGreaterThan(0);
 });
 
-test("every card shows a host chip labeled local", async ({ app }) => {
+test('every card shows a host chip labeled local', async ({ app }) => {
   const cards = allCards(app);
   await expect(cards.first()).toBeVisible({ timeout: 10_000 });
   const count = await cards.count();
   for (let i = 0; i < count; i++) {
-    await expect(cardHostChip(cards.nth(i))).toHaveText("local");
+    await expect(cardHostChip(cards.nth(i))).toHaveText('local');
   }
 });
 
 test("toggling a status filter chip hides and restores that column's cards", async ({ app }) => {
   // Pick whichever status column currently has at least one card, so this
   // test doesn't depend on a specific pane's live agent_status.
-  const statuses = ["working", "blocked", "idle", "done", "unknown"];
+  const statuses = ['working', 'blocked', 'idle', 'done', 'unknown'];
   let targetStatus: string | undefined;
   for (const status of statuses) {
     const column = columnByStatus(app, status);
@@ -69,7 +69,7 @@ test("toggling a status filter chip hides and restores that column's cards", asy
       break;
     }
   }
-  test.skip(!targetStatus, "no populated status column found to toggle");
+  test.skip(!targetStatus, 'no populated status column found to toggle');
   const status = targetStatus as string;
 
   // ponytail: stabilizes the pre-toggle read against a pane.created/closed
@@ -91,7 +91,9 @@ test("toggling a status filter chip hides and restores that column's cards", asy
   await expect(columnByStatus(app, status)).toHaveCount(1);
 });
 
-test("toggling the local host chip off hides cards, toggling back restores them", async ({ app }) => {
+test('toggling the local host chip off hides cards, toggling back restores them', async ({
+  app,
+}) => {
   const cards = allCards(app);
   await expect(cards.first()).toBeVisible({ timeout: 10_000 });
   // ponytail: same reasoning as the status-filter test above — real herdr
@@ -101,10 +103,10 @@ test("toggling the local host chip off hides cards, toggling back restores them"
   const countBefore = await waitForStableCount(cards);
   expect(countBefore).toBeGreaterThan(0);
 
-  await hostChip(app, "local").click();
+  await hostChip(app, 'local').click();
   await expect(cards).toHaveCount(0);
 
-  await hostChip(app, "local").click();
+  await hostChip(app, 'local').click();
   await expect(cards.first()).toBeVisible({ timeout: 5_000 });
   expect(await cards.count()).toBeGreaterThan(0);
 });

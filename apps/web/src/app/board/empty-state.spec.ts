@@ -1,13 +1,13 @@
-import { ComponentFixture, TestBed } from "@angular/core/testing";
-import { provideZonelessChangeDetection } from "@angular/core";
-import type { HostSummary } from "@kanhrd/schema";
-import { EmptyState } from "./empty-state";
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
+import type { HostSummary } from '@kanhrd/schema';
+import { EmptyState } from './empty-state';
 
 function host(name: string, connected: boolean): HostSummary {
-  return { name, connected, last_error: connected ? undefined : "connection refused" };
+  return { name, connected, last_error: connected ? undefined : 'connection refused' };
 }
 
-describe("EmptyState", () => {
+describe('EmptyState', () => {
   let fixture: ComponentFixture<EmptyState>;
 
   beforeEach(() => {
@@ -28,23 +28,23 @@ describe("EmptyState", () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it("renders immediately when there are no configured hosts", () => {
-    fixture.componentRef.setInput("hosts", []);
+  it('renders immediately when there are no configured hosts', () => {
+    fixture.componentRef.setInput('hosts', []);
     fixture.detectChanges();
     expect(fixture.componentInstance.show()).toBe(true);
-    expect(el().querySelector(".empty-state")).not.toBeNull();
-    expect(el().textContent).toContain("no hosts yet.");
+    expect(el().querySelector('.empty-state')).not.toBeNull();
+    expect(el().textContent).toContain('no hosts yet.');
   });
 
-  it("does not render right away when a host is merely disconnected", () => {
-    fixture.componentRef.setInput("hosts", [host("local", false)]);
+  it('does not render right away when a host is merely disconnected', () => {
+    fixture.componentRef.setInput('hosts', [host('local', false)]);
     fixture.detectChanges();
     expect(fixture.componentInstance.show()).toBe(false);
-    expect(el().querySelector(".empty-state")).toBeNull();
+    expect(el().querySelector('.empty-state')).toBeNull();
   });
 
-  it("renders after every host has been disconnected for more than 5s", () => {
-    fixture.componentRef.setInput("hosts", [host("local", false)]);
+  it('renders after every host has been disconnected for more than 5s', () => {
+    fixture.componentRef.setInput('hosts', [host('local', false)]);
     fixture.detectChanges();
     expect(fixture.componentInstance.show()).toBe(false);
 
@@ -55,27 +55,27 @@ describe("EmptyState", () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.show()).toBe(true);
-    expect(el().textContent).toContain("waiting for a host…");
+    expect(el().textContent).toContain('waiting for a host…');
   });
 
-  it("does not render when at least one host is connected", () => {
-    fixture.componentRef.setInput("hosts", [host("local", false), host("remote", true)]);
+  it('does not render when at least one host is connected', () => {
+    fixture.componentRef.setInput('hosts', [host('local', false), host('remote', true)]);
     fixture.detectChanges();
     jasmine.clock().tick(10_000);
     fixture.detectChanges();
     expect(fixture.componentInstance.show()).toBe(false);
   });
 
-  it("resets the disconnected timer once a host reconnects", () => {
-    fixture.componentRef.setInput("hosts", [host("local", false)]);
+  it('resets the disconnected timer once a host reconnects', () => {
+    fixture.componentRef.setInput('hosts', [host('local', false)]);
     fixture.detectChanges();
     jasmine.clock().tick(3000);
 
-    fixture.componentRef.setInput("hosts", [host("local", true)]);
+    fixture.componentRef.setInput('hosts', [host('local', true)]);
     fixture.detectChanges();
     jasmine.clock().tick(3000);
 
-    fixture.componentRef.setInput("hosts", [host("local", false)]);
+    fixture.componentRef.setInput('hosts', [host('local', false)]);
     fixture.detectChanges();
     jasmine.clock().tick(3000);
     fixture.detectChanges();
@@ -86,7 +86,7 @@ describe("EmptyState", () => {
   });
 });
 
-describe("EmptyState: the no-matches variant", () => {
+describe('EmptyState: the no-matches variant', () => {
   let fixture: ComponentFixture<EmptyState>;
 
   beforeEach(() => {
@@ -95,31 +95,33 @@ describe("EmptyState: the no-matches variant", () => {
       providers: [provideZonelessChangeDetection()],
     });
     fixture = TestBed.createComponent(EmptyState);
-    fixture.componentRef.setInput("variant", "noMatches");
-    fixture.componentRef.setInput("hosts", [{ name: "local", connected: true }]);
+    fixture.componentRef.setInput('variant', 'noMatches');
+    fixture.componentRef.setInput('hosts', [{ name: 'local', connected: true }]);
     fixture.detectChanges();
   });
 
-  it("always shows, whatever the hosts are doing", () => {
+  it('always shows, whatever the hosts are doing', () => {
     expect(fixture.componentInstance.show()).toBe(true);
   });
 
-  it("offers clear filters as the next step, with no setup instructions", () => {
+  it('offers clear filters as the next step, with no setup instructions', () => {
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector(".no-matches")?.textContent).toContain("nothing matches these filters.");
-    expect(el.querySelector(".action")?.textContent?.trim()).toBe("clear filters");
-    expect(el.querySelector(".config-snippet")).withContext("never setup instructions").toBeNull();
+    expect(el.querySelector('.no-matches')?.textContent).toContain(
+      'nothing matches these filters.'
+    );
+    expect(el.querySelector('.action')?.textContent?.trim()).toBe('clear filters');
+    expect(el.querySelector('.config-snippet')).withContext('never setup instructions').toBeNull();
   });
 
-  it("emits clearFilters when the action is used", () => {
+  it('emits clearFilters when the action is used', () => {
     let emitted = 0;
     fixture.componentInstance.clearFilters.subscribe(() => (emitted += 1));
-    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(".action")?.click();
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.action')?.click();
     expect(emitted).toBe(1);
   });
 });
 
-describe("EmptyState: the no-hosts variant is a tutorial", () => {
+describe('EmptyState: the no-hosts variant is a tutorial', () => {
   let fixture: ComponentFixture<EmptyState>;
 
   beforeEach(() => {
@@ -128,17 +130,17 @@ describe("EmptyState: the no-hosts variant is a tutorial", () => {
       providers: [provideZonelessChangeDetection()],
     });
     fixture = TestBed.createComponent(EmptyState);
-    fixture.componentRef.setInput("hosts", []);
+    fixture.componentRef.setInput('hosts', []);
     fixture.detectChanges();
   });
 
-  it("renders the config snippet, a copy action and the operating-guide link", () => {
+  it('renders the config snippet, a copy action and the operating-guide link', () => {
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector(".empty-state")?.textContent).toContain("no hosts yet.");
-    expect(el.querySelector(".config-snippet")?.textContent).toContain("socket:");
-    expect(el.querySelector(".copy-action")).not.toBeNull();
-    const link = el.querySelector<HTMLAnchorElement>(".guide-link");
-    expect(link?.textContent?.trim()).toBe("read the operating guide");
-    expect(link?.href).toContain("OPERATING.md");
+    expect(el.querySelector('.empty-state')?.textContent).toContain('no hosts yet.');
+    expect(el.querySelector('.config-snippet')?.textContent).toContain('socket:');
+    expect(el.querySelector('.copy-action')).not.toBeNull();
+    const link = el.querySelector<HTMLAnchorElement>('.guide-link');
+    expect(link?.textContent?.trim()).toBe('read the operating guide');
+    expect(link?.href).toContain('OPERATING.md');
   });
 });

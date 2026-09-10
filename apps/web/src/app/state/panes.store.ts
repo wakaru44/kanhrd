@@ -1,6 +1,6 @@
-import { computed, effect, inject, Injectable, signal, untracked } from "@angular/core";
-import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { httpResource } from "@angular/common/http";
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { httpResource } from '@angular/common/http';
 import type {
   AgentStatus,
   BridgeCapabilities,
@@ -12,9 +12,9 @@ import type {
   TabSummary,
   WorkspaceSummary,
   WsEvent,
-} from "@kanhrd/schema";
-import { WsClient } from "./ws-client";
-import { SettingsService, type SwimlaneDimension } from "./settings.service";
+} from '@kanhrd/schema';
+import { WsClient } from './ws-client';
+import { SettingsService, type SwimlaneDimension } from './settings.service';
 
 /** What a bridge that never answers (or errors on) `bridge.capabilities` gets treated as: tier-1, no terminal. */
 export function fallbackCapabilities(): BridgeCapabilities {
@@ -35,11 +35,11 @@ export function fallbackCapabilities(): BridgeCapabilities {
 
 /** Column order per CONTRACT/brief: working first so live activity shows on load. */
 export const STATUS_COLUMN_ORDER: readonly AgentStatus[] = [
-  "working",
-  "blocked",
-  "idle",
-  "done",
-  "unknown",
+  'working',
+  'blocked',
+  'idle',
+  'done',
+  'unknown',
 ];
 
 export type PaneKey = `${string}:${string}`;
@@ -59,14 +59,14 @@ export function defaultFilters(): Filters {
   return { excludedHosts: new Set(), hiddenStatuses: new Set() };
 }
 
-const FILTERS_STORAGE_KEY = "kanhrd.filters";
+const FILTERS_STORAGE_KEY = 'kanhrd.filters';
 
 interface StoredFilters {
   excludedHosts: string[];
   hiddenStatuses: AgentStatus[];
 }
 
-export function loadFilters(storage: Pick<Storage, "getItem"> = localStorage): Filters {
+export function loadFilters(storage: Pick<Storage, 'getItem'> = localStorage): Filters {
   try {
     const raw = storage.getItem(FILTERS_STORAGE_KEY);
     if (!raw) {
@@ -82,7 +82,10 @@ export function loadFilters(storage: Pick<Storage, "getItem"> = localStorage): F
   }
 }
 
-export function saveFilters(filters: Filters, storage: Pick<Storage, "setItem"> = localStorage): void {
+export function saveFilters(
+  filters: Filters,
+  storage: Pick<Storage, 'setItem'> = localStorage
+): void {
   const stored: StoredFilters = {
     excludedHosts: [...filters.excludedHosts],
     hiddenStatuses: [...filters.hiddenStatuses],
@@ -112,7 +115,7 @@ export function applyPaneClosed(panes: PaneMap, evt: { id: string; host: string 
 
 export function applyPaneAgentStatusChanged(
   panes: PaneMap,
-  evt: { id: string; host: string; agent_status: AgentStatus; status_since?: number },
+  evt: { id: string; host: string; agent_status: AgentStatus; status_since?: number }
 ): PaneMap {
   const key = paneKey(evt.host, evt.id);
   const existing = panes.get(key);
@@ -149,22 +152,22 @@ export function applyPaneAgentStatusChanged(
  */
 export function applyEvent(panes: PaneMap, evt: WsEvent): PaneMap {
   switch (evt.event) {
-    case "pane.created":
-      return applyPaneCreated(panes, (evt.payload as BridgeEventPayload["pane.created"]).pane);
-    case "pane.closed":
-      return applyPaneClosed(panes, evt.payload as BridgeEventPayload["pane.closed"]);
-    case "pane.agent_status_changed":
+    case 'pane.created':
+      return applyPaneCreated(panes, (evt.payload as BridgeEventPayload['pane.created']).pane);
+    case 'pane.closed':
+      return applyPaneClosed(panes, evt.payload as BridgeEventPayload['pane.closed']);
+    case 'pane.agent_status_changed':
       return applyPaneAgentStatusChanged(
         panes,
-        evt.payload as BridgeEventPayload["pane.agent_status_changed"],
+        evt.payload as BridgeEventPayload['pane.agent_status_changed']
       );
-    case "pane.moved":
-      return applyPaneCreated(panes, (evt.payload as BridgeEventPayload["pane.moved"]).pane);
+    case 'pane.moved':
+      return applyPaneCreated(panes, (evt.payload as BridgeEventPayload['pane.moved']).pane);
     // herdr broadcasts the WHOLE pane on `pane.updated` (a rename from this
     // board, from herdr's own interface, or from another client), so this is
     // the same plain upsert `pane.created` does.
-    case "pane.updated":
-      return applyPaneCreated(panes, (evt.payload as BridgeEventPayload["pane.updated"]).pane);
+    case 'pane.updated':
+      return applyPaneCreated(panes, (evt.payload as BridgeEventPayload['pane.updated']).pane);
     default:
       return panes;
   }
@@ -182,7 +185,10 @@ export interface LifecycleState {
   tabs: TabMap;
 }
 
-export function applyWorkspaceCreated(workspaces: WorkspaceMap, workspace: WorkspaceSummary): WorkspaceMap {
+export function applyWorkspaceCreated(
+  workspaces: WorkspaceMap,
+  workspace: WorkspaceSummary
+): WorkspaceMap {
   const next = new Map(workspaces);
   next.set(paneKey(workspace.host, workspace.id), workspace);
   return next;
@@ -190,7 +196,7 @@ export function applyWorkspaceCreated(workspaces: WorkspaceMap, workspace: Works
 
 export function applyWorkspaceRenamed(
   workspaces: WorkspaceMap,
-  evt: { id: string; host: string; name: string },
+  evt: { id: string; host: string; name: string }
 ): WorkspaceMap {
   const key = paneKey(evt.host, evt.id);
   const existing = workspaces.get(key);
@@ -210,7 +216,7 @@ export function applyTabCreated(tabs: TabMap, tab: TabSummary): TabMap {
 
 export function applyTabRenamed(
   tabs: TabMap,
-  evt: { id: string; host: string; name: string },
+  evt: { id: string; host: string; name: string }
 ): TabMap {
   const key = paneKey(evt.host, evt.id);
   const existing = tabs.get(key);
@@ -227,7 +233,7 @@ export function applyTabsReplaced(
   tabs: TabMap,
   host: string,
   workspaceId: string,
-  newTabs: readonly TabSummary[],
+  newTabs: readonly TabSummary[]
 ): TabMap {
   const next = new Map(tabs);
   for (const [key, tab] of tabs) {
@@ -252,7 +258,7 @@ function removeByKey<T>(map: ReadonlyMap<PaneKey, T>, key: PaneKey): ReadonlyMap
 
 function purgeWhere<T>(
   map: ReadonlyMap<PaneKey, T>,
-  predicate: (value: T) => boolean,
+  predicate: (value: T) => boolean
 ): ReadonlyMap<PaneKey, T> {
   let changed = false;
   const next = new Map(map);
@@ -276,7 +282,7 @@ function purgeWhere<T>(
 function updatePanes(
   panes: PaneMap,
   predicate: (pane: Pane) => boolean,
-  update: (pane: Pane) => Pane,
+  update: (pane: Pane) => Pane
 ): PaneMap {
   let changed = false;
   const next = new Map(panes);
@@ -300,70 +306,77 @@ function updatePanes(
  */
 export function applyLifecycleEvent(state: LifecycleState, evt: WsEvent): LifecycleState {
   switch (evt.event) {
-    case "pane.created":
-    case "pane.closed":
-    case "pane.agent_status_changed":
-    case "pane.updated":
+    case 'pane.created':
+    case 'pane.closed':
+    case 'pane.agent_status_changed':
+    case 'pane.updated':
       return { ...state, panes: applyEvent(state.panes, evt) };
 
-    case "workspace.created": {
-      const payload = evt.payload as BridgeEventPayload["workspace.created"];
+    case 'workspace.created': {
+      const payload = evt.payload as BridgeEventPayload['workspace.created'];
       return { ...state, workspaces: applyWorkspaceCreated(state.workspaces, payload.workspace) };
     }
-    case "workspace.renamed": {
-      const payload = evt.payload as BridgeEventPayload["workspace.renamed"];
+    case 'workspace.renamed': {
+      const payload = evt.payload as BridgeEventPayload['workspace.renamed'];
       const workspaces = applyWorkspaceRenamed(state.workspaces, payload);
       const panes = updatePanes(
         state.panes,
         (p) => p.host === payload.host && p.workspace.id === payload.id,
-        (p) => ({ ...p, workspace: { ...p.workspace, name: payload.name } }),
+        (p) => ({ ...p, workspace: { ...p.workspace, name: payload.name } })
       );
       return { ...state, workspaces, panes };
     }
-    case "workspace.closed": {
-      const payload = evt.payload as BridgeEventPayload["workspace.closed"];
+    case 'workspace.closed': {
+      const payload = evt.payload as BridgeEventPayload['workspace.closed'];
       const workspaces = removeByKey(state.workspaces, paneKey(payload.host, payload.id));
       const tabs = purgeWhere(
         state.tabs,
-        (t) => t.host === payload.host && t.workspace.id === payload.id,
+        (t) => t.host === payload.host && t.workspace.id === payload.id
       );
       const panes = purgeWhere(
         state.panes,
-        (p) => p.host === payload.host && p.workspace.id === payload.id,
+        (p) => p.host === payload.host && p.workspace.id === payload.id
       );
       return { panes, workspaces, tabs };
     }
 
-    case "tab.created": {
-      const payload = evt.payload as BridgeEventPayload["tab.created"];
+    case 'tab.created': {
+      const payload = evt.payload as BridgeEventPayload['tab.created'];
       return { ...state, tabs: applyTabCreated(state.tabs, payload.tab) };
     }
-    case "tab.renamed": {
-      const payload = evt.payload as BridgeEventPayload["tab.renamed"];
-      const tabs = applyTabRenamed(state.tabs, { id: payload.id, host: payload.host, name: payload.name });
+    case 'tab.renamed': {
+      const payload = evt.payload as BridgeEventPayload['tab.renamed'];
+      const tabs = applyTabRenamed(state.tabs, {
+        id: payload.id,
+        host: payload.host,
+        name: payload.name,
+      });
       const panes = updatePanes(
         state.panes,
         (p) => p.host === payload.host && p.tab.id === payload.id,
-        (p) => ({ ...p, tab: { ...p.tab, name: payload.name } }),
+        (p) => ({ ...p, tab: { ...p.tab, name: payload.name } })
       );
       return { ...state, tabs, panes };
     }
-    case "tab.closed": {
-      const payload = evt.payload as BridgeEventPayload["tab.closed"];
+    case 'tab.closed': {
+      const payload = evt.payload as BridgeEventPayload['tab.closed'];
       const tabs = removeByKey(state.tabs, paneKey(payload.host, payload.id));
-      const panes = purgeWhere(state.panes, (p) => p.host === payload.host && p.tab.id === payload.id);
+      const panes = purgeWhere(
+        state.panes,
+        (p) => p.host === payload.host && p.tab.id === payload.id
+      );
       return { ...state, tabs, panes };
     }
-    case "tab.moved": {
-      const payload = evt.payload as BridgeEventPayload["tab.moved"];
+    case 'tab.moved': {
+      const payload = evt.payload as BridgeEventPayload['tab.moved'];
       return {
         ...state,
         tabs: applyTabsReplaced(state.tabs, payload.host, payload.workspace.id, payload.tabs),
       };
     }
 
-    case "pane.moved": {
-      const payload = evt.payload as BridgeEventPayload["pane.moved"];
+    case 'pane.moved': {
+      const payload = evt.payload as BridgeEventPayload['pane.moved'];
       const panes = applyEvent(state.panes, evt);
       let workspaces = state.workspaces;
       let tabs = state.tabs;
@@ -378,7 +391,7 @@ export function applyLifecycleEvent(state: LifecycleState, evt: WsEvent): Lifecy
         workspaces = removeByKey(workspaces, key);
         tabs = purgeWhere(
           tabs,
-          (t) => t.host === payload.pane.host && t.workspace.id === payload.closed_workspace_id,
+          (t) => t.host === payload.pane.host && t.workspace.id === payload.closed_workspace_id
         );
       }
       if (payload.closed_tab_id) {
@@ -394,7 +407,7 @@ export function applyLifecycleEvent(state: LifecycleState, evt: WsEvent): Lifecy
 
 export function groupByStatus(
   panes: Iterable<Pane>,
-  filters: Filters,
+  filters: Filters
 ): Record<AgentStatus, Pane[]> {
   const groups: Record<AgentStatus, Pane[]> = {
     idle: [],
@@ -413,7 +426,7 @@ export function groupByStatus(
 }
 
 /** Band key/label for the no-`project` fallback. Rendered last, labelled by `copy.swimlane.ungrouped`. */
-const UNGROUPED_BAND_KEY = "ungrouped";
+const UNGROUPED_BAND_KEY = 'ungrouped';
 
 /**
  * One horizontal band of the board. `columns` keeps `groupByStatus`'s exact
@@ -431,19 +444,22 @@ export interface Swimlane {
   columns: Record<AgentStatus, Pane[]>;
 }
 
-function bandOf(pane: Pane, dimension: Exclude<SwimlaneDimension, "none">): { key: string; label: string } {
+function bandOf(
+  pane: Pane,
+  dimension: Exclude<SwimlaneDimension, 'none'>
+): { key: string; label: string } {
   switch (dimension) {
-    case "host":
+    case 'host':
       return { key: pane.host, label: pane.host };
-    case "repository":
+    case 'repository':
       return pane.project
         ? { key: pane.project.repo_name, label: pane.project.repo_name }
-        : { key: UNGROUPED_BAND_KEY, label: "" };
-    case "checkout":
+        : { key: UNGROUPED_BAND_KEY, label: '' };
+    case 'checkout':
       return pane.project
         ? { key: pane.project.checkout_path, label: pane.project.checkout_path }
-        : { key: UNGROUPED_BAND_KEY, label: "" };
-    case "tab":
+        : { key: UNGROUPED_BAND_KEY, label: '' };
+    case 'tab':
       return { key: paneKey(pane.host, pane.tab.id), label: pane.tab.name };
   }
 }
@@ -458,10 +474,10 @@ function bandOf(pane: Pane, dimension: Exclude<SwimlaneDimension, "none">): { ke
 export function groupIntoSwimlanes(
   panes: Iterable<Pane>,
   filters: Filters,
-  dimension: SwimlaneDimension,
+  dimension: SwimlaneDimension
 ): readonly Swimlane[] {
-  if (dimension === "none") {
-    return [{ key: "all", label: "", columns: groupByStatus(panes, filters) }];
+  if (dimension === 'none') {
+    return [{ key: 'all', label: '', columns: groupByStatus(panes, filters) }];
   }
   const bands = new Map<string, { label: string; members: Pane[] }>();
   for (const pane of panes) {
@@ -479,11 +495,15 @@ export function groupIntoSwimlanes(
   // Every band here holds at least one pane that survived the filter, so the
   // "empty band is not rendered" rule needs no extra pass.
   return [...bands]
-    .map(([key, band]) => ({ key, label: band.label, columns: groupByStatus(band.members, filters) }))
+    .map(([key, band]) => ({
+      key,
+      label: band.label,
+      columns: groupByStatus(band.members, filters),
+    }))
     .sort((a, b) => {
       if (a.key === UNGROUPED_BAND_KEY) return b.key === UNGROUPED_BAND_KEY ? 0 : 1;
       if (b.key === UNGROUPED_BAND_KEY) return -1;
-      return a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: "base" });
+      return a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' });
     });
 }
 
@@ -495,18 +515,18 @@ export function groupIntoSwimlanes(
  * round trip once tier-3 support shows up in `bridge.capabilities`.
  */
 const ALL_EVENT_KINDS = [
-  "pane.created",
-  "pane.closed",
-  "pane.agent_status_changed",
-  "pane.updated",
-  "workspace.created",
-  "workspace.closed",
-  "workspace.renamed",
-  "tab.created",
-  "tab.closed",
-  "tab.renamed",
-  "tab.moved",
-  "pane.moved",
+  'pane.created',
+  'pane.closed',
+  'pane.agent_status_changed',
+  'pane.updated',
+  'workspace.created',
+  'workspace.closed',
+  'workspace.renamed',
+  'tab.created',
+  'tab.closed',
+  'tab.renamed',
+  'tab.moved',
+  'pane.moved',
 ] as const;
 
 /**
@@ -515,7 +535,7 @@ const ALL_EVENT_KINDS = [
  * Owns the WsClient lifecycle: refetches hosts and re-subscribes every host
  * whenever the socket (re)connects.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class PanesStore {
   private readonly ws = inject(WsClient);
   private readonly settings = inject(SettingsService);
@@ -525,7 +545,7 @@ export class PanesStore {
 
   private readonly hostsResource = httpResource<GetHostsResponse>(() => {
     this.connectTick();
-    return "/api/hosts";
+    return '/api/hosts';
   });
 
   readonly hostsSignal = computed<HostSummary[]>(() => this.hostsResource.value()?.hosts ?? []);
@@ -551,7 +571,9 @@ export class PanesStore {
    * brief); `KeyboardService`'s tab-cycling shortcuts navigate too, so this
    * stays a pure reflection of the current URL either way.
    */
-  readonly scopeSignal = signal<{ host: string; workspaceId: string; tabId: string | null } | null>(null);
+  readonly scopeSignal = signal<{ host: string; workspaceId: string; tabId: string | null } | null>(
+    null
+  );
 
   /** Convenience view of `scopeSignal` for tab-only scoping, e.g. the rail's active-tab highlight. */
   readonly tabFilterSignal = computed(() => {
@@ -566,9 +588,11 @@ export class PanesStore {
    * see the tier-3 brief's "opens rename inline afterward"). The rail is
    * expected to clear this once it has consumed it.
    */
-  readonly pendingRenameSignal = signal<{ kind: "workspace" | "tab"; host: string; id: string } | null>(
-    null,
-  );
+  readonly pendingRenameSignal = signal<{
+    kind: 'workspace' | 'tab';
+    host: string;
+    id: string;
+  } | null>(null);
 
   /**
    * Same pattern as `pendingRenameSignal`, for `KeyboardService`'s
@@ -629,7 +653,9 @@ export class PanesStore {
     });
   });
 
-  readonly columnsSignal = computed(() => groupByStatus(this.scopedPanesSignal(), this.filtersSignal()));
+  readonly columnsSignal = computed(() =>
+    groupByStatus(this.scopedPanesSignal(), this.filtersSignal())
+  );
 
   /**
    * The board's bands under the persisted `swimlaneDimension`. With the
@@ -640,8 +666,8 @@ export class PanesStore {
     groupIntoSwimlanes(
       this.scopedPanesSignal(),
       this.filtersSignal(),
-      this.settings.settings().swimlaneDimension,
-    ),
+      this.settings.settings().swimlaneDimension
+    )
   );
 
   private readonly subscribedHosts = new Set<string>();
@@ -720,7 +746,7 @@ export class PanesStore {
     }
     this.subscribedHosts.add(host);
     try {
-      const list = await this.ws.request(host, "pane.list", {});
+      const list = await this.ws.request(host, 'pane.list', {});
       if (list) {
         this.panesSignal.update((panes) => {
           let next: PaneMap = panes;
@@ -757,7 +783,7 @@ export class PanesStore {
           return next;
         });
       }
-      await this.ws.request(host, "events.subscribe", { kinds: [...ALL_EVENT_KINDS] });
+      await this.ws.request(host, 'events.subscribe', { kinds: [...ALL_EVENT_KINDS] });
     } catch {
       // Connection dropped mid-subscribe; the next `connected` transition
       // clears `subscribedHosts` and retries every host from scratch.
@@ -776,7 +802,7 @@ export class PanesStore {
   private async probeCapabilities(host: string): Promise<void> {
     let caps: BridgeCapabilities;
     try {
-      caps = (await this.ws.request(host, "bridge.capabilities", {})) ?? fallbackCapabilities();
+      caps = (await this.ws.request(host, 'bridge.capabilities', {})) ?? fallbackCapabilities();
     } catch {
       caps = fallbackCapabilities();
     }
@@ -806,8 +832,8 @@ export class PanesStore {
   // harmless no-op either way. Callers must
   // gate on `capabilitiesSignal` themselves before calling any of these.
 
-  async splitPane(host: string, params: BridgeMethodParams["pane.split"]) {
-    const result = await this.ws.request(host, "pane.split", params);
+  async splitPane(host: string, params: BridgeMethodParams['pane.split']) {
+    const result = await this.ws.request(host, 'pane.split', params);
     if (result) {
       this.panesSignal.update((panes) => applyPaneCreated(panes, result.pane));
     }
@@ -815,7 +841,7 @@ export class PanesStore {
   }
 
   async closePane(host: string, paneId: string) {
-    const result = await this.ws.request(host, "pane.close", { pane_id: paneId });
+    const result = await this.ws.request(host, 'pane.close', { pane_id: paneId });
     this.panesSignal.update((panes) => applyPaneClosed(panes, { id: paneId, host }));
     return result;
   }
@@ -828,15 +854,15 @@ export class PanesStore {
    * the event landing later re-applies the same value harmlessly.
    */
   async renamePane(host: string, paneId: string, label: string | null) {
-    const result = await this.ws.request(host, "pane.rename", { pane_id: paneId, label });
+    const result = await this.ws.request(host, 'pane.rename', { pane_id: paneId, label });
     if (result) {
       this.panesSignal.update((panes) => applyPaneCreated(panes, result.pane));
     }
     return result;
   }
 
-  async createTab(host: string, params: BridgeMethodParams["tab.create"] = {}) {
-    const result = await this.ws.request(host, "tab.create", params);
+  async createTab(host: string, params: BridgeMethodParams['tab.create'] = {}) {
+    const result = await this.ws.request(host, 'tab.create', params);
     if (result) {
       this.tabsSignal.update((tabs) => applyTabCreated(tabs, result.tab));
       this.panesSignal.update((panes) => applyPaneCreated(panes, result.pane));
@@ -845,7 +871,7 @@ export class PanesStore {
   }
 
   async renameTab(host: string, tabId: string, label: string) {
-    const result = await this.ws.request(host, "tab.rename", { tab_id: tabId, label });
+    const result = await this.ws.request(host, 'tab.rename', { tab_id: tabId, label });
     // Optimistic, like every other tier-3 action above — verified live
     // against a real bridge (round-4 diagnosis) that the paired
     // `tab.renamed` broadcast event never arrives for a tab created earlier
@@ -858,26 +884,28 @@ export class PanesStore {
         updatePanes(
           panes,
           (p) => p.host === host && p.tab.id === tabId,
-          (p) => ({ ...p, tab: { ...p.tab, name: label } }),
-        ),
+          (p) => ({ ...p, tab: { ...p.tab, name: label } })
+        )
       );
     }
     return result;
   }
 
   async closeTab(host: string, tabId: string) {
-    const result = await this.ws.request(host, "tab.close", { tab_id: tabId });
+    const result = await this.ws.request(host, 'tab.close', { tab_id: tabId });
     this.tabsSignal.update((tabs) => removeByKey(tabs, paneKey(host, tabId)));
     this.panesSignal.update((panes) =>
-      purgeWhere(panes, (p) => p.host === host && p.tab.id === tabId),
+      purgeWhere(panes, (p) => p.host === host && p.tab.id === tabId)
     );
     return result;
   }
 
-  async createWorkspace(host: string, params: BridgeMethodParams["workspace.create"] = {}) {
-    const result = await this.ws.request(host, "workspace.create", params);
+  async createWorkspace(host: string, params: BridgeMethodParams['workspace.create'] = {}) {
+    const result = await this.ws.request(host, 'workspace.create', params);
     if (result) {
-      this.workspacesSignal.update((workspaces) => applyWorkspaceCreated(workspaces, result.workspace));
+      this.workspacesSignal.update((workspaces) =>
+        applyWorkspaceCreated(workspaces, result.workspace)
+      );
       this.tabsSignal.update((tabs) => applyTabCreated(tabs, result.tab));
       this.panesSignal.update((panes) => applyPaneCreated(panes, result.pane));
     }
@@ -885,24 +913,27 @@ export class PanesStore {
   }
 
   async renameWorkspace(host: string, workspaceId: string, label: string) {
-    const result = await this.ws.request(host, "workspace.rename", { workspace_id: workspaceId, label });
+    const result = await this.ws.request(host, 'workspace.rename', {
+      workspace_id: workspaceId,
+      label,
+    });
     if (result) {
       this.workspacesSignal.update((workspaces) =>
-        applyWorkspaceRenamed(workspaces, { id: workspaceId, host, name: label }),
+        applyWorkspaceRenamed(workspaces, { id: workspaceId, host, name: label })
       );
       this.panesSignal.update((panes) =>
         updatePanes(
           panes,
           (p) => p.host === host && p.workspace.id === workspaceId,
-          (p) => ({ ...p, workspace: { ...p.workspace, name: label } }),
-        ),
+          (p) => ({ ...p, workspace: { ...p.workspace, name: label } })
+        )
       );
     }
     return result;
   }
 
   async closeWorkspace(host: string, workspaceId: string, closeGroup = false) {
-    const result = await this.ws.request(host, "workspace.close", {
+    const result = await this.ws.request(host, 'workspace.close', {
       workspace_id: workspaceId,
       close_group: closeGroup,
     });
@@ -910,12 +941,14 @@ export class PanesStore {
     // can close OTHER linked workspaces too (CONTRACT-TIER3.md section 5.4)
     // — those aren't predictable from this single id, so they still rely on
     // their own `workspace.closed` events landing via `applyLifecycleEvent`.
-    this.workspacesSignal.update((workspaces) => removeByKey(workspaces, paneKey(host, workspaceId)));
+    this.workspacesSignal.update((workspaces) =>
+      removeByKey(workspaces, paneKey(host, workspaceId))
+    );
     this.tabsSignal.update((tabs) =>
-      purgeWhere(tabs, (t) => t.host === host && t.workspace.id === workspaceId),
+      purgeWhere(tabs, (t) => t.host === host && t.workspace.id === workspaceId)
     );
     this.panesSignal.update((panes) =>
-      purgeWhere(panes, (p) => p.host === host && p.workspace.id === workspaceId),
+      purgeWhere(panes, (p) => p.host === host && p.workspace.id === workspaceId)
     );
     return result;
   }
@@ -951,7 +984,7 @@ export class PanesStore {
     this.scopeSignal.set(null);
   }
 
-  requestPendingRename(kind: "workspace" | "tab", host: string, id: string): void {
+  requestPendingRename(kind: 'workspace' | 'tab', host: string, id: string): void {
     this.pendingRenameSignal.set({ kind, host, id });
   }
 
@@ -993,7 +1026,7 @@ export class PanesStore {
    * configured prefix as kanhrd's default (see the
    * `add-host-keybinds-passthrough` openspec change).
    */
-  primaryHostKeybinds(): BridgeCapabilities["hostKeybinds"] | null {
+  primaryHostKeybinds(): BridgeCapabilities['hostKeybinds'] | null {
     const capabilities = this.capabilitiesSignal();
     for (const host of this.hostsSignal()) {
       const hostKeybinds = capabilities.get(host.name)?.hostKeybinds;
@@ -1007,9 +1040,9 @@ export class PanesStore {
 
 /** True when `err` is the wire error `workspace.close` returns for CONTRACT-TIER3.md section 5.4's linked-worktree-group gate. */
 export function isWorkspaceGroupCloseRequiredError(err: unknown): boolean {
-  return err instanceof Error && err.message.startsWith("workspace_group_close_required");
+  return err instanceof Error && err.message.startsWith('workspace_group_close_required');
 }
 
 function describeError(err: unknown): string {
-  return err instanceof Error ? err.message : "failed to load hosts";
+  return err instanceof Error ? err.message : 'failed to load hosts';
 }

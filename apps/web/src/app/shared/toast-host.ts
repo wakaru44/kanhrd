@@ -1,10 +1,10 @@
-import { Component, DestroyRef, inject, signal } from "@angular/core";
-import { LucideInfo, LucideTriangleAlert, LucideX } from "./icons";
-import { COPY } from "./copy";
-import { ToastService, type ToastLevel } from "../state/toast.service";
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { LucideInfo, LucideTriangleAlert, LucideX } from './icons';
+import { COPY } from './copy';
+import { ToastService, type ToastLevel } from '../state/toast.service';
 
 /** Mirrors `--breakpoint-mobile` (900px) in `shared/tokens.scss`. Placement is decided here rather than in a media query so it is assertable in a unit test. */
-const MOBILE_BREAKPOINT = "(max-width: 900px)";
+const MOBILE_BREAKPOINT = '(max-width: 900px)';
 
 /**
  * The one toast stack, mounted once in `app.html`: bottom-right on desktop,
@@ -19,10 +19,10 @@ const MOBILE_BREAKPOINT = "(max-width: 900px)";
  * by their host id on reconnect rather than stacking up.
  */
 @Component({
-  selector: "app-toast-host",
+  selector: 'app-toast-host',
   imports: [LucideX, LucideInfo, LucideTriangleAlert],
-  templateUrl: "./toast-host.html",
-  styleUrl: "./toast-host.scss",
+  templateUrl: './toast-host.html',
+  styleUrl: './toast-host.scss',
 })
 export class ToastHost {
   protected readonly toastService = inject(ToastService);
@@ -36,12 +36,12 @@ export class ToastHost {
     const query = window.matchMedia(MOBILE_BREAKPOINT);
     this.compact.set(query.matches);
     const onChange = (event: MediaQueryListEvent): void => this.compact.set(event.matches);
-    query.addEventListener("change", onChange);
-    inject(DestroyRef).onDestroy(() => query.removeEventListener("change", onChange));
+    query.addEventListener('change', onChange);
+    inject(DestroyRef).onDestroy(() => query.removeEventListener('change', onChange));
   }
 
   protected isError(level: ToastLevel): boolean {
-    return level !== "info";
+    return level !== 'info';
   }
 
   protected dismiss(id: number): void {

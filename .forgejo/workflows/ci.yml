@@ -85,6 +85,9 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
 
+      - name: build schema
+        run: pnpm --filter @kanhrd/schema build
+
       - name: bridge unit tests
         run: pnpm --filter @kanhrd/bridge test
 
@@ -305,6 +308,9 @@ jobs:
           sudo apt-get install -y google-chrome-stable
         env:
           DEBIAN_FRONTEND: noninteractive
+
+      - name: build schema
+        run: pnpm --filter @kanhrd/schema build
 
       - name: web coverage (karma-coverage, already an installed devDependency)
         run: pnpm --filter @kanhrd/web exec ng test --watch=false --browsers=ChromeHeadless --code-coverage

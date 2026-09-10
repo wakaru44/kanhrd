@@ -8,23 +8,23 @@ import {
   input,
   output,
   viewChild,
-} from "@angular/core";
+} from '@angular/core';
 import {
   KeyboardService,
   formatBinding,
   type ShortcutBinding,
   type ShortcutCategory,
-} from "../state/keyboard.service";
-import { LucideX } from "./icons";
-import { COPY } from "./copy";
-import { containDialogFocus } from "./confirm-modal";
+} from '../state/keyboard.service';
+import { LucideX } from './icons';
+import { COPY } from './copy';
+import { containDialogFocus } from './confirm-modal';
 
 interface CategoryGroup {
   category: ShortcutCategory;
   bindings: ShortcutBinding[];
 }
 
-const CATEGORY_ORDER: readonly ShortcutCategory[] = ["Navigation", "Lifecycle", "View", "Help"];
+const CATEGORY_ORDER: readonly ShortcutCategory[] = ['Navigation', 'Lifecycle', 'View', 'Help'];
 
 /**
  * The keyboard-shortcut reference, grouped by category. A plain
@@ -37,10 +37,10 @@ const CATEGORY_ORDER: readonly ShortcutCategory[] = ["Navigation", "Lifecycle", 
  * `inert`, and returns focus to whatever opened it.
  */
 @Component({
-  selector: "app-keyboard-help-overlay",
+  selector: 'app-keyboard-help-overlay',
   imports: [LucideX],
-  templateUrl: "./keyboard-help-overlay.html",
-  styleUrl: "./keyboard-help-overlay.scss",
+  templateUrl: './keyboard-help-overlay.html',
+  styleUrl: './keyboard-help-overlay.scss',
 })
 export class KeyboardHelpOverlay implements OnDestroy {
   protected readonly keyboard = inject(KeyboardService);
@@ -49,7 +49,7 @@ export class KeyboardHelpOverlay implements OnDestroy {
   readonly open = input<boolean>(false);
   readonly closed = output<void>();
 
-  private readonly dialog = viewChild<ElementRef<HTMLElement>>("dialog");
+  private readonly dialog = viewChild<ElementRef<HTMLElement>>('dialog');
   private release: (() => void) | null = null;
 
   constructor() {
@@ -99,7 +99,7 @@ export class KeyboardHelpOverlay implements OnDestroy {
    */
   protected keysLabel(binding: ShortcutBinding): string {
     const prefix = this.keyboard.prefix();
-    return binding.action === "help" ? `${prefix} + ?` : formatBinding(binding, prefix);
+    return binding.action === 'help' ? `${prefix} + ?` : formatBinding(binding, prefix);
   }
 
   protected onBackdropClick(): void {

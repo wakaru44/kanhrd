@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import { dirname, isAbsolute, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import Fastify from "fastify";
-import { loadConfig, type CliOverrides } from "./config.js";
-import { HostRegistry } from "./herdr/hosts.js";
-import { registerRest } from "./http/rest.js";
-import { registerWebSocket } from "./ws/server.js";
+import { dirname, isAbsolute, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import Fastify from 'fastify';
+import { loadConfig, type CliOverrides } from './config.js';
+import { HostRegistry } from './herdr/hosts.js';
+import { registerRest } from './http/rest.js';
+import { registerWebSocket } from './ws/server.js';
 
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -13,27 +13,27 @@ function parseArgs(argv: string[]): CliOverrides {
   const overrides: CliOverrides = {};
   for (let i = 0; i < argv.length; i++) {
     switch (argv[i]) {
-      case "--config": {
+      case '--config': {
         const value = argv[++i];
         if (value !== undefined) overrides.configPath = value;
         break;
       }
-      case "--port": {
+      case '--port': {
         const value = argv[++i];
         if (value !== undefined) overrides.port = Number(value);
         break;
       }
-      case "--bind": {
+      case '--bind': {
         const value = argv[++i];
         if (value !== undefined) overrides.bind = value;
         break;
       }
-      case "--spa-dir": {
+      case '--spa-dir': {
         const value = argv[++i];
         if (value !== undefined) overrides.spaDir = value;
         break;
       }
-      case "--i-know-what-im-doing":
+      case '--i-know-what-im-doing':
         overrides.allowNonLoopback = true;
         break;
       default:

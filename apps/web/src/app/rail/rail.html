@@ -11,7 +11,7 @@
 
         @for (group of entry.value; track group.workspace.id) {
           <div class="workspace-row" [class.active]="isWorkspaceScopeActive(group.workspace.id)">
-            @if (isEditing("workspace", group.workspace.host, group.workspace.id)) {
+            @if (isEditing('workspace', group.workspace.host, group.workspace.id)) {
               <input
                 class="edit-input"
                 type="text"
@@ -42,12 +42,15 @@
                     "
                     aria-haspopup="menu"
                     (click)="
-                      toggleMenu(rowKey('workspace', group.workspace.host, group.workspace.id), $event)
+                      toggleMenu(
+                        rowKey('workspace', group.workspace.host, group.workspace.id),
+                        $event
+                      )
                     "
                   >
                     <svg lucideMoreHorizontal class="icon"></svg>
                   </button>
-                  @if (isMenuOpen(rowKey("workspace", group.workspace.host, group.workspace.id))) {
+                  @if (isMenuOpen(rowKey('workspace', group.workspace.host, group.workspace.id))) {
                     <div class="row-menu" role="menu" (keydown)="onMenuKeydown($event)">
                       <button
                         type="button"
@@ -74,7 +77,7 @@
 
           @for (tab of group.tabs; track tab.id) {
             <div class="tab-row" [class.active]="isTabFilterActive(tab.host, tab.id)">
-              @if (isEditing("tab", tab.host, tab.id)) {
+              @if (isEditing('tab', tab.host, tab.id)) {
                 <input
                   class="edit-input"
                   type="text"
@@ -106,7 +109,7 @@
                     >
                       <svg lucideMoreHorizontal class="icon"></svg>
                     </button>
-                    @if (isMenuOpen(rowKey("tab", tab.host, tab.id))) {
+                    @if (isMenuOpen(rowKey('tab', tab.host, tab.id))) {
                       <div class="row-menu" role="menu" (keydown)="onMenuKeydown($event)">
                         <button
                           type="button"

@@ -1,4 +1,4 @@
-import type { Pane } from "@kanhrd/schema";
+import type { Pane } from '@kanhrd/schema';
 
 /** How many pane-id characters stand in for a pane with no name at all. */
 const ID_PREFIX_LENGTH = 8;

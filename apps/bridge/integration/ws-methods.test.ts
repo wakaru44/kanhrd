@@ -1,8 +1,8 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { startBridge, waitForHostConnected, type RunningBridge } from "./fixtures/bridge.js";
-import { IntegrationClient } from "./fixtures/ws-client.js";
-import { herdrPaneList, herdrPaneSendText } from "./fixtures/herdr-cli.js";
-import { requireHerdrOrSkipReason } from "./fixtures/require-herdr.js";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { startBridge, waitForHostConnected, type RunningBridge } from './fixtures/bridge.js';
+import { IntegrationClient } from './fixtures/ws-client.js';
+import { herdrPaneList, herdrPaneSendText } from './fixtures/herdr-cli.js';
+import { requireHerdrOrSkipReason } from './fixtures/require-herdr.js';
 
 /**
  * B. WebSocket protocol methods — B1-B7 from the L-INT brief.
@@ -11,7 +11,7 @@ import { requireHerdrOrSkipReason } from "./fixtures/require-herdr.js";
  * (checklist items 3-10), re-run manually every validation round against a
  * throwaway `/tmp/kanhrd-ws-test.mjs`. This file is that script, committed.
  */
-describe("B. WebSocket protocol methods", () => {
+describe('B. WebSocket protocol methods', () => {
   let skipReason: string | undefined;
   let bridge: RunningBridge;
   let client: IntegrationClient;
@@ -21,7 +21,7 @@ describe("B. WebSocket protocol methods", () => {
     skipReason = await requireHerdrOrSkipReason();
     if (skipReason) return;
     bridge = await startBridge();
-    await waitForHostConnected(bridge, "local");
+    await waitForHostConnected(bridge, 'local');
     client = await IntegrationClient.connect(bridge.wsUrl);
     const panes = await herdrPaneList();
     panePid = panes[0].pane_id;
@@ -35,13 +35,15 @@ describe("B. WebSocket protocol methods", () => {
   const openSubscriptions: string[] = [];
   afterEach(async () => {
     for (const id of openSubscriptions.splice(0)) {
-      await client.call("local", "pane.unsubscribe_output", { subscription_id: id }).catch(() => undefined);
+      await client
+        .call('local', 'pane.unsubscribe_output', { subscription_id: id })
+        .catch(() => undefined);
     }
   });
 
-  it("B1. bridge.capabilities reports all tier-2 + tier-3 booleans", async (ctx) => {
+  it('B1. bridge.capabilities reports all tier-2 + tier-3 booleans', async (ctx) => {
     if (skipReason) return ctx.skip();
-    const data = await client.call("local", "bridge.capabilities", {});
+    const data = await client.call('local', 'bridge.capabilities', {});
     expect(data.tier).toBe(3);
     expect(data).toMatchObject({
       terminal: true,
@@ -62,97 +64,125 @@ describe("B. WebSocket protocol methods", () => {
   // `KANHRD_INT_HERDR_SOCKET` to be set, so a bare `pnpm test:int` run
   // never depends on (or gets tripped up by) whatever `config.toml` prefix
   // happens to be configured on a given machine.
-  it("B1b. bridge.capabilities.hostKeybinds reports a plausible mirrored prefix", async (ctx) => {
+  it('B1b. bridge.capabilities.hostKeybinds reports a plausible mirrored prefix', async (ctx) => {
     if (skipReason) return ctx.skip();
     if (!process.env.KANHRD_INT_HERDR_SOCKET) {
       return ctx.skip();
     }
-    const data = await client.call("local", "bridge.capabilities", {});
+    const data = await client.call('local', 'bridge.capabilities', {});
     expect(data.hostKeybinds).toBeDefined();
-    expect(typeof data.hostKeybinds?.prefix).toBe("string");
+    expect(typeof data.hostKeybinds?.prefix).toBe('string');
     expect(data.hostKeybinds?.prefix.length).toBeGreaterThan(0);
-    expect(["herdr-api", "herdr-cli", "config-file", "default"]).toContain(data.hostKeybinds?.source);
+    expect(['herdr-api', 'herdr-cli', 'config-file', 'default']).toContain(
+      data.hostKeybinds?.source
+    );
   });
 
-  it("B2. pane.read returns non-empty ansi/recent content with an integer revision", async (ctx) => {
+  it('B2. pane.read returns non-empty ansi/recent content with an integer revision', async (ctx) => {
     if (skipReason) return ctx.skip();
-    const data = await client.call("local", "pane.read", { pane_id: panePid });
+    const data = await client.call('local', 'pane.read', { pane_id: panePid });
     expect(data.content.length).toBeGreaterThan(0);
     expect(Number.isInteger(data.revision)).toBe(true);
-    expect(data.format).toBe("ansi");
-    expect(data.source).toBe("recent");
+    expect(data.format).toBe('ansi');
+    expect(data.source).toBe('recent');
   });
 
-  it("B3. pane.subscribe_output mints a subscription_id and delivers a pane.output event within 3s", async (ctx) => {
+  it('B3. pane.subscribe_output mints a subscription_id and delivers a pane.output event within 3s', async (ctx) => {
     if (skipReason) return ctx.skip();
-    const { subscription_id } = await client.call("local", "pane.subscribe_output", { pane_id: panePid });
+    const { subscription_id } = await client.call('local', 'pane.subscribe_output', {
+      pane_id: panePid,
+    });
     openSubscriptions.push(subscription_id);
     expect(subscription_id).toBeTruthy();
 
     // Nudge the pane so there is guaranteed fresh content for the poller to observe.
-    void herdrPaneSendText(panePid, "echo kanhrd-b3-nudge\r");
+    void herdrPaneSendText(panePid, 'echo kanhrd-b3-nudge\r');
 
     const event = await client.waitForEvent(
-      (e) => e.event === "pane.output" && (e.payload as { subscription_id: string }).subscription_id === subscription_id,
-      3_000,
+      (e) =>
+        e.event === 'pane.output' &&
+        (e.payload as { subscription_id: string }).subscription_id === subscription_id,
+      3_000
     );
-    const payload = event.payload as { subscription_id: string; pane_id: string; revision: number; content: string; format: string; truncated: boolean };
+    const payload = event.payload as {
+      subscription_id: string;
+      pane_id: string;
+      revision: number;
+      content: string;
+      format: string;
+      truncated: boolean;
+    };
     expect(payload.pane_id).toBe(panePid);
-    expect(typeof payload.content).toBe("string");
+    expect(typeof payload.content).toBe('string');
     expect(payload.content.length).toBeGreaterThan(0);
-    expect(typeof payload.revision).toBe("number");
-    expect(typeof payload.truncated).toBe("boolean");
+    expect(typeof payload.revision).toBe('number');
+    expect(typeof payload.truncated).toBe('boolean');
   });
 
-  it("B4. pane.unsubscribe_output returns {} and stops further pane.output events", async (ctx) => {
+  it('B4. pane.unsubscribe_output returns {} and stops further pane.output events', async (ctx) => {
     if (skipReason) return ctx.skip();
-    const { subscription_id } = await client.call("local", "pane.subscribe_output", { pane_id: panePid });
+    const { subscription_id } = await client.call('local', 'pane.subscribe_output', {
+      pane_id: panePid,
+    });
     // Let at least one event land so we know the subscription was live.
     await client.waitForEvent(
-      (e) => e.event === "pane.output" && (e.payload as { subscription_id: string }).subscription_id === subscription_id,
-      3_000,
+      (e) =>
+        e.event === 'pane.output' &&
+        (e.payload as { subscription_id: string }).subscription_id === subscription_id,
+      3_000
     );
 
-    const res = await client.request("local", "pane.unsubscribe_output", { subscription_id });
+    const res = await client.request('local', 'pane.unsubscribe_output', { subscription_id });
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.data).toEqual({});
 
     const countBefore = client.eventsFor(
-      (e) => e.event === "pane.output" && (e.payload as { subscription_id: string }).subscription_id === subscription_id,
+      (e) =>
+        e.event === 'pane.output' &&
+        (e.payload as { subscription_id: string }).subscription_id === subscription_id
     ).length;
     await new Promise((r) => setTimeout(r, 500));
     const countAfter = client.eventsFor(
-      (e) => e.event === "pane.output" && (e.payload as { subscription_id: string }).subscription_id === subscription_id,
+      (e) =>
+        e.event === 'pane.output' &&
+        (e.payload as { subscription_id: string }).subscription_id === subscription_id
     ).length;
     expect(countAfter).toBe(countBefore);
   });
 
-  it("B5. pane.send_text reaches the real pane (verified via a follow-up pane.read)", async (ctx) => {
+  it('B5. pane.send_text reaches the real pane (verified via a follow-up pane.read)', async (ctx) => {
     if (skipReason) return ctx.skip();
     const marker = `kanhrd-b5-marker-${Date.now()}`;
-    const res = await client.request("local", "pane.send_text", { pane_id: panePid, text: `echo ${marker}\r` });
+    const res = await client.request('local', 'pane.send_text', {
+      pane_id: panePid,
+      text: `echo ${marker}\r`,
+    });
     expect(res.ok).toBe(true);
 
     await new Promise((r) => setTimeout(r, 500));
-    const data = await client.call("local", "pane.read", { pane_id: panePid });
+    const data = await client.call('local', 'pane.read', { pane_id: panePid });
     expect(data.content).toContain(marker);
   });
 
-  it("B6. pane.resize rejects with not_supported", async (ctx) => {
+  it('B6. pane.resize rejects with not_supported', async (ctx) => {
     if (skipReason) return ctx.skip();
-    const res = await client.request("local", "pane.resize", { pane_id: panePid, cols: 80, rows: 24 });
+    const res = await client.request('local', 'pane.resize', {
+      pane_id: panePid,
+      cols: 80,
+      rows: 24,
+    });
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error.code).toBe("not_supported");
+    if (!res.ok) expect(res.error.code).toBe('not_supported');
   });
 
-  it("B7. pane.graphics.info and pane.graphics.stream reject with not_supported", async (ctx) => {
+  it('B7. pane.graphics.info and pane.graphics.stream reject with not_supported', async (ctx) => {
     if (skipReason) return ctx.skip();
-    const infoRes = await client.request("local", "pane.graphics.info", { pane_id: panePid });
+    const infoRes = await client.request('local', 'pane.graphics.info', { pane_id: panePid });
     expect(infoRes.ok).toBe(false);
-    if (!infoRes.ok) expect(infoRes.error.code).toBe("not_supported");
+    if (!infoRes.ok) expect(infoRes.error.code).toBe('not_supported');
 
-    const streamRes = await client.request("local", "pane.graphics.stream", { pane_id: panePid });
+    const streamRes = await client.request('local', 'pane.graphics.stream', { pane_id: panePid });
     expect(streamRes.ok).toBe(false);
-    if (!streamRes.ok) expect(streamRes.error.code).toBe("not_supported");
+    if (!streamRes.ok) expect(streamRes.error.code).toBe('not_supported');
   });
 });

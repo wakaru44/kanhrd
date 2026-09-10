@@ -1,8 +1,14 @@
-import { test, expect } from "./fixtures/kanhrd";
-import { herdrAvailable, herdrPaneRead, herdrPaneSendText } from "./fixtures/herdr";
-import { allCards, cardOpenLink, terminalContainer, xtermElement, xtermRows } from "./helpers/selectors";
-import { waitFor } from "./helpers/wait";
-import type { Page } from "@playwright/test";
+import { test, expect } from './fixtures/kanhrd';
+import { herdrAvailable, herdrPaneRead, herdrPaneSendText } from './fixtures/herdr';
+import {
+  allCards,
+  cardOpenLink,
+  terminalContainer,
+  xtermElement,
+  xtermRows,
+} from './helpers/selectors';
+import { waitFor } from './helpers/wait';
+import type { Page } from '@playwright/test';
 
 /**
  * Tier-2: click card -> xterm.js terminal, type, verify echo. Mirrors the
@@ -47,25 +53,27 @@ async function openFirstPane(app: Page): Promise<void> {
   await expect(cards.first()).toBeVisible({ timeout: 10_000 });
   // The card's opening control is a sibling `<a class="card-open">`, not the
   // `.card` element itself (see helpers/selectors.ts) — click the link.
-  await cardOpenLink(cards.filter({ has: app.locator("a.card-open") }).first()).click();
+  await cardOpenLink(cards.filter({ has: app.locator('a.card-open') }).first()).click();
   await expect(xtermElement(app)).toBeVisible({ timeout: 3_000 });
 }
 
-test("clicking a card navigates to the pane detail view and mounts a live terminal", async ({
+test('clicking a card navigates to the pane detail view and mounts a live terminal', async ({
   app,
   panePicker,
 }) => {
   await openFirstPane(app);
 
-  await expect(app).toHaveURL(new RegExp(`/pane/${panePicker.host}/${escapeRegExp(panePicker.id)}$`));
+  await expect(app).toHaveURL(
+    new RegExp(`/pane/${panePicker.host}/${escapeRegExp(panePicker.id)}$`)
+  );
 
-  await waitFor(async () => ((await xtermRows(app).textContent()) ?? "").trim().length > 0, {
+  await waitFor(async () => ((await xtermRows(app).textContent()) ?? '').trim().length > 0, {
     timeoutMs: 3_000,
-    message: "terminal never rendered non-empty pane content",
+    message: 'terminal never rendered non-empty pane content',
   });
 });
 
-test("typing fast into the terminal arrives at the real pane in order (no keystroke scrambling)", async ({
+test('typing fast into the terminal arrives at the real pane in order (no keystroke scrambling)', async ({
   app,
   panePicker,
 }) => {
@@ -79,13 +87,13 @@ test("typing fast into the terminal arrives at the real pane in order (no keystr
   // herdr socket connections).
   await app.keyboard.type(`echo ${marker}\r`);
 
-  await waitFor(
-    async () => (await herdrPaneRead(panePicker.id)).includes(`echo ${marker}`),
-    { timeoutMs: 5_000, message: `marker "${marker}" never landed in order at the real pane` },
-  );
+  await waitFor(async () => (await herdrPaneRead(panePicker.id)).includes(`echo ${marker}`), {
+    timeoutMs: 5_000,
+    message: `marker "${marker}" never landed in order at the real pane`,
+  });
 });
 
-test("output typed externally via herdr appears live in the terminal DOM (no reload)", async ({
+test('output typed externally via herdr appears live in the terminal DOM (no reload)', async ({
   app,
   panePicker,
 }) => {
@@ -93,7 +101,7 @@ test("output typed externally via herdr appears live in the terminal DOM (no rel
   // Let the initial pane.read + pane.subscribe_output snapshot settle before
   // driving an external change, so this test isolates the live-update path
   // (pane.output event -> xterm.write) rather than the initial-load path.
-  await waitFor(async () => ((await xtermRows(app).textContent()) ?? "").trim().length > 0, {
+  await waitFor(async () => ((await xtermRows(app).textContent()) ?? '').trim().length > 0, {
     timeoutMs: 3_000,
   });
 
@@ -104,12 +112,12 @@ test("output typed externally via herdr appears live in the terminal DOM (no rel
   // render its own input locally.
   await herdrPaneSendText(panePicker.id, `echo ${marker}\r`);
 
-  await waitFor(
-    async () => ((await xtermRows(app).textContent()) ?? "").includes(marker),
-    { timeoutMs: 3_000, message: `externally-sent marker "${marker}" never appeared in the terminal DOM` },
-  );
+  await waitFor(async () => ((await xtermRows(app).textContent()) ?? '').includes(marker), {
+    timeoutMs: 3_000,
+    message: `externally-sent marker "${marker}" never appeared in the terminal DOM`,
+  });
 });
 
 function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

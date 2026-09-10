@@ -1,17 +1,9 @@
-import {
-  Component,
-  ElementRef,
-  computed,
-  effect,
-  input,
-  output,
-  viewChild,
-} from "@angular/core";
-import type { AgentStatus, BridgeCapabilities } from "@kanhrd/schema";
-import { COPY } from "../shared/copy";
-import type { Swimlane as SwimlaneBand } from "../state/panes.store";
-import type { SwimlaneDimension } from "../state/settings.service";
-import { Column, mobileViewportSignal } from "./column";
+import { Component, ElementRef, computed, effect, input, output, viewChild } from '@angular/core';
+import type { AgentStatus, BridgeCapabilities } from '@kanhrd/schema';
+import { COPY } from '../shared/copy';
+import type { Swimlane as SwimlaneBand } from '../state/panes.store';
+import type { SwimlaneDimension } from '../state/settings.service';
+import { Column, mobileViewportSignal } from './column';
 
 /**
  * The resting page index of a paging strip. Deterministic by construction:
@@ -62,21 +54,21 @@ export interface BandLabel {
  */
 export function bandLabels(
   lanes: readonly SwimlaneBand[],
-  dimension: SwimlaneDimension,
+  dimension: SwimlaneDimension
 ): readonly BandLabel[] {
   const seen = new Map<string, number>();
   for (const lane of lanes) {
     seen.set(lane.label, (seen.get(lane.label) ?? 0) + 1);
   }
   return lanes.map((lane) => {
-    if (lane.key === "ungrouped") {
+    if (lane.key === 'ungrouped') {
       return { lane, label: COPY.swimlane.ungrouped, title: null };
     }
-    if (dimension === "tab" && (seen.get(lane.label) ?? 0) > 1) {
-      const host = lane.key.slice(0, lane.key.indexOf(":"));
+    if (dimension === 'tab' && (seen.get(lane.label) ?? 0) > 1) {
+      const host = lane.key.slice(0, lane.key.indexOf(':'));
       return { lane, label: `${host} / ${lane.label}`, title: null };
     }
-    if (dimension === "checkout") {
+    if (dimension === 'checkout') {
       const label = elideHead(lane.label);
       return { lane, label, title: label === lane.label ? null : lane.label };
     }
@@ -99,10 +91,10 @@ export function bandLabels(
  * chrome at all, so the grouped-off DOM is what it always was.
  */
 @Component({
-  selector: "app-swimlane",
+  selector: 'app-swimlane',
   imports: [Column],
-  templateUrl: "./swimlane.html",
-  styleUrl: "./swimlane.scss",
+  templateUrl: './swimlane.html',
+  styleUrl: './swimlane.scss',
 })
 export class Swimlane {
   readonly lane = input.required<SwimlaneBand>();
@@ -125,7 +117,7 @@ export class Swimlane {
 
   protected readonly mobile = mobileViewportSignal();
 
-  private readonly strip = viewChild<ElementRef<HTMLElement>>("strip");
+  private readonly strip = viewChild<ElementRef<HTMLElement>>('strip');
 
   /** Cards in this band across every visible column — the band's own count, not the board's. */
   protected readonly count = computed(() => {
@@ -173,11 +165,11 @@ export class Swimlane {
       return;
     }
     const reduced =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
     element.scrollTo({
       left: index * element.clientWidth,
-      behavior: reduced ? "auto" : "smooth",
+      behavior: reduced ? 'auto' : 'smooth',
     });
   }
 }

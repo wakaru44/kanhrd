@@ -23,13 +23,17 @@
           class="segment"
           [class.active]="density() === 'comfortable'"
           (click)="setDensity('comfortable')"
-        >{{ text.comfortable }}</button>
+        >
+          {{ text.comfortable }}
+        </button>
         <button
           type="button"
           class="segment"
           [class.active]="density() === 'compact'"
           (click)="setDensity('compact')"
-        >{{ text.compact }}</button>
+        >
+          {{ text.compact }}
+        </button>
       </div>
     </div>
   </section>
@@ -61,7 +65,9 @@
             [class.active]="terminalFontSizeService.size() === size"
             [attr.aria-pressed]="terminalFontSizeService.size() === size"
             (click)="setTerminalFontSize(size)"
-          >{{ size }}</button>
+          >
+            {{ size }}
+          </button>
         }
       </div>
     </div>
@@ -112,7 +118,9 @@
           <li class="host-row">
             <span class="conn-dot" [class.ok]="host.connected" [class.err]="!host.connected"></span>
             <span class="host-name">{{ host.name }}</span>
-            <span class="host-status">{{ host.connected ? text.connected : text.notConnected }}</span>
+            <span class="host-status">{{
+              host.connected ? text.connected : text.notConnected
+            }}</span>
             @if (host.last_error) {
               <span class="host-error">{{ host.last_error }}</span>
             }
@@ -143,21 +151,29 @@
           @for (binding of shortcutRows(); track binding.action) {
             <tr>
               <td>{{ binding.description }}</td>
-              <td><kbd>{{ defaultBindingLabel(binding) }}</kbd></td>
-              <td><kbd>{{ currentBindingLabel(binding) }}</kbd></td>
+              <td>
+                <kbd>{{ defaultBindingLabel(binding) }}</kbd>
+              </td>
+              <td>
+                <kbd>{{ currentBindingLabel(binding) }}</kbd>
+              </td>
             </tr>
           }
         </tbody>
       </table>
     </div>
 
-    <button type="button" class="btn" (click)="resetKeyboardDefaults()">{{ text.resetDefaults }}</button>
+    <button type="button" class="btn" (click)="resetKeyboardDefaults()">
+      {{ text.resetDefaults }}
+    </button>
   </section>
 
   <section class="settings-section">
     <h2>{{ text.data }}</h2>
     <p class="section-note">{{ text.dataNote }}</p>
-    <button type="button" class="btn danger" (click)="requestClearData()">{{ text.clearData }}</button>
+    <button type="button" class="btn danger" (click)="requestClearData()">
+      {{ text.clearData }}
+    </button>
   </section>
 </div>
 

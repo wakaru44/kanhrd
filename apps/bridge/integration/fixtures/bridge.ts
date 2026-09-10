@@ -1,10 +1,10 @@
-import { spawn, type ChildProcessByStdio } from "node:child_process";
-import type { Readable } from "node:stream";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { spawn, type ChildProcessByStdio } from 'node:child_process';
+import type { Readable } from 'node:stream';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 
 const FIXTURES_DIR = dirname(fileURLToPath(import.meta.url));
-const BRIDGE_DIR = resolve(FIXTURES_DIR, "../.."); // apps/bridge
+const BRIDGE_DIR = resolve(FIXTURES_DIR, '../..'); // apps/bridge
 
 const LISTEN_LINE_RE = /Server listening at http:\/\/[^:]+:(\d+)/;
 const START_TIMEOUT_MS = 3_000;
@@ -41,26 +41,34 @@ export interface RunningBridge {
  */
 export async function startBridge(extraArgs: string[] = []): Promise<RunningBridge> {
   const proc: ChildProcessByStdio<null, Readable, Readable> = spawn(
-    "node",
-    ["--import", "tsx", "src/main.ts", "--port", "0", ...extraArgs],
-    { cwd: BRIDGE_DIR, stdio: ["ignore", "pipe", "pipe"] },
+    'node',
+    ['--import', 'tsx', 'src/main.ts', '--port', '0', ...extraArgs],
+    { cwd: BRIDGE_DIR, stdio: ['ignore', 'pipe', 'pipe'] }
   );
 
-  let log = "";
-  let stderr = "";
-  proc.stdout.on("data", (chunk: Buffer) => (log += chunk.toString("utf8")));
-  proc.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString("utf8")));
+  let log = '';
+  let stderr = '';
+  proc.stdout.on('data', (chunk: Buffer) => (log += chunk.toString('utf8')));
+  proc.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString('utf8')));
 
   const exitedEarly = new Promise<never>((_resolvePromise, reject) => {
-    proc.once("exit", (code, signal) => {
-      reject(new Error(`bridge process exited early (code=${code}, signal=${signal})\nstdout:\n${log}\nstderr:\n${stderr}`));
+    proc.once('exit', (code, signal) => {
+      reject(
+        new Error(
+          `bridge process exited early (code=${code}, signal=${signal})\nstdout:\n${log}\nstderr:\n${stderr}`
+        )
+      );
     });
-    proc.once("error", (err) => reject(err));
+    proc.once('error', (err) => reject(err));
   });
 
   const waitForListen = new Promise<number>((resolvePromise, reject) => {
     const timer = setTimeout(() => {
-      reject(new Error(`bridge did not log "Server listening" within ${START_TIMEOUT_MS}ms\nstdout:\n${log}\nstderr:\n${stderr}`));
+      reject(
+        new Error(
+          `bridge did not log "Server listening" within ${START_TIMEOUT_MS}ms\nstdout:\n${log}\nstderr:\n${stderr}`
+        )
+      );
     }, START_TIMEOUT_MS);
 
     const check = (): void => {
@@ -70,7 +78,7 @@ export async function startBridge(extraArgs: string[] = []): Promise<RunningBrid
         resolvePromise(Number(match[1]));
       }
     };
-    proc.stdout.on("data", check);
+    proc.stdout.on('data', check);
     check(); // in case it already arrived before this listener attached
   });
 
@@ -78,10 +86,10 @@ export async function startBridge(extraArgs: string[] = []): Promise<RunningBrid
 
   const stop = async (): Promise<void> => {
     if (proc.exitCode !== null || proc.signalCode !== null) return;
-    proc.kill("SIGTERM");
+    proc.kill('SIGTERM');
     await new Promise<void>((resolvePromise) => {
-      const forceKill = setTimeout(() => proc.kill("SIGKILL"), 2_000);
-      proc.once("exit", () => {
+      const forceKill = setTimeout(() => proc.kill('SIGKILL'), 2_000);
+      proc.once('exit', () => {
         clearTimeout(forceKill);
         resolvePromise();
       });
@@ -113,17 +121,25 @@ export async function startBridge(extraArgs: string[] = []): Promise<RunningBrid
  * `beforeAll`, right after `startBridge()`, instead of hammering
  * `/api/hosts` on the very first tick.
  */
-export async function waitForHostConnected(bridge: RunningBridge, host = "local", timeoutMs = 3_000): Promise<void> {
+export async function waitForHostConnected(
+  bridge: RunningBridge,
+  host = 'local',
+  timeoutMs = 3_000
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let last: { connected: boolean; last_error?: string } | undefined;
   while (Date.now() < deadline) {
     const res = await fetch(`${bridge.baseUrl}/api/hosts`);
     if (res.ok) {
-      const body = (await res.json()) as { hosts: Array<{ name: string; connected: boolean; last_error?: string }> };
+      const body = (await res.json()) as {
+        hosts: Array<{ name: string; connected: boolean; last_error?: string }>;
+      };
       last = body.hosts.find((h) => h.name === host);
       if (last?.connected) return;
     }
     await new Promise((r) => setTimeout(r, 50));
   }
-  throw new Error(`host "${host}" did not report connected: true within ${timeoutMs}ms (last seen: ${JSON.stringify(last)})`);
+  throw new Error(
+    `host "${host}" did not report connected: true within ${timeoutMs}ms (last seen: ${JSON.stringify(last)})`
+  );
 }

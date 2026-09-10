@@ -1,4 +1,4 @@
-import { EventEmitter } from "node:events";
+import { EventEmitter } from 'node:events';
 import type {
   BridgeEventPayload,
   BridgeMethodParams,
@@ -21,18 +21,18 @@ import type {
   ReadSource,
   WorkspaceSummary,
   WsEvent,
-} from "@kanhrd/schema";
-import type { HostConfig } from "../config.js";
+} from '@kanhrd/schema';
+import type { HostConfig } from '../config.js';
 import {
   HerdrClient,
   type HerdrPushedEvent,
   type HerdrSubscription,
   type HerdrSubscriptionSpec,
-} from "./client.js";
-import { WorkspaceTabNameCache } from "./names.js";
-import { herdrConfigDir, resolveHostKeybinds, type HostKeybinds } from "./keybinds.js";
-import { projectPane, projectTab, projectWorkspace } from "./project.js";
-import { HostMutationQueue, PaneWriteQueue } from "./write-queue.js";
+} from './client.js';
+import { WorkspaceTabNameCache } from './names.js';
+import { herdrConfigDir, resolveHostKeybinds, type HostKeybinds } from './keybinds.js';
+import { projectPane, projectTab, projectWorkspace } from './project.js';
+import { HostMutationQueue, PaneWriteQueue } from './write-queue.js';
 
 const MIN_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30_000;
@@ -55,7 +55,7 @@ const MAX_BACKOFF_MS = 30_000;
 const AGENT_STATUS_POLL_INTERVAL_MS = 5000;
 
 export class HostUnavailableError extends Error {
-  readonly code = "host_unavailable";
+  readonly code = 'host_unavailable';
   constructor(host: string) {
     super(`host "${host}" is not connected`);
   }
@@ -67,19 +67,19 @@ export class HostUnavailableError extends Error {
  * CONTRACT-TIER3.md section 4.
  */
 const LIFECYCLE_EVENT_KINDS: EventKind[] = [
-  "workspace.created",
-  "workspace.closed",
-  "workspace.renamed",
-  "tab.created",
-  "tab.closed",
-  "tab.renamed",
-  "tab.moved",
-  "pane.moved",
+  'workspace.created',
+  'workspace.closed',
+  'workspace.renamed',
+  'tab.created',
+  'tab.closed',
+  'tab.renamed',
+  'tab.moved',
+  'pane.moved',
   // Global (`Subscription::PaneUpdated {}`, no `pane_id`), so the spec set
   // below stays fixed. Carries a whole `PaneInfo`, which is how a rename
   // made in herdr's own interface reaches the board without a refetch —
   // the agent-status poll only synthesizes `agent_status` transitions.
-  "pane.updated",
+  'pane.updated',
 ];
 
 /**
@@ -108,7 +108,7 @@ export class HostRuntime extends EventEmitter {
    */
   private readonly paneAgentStatus = new Map<
     string,
-    { status: HerdrPaneInfo["agent_status"]; since?: number }
+    { status: HerdrPaneInfo['agent_status']; since?: number }
   >();
   private subscription: HerdrSubscription | null = null;
   /** Guards against a superseded subscribe (resubscribe in flight) acting on stale disconnect/settle events. */
@@ -126,7 +126,7 @@ export class HostRuntime extends EventEmitter {
     private readonly config: HostConfig,
     // ponytail: test-only override so unit tests don't have to wait out a
     // real 5s interval; production callers always use the default.
-    private readonly agentStatusPollIntervalMs = AGENT_STATUS_POLL_INTERVAL_MS,
+    private readonly agentStatusPollIntervalMs = AGENT_STATUS_POLL_INTERVAL_MS
   ) {
     super();
     this.name = config.name;
@@ -164,7 +164,10 @@ export class HostRuntime extends EventEmitter {
     this.stopped = false;
     // Runs for the lifetime of this runtime, not just while connected —
     // `pollAgentStatus()` itself no-ops while `connected` is false.
-    this.agentStatusPollTimer = setInterval(() => void this.pollAgentStatus(), this.agentStatusPollIntervalMs);
+    this.agentStatusPollTimer = setInterval(
+      () => void this.pollAgentStatus(),
+      this.agentStatusPollIntervalMs
+    );
     void this.connectOnce();
   }
 
@@ -183,7 +186,7 @@ export class HostRuntime extends EventEmitter {
     // connection to be up, but we gate on `connected` anyway: a subscription
     // outage is our signal that this host's socket/server is unreachable.
     if (!this.connected) throw new HostUnavailableError(this.name);
-    const result = await this.client.request<{ panes: HerdrPaneInfo[] }>("pane.list");
+    const result = await this.client.request<{ panes: HerdrPaneInfo[] }>('pane.list');
     for (const pane of result.panes) this.trackPane(pane);
     return result.panes.map((pane) => this.project(pane));
   }
@@ -195,10 +198,16 @@ export class HostRuntime extends EventEmitter {
     format?: ReadFormat;
     lines?: number;
     strip_ansi?: boolean;
-  }): Promise<{ content: string; revision: number; truncated: boolean; format: ReadFormat; source: ReadSource }> {
+  }): Promise<{
+    content: string;
+    revision: number;
+    truncated: boolean;
+    format: ReadFormat;
+    source: ReadSource;
+  }> {
     if (!this.connected) throw new HostUnavailableError(this.name);
-    const source = params.source ?? "recent";
-    const format = params.format ?? "ansi";
+    const source = params.source ?? 'recent';
+    const format = params.format ?? 'ansi';
     const requestParams: Record<string, unknown> = { pane_id: params.pane_id, source, format };
     if (params.lines !== undefined) requestParams.lines = params.lines;
     if (params.strip_ansi !== undefined) requestParams.strip_ansi = params.strip_ansi;
@@ -207,7 +216,10 @@ export class HostRuntime extends EventEmitter {
     // `{"type":"pane_list","panes":[...]}` shape — confirmed against a live herdr socket.
     // herdr.ts's `HerdrPaneReadResult` doc cites a flat `ResponseResult::PaneRead`; the
     // wire reality is a struct variant with a `read` field, so unwrap it here.
-    const result = await this.client.request<{ read: HerdrPaneReadResult }>("pane.read", requestParams);
+    const result = await this.client.request<{ read: HerdrPaneReadResult }>(
+      'pane.read',
+      requestParams
+    );
     const read = result.read;
     return {
       content: read.text,
@@ -226,7 +238,7 @@ export class HostRuntime extends EventEmitter {
   async paneSendKeys(params: { pane_id: string; keys: string[] }): Promise<void> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     await this.writeQueue.enqueue(this.name, params.pane_id, () =>
-      this.client.request("pane.send_keys", { pane_id: params.pane_id, keys: params.keys }),
+      this.client.request('pane.send_keys', { pane_id: params.pane_id, keys: params.keys })
     );
   }
 
@@ -237,7 +249,7 @@ export class HostRuntime extends EventEmitter {
   async paneSendText(params: { pane_id: string; text: string }): Promise<void> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     await this.writeQueue.enqueue(this.name, params.pane_id, () =>
-      this.client.request("pane.send_text", { pane_id: params.pane_id, text: params.text }),
+      this.client.request('pane.send_text', { pane_id: params.pane_id, text: params.text })
     );
   }
 
@@ -253,7 +265,9 @@ export class HostRuntime extends EventEmitter {
   // `move_result`, unlike every other tier-3 result, which nests under the
   // resource's own name (`pane`/`tab`/`workspace`) or is flat (`tabs`).
 
-  async paneSplit(params: BridgeMethodParams["pane.split"]): Promise<BridgeMethodResult["pane.split"]> {
+  async paneSplit(
+    params: BridgeMethodParams['pane.split']
+  ): Promise<BridgeMethodResult['pane.split']> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     return this.mutationQueue.enqueue(this.name, async () => {
       const requestParams: Record<string, unknown> = { direction: params.direction };
@@ -263,7 +277,10 @@ export class HostRuntime extends EventEmitter {
       if (params.cwd !== undefined) requestParams.cwd = params.cwd;
       if (params.focus !== undefined) requestParams.focus = params.focus;
       if (params.env !== undefined) requestParams.env = params.env;
-      const result = await this.client.request<{ pane: HerdrPaneInfo }>("pane.split", requestParams);
+      const result = await this.client.request<{ pane: HerdrPaneInfo }>(
+        'pane.split',
+        requestParams
+      );
       this.trackPane(result.pane);
       return { pane: this.project(result.pane) };
     });
@@ -272,7 +289,7 @@ export class HostRuntime extends EventEmitter {
   async paneClose(params: { pane_id: string }): Promise<void> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     await this.mutationQueue.enqueue(this.name, () =>
-      this.client.request<HerdrOkResult>("pane.close", { pane_id: params.pane_id }),
+      this.client.request<HerdrOkResult>('pane.close', { pane_id: params.pane_id })
     );
     // Belt-and-suspenders alongside the `pane.closed` event handler — see
     // that handler's doc for why closing is otherwise event-driven.
@@ -289,28 +306,41 @@ export class HostRuntime extends EventEmitter {
    * herdr's response — and never touches `pane.report_metadata`, `title`,
    * `display_agent`, `state_labels` or any `tokens` entry.
    */
-  async paneRename(params: BridgeMethodParams["pane.rename"]): Promise<BridgeMethodResult["pane.rename"]> {
+  async paneRename(
+    params: BridgeMethodParams['pane.rename']
+  ): Promise<BridgeMethodResult['pane.rename']> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     return this.writeQueue.enqueue(this.name, params.pane_id, async () => {
       const requestParams: Record<string, unknown> = { pane_id: params.pane_id };
       // `undefined` means "no change" and must not be sent; `null` is
       // herdr's explicit clear and must be.
       if (params.label !== undefined) requestParams.label = params.label;
-      const result = await this.client.request<{ pane: HerdrPaneInfo }>("pane.rename", requestParams);
+      const result = await this.client.request<{ pane: HerdrPaneInfo }>(
+        'pane.rename',
+        requestParams
+      );
       this.trackPane(result.pane);
       return { pane: this.project(result.pane) };
     });
   }
 
-  async paneMove(params: BridgeMethodParams["pane.move"]): Promise<BridgeMethodResult["pane.move"]> {
+  async paneMove(
+    params: BridgeMethodParams['pane.move']
+  ): Promise<BridgeMethodResult['pane.move']> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     return this.mutationQueue.enqueue(this.name, async () => {
-      const requestParams: Record<string, unknown> = { pane_id: params.pane_id, destination: params.destination };
+      const requestParams: Record<string, unknown> = {
+        pane_id: params.pane_id,
+        destination: params.destination,
+      };
       if (params.focus !== undefined) requestParams.focus = params.focus;
-      const result = await this.client.request<{ move_result: HerdrPaneMoveResult }>("pane.move", requestParams);
+      const result = await this.client.request<{ move_result: HerdrPaneMoveResult }>(
+        'pane.move',
+        requestParams
+      );
       const move = result.move_result;
       this.applyPaneMoveCache(move);
-      const projected: BridgeMethodResult["pane.move"] = {
+      const projected: BridgeMethodResult['pane.move'] = {
         changed: move.changed,
         pane: this.project(move.pane),
         previous_workspace_id: move.previous_workspace_id,
@@ -319,14 +349,18 @@ export class HostRuntime extends EventEmitter {
       if (move.reason !== undefined) projected.reason = move.reason;
       if (move.created_workspace !== undefined)
         projected.created_workspace = projectWorkspace(this.name, move.created_workspace);
-      if (move.created_tab !== undefined) projected.created_tab = projectTab(this.name, move.created_tab);
-      if (move.closed_workspace_id !== undefined) projected.closed_workspace_id = move.closed_workspace_id;
+      if (move.created_tab !== undefined)
+        projected.created_tab = projectTab(this.name, move.created_tab);
+      if (move.closed_workspace_id !== undefined)
+        projected.closed_workspace_id = move.closed_workspace_id;
       if (move.closed_tab_id !== undefined) projected.closed_tab_id = move.closed_tab_id;
       return projected;
     });
   }
 
-  async tabCreate(params: BridgeMethodParams["tab.create"]): Promise<BridgeMethodResult["tab.create"]> {
+  async tabCreate(
+    params: BridgeMethodParams['tab.create']
+  ): Promise<BridgeMethodResult['tab.create']> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     return this.mutationQueue.enqueue(this.name, async () => {
       const requestParams: Record<string, unknown> = {};
@@ -335,17 +369,19 @@ export class HostRuntime extends EventEmitter {
       if (params.focus !== undefined) requestParams.focus = params.focus;
       if (params.label !== undefined) requestParams.label = params.label;
       if (params.env !== undefined) requestParams.env = params.env;
-      const result = await this.client.request<HerdrTabCreateResult>("tab.create", requestParams);
+      const result = await this.client.request<HerdrTabCreateResult>('tab.create', requestParams);
       this.trackTab(result.tab);
       this.trackPane(result.root_pane);
       return { tab: projectTab(this.name, result.tab), pane: this.project(result.root_pane) };
     });
   }
 
-  async tabRename(params: BridgeMethodParams["tab.rename"]): Promise<BridgeMethodResult["tab.rename"]> {
+  async tabRename(
+    params: BridgeMethodParams['tab.rename']
+  ): Promise<BridgeMethodResult['tab.rename']> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     return this.mutationQueue.enqueue(this.name, async () => {
-      const result = await this.client.request<HerdrTabRenameResult>("tab.rename", {
+      const result = await this.client.request<HerdrTabRenameResult>('tab.rename', {
         tab_id: params.tab_id,
         label: params.label,
       });
@@ -357,17 +393,17 @@ export class HostRuntime extends EventEmitter {
   async tabClose(params: { tab_id: string }): Promise<void> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     await this.mutationQueue.enqueue(this.name, () =>
-      this.client.request<HerdrOkResult>("tab.close", { tab_id: params.tab_id }),
+      this.client.request<HerdrOkResult>('tab.close', { tab_id: params.tab_id })
     );
     // Belt-and-suspenders alongside the `tab.closed` event handler — purge
     // nested panes now rather than wait for the event round trip.
     this.purgeCascade(this.names.purgeTab(params.tab_id).paneIds);
   }
 
-  async tabMove(params: BridgeMethodParams["tab.move"]): Promise<BridgeMethodResult["tab.move"]> {
+  async tabMove(params: BridgeMethodParams['tab.move']): Promise<BridgeMethodResult['tab.move']> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     return this.mutationQueue.enqueue(this.name, async () => {
-      const result = await this.client.request<HerdrTabMoveResult>("tab.move", {
+      const result = await this.client.request<HerdrTabMoveResult>('tab.move', {
         tab_id: params.tab_id,
         insert_index: params.insert_index,
       });
@@ -377,17 +413,21 @@ export class HostRuntime extends EventEmitter {
   }
 
   async workspaceCreate(
-    params: BridgeMethodParams["workspace.create"],
-  ): Promise<BridgeMethodResult["workspace.create"]> {
+    params: BridgeMethodParams['workspace.create']
+  ): Promise<BridgeMethodResult['workspace.create']> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     return this.mutationQueue.enqueue(this.name, async () => {
       const requestParams: Record<string, unknown> = {};
-      if (params.source_workspace_id !== undefined) requestParams.source_workspace_id = params.source_workspace_id;
+      if (params.source_workspace_id !== undefined)
+        requestParams.source_workspace_id = params.source_workspace_id;
       if (params.cwd !== undefined) requestParams.cwd = params.cwd;
       if (params.focus !== undefined) requestParams.focus = params.focus;
       if (params.label !== undefined) requestParams.label = params.label;
       if (params.env !== undefined) requestParams.env = params.env;
-      const result = await this.client.request<HerdrWorkspaceCreateResult>("workspace.create", requestParams);
+      const result = await this.client.request<HerdrWorkspaceCreateResult>(
+        'workspace.create',
+        requestParams
+      );
       this.trackWorkspace(result.workspace);
       this.trackTab(result.tab);
       this.trackPane(result.root_pane);
@@ -400,11 +440,11 @@ export class HostRuntime extends EventEmitter {
   }
 
   async workspaceRename(
-    params: BridgeMethodParams["workspace.rename"],
-  ): Promise<BridgeMethodResult["workspace.rename"]> {
+    params: BridgeMethodParams['workspace.rename']
+  ): Promise<BridgeMethodResult['workspace.rename']> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     return this.mutationQueue.enqueue(this.name, async () => {
-      const result = await this.client.request<HerdrWorkspaceRenameResult>("workspace.rename", {
+      const result = await this.client.request<HerdrWorkspaceRenameResult>('workspace.rename', {
         workspace_id: params.workspace_id,
         label: params.label,
       });
@@ -425,7 +465,7 @@ export class HostRuntime extends EventEmitter {
     const requestParams: Record<string, unknown> = { workspace_id: params.workspace_id };
     if (params.close_group !== undefined) requestParams.close_group = params.close_group;
     await this.mutationQueue.enqueue(this.name, () =>
-      this.client.request<HerdrOkResult>("workspace.close", requestParams),
+      this.client.request<HerdrOkResult>('workspace.close', requestParams)
     );
     // Belt-and-suspenders alongside the `workspace.closed` event handler.
     const purged = this.names.purgeWorkspace(params.workspace_id);
@@ -456,7 +496,7 @@ export class HostRuntime extends EventEmitter {
     if (previous === undefined) {
       this.paneAgentStatus.set(
         pane.pane_id,
-        seeding ? { status: pane.agent_status } : { status: pane.agent_status, since: Date.now() },
+        seeding ? { status: pane.agent_status } : { status: pane.agent_status, since: Date.now() }
       );
     } else if (previous.status !== pane.agent_status) {
       this.paneAgentStatus.set(pane.pane_id, { status: pane.agent_status, since: Date.now() });
@@ -513,7 +553,7 @@ export class HostRuntime extends EventEmitter {
   private async connectOnce(): Promise<void> {
     try {
       await this.names.refresh(this.client);
-      const paneList = await this.client.request<{ panes: HerdrPaneInfo[] }>("pane.list");
+      const paneList = await this.client.request<{ panes: HerdrPaneInfo[] }>('pane.list');
       // `seeding: true` — every pane in this first list was already holding
       // its status before we connected, so none of them gets a `since`. A
       // reconnect re-seeds for the same reason: we may have slept through
@@ -525,7 +565,7 @@ export class HostRuntime extends EventEmitter {
     } catch (err) {
       this.connected = false;
       this.lastError = err instanceof Error ? err.message : String(err);
-      this.emit("state", this.state());
+      this.emit('state', this.state());
       this.scheduleReconnect();
     }
   }
@@ -540,7 +580,7 @@ export class HostRuntime extends EventEmitter {
    * never needs to be rebuilt in response to pane/tab/workspace churn.
    */
   private buildSubscriptionSpecs(): HerdrSubscriptionSpec[] {
-    const specs: HerdrSubscriptionSpec[] = [{ type: "pane.created" }, { type: "pane.closed" }];
+    const specs: HerdrSubscriptionSpec[] = [{ type: 'pane.created' }, { type: 'pane.closed' }];
     for (const kind of LIFECYCLE_EVENT_KINDS) specs.push({ type: kind });
     return specs;
   }
@@ -565,7 +605,7 @@ export class HostRuntime extends EventEmitter {
     if (!this.connected) return;
     let panes: HerdrPaneInfo[];
     try {
-      const result = await this.client.request<{ panes: HerdrPaneInfo[] }>("pane.list");
+      const result = await this.client.request<{ panes: HerdrPaneInfo[] }>('pane.list');
       panes = result.panes;
     } catch {
       return; // ponytail: transient poll failure — next tick retries, same as OutputPoller's pane.read
@@ -581,7 +621,7 @@ export class HostRuntime extends EventEmitter {
       const previous = this.paneAgentStatus.get(pane.pane_id);
       this.trackPane(pane);
       if (previous !== undefined && previous.status !== pane.agent_status) {
-        const payload: BridgeEventPayload["pane.agent_status_changed"] = {
+        const payload: BridgeEventPayload['pane.agent_status_changed'] = {
           id: pane.pane_id,
           host: this.name,
           agent_status: pane.agent_status,
@@ -592,12 +632,12 @@ export class HostRuntime extends EventEmitter {
         // pane's own `status_since` can never disagree.
         const since = this.paneAgentStatus.get(pane.pane_id)?.since;
         if (since !== undefined) payload.status_since = since;
-        const event: WsEvent<"pane.agent_status_changed"> = {
+        const event: WsEvent<'pane.agent_status_changed'> = {
           host: this.name,
-          event: "pane.agent_status_changed",
+          event: 'pane.agent_status_changed',
           payload,
         };
-        this.emit("bridge-event", event);
+        this.emit('bridge-event', event);
       }
     }
   }
@@ -616,7 +656,7 @@ export class HostRuntime extends EventEmitter {
     const previousSubscription = this.subscription;
 
     const subscription = await this.client.subscribe(this.buildSubscriptionSpecs(), (pushed) =>
-      this.handlePushedEvent(pushed),
+      this.handlePushedEvent(pushed)
     );
 
     if (generation !== this.subscriptionGeneration) {
@@ -624,12 +664,12 @@ export class HostRuntime extends EventEmitter {
       return;
     }
 
-    subscription.on("disconnect", (err?: Error) => {
+    subscription.on('disconnect', (err?: Error) => {
       if (generation !== this.subscriptionGeneration) return; // stale — a newer subscription replaced this one
       this.subscription = null;
       this.connected = false;
-      this.lastError = err?.message ?? "connection closed";
-      this.emit("state", this.state());
+      this.lastError = err?.message ?? 'connection closed';
+      this.emit('state', this.state());
       this.scheduleReconnect();
     });
 
@@ -637,7 +677,7 @@ export class HostRuntime extends EventEmitter {
     this.connected = true;
     this.lastError = undefined;
     this.backoffMs = MIN_BACKOFF_MS;
-    this.emit("state", this.state());
+    this.emit('state', this.state());
 
     previousSubscription?.close();
   }
@@ -654,41 +694,41 @@ export class HostRuntime extends EventEmitter {
     const data = pushed.data as Record<string, unknown> | undefined;
 
     switch (pushed.event as EventKind) {
-      case "pane.created": {
+      case 'pane.created': {
         const pane = (data as { pane?: HerdrPaneInfo } | undefined)?.pane;
         if (!pane) return;
         this.trackPane(pane);
-        const event: WsEvent<"pane.created"> = {
+        const event: WsEvent<'pane.created'> = {
           host,
-          event: "pane.created",
+          event: 'pane.created',
           payload: { pane: this.project(pane) },
         };
-        this.emit("bridge-event", event);
+        this.emit('bridge-event', event);
         return;
       }
-      case "pane.closed": {
+      case 'pane.closed': {
         const paneId = (data as { pane_id?: string } | undefined)?.pane_id;
         const workspaceId = (data as { workspace_id?: string } | undefined)?.workspace_id;
         if (!paneId || !workspaceId) return;
         this.untrackPane(paneId);
-        const event: WsEvent<"pane.closed"> = {
+        const event: WsEvent<'pane.closed'> = {
           host,
-          event: "pane.closed",
+          event: 'pane.closed',
           payload: { id: paneId, host, workspace: { id: workspaceId } },
         };
-        this.emit("bridge-event", event);
+        this.emit('bridge-event', event);
         return;
       }
-      case "pane.updated": {
+      case 'pane.updated': {
         const pane = (data as { pane?: HerdrPaneInfo } | undefined)?.pane;
         if (!pane) return;
         this.trackPane(pane);
-        const event: WsEvent<"pane.updated"> = {
+        const event: WsEvent<'pane.updated'> = {
           host,
-          event: "pane.updated",
+          event: 'pane.updated',
           payload: { pane: this.project(pane) },
         };
-        this.emit("bridge-event", event);
+        this.emit('bridge-event', event);
         return;
       }
       // "pane.agent_status_changed" is no longer a subscribed push kind —
@@ -703,96 +743,103 @@ export class HostRuntime extends EventEmitter {
       // every torn-down resource (section 5.6) — the local purge is what
       // covers that gap, not a second event we'd otherwise wait for.
 
-      case "workspace.created": {
+      case 'workspace.created': {
         const workspace = (data as { workspace?: HerdrWorkspaceDetail } | undefined)?.workspace;
         if (!workspace) return;
         this.trackWorkspace(workspace);
-        const event: WsEvent<"workspace.created"> = {
+        const event: WsEvent<'workspace.created'> = {
           host,
-          event: "workspace.created",
+          event: 'workspace.created',
           payload: { workspace: projectWorkspace(host, workspace) },
         };
-        this.emit("bridge-event", event);
+        this.emit('bridge-event', event);
         return;
       }
-      case "workspace.closed": {
-        const info = data as { workspace_id?: string; workspace?: HerdrWorkspaceDetail } | undefined;
+      case 'workspace.closed': {
+        const info = data as
+          { workspace_id?: string; workspace?: HerdrWorkspaceDetail } | undefined;
         if (!info?.workspace_id) return;
         this.purgeCascade(this.names.purgeWorkspace(info.workspace_id).paneIds);
         const payload: { id: string; host: string; workspace?: WorkspaceSummary } = {
           id: info.workspace_id,
           host,
         };
-        if (info.workspace !== undefined) payload.workspace = projectWorkspace(host, info.workspace);
-        const event: WsEvent<"workspace.closed"> = { host, event: "workspace.closed", payload };
-        this.emit("bridge-event", event);
+        if (info.workspace !== undefined)
+          payload.workspace = projectWorkspace(host, info.workspace);
+        const event: WsEvent<'workspace.closed'> = { host, event: 'workspace.closed', payload };
+        this.emit('bridge-event', event);
         return;
       }
-      case "workspace.renamed": {
+      case 'workspace.renamed': {
         const info = data as { workspace_id?: string; label?: string } | undefined;
         if (!info?.workspace_id || info.label === undefined) return;
         this.names.setWorkspace(info.workspace_id, info.label);
-        const event: WsEvent<"workspace.renamed"> = {
+        const event: WsEvent<'workspace.renamed'> = {
           host,
-          event: "workspace.renamed",
+          event: 'workspace.renamed',
           payload: { id: info.workspace_id, host, name: info.label },
         };
-        this.emit("bridge-event", event);
+        this.emit('bridge-event', event);
         return;
       }
-      case "tab.created": {
+      case 'tab.created': {
         const tab = (data as { tab?: HerdrTabDetail } | undefined)?.tab;
         if (!tab) return;
         this.trackTab(tab);
-        const event: WsEvent<"tab.created"> = {
+        const event: WsEvent<'tab.created'> = {
           host,
-          event: "tab.created",
+          event: 'tab.created',
           payload: { tab: projectTab(host, tab) },
         };
-        this.emit("bridge-event", event);
+        this.emit('bridge-event', event);
         return;
       }
-      case "tab.closed": {
+      case 'tab.closed': {
         const info = data as { tab_id?: string; workspace_id?: string } | undefined;
         if (!info?.tab_id || !info.workspace_id) return;
         this.purgeCascade(this.names.purgeTab(info.tab_id).paneIds);
-        const event: WsEvent<"tab.closed"> = {
+        const event: WsEvent<'tab.closed'> = {
           host,
-          event: "tab.closed",
+          event: 'tab.closed',
           payload: { id: info.tab_id, host, workspace: { id: info.workspace_id } },
         };
-        this.emit("bridge-event", event);
+        this.emit('bridge-event', event);
         return;
       }
-      case "tab.renamed": {
+      case 'tab.renamed': {
         const info = data as { tab_id?: string; workspace_id?: string; label?: string } | undefined;
         if (!info?.tab_id || !info.workspace_id || info.label === undefined) return;
         this.names.setTab(info.tab_id, info.label, info.workspace_id);
-        const event: WsEvent<"tab.renamed"> = {
+        const event: WsEvent<'tab.renamed'> = {
           host,
-          event: "tab.renamed",
-          payload: { id: info.tab_id, host, workspace: { id: info.workspace_id }, name: info.label },
+          event: 'tab.renamed',
+          payload: {
+            id: info.tab_id,
+            host,
+            workspace: { id: info.workspace_id },
+            name: info.label,
+          },
         };
-        this.emit("bridge-event", event);
+        this.emit('bridge-event', event);
         return;
       }
-      case "tab.moved": {
+      case 'tab.moved': {
         const info = data as { workspace_id?: string; tabs?: HerdrTabDetail[] } | undefined;
         if (!info?.workspace_id || !info.tabs) return;
         for (const tab of info.tabs) this.trackTab(tab);
-        const event: WsEvent<"tab.moved"> = {
+        const event: WsEvent<'tab.moved'> = {
           host,
-          event: "tab.moved",
+          event: 'tab.moved',
           payload: {
             host,
             workspace: { id: info.workspace_id },
             tabs: info.tabs.map((tab) => projectTab(host, tab)),
           },
         };
-        this.emit("bridge-event", event);
+        this.emit('bridge-event', event);
         return;
       }
-      case "pane.moved": {
+      case 'pane.moved': {
         const info = data as
           | {
               previous_workspace_id?: string;
@@ -812,22 +859,29 @@ export class HostRuntime extends EventEmitter {
           previous_tab_id: info.previous_tab_id,
           pane: info.pane,
           focused_pane_id: info.pane.pane_id,
-          ...(info.created_workspace !== undefined ? { created_workspace: info.created_workspace } : {}),
+          ...(info.created_workspace !== undefined
+            ? { created_workspace: info.created_workspace }
+            : {}),
           ...(info.created_tab !== undefined ? { created_tab: info.created_tab } : {}),
-          ...(info.closed_workspace_id !== undefined ? { closed_workspace_id: info.closed_workspace_id } : {}),
+          ...(info.closed_workspace_id !== undefined
+            ? { closed_workspace_id: info.closed_workspace_id }
+            : {}),
           ...(info.closed_tab_id !== undefined ? { closed_tab_id: info.closed_tab_id } : {}),
         });
-        const payload: BridgeEventPayload["pane.moved"] = {
+        const payload: BridgeEventPayload['pane.moved'] = {
           pane: this.project(info.pane),
           previous_workspace_id: info.previous_workspace_id,
           previous_tab_id: info.previous_tab_id,
         };
-        if (info.created_workspace !== undefined) payload.created_workspace = projectWorkspace(host, info.created_workspace);
-        if (info.created_tab !== undefined) payload.created_tab = projectTab(host, info.created_tab);
-        if (info.closed_workspace_id !== undefined) payload.closed_workspace_id = info.closed_workspace_id;
+        if (info.created_workspace !== undefined)
+          payload.created_workspace = projectWorkspace(host, info.created_workspace);
+        if (info.created_tab !== undefined)
+          payload.created_tab = projectTab(host, info.created_tab);
+        if (info.closed_workspace_id !== undefined)
+          payload.closed_workspace_id = info.closed_workspace_id;
         if (info.closed_tab_id !== undefined) payload.closed_tab_id = info.closed_tab_id;
-        const event: WsEvent<"pane.moved"> = { host, event: "pane.moved", payload };
-        this.emit("bridge-event", event);
+        const event: WsEvent<'pane.moved'> = { host, event: 'pane.moved', payload };
+        this.emit('bridge-event', event);
         return;
       }
       default:

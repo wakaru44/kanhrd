@@ -8,16 +8,18 @@
  * subscription to that pane (including across multiple WS connections) —
  * never one loop per subscription.
  */
-import { createHash, randomUUID } from "node:crypto";
-import type { ReadFormat, ReadSource, WsEvent } from "@kanhrd/schema";
+import { createHash, randomUUID } from 'node:crypto';
+import type { ReadFormat, ReadSource, WsEvent } from '@kanhrd/schema';
 
 /** Just enough of `DispatchHost` for the poller to fetch pane content. */
 export interface PaneReader {
-  paneRead(params: {
-    pane_id: string;
-    source?: ReadSource;
-    format?: ReadFormat;
-  }): Promise<{ content: string; revision: number; truncated: boolean; format: ReadFormat; source: ReadSource }>;
+  paneRead(params: { pane_id: string; source?: ReadSource; format?: ReadFormat }): Promise<{
+    content: string;
+    revision: number;
+    truncated: boolean;
+    format: ReadFormat;
+    source: ReadSource;
+  }>;
 }
 
 export interface PaneReaderSource {
@@ -27,7 +29,7 @@ export interface PaneReaderSource {
 interface Subscriber {
   subscriptionId: string;
   connectionId: string;
-  emit: (event: WsEvent<"pane.output">) => void;
+  emit: (event: WsEvent<'pane.output'>) => void;
 }
 
 interface PollEntry {
@@ -54,7 +56,7 @@ export class OutputPoller {
 
   constructor(
     private readonly hosts: PaneReaderSource,
-    private readonly intervalMs: number,
+    private readonly intervalMs: number
   ) {}
 
   /** Starts (or attaches to an existing) poll loop for `(host, pane_id)` and registers a new subscriber. */
@@ -64,7 +66,7 @@ export class OutputPoller {
     source: ReadSource | undefined,
     format: ReadFormat | undefined,
     connectionId: string,
-    emit: (event: WsEvent<"pane.output">) => void,
+    emit: (event: WsEvent<'pane.output'>) => void
   ): string {
     const key = entryKey(host, paneId);
     let entry = this.entries.get(key);
@@ -84,8 +86,8 @@ export class OutputPoller {
         // `visible` poll behind a `recent` initial read silently deletes the pane's
         // scrollback on the first tick. A caller that wants the cheap viewport-only
         // stream asks for `source: "visible"` explicitly.
-        source: source ?? "recent",
-        format: format ?? "ansi",
+        source: source ?? 'recent',
+        format: format ?? 'ansi',
         lastRevision: -1,
         lastContentHash: null,
         inFlight: false,
@@ -137,14 +139,18 @@ export class OutputPoller {
 
     entry.inFlight = true;
     try {
-      const result = await reader.paneRead({ pane_id: entry.paneId, source: entry.source, format: entry.format });
+      const result = await reader.paneRead({
+        pane_id: entry.paneId,
+        source: entry.source,
+        format: entry.format,
+      });
 
       // ponytail: herdr 0.8.2 hardcodes `revision: 0` on every `pane.read` response
       // (herdr src/app/api/panes.rs:1524), so revision-only dedup never fires past the
       // first push. Fall back to a content hash so live updates still work against that
       // build; drop this hash path once herdr's revision fix ships and dedup can be
       // revision-only again.
-      const contentHash = createHash("sha1").update(result.content).digest("hex");
+      const contentHash = createHash('sha1').update(result.content).digest('hex');
       const revisionAdvanced = result.revision > entry.lastRevision;
       const contentChanged = contentHash !== entry.lastContentHash;
       if (!revisionAdvanced && !contentChanged) return; // no change — dedup on revision or content hash
@@ -153,7 +159,7 @@ export class OutputPoller {
       for (const subscriber of entry.subscribers.values()) {
         subscriber.emit({
           host: entry.host,
-          event: "pane.output",
+          event: 'pane.output',
           payload: {
             subscription_id: subscriber.subscriptionId,
             pane_id: entry.paneId,

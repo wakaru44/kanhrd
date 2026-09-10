@@ -1,10 +1,10 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { createServer, type Server, type Socket } from "node:net";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { HostSummary, WsEvent } from "@kanhrd/schema";
-import { HostRuntime } from "./hosts.js";
+import { mkdtempSync, rmSync } from 'node:fs';
+import { createServer, type Server, type Socket } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { HostSummary, WsEvent } from '@kanhrd/schema';
+import { HostRuntime } from './hosts.js';
 
 /**
  * Regression coverage for the phantom-lifecycle-event storm: `HostRuntime`
@@ -25,32 +25,38 @@ import { HostRuntime } from "./hosts.js";
  * hand-rolled fake herdr server — same pattern as `client.test.ts`,
  * newline-delimited JSON over a unix socket, no mock-socket library needed.
  */
-describe("HostRuntime — subscription stability under pane churn", () => {
+describe('HostRuntime — subscription stability under pane churn', () => {
   let dir: string;
   let socketPath: string;
   let server: Server;
   let subscribeCount: number;
   let lastSubscribeSpecs: Array<{ type: string; pane_id?: string }>;
-  let panes: Array<{ pane_id: string; workspace_id: string; tab_id: string; agent_status: string; revision: number }>;
+  let panes: Array<{
+    pane_id: string;
+    workspace_id: string;
+    tab_id: string;
+    agent_status: string;
+    revision: number;
+  }>;
   let subscribeSocket: Socket | null;
 
   beforeEach(async () => {
-    dir = mkdtempSync(join(tmpdir(), "kanhrd-bridge-hosts-test-"));
-    socketPath = join(dir, "herdr.sock");
+    dir = mkdtempSync(join(tmpdir(), 'kanhrd-bridge-hosts-test-'));
+    socketPath = join(dir, 'herdr.sock');
     subscribeCount = 0;
     lastSubscribeSpecs = [];
     subscribeSocket = null;
     panes = [
-      { pane_id: "p1", workspace_id: "w1", tab_id: "t1", agent_status: "idle", revision: 0 },
-      { pane_id: "p2", workspace_id: "w1", tab_id: "t1", agent_status: "idle", revision: 0 },
+      { pane_id: 'p1', workspace_id: 'w1', tab_id: 't1', agent_status: 'idle', revision: 0 },
+      { pane_id: 'p2', workspace_id: 'w1', tab_id: 't1', agent_status: 'idle', revision: 0 },
     ];
 
     server = createServer((socket) => {
-      let buffer = "";
-      socket.setEncoding("utf8");
-      socket.on("data", (chunk: string) => {
+      let buffer = '';
+      socket.setEncoding('utf8');
+      socket.on('data', (chunk: string) => {
         buffer += chunk;
-        const idx = buffer.indexOf("\n");
+        const idx = buffer.indexOf('\n');
         if (idx === -1) return;
         const line = buffer.slice(0, idx);
         buffer = buffer.slice(idx + 1);
@@ -72,22 +78,22 @@ describe("HostRuntime — subscription stability under pane churn", () => {
   }
 
   function handleRequest(socket: Socket, request: FakeRequest): void {
-    if (request.method === "workspace.list") {
+    if (request.method === 'workspace.list') {
       socket.write(`${JSON.stringify({ id: request.id, ok: true, result: { workspaces: [] } })}\n`);
       socket.end();
       return;
     }
-    if (request.method === "tab.list") {
+    if (request.method === 'tab.list') {
       socket.write(`${JSON.stringify({ id: request.id, ok: true, result: { tabs: [] } })}\n`);
       socket.end();
       return;
     }
-    if (request.method === "pane.list") {
+    if (request.method === 'pane.list') {
       socket.write(`${JSON.stringify({ id: request.id, ok: true, result: { panes } })}\n`);
       socket.end();
       return;
     }
-    if (request.method === "events.subscribe") {
+    if (request.method === 'events.subscribe') {
       subscribeCount++;
       lastSubscribeSpecs = request.params?.subscriptions ?? [];
       subscribeSocket = socket;
@@ -101,15 +107,15 @@ describe("HostRuntime — subscription stability under pane churn", () => {
   async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
     const start = Date.now();
     while (!predicate()) {
-      if (Date.now() - start > timeoutMs) throw new Error("waitFor timed out");
+      if (Date.now() - start > timeoutMs) throw new Error('waitFor timed out');
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
   }
 
-  it("subscribes once, with a pane-id-independent spec set, and never resubscribes on pane push events", async () => {
-    const host = new HostRuntime({ name: "test", socket: socketPath });
+  it('subscribes once, with a pane-id-independent spec set, and never resubscribes on pane push events', async () => {
+    const host = new HostRuntime({ name: 'test', socket: socketPath });
     const bridgeEvents: WsEvent[] = [];
-    host.on("bridge-event", (e: WsEvent) => bridgeEvents.push(e));
+    host.on('bridge-event', (e: WsEvent) => bridgeEvents.push(e));
 
     host.start();
     try {
@@ -120,9 +126,11 @@ describe("HostRuntime — subscription stability under pane churn", () => {
       // the live pane-id set, and no `pane.agent_status_changed` entries
       // at all (that kind moved to polling).
       expect(lastSubscribeSpecs.every((spec) => spec.pane_id === undefined)).toBe(true);
-      expect(lastSubscribeSpecs.some((spec) => spec.type === "pane.agent_status_changed")).toBe(false);
+      expect(lastSubscribeSpecs.some((spec) => spec.type === 'pane.agent_status_changed')).toBe(
+        false
+      );
       expect(lastSubscribeSpecs.map((s) => s.type)).toEqual(
-        expect.arrayContaining(["pane.created", "pane.closed", "tab.created", "workspace.created"]),
+        expect.arrayContaining(['pane.created', 'pane.closed', 'tab.created', 'workspace.created'])
       );
 
       // Simulate herdr pushing several pane.created/pane.closed events in a
@@ -130,9 +138,25 @@ describe("HostRuntime — subscription stability under pane churn", () => {
       // resubscribe storm).
       const push = (event: string, data: unknown) =>
         subscribeSocket?.write(`${JSON.stringify({ event, data })}\n`);
-      push("pane_created", { pane: { pane_id: "p3", workspace_id: "w1", tab_id: "t1", agent_status: "idle", revision: 0 } });
-      push("pane_closed", { pane_id: "p3", workspace_id: "w1" });
-      push("pane_created", { pane: { pane_id: "p4", workspace_id: "w1", tab_id: "t1", agent_status: "idle", revision: 0 } });
+      push('pane_created', {
+        pane: {
+          pane_id: 'p3',
+          workspace_id: 'w1',
+          tab_id: 't1',
+          agent_status: 'idle',
+          revision: 0,
+        },
+      });
+      push('pane_closed', { pane_id: 'p3', workspace_id: 'w1' });
+      push('pane_created', {
+        pane: {
+          pane_id: 'p4',
+          workspace_id: 'w1',
+          tab_id: 't1',
+          agent_status: 'idle',
+          revision: 0,
+        },
+      });
 
       await waitFor(() => bridgeEvents.length >= 3);
       // Give any (incorrect) debounced resubscribe a chance to fire before asserting it didn't.
@@ -149,44 +173,46 @@ describe("HostRuntime — subscription stability under pane churn", () => {
    * subscription (no `pane_id`), so it joins the fixed spec set without
    * reintroducing the resubscribe-on-pane-churn storm the tests above guard.
    */
-  it("subscribes to pane.updated globally and relays it as a projected pane", async () => {
-    const host = new HostRuntime({ name: "test", socket: socketPath });
+  it('subscribes to pane.updated globally and relays it as a projected pane', async () => {
+    const host = new HostRuntime({ name: 'test', socket: socketPath });
     const bridgeEvents: WsEvent[] = [];
-    host.on("bridge-event", (e: WsEvent) => bridgeEvents.push(e));
+    host.on('bridge-event', (e: WsEvent) => bridgeEvents.push(e));
 
     host.start();
     try {
       await waitFor(() => host.state().connected);
-      const updatedSpec = lastSubscribeSpecs.find((spec) => spec.type === "pane.updated");
+      const updatedSpec = lastSubscribeSpecs.find((spec) => spec.type === 'pane.updated');
       expect(updatedSpec).toBeDefined();
       expect(updatedSpec?.pane_id).toBeUndefined();
 
       subscribeSocket?.write(
         `${JSON.stringify({
-          event: "pane_updated",
+          event: 'pane_updated',
           data: {
             pane: {
-              pane_id: "p1",
-              workspace_id: "w1",
-              tab_id: "t1",
-              agent_status: "idle",
+              pane_id: 'p1',
+              workspace_id: 'w1',
+              tab_id: 't1',
+              agent_status: 'idle',
               revision: 1,
-              label: "fix the backlog storm",
+              label: 'fix the backlog storm',
             },
           },
-        })}\n`,
+        })}\n`
       );
 
-      await waitFor(() => bridgeEvents.some((e) => e.event === "pane.updated"));
-      const relayed = bridgeEvents.find((e) => e.event === "pane.updated") as WsEvent<"pane.updated">;
-      expect(relayed.host).toBe("test");
-      expect(relayed.payload.pane.id).toBe("p1");
-      expect(relayed.payload.pane.label).toBe("fix the backlog storm");
+      await waitFor(() => bridgeEvents.some((e) => e.event === 'pane.updated'));
+      const relayed = bridgeEvents.find(
+        (e) => e.event === 'pane.updated'
+      ) as WsEvent<'pane.updated'>;
+      expect(relayed.host).toBe('test');
+      expect(relayed.payload.pane.id).toBe('p1');
+      expect(relayed.payload.pane.label).toBe('fix the backlog storm');
 
       // The agent-status poll is untouched by this: no synthetic status
       // event was emitted for a pane whose status did not change.
       await new Promise((resolve) => setTimeout(resolve, 200));
-      expect(bridgeEvents.some((e) => e.event === "pane.agent_status_changed")).toBe(false);
+      expect(bridgeEvents.some((e) => e.event === 'pane.agent_status_changed')).toBe(false);
       expect(subscribeCount).toBe(1);
     } finally {
       host.stop();
@@ -194,43 +220,53 @@ describe("HostRuntime — subscription stability under pane churn", () => {
   });
 });
 
-describe("HostRuntime — agent-status polling", () => {
+describe('HostRuntime — agent-status polling', () => {
   let dir: string;
   let socketPath: string;
   let server: Server;
-  let panes: Array<{ pane_id: string; workspace_id: string; tab_id: string; agent_status: string; revision: number }>;
+  let panes: Array<{
+    pane_id: string;
+    workspace_id: string;
+    tab_id: string;
+    agent_status: string;
+    revision: number;
+  }>;
 
   beforeEach(async () => {
-    dir = mkdtempSync(join(tmpdir(), "kanhrd-bridge-hosts-poll-test-"));
-    socketPath = join(dir, "herdr.sock");
-    panes = [{ pane_id: "p1", workspace_id: "w1", tab_id: "t1", agent_status: "idle", revision: 0 }];
+    dir = mkdtempSync(join(tmpdir(), 'kanhrd-bridge-hosts-poll-test-'));
+    socketPath = join(dir, 'herdr.sock');
+    panes = [
+      { pane_id: 'p1', workspace_id: 'w1', tab_id: 't1', agent_status: 'idle', revision: 0 },
+    ];
 
     server = createServer((socket) => {
-      let buffer = "";
-      socket.setEncoding("utf8");
-      socket.on("data", (chunk: string) => {
+      let buffer = '';
+      socket.setEncoding('utf8');
+      socket.on('data', (chunk: string) => {
         buffer += chunk;
-        const idx = buffer.indexOf("\n");
+        const idx = buffer.indexOf('\n');
         if (idx === -1) return;
         const line = buffer.slice(0, idx);
         buffer = buffer.slice(idx + 1);
         const request = JSON.parse(line) as { id: string; method: string };
-        if (request.method === "workspace.list") {
-          socket.write(`${JSON.stringify({ id: request.id, ok: true, result: { workspaces: [] } })}\n`);
+        if (request.method === 'workspace.list') {
+          socket.write(
+            `${JSON.stringify({ id: request.id, ok: true, result: { workspaces: [] } })}\n`
+          );
           socket.end();
           return;
         }
-        if (request.method === "tab.list") {
+        if (request.method === 'tab.list') {
           socket.write(`${JSON.stringify({ id: request.id, ok: true, result: { tabs: [] } })}\n`);
           socket.end();
           return;
         }
-        if (request.method === "pane.list") {
+        if (request.method === 'pane.list') {
           socket.write(`${JSON.stringify({ id: request.id, ok: true, result: { panes } })}\n`);
           socket.end();
           return;
         }
-        if (request.method === "events.subscribe") {
+        if (request.method === 'events.subscribe') {
           socket.write(`${JSON.stringify({ id: request.id, ok: true, result: {} })}\n`);
           return;
         }
@@ -249,16 +285,20 @@ describe("HostRuntime — agent-status polling", () => {
   async function waitFor(predicate: () => boolean, timeoutMs = 3000): Promise<void> {
     const start = Date.now();
     while (!predicate()) {
-      if (Date.now() - start > timeoutMs) throw new Error("waitFor timed out");
+      if (Date.now() - start > timeoutMs) throw new Error('waitFor timed out');
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
   }
 
-  it("does not emit for the baseline status seen at connect, only for a later change", async () => {
-    const host = new HostRuntime({ name: "test", socket: socketPath }, 25 /* fast poll for the test */);
-    const statusEvents: WsEvent<"pane.agent_status_changed">[] = [];
-    host.on("bridge-event", (e: WsEvent) => {
-      if (e.event === "pane.agent_status_changed") statusEvents.push(e as WsEvent<"pane.agent_status_changed">);
+  it('does not emit for the baseline status seen at connect, only for a later change', async () => {
+    const host = new HostRuntime(
+      { name: 'test', socket: socketPath },
+      25 /* fast poll for the test */
+    );
+    const statusEvents: WsEvent<'pane.agent_status_changed'>[] = [];
+    host.on('bridge-event', (e: WsEvent) => {
+      if (e.event === 'pane.agent_status_changed')
+        statusEvents.push(e as WsEvent<'pane.agent_status_changed'>);
     });
 
     host.start();
@@ -268,9 +308,19 @@ describe("HostRuntime — agent-status polling", () => {
       await new Promise((resolve) => setTimeout(resolve, 80));
       expect(statusEvents).toHaveLength(0);
 
-      panes[0] = { pane_id: "p1", workspace_id: "w1", tab_id: "t1", agent_status: "working", revision: 0 };
+      panes[0] = {
+        pane_id: 'p1',
+        workspace_id: 'w1',
+        tab_id: 't1',
+        agent_status: 'working',
+        revision: 0,
+      };
       await waitFor(() => statusEvents.length === 1);
-      expect(statusEvents[0]?.payload).toMatchObject({ id: "p1", host: "test", agent_status: "working" });
+      expect(statusEvents[0]?.payload).toMatchObject({
+        id: 'p1',
+        host: 'test',
+        agent_status: 'working',
+      });
     } finally {
       host.stop();
     }
@@ -283,14 +333,14 @@ describe("HostRuntime — agent-status polling", () => {
   // transition itself; everywhere else the field is absent, never zeroed and
   // never stamped "now" to look complete.
 
-  it("gives a pane it found already in its status at connect no status_since at all", async () => {
-    const host = new HostRuntime({ name: "test", socket: socketPath }, 25);
+  it('gives a pane it found already in its status at connect no status_since at all', async () => {
+    const host = new HostRuntime({ name: 'test', socket: socketPath }, 25);
     host.start();
     try {
       await waitFor(() => host.state().connected);
       const pane = (await host.listPanes())[0]!;
       expect(pane.status_since).toBeUndefined();
-      expect("status_since" in pane).toBe(false); // omitted, not `undefined`/`0`/`null`
+      expect('status_since' in pane).toBe(false); // omitted, not `undefined`/`0`/`null`
 
       // Still absent several polls later: a steady status does not become
       // vouchable just because the bridge kept looking at it.
@@ -301,18 +351,25 @@ describe("HostRuntime — agent-status polling", () => {
     }
   });
 
-  it("stamps status_since on a transition it observes, and leaves it alone while the status holds", async () => {
-    const host = new HostRuntime({ name: "test", socket: socketPath }, 25);
-    const statusEvents: WsEvent<"pane.agent_status_changed">[] = [];
-    host.on("bridge-event", (e: WsEvent) => {
-      if (e.event === "pane.agent_status_changed") statusEvents.push(e as WsEvent<"pane.agent_status_changed">);
+  it('stamps status_since on a transition it observes, and leaves it alone while the status holds', async () => {
+    const host = new HostRuntime({ name: 'test', socket: socketPath }, 25);
+    const statusEvents: WsEvent<'pane.agent_status_changed'>[] = [];
+    host.on('bridge-event', (e: WsEvent) => {
+      if (e.event === 'pane.agent_status_changed')
+        statusEvents.push(e as WsEvent<'pane.agent_status_changed'>);
     });
 
     host.start();
     try {
       await waitFor(() => host.state().connected);
       const before = Date.now();
-      panes[0] = { pane_id: "p1", workspace_id: "w1", tab_id: "t1", agent_status: "working", revision: 0 };
+      panes[0] = {
+        pane_id: 'p1',
+        workspace_id: 'w1',
+        tab_id: 't1',
+        agent_status: 'working',
+        revision: 0,
+      };
       await waitFor(() => statusEvents.length === 1);
 
       const stamped = (await host.listPanes())[0]?.status_since;
@@ -328,7 +385,13 @@ describe("HostRuntime — agent-status polling", () => {
       expect((await host.listPanes())[0]?.status_since).toBe(stamped);
 
       // A second transition re-stamps.
-      panes[0] = { pane_id: "p1", workspace_id: "w1", tab_id: "t1", agent_status: "idle", revision: 0 };
+      panes[0] = {
+        pane_id: 'p1',
+        workspace_id: 'w1',
+        tab_id: 't1',
+        agent_status: 'idle',
+        revision: 0,
+      };
       await waitFor(() => statusEvents.length === 2);
       const restamped = (await host.listPanes())[0]?.status_since;
       expect(restamped).toBeGreaterThanOrEqual(stamped as number);
@@ -338,8 +401,8 @@ describe("HostRuntime — agent-status polling", () => {
     }
   });
 
-  it("drops the record when a pane leaves pane.list, and stamps a returning id fresh", async () => {
-    const host = new HostRuntime({ name: "test", socket: socketPath }, 25);
+  it('drops the record when a pane leaves pane.list, and stamps a returning id fresh', async () => {
+    const host = new HostRuntime({ name: 'test', socket: socketPath }, 25);
     host.start();
     try {
       await waitFor(() => host.state().connected);
@@ -381,7 +444,7 @@ describe("HostRuntime — agent-status polling", () => {
  * must not cause a second `events.subscribe` call, and the number of
  * `bridge-event`s emitted must match the burst exactly (no amplification).
  */
-describe("HostRuntime — resubscribe-cascade storm reproduction", () => {
+describe('HostRuntime — resubscribe-cascade storm reproduction', () => {
   let dir: string;
   let socketPath: string;
   let server: Server;
@@ -389,20 +452,20 @@ describe("HostRuntime — resubscribe-cascade storm reproduction", () => {
   const BURST_SIZE = 500;
 
   beforeEach(async () => {
-    dir = mkdtempSync(join(tmpdir(), "kanhrd-bridge-hosts-storm-test-"));
-    socketPath = join(dir, "herdr.sock");
+    dir = mkdtempSync(join(tmpdir(), 'kanhrd-bridge-hosts-storm-test-'));
+    socketPath = join(dir, 'herdr.sock');
     subscribeCount = 0;
 
     server = createServer((socket) => {
-      let buffer = "";
-      socket.setEncoding("utf8");
-      socket.on("data", (chunk: string) => {
+      let buffer = '';
+      socket.setEncoding('utf8');
+      socket.on('data', (chunk: string) => {
         buffer += chunk;
-        let idx = buffer.indexOf("\n");
+        let idx = buffer.indexOf('\n');
         while (idx !== -1) {
           const line = buffer.slice(0, idx);
           buffer = buffer.slice(idx + 1);
-          idx = buffer.indexOf("\n");
+          idx = buffer.indexOf('\n');
           handleRequest(socket, JSON.parse(line));
         }
       });
@@ -421,22 +484,22 @@ describe("HostRuntime — resubscribe-cascade storm reproduction", () => {
   }
 
   function handleRequest(socket: Socket, request: FakeRequest): void {
-    if (request.method === "workspace.list") {
+    if (request.method === 'workspace.list') {
       socket.write(`${JSON.stringify({ id: request.id, ok: true, result: { workspaces: [] } })}\n`);
       socket.end();
       return;
     }
-    if (request.method === "tab.list") {
+    if (request.method === 'tab.list') {
       socket.write(`${JSON.stringify({ id: request.id, ok: true, result: { tabs: [] } })}\n`);
       socket.end();
       return;
     }
-    if (request.method === "pane.list") {
+    if (request.method === 'pane.list') {
       socket.write(`${JSON.stringify({ id: request.id, ok: true, result: { panes: [] } })}\n`);
       socket.end();
       return;
     }
-    if (request.method === "events.subscribe") {
+    if (request.method === 'events.subscribe') {
       subscribeCount++;
       socket.write(`${JSON.stringify({ id: request.id, ok: true, result: {} })}\n`);
       // Simulate a full backlog replay: a burst of phantom create/close
@@ -445,11 +508,21 @@ describe("HostRuntime — resubscribe-cascade storm reproduction", () => {
         const paneId = `phantom-${i}`;
         socket.write(
           `${JSON.stringify({
-            event: "pane_created",
-            data: { pane: { pane_id: paneId, workspace_id: "w1", tab_id: "t1", agent_status: "idle", revision: 0 } },
-          })}\n`,
+            event: 'pane_created',
+            data: {
+              pane: {
+                pane_id: paneId,
+                workspace_id: 'w1',
+                tab_id: 't1',
+                agent_status: 'idle',
+                revision: 0,
+              },
+            },
+          })}\n`
         );
-        socket.write(`${JSON.stringify({ event: "pane_closed", data: { pane_id: paneId, workspace_id: "w1" } })}\n`);
+        socket.write(
+          `${JSON.stringify({ event: 'pane_closed', data: { pane_id: paneId, workspace_id: 'w1' } })}\n`
+        );
       }
       return; // herdr keeps subscribe connections open — no socket.end()
     }
@@ -460,15 +533,15 @@ describe("HostRuntime — resubscribe-cascade storm reproduction", () => {
   async function waitFor(predicate: () => boolean, timeoutMs = 3000): Promise<void> {
     const start = Date.now();
     while (!predicate()) {
-      if (Date.now() - start > timeoutMs) throw new Error("waitFor timed out");
+      if (Date.now() - start > timeoutMs) throw new Error('waitFor timed out');
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
   }
 
-  it("absorbs a full backlog-replay burst without cascading into repeat subscribes", async () => {
-    const host = new HostRuntime({ name: "test", socket: socketPath });
+  it('absorbs a full backlog-replay burst without cascading into repeat subscribes', async () => {
+    const host = new HostRuntime({ name: 'test', socket: socketPath });
     const bridgeEvents: WsEvent[] = [];
-    host.on("bridge-event", (e: WsEvent) => bridgeEvents.push(e));
+    host.on('bridge-event', (e: WsEvent) => bridgeEvents.push(e));
 
     host.start();
     try {

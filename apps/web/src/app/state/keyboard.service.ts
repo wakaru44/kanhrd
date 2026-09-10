@@ -1,27 +1,27 @@
-import { Injectable, computed, inject, signal } from "@angular/core";
-import { Router } from "@angular/router";
-import { PanesStore } from "./panes.store";
-import { LayoutService } from "./layout.service";
-import { ThemeService } from "./theme.service";
-import { ToastService } from "./toast.service";
-import { COPY } from "../shared/copy";
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { PanesStore } from './panes.store';
+import { LayoutService } from './layout.service';
+import { ThemeService } from './theme.service';
+import { ToastService } from './toast.service';
+import { COPY } from '../shared/copy';
 
-export type ShortcutCategory = "Navigation" | "Lifecycle" | "View" | "Help";
+export type ShortcutCategory = 'Navigation' | 'Lifecycle' | 'View' | 'Help';
 
 export type ShortcutAction =
-  | "new-pane"
-  | "next-tab"
-  | "prev-tab"
-  | "last-tab"
-  | "open-rail"
-  | "close-tab"
-  | "close-pane"
-  | "rename-tab"
-  | "jump-tab"
-  | "help"
-  | "toggle-theme"
-  | "focus-search"
-  | "close-overlay";
+  | 'new-pane'
+  | 'next-tab'
+  | 'prev-tab'
+  | 'last-tab'
+  | 'open-rail'
+  | 'close-tab'
+  | 'close-pane'
+  | 'rename-tab'
+  | 'jump-tab'
+  | 'help'
+  | 'toggle-theme'
+  | 'focus-search'
+  | 'close-overlay';
 
 export interface ShortcutBinding {
   readonly action: ShortcutAction;
@@ -33,9 +33,9 @@ export interface ShortcutBinding {
   readonly chord: boolean;
 }
 
-export const DEFAULT_PREFIX = "Ctrl+B";
+export const DEFAULT_PREFIX = 'Ctrl+B';
 const CHORD_TIMEOUT_MS = 2000;
-const STORAGE_KEY = "kanhrd.keyboard";
+const STORAGE_KEY = 'kanhrd.keyboard';
 
 interface StoredKeyboardSettings {
   prefix: string;
@@ -47,107 +47,113 @@ const SHORTCUT_LIST: readonly ShortcutBinding[] = [
   // `shared/copy.ts` — never a literal typed here. `new-pane` reuses
   // `create.pane` because it is the same action the board's `+` menu
   // performs; the rest live under `help.shortcuts`.
-  { action: "new-pane", keys: "c", description: COPY.create.pane, category: "Lifecycle", chord: true },
   {
-    action: "next-tab",
-    keys: "n",
+    action: 'new-pane',
+    keys: 'c',
+    description: COPY.create.pane,
+    category: 'Lifecycle',
+    chord: true,
+  },
+  {
+    action: 'next-tab',
+    keys: 'n',
     description: COPY.help.shortcuts.nextTab,
-    category: "Navigation",
+    category: 'Navigation',
     chord: true,
   },
   {
-    action: "prev-tab",
-    keys: "p",
+    action: 'prev-tab',
+    keys: 'p',
     description: COPY.help.shortcuts.prevTab,
-    category: "Navigation",
+    category: 'Navigation',
     chord: true,
   },
   {
-    action: "last-tab",
-    keys: "l",
+    action: 'last-tab',
+    keys: 'l',
     description: COPY.help.shortcuts.lastTab,
-    category: "Navigation",
+    category: 'Navigation',
     chord: true,
   },
   {
-    action: "open-rail",
-    keys: "w",
+    action: 'open-rail',
+    keys: 'w',
     description: COPY.help.shortcuts.openRail,
-    category: "View",
+    category: 'View',
     chord: true,
   },
   {
-    action: "close-tab",
-    keys: "&",
+    action: 'close-tab',
+    keys: '&',
     description: COPY.help.shortcuts.closeTab,
-    category: "Lifecycle",
+    category: 'Lifecycle',
     chord: true,
   },
   {
-    action: "close-pane",
-    keys: "x",
+    action: 'close-pane',
+    keys: 'x',
     description: COPY.help.shortcuts.closePane,
-    category: "Lifecycle",
+    category: 'Lifecycle',
     chord: true,
   },
   {
-    action: "rename-tab",
-    keys: ",",
+    action: 'rename-tab',
+    keys: ',',
     description: COPY.help.shortcuts.renameTab,
-    category: "Lifecycle",
+    category: 'Lifecycle',
     chord: true,
   },
   {
-    action: "jump-tab",
-    keys: "0-9",
+    action: 'jump-tab',
+    keys: '0-9',
     description: COPY.help.shortcuts.jumpTab,
-    category: "Navigation",
+    category: 'Navigation',
     chord: true,
   },
   {
-    action: "help",
-    keys: "?",
+    action: 'help',
+    keys: '?',
     description: COPY.help.shortcuts.help,
-    category: "Help",
+    category: 'Help',
     chord: false,
   },
   {
-    action: "toggle-theme",
-    keys: "t",
+    action: 'toggle-theme',
+    keys: 't',
     description: COPY.help.shortcuts.toggleTheme,
-    category: "View",
+    category: 'View',
     chord: false,
   },
   {
-    action: "focus-search",
-    keys: "/",
+    action: 'focus-search',
+    keys: '/',
     description: COPY.help.shortcuts.focusSearch,
-    category: "View",
+    category: 'View',
     chord: false,
   },
   {
-    action: "close-overlay",
-    keys: "Escape",
+    action: 'close-overlay',
+    keys: 'Escape',
     description: COPY.help.shortcuts.closeOverlay,
-    category: "Help",
+    category: 'Help',
     chord: false,
   },
 ];
 
 const SHORTCUT_MAP: ReadonlyMap<ShortcutAction, ShortcutBinding> = new Map(
-  SHORTCUT_LIST.map((binding) => [binding.action, binding]),
+  SHORTCUT_LIST.map((binding) => [binding.action, binding])
 );
 
 /** Renders a binding's display label for the given prefix, e.g. `"Ctrl+B + c"` or `"t"` for non-chord bindings. */
 export function formatBinding(binding: ShortcutBinding, prefix: string): string {
-  if (binding.action === "help") {
+  if (binding.action === 'help') {
     return `? or ${prefix} + ?`;
   }
   return binding.chord ? `${prefix} + ${binding.keys}` : binding.keys;
 }
 
 /** Pure read, unit-testable without DI — mirrors `loadTheme` in theme.service.ts. */
-export function loadPrefix(storage: Pick<Storage, "getItem"> = localStorage): string {
+export function loadPrefix(storage: Pick<Storage, 'getItem'> = localStorage): string {
   return loadPrefixOverride(storage) ?? DEFAULT_PREFIX;
 }
 
@@ -157,24 +163,26 @@ export function loadPrefix(storage: Pick<Storage, "getItem"> = localStorage): st
  * needs to tell "the user explicitly rebound this" apart from "no override
  * exists yet, fall through to the herdr-mirrored or hardcoded default."
  */
-export function loadPrefixOverride(storage: Pick<Storage, "getItem"> = localStorage): string | null {
+export function loadPrefixOverride(
+  storage: Pick<Storage, 'getItem'> = localStorage
+): string | null {
   try {
     const raw = storage.getItem(STORAGE_KEY);
     if (!raw) {
       return null;
     }
     const parsed = JSON.parse(raw) as Partial<StoredKeyboardSettings>;
-    return typeof parsed.prefix === "string" && parsed.prefix.trim() ? parsed.prefix : null;
+    return typeof parsed.prefix === 'string' && parsed.prefix.trim() ? parsed.prefix : null;
   } catch {
     return null;
   }
 }
 
-export function savePrefix(prefix: string, storage: Pick<Storage, "setItem"> = localStorage): void {
+export function savePrefix(prefix: string, storage: Pick<Storage, 'setItem'> = localStorage): void {
   storage.setItem(STORAGE_KEY, JSON.stringify({ prefix } satisfies StoredKeyboardSettings));
 }
 
-export function clearStoredPrefix(storage: Pick<Storage, "removeItem"> = localStorage): void {
+export function clearStoredPrefix(storage: Pick<Storage, 'removeItem'> = localStorage): void {
   storage.removeItem(STORAGE_KEY);
 }
 
@@ -183,7 +191,7 @@ export function isTextInputFocused(el: Element | null): boolean {
   if (!el) {
     return false;
   }
-  if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
     return true;
   }
   return (el as HTMLElement).isContentEditable === true;
@@ -200,16 +208,16 @@ interface ParsedPrefix {
 /** Parses a display prefix string (e.g. `"Ctrl+B"`) into the modifier/key shape needed to match a `KeyboardEvent`. */
 export function parsePrefix(prefix: string): ParsedPrefix {
   const parts = prefix
-    .split("+")
+    .split('+')
     .map((p) => p.trim())
     .filter(Boolean);
-  const key = (parts[parts.length - 1] ?? "").toLowerCase();
+  const key = (parts[parts.length - 1] ?? '').toLowerCase();
   const mods = parts.slice(0, -1).map((p) => p.toLowerCase());
   return {
-    ctrl: mods.includes("ctrl") || mods.includes("control"),
-    meta: mods.includes("meta") || mods.includes("cmd"),
-    shift: mods.includes("shift"),
-    alt: mods.includes("alt"),
+    ctrl: mods.includes('ctrl') || mods.includes('control'),
+    meta: mods.includes('meta') || mods.includes('cmd'),
+    shift: mods.includes('shift'),
+    alt: mods.includes('alt'),
     key,
   };
 }
@@ -242,7 +250,7 @@ export function matchesPrefix(prefix: string, event: KeyboardEvent): boolean {
  * every pane simultaneously with no single focused pane to close, so there
  * is no honest "current" to act on yet.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class KeyboardService {
   private readonly store = inject(PanesStore);
   private readonly layout = inject(LayoutService);
@@ -266,15 +274,15 @@ export class KeyboardService {
    * openspec change), (3) the hardcoded `DEFAULT_PREFIX`.
    */
   readonly prefix = computed<string>(
-    () => this.prefixOverride() ?? this.store.primaryHostKeybinds()?.prefix ?? DEFAULT_PREFIX,
+    () => this.prefixOverride() ?? this.store.primaryHostKeybinds()?.prefix ?? DEFAULT_PREFIX
   );
 
   /** Where `prefix()`'s current value came from, for Settings > Keyboard's source label. */
-  readonly prefixSource = computed<"override" | "herdr-config" | "default">(() => {
+  readonly prefixSource = computed<'override' | 'herdr-config' | 'default'>(() => {
     if (this.prefixOverride() !== null) {
-      return "override";
+      return 'override';
     }
-    return this.store.primaryHostKeybinds() ? "herdr-config" : "default";
+    return this.store.primaryHostKeybinds() ? 'herdr-config' : 'default';
   });
 
   readonly helpOpen = signal(false);
@@ -368,31 +376,31 @@ export class KeyboardService {
       return;
     }
     switch (key) {
-      case "c":
+      case 'c':
         event.preventDefault();
         void this.newPane();
         return;
-      case "n":
+      case 'n':
         event.preventDefault();
         this.cycleTab(1);
         return;
-      case "p":
+      case 'p':
         event.preventDefault();
         this.cycleTab(-1);
         return;
-      case "l":
+      case 'l':
         event.preventDefault();
         this.lastTab();
         return;
-      case "w":
+      case 'w':
         event.preventDefault();
         this.openRailFocused();
         return;
-      case "&":
+      case '&':
         event.preventDefault();
         this.closeCurrentTab();
         return;
-      case "x":
+      case 'x':
         event.preventDefault();
         // ponytail: no "focused pane" concept exists in this kanban board
         // (every pane renders simultaneously, unlike a single-pane tmux/herdr
@@ -401,19 +409,19 @@ export class KeyboardService {
         // the same way close-tab is wired below (PanesStore pending-action
         // signal → Rail/Board opens the existing ConfirmModal).
         console.info(
-          "kanhrd: prefix+x (close current pane) isn't wired up yet — the board has no focused-pane model to act on",
+          "kanhrd: prefix+x (close current pane) isn't wired up yet — the board has no focused-pane model to act on"
         );
         return;
-      case ",":
+      case ',':
         event.preventDefault();
         this.renameCurrentTab();
         return;
-      case "?":
+      case '?':
         event.preventDefault();
         this.openHelp();
         return;
-      case "t":
-      case "T":
+      case 't':
+      case 'T':
         // Not in the brief's "prefix" action-key list (`t` is documented as
         // a bare non-chord shortcut below) — kept as a harmless alias so
         // `prefix+t` also works, matching the brief's own E2E acceptance
@@ -429,19 +437,19 @@ export class KeyboardService {
 
   private dispatchNonChordAction(event: KeyboardEvent): void {
     switch (event.key) {
-      case "?":
+      case '?':
         event.preventDefault();
         this.openHelp();
         return;
-      case "Escape":
+      case 'Escape':
         this.closeTopOverlay();
         return;
-      case "/":
+      case '/':
         event.preventDefault();
-        console.info("kanhrd: search is coming soon");
+        console.info('kanhrd: search is coming soon');
         return;
-      case "t":
-      case "T":
+      case 't':
+      case 'T':
         this.themeService.toggle();
         return;
       default:
@@ -471,25 +479,25 @@ export class KeyboardService {
       // `/` rather than clearing `PanesStore.scopeSignal` directly, so the
       // URL (the source of truth `Board`'s route-sync effect derives the
       // scope from) and the store never disagree.
-      void this.router.navigate(["/"]);
+      void this.router.navigate(['/']);
     }
   }
 
   private async newPane(): Promise<void> {
-    const host = this.store.findHostForCapability("paneCreate");
+    const host = this.store.findHostForCapability('paneCreate');
     if (!host) {
       return;
     }
     try {
-      await this.store.splitPane(host, { direction: "right" });
+      await this.store.splitPane(host, { direction: 'right' });
     } catch (err) {
-      console.warn("keyboard: new pane failed", err);
+      console.warn('keyboard: new pane failed', err);
     }
   }
 
   private openRailFocused(): void {
     this.layout.openRail();
-    document.querySelector<HTMLElement>(".rail")?.focus();
+    document.querySelector<HTMLElement>('.rail')?.focus();
   }
 
   private orderedTabs(): { host: string; id: string; workspaceId: string }[] {
@@ -528,7 +536,9 @@ export class KeyboardService {
     }
     const current = this.store.tabFilterSignal();
     this.previousTab = current ? { host: current.host, tabId: current.tabId } : null;
-    const workspaceId = this.orderedTabs().find((t) => t.host === prev.host && t.id === prev.tabId)?.workspaceId;
+    const workspaceId = this.orderedTabs().find(
+      (t) => t.host === prev.host && t.id === prev.tabId
+    )?.workspaceId;
     if (workspaceId) {
       this.store.setScope(prev.host, workspaceId, prev.tabId);
     }
@@ -545,7 +555,7 @@ export class KeyboardService {
     if (!current) {
       return;
     }
-    this.store.requestPendingRename("tab", current.host, current.tabId);
+    this.store.requestPendingRename('tab', current.host, current.tabId);
   }
 
   private closeCurrentTab(): void {

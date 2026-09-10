@@ -1,6 +1,6 @@
-import { test, expect } from "./fixtures/kanhrd";
-import { herdrAvailable, herdrPaneList } from "./fixtures/herdr";
-import { COPY } from "../src/app/shared/copy";
+import { test, expect } from './fixtures/kanhrd';
+import { herdrAvailable, herdrPaneList } from './fixtures/herdr';
+import { COPY } from '../src/app/shared/copy';
 
 /**
  * Two board empty-state contracts (task 14.5 of
@@ -22,61 +22,65 @@ import { COPY } from "../src/app/shared/copy";
 
 // --- no hosts configured ---------------------------------------------------
 
-test.describe("board empty state — no hosts configured", () => {
+test.describe('board empty state — no hosts configured', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route("**/api/hosts", (route) =>
+    await page.route('**/api/hosts', (route) =>
       route.fulfill({
         status: 200,
-        contentType: "application/json",
+        contentType: 'application/json',
         body: JSON.stringify({ hosts: [] }),
-      }),
+      })
     );
-    await page.goto("/");
-    await expect(page.locator(".empty-state")).toBeVisible({ timeout: 10_000 });
+    await page.goto('/');
+    await expect(page.locator('.empty-state')).toBeVisible({ timeout: 10_000 });
   });
 
-  test("renders the sample kanhrd.config.yaml snippet with a copy control", async ({ page }) => {
-    const emptyState = page.locator(".empty-state").filter({ hasNot: page.locator(".no-matches") });
-    await expect(emptyState.locator("h2")).toHaveText(COPY.emptyState.noHosts);
+  test('renders the sample kanhrd.config.yaml snippet with a copy control', async ({ page }) => {
+    const emptyState = page.locator('.empty-state').filter({ hasNot: page.locator('.no-matches') });
+    await expect(emptyState.locator('h2')).toHaveText(COPY.emptyState.noHosts);
     await expect(emptyState).toContainText(COPY.emptyState.noHostsBody);
 
     // A YAML-looking sample config with at least one `hosts:`/`socket:`
     // marker is what the operator has to copy into kanhrd.config.yaml.
-    const snippets = emptyState.locator(".config-snippet");
+    const snippets = emptyState.locator('.config-snippet');
     expect(await snippets.count()).toBeGreaterThanOrEqual(2);
-    const configText = ((await snippets.first().textContent()) ?? "").trim();
-    expect(configText.length, "sample config snippet is empty").toBeGreaterThan(0);
+    const configText = ((await snippets.first().textContent()) ?? '').trim();
+    expect(configText.length, 'sample config snippet is empty').toBeGreaterThan(0);
     // The sample config uses herdr's `hosts:` key, the same word the copy
     // uses — see `apps/web/src/app/shared/copy.ts` rule 1.
     expect(configText).toMatch(/hosts?:/i);
 
-    const copyAction = emptyState.locator(".copy-action");
+    const copyAction = emptyState.locator('.copy-action');
     await expect(copyAction).toBeVisible();
     await expect(copyAction).toContainText(/copy/i);
   });
 
-  test("renders the start-the-bridge command and the operating-guide link", async ({ page }) => {
-    const emptyState = page.locator(".empty-state").filter({ hasNot: page.locator(".no-matches") });
+  test('renders the start-the-bridge command and the operating-guide link', async ({ page }) => {
+    const emptyState = page.locator('.empty-state').filter({ hasNot: page.locator('.no-matches') });
     await expect(emptyState).toContainText(COPY.emptyState.noHostsThen);
 
     // The second `.config-snippet` is the start command — must be a
     // non-empty, non-trivial shell string.
-    const startCommand = ((await emptyState.locator(".config-snippet").nth(1).textContent()) ?? "").trim();
-    expect(startCommand.length, "start-the-bridge command is empty").toBeGreaterThan(0);
-    expect(startCommand.split(/\s+/).length, "start command looks trivial").toBeGreaterThanOrEqual(1);
+    const startCommand = (
+      (await emptyState.locator('.config-snippet').nth(1).textContent()) ?? ''
+    ).trim();
+    expect(startCommand.length, 'start-the-bridge command is empty').toBeGreaterThan(0);
+    expect(startCommand.split(/\s+/).length, 'start command looks trivial').toBeGreaterThanOrEqual(
+      1
+    );
 
-    const guide = emptyState.locator(".guide-link");
+    const guide = emptyState.locator('.guide-link');
     await expect(guide).toBeVisible();
     await expect(guide).toHaveText(COPY.emptyState.noHostsDocsLink);
-    const href = await guide.getAttribute("href");
-    expect(href, "operating-guide link has no href").toBeTruthy();
+    const href = await guide.getAttribute('href');
+    expect(href, 'operating-guide link has no href').toBeTruthy();
     expect(href!).toMatch(/^https?:\/\//);
   });
 });
 
 // --- scoped URL renders the scope pill + clear action ---------------------
 
-test.describe("board URL scope", () => {
+test.describe('board URL scope', () => {
   let preflightReason: string | undefined;
 
   test.beforeAll(async () => {
@@ -90,24 +94,27 @@ test.describe("board URL scope", () => {
     test.skip(!!preflightReason, `herdr pre-flight failed: ${preflightReason}`);
   });
 
-  test("opening /workspace/:workspaceId/tab/:tabId renders the scope pill and a clear-scope action", async ({
+  test('opening /workspace/:workspaceId/tab/:tabId renders the scope pill and a clear-scope action', async ({
     page,
   }) => {
     const panes = await herdrPaneList();
     const scoped = panes.find((p) => !!p.workspace_id && !!p.tab_id);
-    test.skip(!scoped, "no herdr pane exposes both a workspace_id and a tab_id — cannot build a scoped URL");
+    test.skip(
+      !scoped,
+      'no herdr pane exposes both a workspace_id and a tab_id — cannot build a scoped URL'
+    );
 
     await page.goto(`/workspace/${scoped!.workspace_id}/tab/${encodeURIComponent(scoped!.tab_id)}`);
 
-    const pill = page.locator(".scope-pill");
+    const pill = page.locator('.scope-pill');
     await expect(pill).toBeVisible({ timeout: 10_000 });
 
     // The clear-scope control is a button labelled with
     // `COPY.emptyState.scopeEmptyAction` (see board.html), and clicking it
     // must actually clear the scope by navigating back to `/`.
-    const clear = pill.locator(".scope-pill-close");
+    const clear = pill.locator('.scope-pill-close');
     await expect(clear).toBeVisible();
-    await expect(clear).toHaveAttribute("aria-label", COPY.emptyState.scopeEmptyAction);
+    await expect(clear).toHaveAttribute('aria-label', COPY.emptyState.scopeEmptyAction);
 
     await clear.click();
     await expect(page).toHaveURL(/\/$/, { timeout: 5_000 });

@@ -1,8 +1,8 @@
-import type { Locator, Page } from "@playwright/test";
-import { test, expect } from "./fixtures/kanhrd";
-import { herdrAvailable, herdrPaneList } from "./fixtures/herdr";
-import { allCards, cardOpenLink } from "./helpers/selectors";
-import { COPY } from "../src/app/shared/copy";
+import type { Locator, Page } from '@playwright/test';
+import { test, expect } from './fixtures/kanhrd';
+import { herdrAvailable, herdrPaneList } from './fixtures/herdr';
+import { allCards, cardOpenLink } from './helpers/selectors';
+import { COPY } from '../src/app/shared/copy';
 
 /**
  * Herdr/tmux-style prefix keyboard shortcuts (L-KEYS). Default prefix
@@ -29,32 +29,32 @@ test.beforeEach(() => {
 // --- local selectors -------------------------------------------------------
 
 function helpOverlay(page: Page): Locator {
-  return page.locator("app-keyboard-help-overlay .modal");
+  return page.locator('app-keyboard-help-overlay .modal');
 }
 
 function plusButton(page: Page): Locator {
-  return page.locator(".plus-button");
+  return page.locator('.plus-button');
 }
 
 function plusMenu(page: Page): Locator {
-  return page.locator(".plus-menu");
+  return page.locator('.plus-menu');
 }
 
 async function pressChord(page: Page, key: string): Promise<void> {
-  await page.keyboard.press("Control+b");
+  await page.keyboard.press('Control+b');
   await page.keyboard.press(key);
 }
 
 // ---------------------------------------------------------------------------
 
 test("a bare '?' is not a global binding", async ({ app }) => {
-  await app.locator("body").click(); // make sure focus isn't inside a text input
+  await app.locator('body').click(); // make sure focus isn't inside a text input
 
   // An unmodified `?` is deliberately NOT forwarded at all
   // (`App.onKeydown` returns early on it — docs/UX-GUIDELINES.md,
   // "Keyboard-first, but the terminal owns its keys"): binding it globally
   // would break vim, less, fzf and every TUI running inside a card.
-  await app.keyboard.press("?");
+  await app.keyboard.press('?');
   await app.waitForTimeout(300);
   await expect(helpOverlay(app)).toHaveCount(0);
 });
@@ -75,13 +75,13 @@ test("a bare '?' is not a global binding", async ({ app }) => {
  * shortcut table. Fix belongs in app.ts (let the guard fall through while
  * the chord is armed), which is outside this suite's writable scope.
  */
-test.fixme("prefix+? opens the help overlay with every shortcut category", async ({ app }) => {
-  await app.locator("body").click();
+test.fixme('prefix+? opens the help overlay with every shortcut category', async ({ app }) => {
+  await app.locator('body').click();
 
-  await pressChord(app, "?");
+  await pressChord(app, '?');
 
   await expect(helpOverlay(app)).toBeVisible({ timeout: 3_000 });
-  const headings = await helpOverlay(app).locator(".shortcut-group h3").allTextContents();
+  const headings = await helpOverlay(app).locator('.shortcut-group h3').allTextContents();
   expect(headings).toEqual([
     COPY.help.categories.Navigation,
     COPY.help.categories.Lifecycle,
@@ -89,71 +89,80 @@ test.fixme("prefix+? opens the help overlay with every shortcut category", async
     COPY.help.categories.Help,
   ]);
 
-  await app.keyboard.press("Escape");
+  await app.keyboard.press('Escape');
   await expect(helpOverlay(app)).toBeHidden({ timeout: 3_000 });
 });
 
-test("prefix+t toggles the theme via KeyboardService -> ThemeService", async ({ app }) => {
-  const html = app.locator("html");
-  const initial = await html.getAttribute("data-theme");
-  expect(initial === "dark" || initial === "light").toBe(true);
-  const expectedToggled = initial === "dark" ? "light" : "dark";
+test('prefix+t toggles the theme via KeyboardService -> ThemeService', async ({ app }) => {
+  const html = app.locator('html');
+  const initial = await html.getAttribute('data-theme');
+  expect(initial === 'dark' || initial === 'light').toBe(true);
+  const expectedToggled = initial === 'dark' ? 'light' : 'dark';
 
-  await pressChord(app, "t");
+  await pressChord(app, 't');
 
-  await expect(html).toHaveAttribute("data-theme", expectedToggled, { timeout: 3_000 });
+  await expect(html).toHaveAttribute('data-theme', expectedToggled, { timeout: 3_000 });
 });
 
 test("prefix+n on the board advances the rail's tab filter", async ({ app }) => {
-  const tabRows = app.locator(".tab-row");
+  const tabRows = app.locator('.tab-row');
   const count = await tabRows.count();
-  test.skip(count < 2, "needs at least 2 tabs in the rail to observe next-tab advancing");
+  test.skip(count < 2, 'needs at least 2 tabs in the rail to observe next-tab advancing');
 
   // Establish a known "current tab" first: click the first tab row.
   await tabRows.first().click();
   await expect(tabRows.first()).toHaveClass(/active/, { timeout: 3_000 });
 
-  await pressChord(app, "n");
+  await pressChord(app, 'n');
 
   // prefix+n must move the active tab filter off the first row.
   await expect(tabRows.first()).not.toHaveClass(/active/, { timeout: 3_000 });
-  const activeCount = await app.locator(".tab-row.active").count();
+  const activeCount = await app.locator('.tab-row.active').count();
   expect(activeCount).toBe(1);
 });
 
-test("an unmodified Escape with no app chrome open is left to the page", async ({ app }) => {
+test('an unmodified Escape with no app chrome open is left to the page', async ({ app }) => {
   // Escape is scoped to open chrome (help overlay, drawer, plus menu,
   // toasts) — never a global binding, or it breaks vim/less/fzf inside a
   // card. With nothing open it must change nothing, including the scope.
-  await app.locator("body").click();
-  await app.keyboard.press("Escape");
+  await app.locator('body').click();
+  await app.keyboard.press('Escape');
   await expect(app).toHaveURL(/\/$/);
   await expect(helpOverlay(app)).toHaveCount(0);
 });
 
-test("Escape closes the plus-menu", async ({ app }) => {
-  test.skip(!(await plusButton(app).isVisible()), "no host advertises a lifecycle-create capability");
+test('Escape closes the plus-menu', async ({ app }) => {
+  test.skip(
+    !(await plusButton(app).isVisible()),
+    'no host advertises a lifecycle-create capability'
+  );
 
   await plusButton(app).click();
   await expect(plusMenu(app)).toBeVisible({ timeout: 3_000 });
 
-  await app.keyboard.press("Escape");
+  await app.keyboard.press('Escape');
   await expect(plusMenu(app)).toBeHidden({ timeout: 3_000 });
 });
 
-test("focused terminal swallows prefix+c: Ctrl+B reaches xterm.js, not the app shortcut", async ({ app }) => {
+test('focused terminal swallows prefix+c: Ctrl+B reaches xterm.js, not the app shortcut', async ({
+  app,
+}) => {
   const before = await herdrPaneList();
 
-  await cardOpenLink(allCards(app).filter({ has: app.locator("a.card-open") }).first()).click();
-  await expect(app.locator(".xterm-rows")).toBeVisible({ timeout: 10_000 });
+  await cardOpenLink(
+    allCards(app)
+      .filter({ has: app.locator('a.card-open') })
+      .first()
+  ).click();
+  await expect(app.locator('.xterm-rows')).toBeVisible({ timeout: 10_000 });
 
   // Click into the visible terminal grid — xterm.js focuses its hidden
   // `.xterm-helper-textarea` input itself on click (that textarea is
   // typically positioned off-viewport, so clicking it directly can fail).
-  await app.locator(".xterm-screen").click();
-  await expect(app.locator(".xterm-helper-textarea")).toBeFocused({ timeout: 3_000 });
+  await app.locator('.xterm-screen').click();
+  await expect(app.locator('.xterm-helper-textarea')).toBeFocused({ timeout: 3_000 });
 
-  await pressChord(app, "c");
+  await pressChord(app, 'c');
 
   // Give the (suppressed) chord a moment to have fired if suppression were
   // broken, then confirm no new pane was created via the herdr CLI —

@@ -7,9 +7,9 @@ import {
   output,
   signal,
   viewChild,
-} from "@angular/core";
-import { COPY } from "./copy";
-import { containDialogFocus } from "./confirm-modal";
+} from '@angular/core';
+import { COPY } from './copy';
+import { containDialogFocus } from './confirm-modal';
 
 /**
  * Single-input naming dialog. Sibling of `ConfirmModal` (whose focus trap it
@@ -23,16 +23,16 @@ import { containDialogFocus } from "./confirm-modal";
  * paths can never disagree.
  */
 @Component({
-  selector: "app-rename-modal",
+  selector: 'app-rename-modal',
   imports: [],
-  templateUrl: "./rename-modal.html",
-  styleUrl: "./rename-modal.scss",
+  templateUrl: './rename-modal.html',
+  styleUrl: './rename-modal.scss',
 })
 export class RenameModal implements AfterViewInit, OnDestroy {
   protected readonly copy = COPY;
 
   /** Seeds the input — the current name, or `""` when the thing has none. */
-  readonly initialValue = input<string>("");
+  readonly initialValue = input<string>('');
   readonly title = input<string>(COPY.card.renameModalTitle);
   readonly fieldLabel = input<string>(COPY.card.renameFieldLabel);
   /**
@@ -47,12 +47,12 @@ export class RenameModal implements AfterViewInit, OnDestroy {
   readonly saved = output<string | null>();
   readonly cancelled = output<void>();
 
-  private readonly dialog = viewChild.required<ElementRef<HTMLElement>>("dialog");
-  private readonly field = viewChild.required<ElementRef<HTMLInputElement>>("field");
+  private readonly dialog = viewChild.required<ElementRef<HTMLElement>>('dialog');
+  private readonly field = viewChild.required<ElementRef<HTMLInputElement>>('field');
   private release: (() => void) | null = null;
 
   /** Mirrors the input so the clear action can appear only when there is something to clear. */
-  protected readonly value = signal("");
+  protected readonly value = signal('');
 
   ngAfterViewInit(): void {
     const field = this.field().nativeElement;
@@ -74,7 +74,7 @@ export class RenameModal implements AfterViewInit, OnDestroy {
   /** Empty after trimming is a clear, not a rename to `""`. */
   protected onSave(): void {
     const trimmed = this.value().trim();
-    this.saved.emit(trimmed === "" ? null : trimmed);
+    this.saved.emit(trimmed === '' ? null : trimmed);
   }
 
   protected onClear(): void {

@@ -1,4 +1,9 @@
-<div class="switcher" role="tablist" [attr.aria-label]="switcherLabel" (keydown)="onKeydown($event)">
+<div
+  class="switcher"
+  role="tablist"
+  [attr.aria-label]="switcherLabel"
+  (keydown)="onKeydown($event)"
+>
   @for (status of statuses(); track status; let i = $index) {
     <button
       #segment
