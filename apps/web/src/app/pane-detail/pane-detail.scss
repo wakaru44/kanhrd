@@ -170,6 +170,17 @@
   flex: 1;
   min-width: 0;
   display: flex;
+  /*
+   * The terminal's breathing room lives here, not on
+   * `.terminal-container`. `FitAddon` sizes the terminal from the computed
+   * height of its parent and subtracts only the *terminal's* own padding,
+   * never the parent's — and `box-sizing: border-box` (styles.scss) makes
+   * that computed height include the parent's padding. Padding on the
+   * container therefore reads to the addon as usable space and it fits a
+   * row more than fits, which the container's `overflow: hidden` then
+   * clips.
+   */
+  padding: var(--sp-2);
 }
 
 /* The terminal owns its own overflow; it never widens the page. */
@@ -177,7 +188,20 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  padding: var(--sp-2);
+
+  /*
+   * The terminal owns the vertical axis. Nothing in the chain above it
+   * scrolls at phone size, so without this reservation the browser treats
+   * a vertical swipe over the terminal as a page gesture and Chrome on a
+   * phone turns a downward one into pull-to-refresh. `pan-x` and
+   * `pinch-zoom` stay with the browser — only `pan-y` is claimed — and
+   * taps are unaffected, so tap-to-focus and the on-screen keyboard still
+   * work. `Terminal.scrollLines` is driven from the touch handlers in
+   * pane-detail.ts; `overscroll-behavior-y` is the belt for any Chromium
+   * that still starts a chain here.
+   */
+  touch-action: pan-x pinch-zoom;
+  overscroll-behavior-y: contain;
   background: var(--paper);
   font-family: var(--font-mono);
 }

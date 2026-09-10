@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { ActivatedRoute, convertToParamMap } from "@angular/router";
 import { BehaviorSubject, Subject, of } from "rxjs";
 import { Terminal } from "@xterm/xterm";
+import { FitAddon } from "@xterm/addon-fit";
 import type { HostSummary, WsEvent } from "@kanhrd/schema";
 import { PaneDetail } from "./pane-detail";
 import { COPY } from "../shared/copy";
@@ -529,5 +530,105 @@ describe("PaneDetail", () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? "";
     expect(text.toLowerCase()).not.toContain("coming soon");
     expect(text.toLowerCase()).not.toContain("updates every");
+  });
+
+  // --- the terminal owns the vertical axis on touch.
+  //
+  // xterm 6 has no touch scrolling of its own (its `.xterm-viewport` is
+  // decorative and `Gesture.addTarget` is never called), and nothing above
+  // the container scrolls at phone size, so an unclaimed vertical swipe
+  // used to fall through to the page — where a phone browser reads a
+  // downward one as pull-to-refresh.
+
+  /** Mounts with a real box, so the terminal renders rows with a measurable height. */
+  async function mountSized(): Promise<HTMLElement> {
+    fixture = TestBed.createComponent(PaneDetail);
+    const root = fixture.nativeElement as HTMLElement;
+    root.style.display = "block";
+    root.style.width = "600px";
+    root.style.height = "400px";
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+    return root.querySelector(".terminal-container") as HTMLElement;
+  }
+
+  function touch(target: HTMLElement, type: string, clientY: number): TouchEvent {
+    const point = new Touch({ identifier: 1, target, clientX: 100, clientY });
+    return new TouchEvent(type, {
+      bubbles: true,
+      cancelable: type !== "touchstart",
+      touches: type === "touchend" || type === "touchcancel" ? [] : [point],
+      changedTouches: [point],
+    });
+  }
+
+  it("reserves the vertical touch axis on the terminal container", async () => {
+    const container = await mountSized();
+    const style = getComputedStyle(container);
+
+    // `pan-y` is deliberately absent: the app spends it on scrollback.
+    expect(style.touchAction).toContain("pan-x");
+    expect(style.touchAction).not.toContain("pan-y");
+    // Pinch-zoom and taps stay with the browser, so tap-to-focus and the
+    // on-screen keyboard are unaffected.
+    expect(style.touchAction).toContain("pinch-zoom");
+    expect(style.overscrollBehaviorY).toBe("contain");
+  });
+
+  it("spends a vertical touch drag on the terminal's scrollback, not the page", async () => {
+    const scrollLines = spyOn(Terminal.prototype, "scrollLines");
+    const container = await mountSized();
+
+    container.dispatchEvent(touch(container, "touchstart", 300));
+    const move = touch(container, "touchmove", 100); // finger up 200px => newer output
+    container.dispatchEvent(move);
+
+    expect(scrollLines).toHaveBeenCalled();
+    expect(scrollLines.calls.mostRecent().args[0]).toBeGreaterThan(0);
+    // The browser must not also get the gesture — that is the
+    // pull-to-refresh path.
+    expect(move.defaultPrevented).toBe(true);
+
+    // Dragging the other way pulls older output back.
+    scrollLines.calls.reset();
+    container.dispatchEvent(touch(container, "touchmove", 300));
+    expect(scrollLines.calls.mostRecent().args[0]).toBeLessThan(0);
+  });
+
+  it("keeps the gesture at the scroll boundary so the page never overscrolls", async () => {
+    spyOn(Terminal.prototype, "scrollLines"); // pinned at the top of the scrollback
+    const container = await mountSized();
+
+    container.dispatchEvent(touch(container, "touchstart", 100));
+    const move = touch(container, "touchmove", 380);
+    container.dispatchEvent(move);
+
+    expect(move.defaultPrevented).toBe(true);
+  });
+
+  it("stops handling touch once destroyed", async () => {
+    const scrollLines = spyOn(Terminal.prototype, "scrollLines");
+    const container = await mountSized();
+    container.dispatchEvent(touch(container, "touchstart", 300));
+    fixture.destroy();
+
+    scrollLines.calls.reset();
+    container.dispatchEvent(touch(container, "touchmove", 100));
+    expect(scrollLines).not.toHaveBeenCalled();
+  });
+
+  it("refits from the container's own box rather than a window resize", async () => {
+    const container = await mountSized();
+    // Let the observer's initial observation land before measuring.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const fit = spyOn(FitAddon.prototype, "fit");
+
+    // Nothing about the window changes here — only the box the terminal
+    // lives in, which is what a wrapping header or an opening drawer does.
+    (container.closest(".pane-detail") as HTMLElement).style.height = "240px";
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(fit).toHaveBeenCalled();
   });
 });

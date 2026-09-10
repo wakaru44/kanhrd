@@ -20,6 +20,7 @@ import { PanesStore, paneKey } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
 import { classifyInput } from "./key-mapping";
 import { TerminalThemeService } from "../state/terminal-theme.service";
+import { TerminalFontSizeService } from "../state/terminal-font-size.service";
 import { ToastService } from "../state/toast.service";
 import { ClockTick, formatElapsed } from "../util/clock";
 import { COPY, fill } from "../shared/copy";
@@ -70,6 +71,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   private readonly ws = inject(WsClient);
   private readonly store = inject(PanesStore);
   private readonly terminalTheme = inject(TerminalThemeService);
+  private readonly terminalFontSize = inject(TerminalFontSizeService);
   private readonly toast = inject(ToastService);
   protected readonly clock = inject(ClockTick);
 
@@ -143,9 +145,120 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
         console.warn("pane-detail: send failed", err);
       });
   }
-  private readonly onWindowResize = (): void => {
-    this.fitAddon?.fit();
+  /**
+   * The terminal is refit from the *container's* box, not from
+   * `window.resize`.
+   *
+   * A window-resize listener is both too narrow and mistimed. Too narrow:
+   * the container also changes size without the window doing so — the
+   * header's meta strip rewrapping, the rail drawer opening. Mistimed: one
+   * `fit()` per resize event fits against the box as it is at that
+   * instant, and xterm's own re-render reflows the surrounding flex column
+   * afterwards, so the fitted row count can end up taller than the box it
+   * was fitted into. `.terminal-container` is `overflow: hidden`, so those
+   * extra rows are clipped and unreachable — the prompt included — and
+   * nothing ever refits to recover them. A `ResizeObserver` fires again on
+   * that second reflow and converges.
+   */
+  private resizeObserver: ResizeObserver | null = null;
+
+  // --- the terminal owns the vertical touch axis ------------------------
+  //
+  // xterm 6 does not scroll on touch. Its `.xterm-viewport` is decorative
+  // (scrollHeight === clientHeight); the real scrolling is done by
+  // `.xterm-scrollable-element`, which transforms its content and listens
+  // only for wheel and scrollbar drags. The vendored vscode `Gesture`
+  // helper is present in the bundle but `Gesture.addTarget` is never
+  // called on it, so a finger drag over the terminal moves nothing.
+  //
+  // With no scroller anywhere in the chain (`.terminal-container`,
+  // `.pane-detail` and the shell's `main` are all unscrollable at phone
+  // size) the browser hands that unclaimed vertical gesture to the root
+  // scroller, and Chrome on a phone reads a downward one as
+  // pull-to-refresh. Both halves of the reported bug — history that cannot
+  // be reached by touch, and a boundary swipe that reloads the page — are
+  // the same missing claim.
+  //
+  // So: `touch-action: pan-x pinch-zoom` on the container (see
+  // pane-detail.scss) tells the browser this element reserves the vertical
+  // axis, which stops the page gesture before it starts, and these
+  // handlers spend it on `scrollLines` instead. Only `touchmove` is
+  // handled — `touchstart`/`touchend` stay untouched so a tap still
+  // focuses the terminal and raises the on-screen keyboard.
+
+  private touchAnchorY: number | null = null;
+  /** Sub-row leftover, so a slow drag accumulates instead of rounding to nothing. */
+  private touchCarryPx = 0;
+
+  private readonly onTouchStart = (event: TouchEvent): void => {
+    const touch = event.touches.length === 1 ? event.touches[0] : null;
+    this.touchAnchorY = touch ? touch.clientY : null;
+    this.touchCarryPx = 0;
   };
+
+  private readonly onTouchMove = (event: TouchEvent): void => {
+    const term = this.term;
+    const touch = event.touches.length === 1 ? event.touches[0] : null;
+    if (!term || !touch || this.touchAnchorY === null) {
+      return;
+    }
+    // Content-following, not scrollbar-following: dragging the finger down
+    // pulls older output into view.
+    const deltaPx = this.touchAnchorY - touch.clientY + this.touchCarryPx;
+    this.touchAnchorY = touch.clientY;
+    const rowHeight = this.rowHeightPx();
+    if (rowHeight <= 0) {
+      return;
+    }
+    const lines = Math.trunc(deltaPx / rowHeight);
+    this.touchCarryPx = deltaPx - lines * rowHeight;
+    if (lines !== 0) {
+      term.scrollLines(lines);
+    }
+    // Claimed for the whole gesture, both boundaries included: the leftover
+    // of a swipe that runs past the top of the scrollback must not become
+    // page overscroll.
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+  };
+
+  private readonly onTouchEnd = (): void => {
+    this.touchAnchorY = null;
+    this.touchCarryPx = 0;
+  };
+
+  /** Rendered row height in CSS pixels, measured rather than assumed from the font size. */
+  private rowHeightPx(): number {
+    const rows = this.term?.rows ?? 0;
+    const screen = this.containerRef?.nativeElement.querySelector(".xterm-screen");
+    if (!screen || rows <= 0) {
+      return 0;
+    }
+    return screen.getBoundingClientRect().height / rows;
+  }
+
+  private fitToContainer(): void {
+    const el = this.containerRef?.nativeElement;
+    // fit() divides by the cell size; a detached or zero-height container
+    // yields NaN rows and corrupts the buffer.
+    if (!el || el.clientHeight === 0 || el.clientWidth === 0) {
+      return;
+    }
+    this.fitAddon?.fit();
+    // `fit()` divides the available height by the renderer's *cached* cell
+    // size. A resize can change that measurement, so the first fit can
+    // land on a row count that no longer fits once the renderer has
+    // re-measured — and the container clips the difference. Fitting once
+    // more on the next frame, with the fresh cell size, converges. A fit
+    // that computes the same dimensions is a no-op, so this settles rather
+    // than looping.
+    requestAnimationFrame(() => {
+      if (this.fitAddon && el.clientHeight > 0 && el.clientWidth > 0) {
+        this.fitAddon.fit();
+      }
+    });
+  }
 
   // --- meta strip: revision count, last-poll timestamp, subscription
   // health. All from data already on the tier-2 wire surface (`pane.read`'s
@@ -256,7 +369,14 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
 
     this.term = term;
     this.fitAddon = fitAddon;
-    window.addEventListener("resize", this.onWindowResize);
+    this.resizeObserver = new ResizeObserver(() => this.fitToContainer());
+    this.resizeObserver.observe(this.containerRef.nativeElement);
+
+    const container = this.containerRef.nativeElement;
+    container.addEventListener("touchstart", this.onTouchStart, { passive: true });
+    container.addEventListener("touchmove", this.onTouchMove, { passive: false });
+    container.addEventListener("touchend", this.onTouchEnd, { passive: true });
+    container.addEventListener("touchcancel", this.onTouchEnd, { passive: true });
 
     this.outputEventsSub = this.ws.events$
       .pipe(filter((evt): evt is WsEvent<"pane.output"> => evt.event === "pane.output"))
@@ -266,7 +386,13 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    window.removeEventListener("resize", this.onWindowResize);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    const container = this.containerRef?.nativeElement;
+    container?.removeEventListener("touchstart", this.onTouchStart);
+    container?.removeEventListener("touchmove", this.onTouchMove);
+    container?.removeEventListener("touchend", this.onTouchEnd);
+    container?.removeEventListener("touchcancel", this.onTouchEnd);
     this.outputEventsSub?.unsubscribe();
     this.teardownSubscription();
     this.term?.dispose();

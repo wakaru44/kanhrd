@@ -48,8 +48,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--card-gap);
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* The card list is the board's vertical scroller; a swipe past either
+   * end stays with it rather than becoming page overscroll (which a phone
+   * browser reads as pull-to-refresh). */
+  overscroll-behavior-y: contain;
 
   /* An empty column keeps its slot and header; the body collapses. No prose. */
   &.is-empty {
@@ -58,12 +63,26 @@
 }
 
 .virtual-viewport {
-  /* Virtual scroll needs a bounded height to know what is visible. */
-  height: 70vh;
-  max-height: 100%;
+  /* Virtual scroll needs a bounded height to know what is visible; the
+   * column body is that bound at every width. A `vh` height here would
+   * make the virtualized column the only element on the board with its
+   * own scroll geometry. */
+  height: 100%;
+  /* The viewport, not `.column-body`, is the scroller in this path. */
+  overscroll-behavior-y: contain;
 
+  /*
+   * `itemSize` is a promise about the rendered row: exactly
+   * --card-compact-height + --card-gap. The compact card only reaches
+   * that height when its vertical padding is zeroed (touch); on a fine
+   * pointer its content overshoots by a fraction of a pixel, and the CDK
+   * multiplies that fraction by the item count — the scroll range and the
+   * real content drift apart, so the last rows never come fully into
+   * view. The column owns the arithmetic, so it pins the row box.
+   */
   ::ng-deep .cdk-virtual-scroll-content-wrapper > app-card {
     display: block;
+    height: var(--card-compact-height);
     margin-bottom: var(--card-gap);
   }
 }
@@ -72,13 +91,5 @@
   .column {
     /* One column per screen: the page gutters live here, inside the strip. */
     padding: 0 var(--sp-4) var(--sp-4);
-  }
-
-  .column-body {
-    flex: 1;
-  }
-
-  .virtual-viewport {
-    height: 100%;
   }
 }

@@ -7,7 +7,18 @@
  */
 
 :host {
-  display: block;
+  /*
+   * The board region is viewport-bounded at every width, so cards scroll
+   * inside their status column instead of growing the page: "columns
+   * across, cards down" (docs/UX-GUIDELINES.md, "Board paging model").
+   * Without this the strip is unbounded, `.column-body`'s `overflow-y`
+   * never engages, and only the virtualized column gets a scroller — two
+   * different scroll models on one board.
+   */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 
 .state {
@@ -160,6 +171,7 @@
   display: flex;
   align-items: stretch;
   gap: var(--sp-2);
+  flex: 1;
   min-height: 0;
 }
 
@@ -218,7 +230,15 @@
 }
 
 .board-grid {
+  /* Bounded height, so each column owns its own vertical scroll. The
+   * single implicit row must be pinned to the strip: an auto row is sized
+   * by its tallest column, which puts the content back outside the box. */
+  flex: 1;
+  min-height: 0;
+  grid-auto-rows: 100%;
+  align-items: stretch;
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .board-skeleton {
@@ -246,25 +266,13 @@
 @media (max-width: 900px) {
   :host {
     /* The card list scrolls, not the page. */
-    display: flex;
-    flex-direction: column;
-    height: 100%;
     overflow: hidden;
-  }
-
-  .board-layout {
-    flex: 1;
   }
 
   .board-grid {
     display: flex;
-    flex: 1;
-    min-height: 0;
     gap: 0;
     padding: 0;
-    align-items: stretch;
-    overflow-x: auto;
-    overflow-y: hidden;
     scroll-snap-type: x mandatory;
     overscroll-behavior-x: contain;
   }
