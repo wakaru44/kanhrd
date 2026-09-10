@@ -1,0 +1,38 @@
+apps/web/src/app/pane-detail/pane-terminal.ts
+  s_e465e30f266fa2::t_eab65e2f8272be 1-34,40,45-580
+  s_e465e30f266fa2::t_e27ee0c6b1277c 35-39,41-44
+  s_e465e30f266fa2::t_c61a50ec302e1e 581
+apps/web/src/app/pane-detail/pane-detail.spec.ts
+  s_e465e30f266fa2::t_5307f8c7e957a3 12-23,55,161-162,251-255,308,316-322,343,359,425,433-442,453,464,488-490,500
+  s_e465e30f266fa2::t_220af6ac36f3de 3
+apps/web/src/app/pane-detail/pane-detail.ts
+  s_e465e30f266fa2::t_eea97dd5cbd1aa 15,33,40-43,48-53,83-94,124-126,159,180,184,192,195-197,199-201,224,230,235,254
+apps/web/src/app/pane-detail/pane-terminal.spec.ts
+  s_e465e30f266fa2::t_15759d5003721f 1-845
+openspec/changes/refactor-board-return-restore/.openspec.yaml
+  s_e465e30f266fa2::t_4608f360cb2205 1-5
+openspec/changes/refactor-board-return-restore/README.md
+  s_e465e30f266fa2::t_d223f51be978bf 1-2
+openspec/changes/refactor-board-return-restore/design.md
+  s_e465e30f266fa2::t_fb6e0adb13ef92 1-141
+openspec/changes/refactor-board-return-restore/proposal.md
+  s_e465e30f266fa2::t_0410b58da790e9 1-60
+openspec/changes/refactor-board-return-restore/tasks.md
+  s_e465e30f266fa2::t_570b6b5f2a4b2a 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bb5912d934da29262e7d8940be0f3dd2aeca3e0c",
+  "prompts": {},
+  "sessions": {
+    "s_e465e30f266fa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2c5b23d5-95a9-4f8a-9e19-5ebcf3fb7297",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
