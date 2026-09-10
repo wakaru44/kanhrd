@@ -1,0 +1,53 @@
+openspec/changes/archive/2026-09-10-add-l-brand-neo-shepherd-redesign/tasks.md
+  s_a62153c2b8328e::t_61eb365a14a53c 214-226,267-269
+openspec/specs/l-brand-neo-shepherd-redesign/spec.md
+  s_a62153c2b8328e::t_61eb365a14a53c 1-484
+docs/review/neo-shepherd-redesign/README.md
+  s_a62153c2b8328e::t_69c85a593de420 1-25,30-36,40-42,44-55,59,61-66,70-79
+  s_a62153c2b8328e::t_7527e61ef313e7 26-27,29,37-38,56-57,67-68
+  s_a62153c2b8328e::t_574f17ef1ef9ec 28,39,43,58,60,69
+.prettierignore
+  s_a62153c2b8328e::t_7527e61ef313e7 9
+docs/review/neo-shepherd-redesign/board-empty-sumi.jpg
+  s_a62153c2b8328e::t_4a9014d8822eb1 1-3
+docs/review/neo-shepherd-redesign/board-empty-washi.jpg
+  s_a62153c2b8328e::t_934b2119bf6734 1-3
+docs/review/neo-shepherd-redesign/board-populated-sumi.jpg
+  s_a62153c2b8328e::t_49254bfcbbce48 1-3
+docs/review/neo-shepherd-redesign/board-populated-washi.jpg
+  s_a62153c2b8328e::t_b63d8654996deb 1-3
+docs/review/neo-shepherd-redesign/mobile-drawer-sumi.jpg
+  s_a62153c2b8328e::t_582af20666b3fe 1-3
+docs/review/neo-shepherd-redesign/mobile-drawer-washi.jpg
+  s_a62153c2b8328e::t_10a08ce5295350 1-3
+docs/review/neo-shepherd-redesign/mobile-pager-first-sumi.jpg
+  s_a62153c2b8328e::t_3460a787ee2074 1-3
+docs/review/neo-shepherd-redesign/mobile-pager-first-washi.jpg
+  s_a62153c2b8328e::t_5d64405ffc894d 1-3
+docs/review/neo-shepherd-redesign/mobile-pager-last-washi.jpg
+  s_a62153c2b8328e::t_ce02085f2042ef 1-3
+docs/review/neo-shepherd-redesign/mobile-pager-middle-washi.jpg
+  s_a62153c2b8328e::t_5ca58ee3e4f369 1-3
+docs/review/neo-shepherd-redesign/pane-detail-sumi-header.jpg
+  s_a62153c2b8328e::t_6ef400c057990e 1-3
+docs/review/neo-shepherd-redesign/settings-sumi.jpg
+  s_a62153c2b8328e::t_71168b64716da4 1-3
+docs/review/neo-shepherd-redesign/settings-washi.jpg
+  s_a62153c2b8328e::t_751ef41fb7c93f 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f6e2992a62fa95331ae8dd57cbea9c9e5e797fa6",
+  "prompts": {},
+  "sessions": {
+    "s_a62153c2b8328e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fae23786-fdaa-46af-b39c-69a564a2b7c2",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
