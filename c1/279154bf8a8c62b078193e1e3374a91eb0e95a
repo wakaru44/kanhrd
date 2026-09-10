@@ -1,0 +1,107 @@
+Makefile
+  s_e465e30f266fa2::t_910fb750799c43 119-122
+README.md
+  s_e465e30f266fa2::t_07a98462179226 52-65
+apps/web/e2e/capture.spec.ts
+  s_e465e30f266fa2::t_67b6bfd3afc550 1-351
+apps/web/e2e/helpers/mock-bridge.ts
+  s_e465e30f266fa2::t_f0f3f96833d3b7 1-176
+apps/web/e2e/viewport-matrix.spec.ts
+  s_e465e30f266fa2::t_222af3905bb282 2-3
+apps/web/package.json
+  s_e465e30f266fa2::t_c1d2fe7c39bb4b 11,13-14
+apps/web/playwright.config.ts
+  s_e465e30f266fa2::t_0257abbf9f06cb 28,38-45
+apps/web/src/app/board/board.html
+  s_e465e30f266fa2::t_25249ae6739c3e 92,100,104-137
+apps/web/src/app/board/board.scss
+  s_e465e30f266fa2::t_5b0340db4c0979 248-259
+apps/web/src/app/board/board.spec.ts
+  s_e465e30f266fa2::t_ed67c64f4773c4 7,15,1093-1525
+apps/web/src/app/board/board.ts
+  s_e465e30f266fa2::t_dccc5d09ada904 27,29,49-52,54,87,110,115-121,126-143,381-391,395-398,400,403,409-414,417,420-424
+apps/web/src/app/board/filter-bar.html
+  s_e465e30f266fa2::t_b865353f3c0363 38-59
+apps/web/src/app/board/filter-bar.scss
+  s_e465e30f266fa2::t_68a67ea69479fc 104-126
+apps/web/src/app/board/filter-bar.spec.ts
+  s_e465e30f266fa2::t_d65207ff0f6da5 6-7,111-193
+apps/web/src/app/board/filter-bar.ts
+  s_e465e30f266fa2::t_0f43bdcd9aeb6a 5,8-19,29,31,34-45
+apps/web/src/app/board/status-switcher.html
+  s_e465e30f266fa2::t_719fdabebdf9b0 15
+apps/web/src/app/board/status-switcher.ts
+  s_e465e30f266fa2::t_e65335e260d01a 29-36
+apps/web/src/app/board/swimlane.html
+  s_e465e30f266fa2::t_ff5754a54e5d7c 1-14
+apps/web/src/app/board/swimlane.scss
+  s_e465e30f266fa2::t_c51593011c7ed4 1-91
+apps/web/src/app/board/swimlane.spec.ts
+  s_e465e30f266fa2::t_002c45758b4397 1-165
+apps/web/src/app/board/swimlane.ts
+  s_e465e30f266fa2::t_f0bf1b7156d018 1-175
+apps/web/src/app/settings/settings.spec.ts
+  s_e465e30f266fa2::t_aa9436f08f7eb8 207-210
+apps/web/src/app/settings/settings.ts
+  s_e465e30f266fa2::t_8e80ec9060ff80 128
+apps/web/src/app/shared/copy.ts
+  s_e465e30f266fa2::t_3bdab4d7e2acb0 108-122,263-264
+apps/web/src/app/state/board-return.service.spec.ts
+  s_e465e30f266fa2::t_1d1fe2c05d07b4 90-91,94,97-98,103-104,106-108,110,112,118,253,255,259-260,266,268,272,278,280,286,291,301,309,314,327-328,332,337,340,349,354,358,363,365,370,376,379,390,392,398,400,406,417,419,425,434-435
+apps/web/src/app/state/board-return.service.ts
+  s_e465e30f266fa2::t_aa95d76babdf24 62-75,248,252,271-272,274-275
+apps/web/src/app/state/panes.store.spec.ts
+  s_e465e30f266fa2::t_2b93826ffaf812 16,24,183-378,569-630
+apps/web/src/app/state/panes.store.ts
+  s_e465e30f266fa2::t_828b3d62741022 17,428-509,541,637-642,644-646,648-653,656-672
+apps/web/src/app/state/settings.service.spec.ts
+  s_e465e30f266fa2::t_ae19e80b391acf 59-77,102,127-142,144-157
+apps/web/src/app/state/settings.service.ts
+  s_e465e30f266fa2::t_b725fcc95843ce 5-11,25-31,35,79-82
+docs/screenshots/desktop_board.png
+  s_e465e30f266fa2::t_d3e94fdeb9d7f3 2-3
+docs/screenshots/desktop_board_dense.png
+  s_e465e30f266fa2::t_dc98063349d9fb 1-3
+docs/screenshots/desktop_board_scoped.png
+  s_e465e30f266fa2::t_827025a62718ce 1-3
+docs/screenshots/empty_state.png
+  s_e465e30f266fa2::t_dbcb6169ab8036 1-3
+docs/screenshots/mobile_kanban.jpg
+  s_e465e30f266fa2::t_f7317c80900f33 1-3
+docs/screenshots/settings.png
+  s_e465e30f266fa2::t_7d68da686fa0d8 1-3
+docs/screenshots/terminal_detail.png
+  s_e465e30f266fa2::t_341c6c074954de 1-3
+docs/screenshots/terminal_palettes.png
+  s_e465e30f266fa2::t_f24a58e8d80cd8 1-3
+openspec/changes/add-screenshot-capture/.openspec.yaml
+  s_e465e30f266fa2::t_d5f9c441a9e2b7 1-2
+openspec/changes/add-screenshot-capture/README.md
+  s_e465e30f266fa2::t_4bbd785328594c 1-3
+openspec/changes/add-screenshot-capture/proposal.md
+  s_e465e30f266fa2::t_5e8753793e0682 1-123
+openspec/changes/add-screenshot-capture/specs/docs-screenshot-capture/spec.md
+  s_e465e30f266fa2::t_898430ca91ad00 1-95
+openspec/changes/add-screenshot-capture/tasks.md
+  s_e465e30f266fa2::t_24c6f7ee92cf9d 1-50
+openspec/changes/add-swimlane-grouping/tasks.md
+  s_e465e30f266fa2::t_69d57cd5b3dc1b 19,21,24,28,30-31,38,40,45-46,51-53,56-71
+openspec/changes/refactor-board-return-restore/design.md
+  s_e465e30f266fa2::t_1d82993985b150 31-35,77-102,137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c1279154bf8a8c62b078193e1e3374a91eb0e95a",
+  "prompts": {},
+  "sessions": {
+    "s_e465e30f266fa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2c5b23d5-95a9-4f8a-9e19-5ebcf3fb7297",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
