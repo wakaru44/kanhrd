@@ -115,6 +115,39 @@ describe("App", () => {
     });
   });
 
+  describe("fix-keyboard-shortcut-suppression: capture-phase listener at window", () => {
+    it("still sees the prefix keydown when a document-level capture-phase listener stops propagation first (simulates a browser extension like Vimium binding Ctrl+B)", () => {
+      create();
+      const keyboard = TestBed.inject(KeyboardService);
+      const handle = spyOn(keyboard, "handleKeydown").and.callThrough();
+
+      const vimiumLike = (e: KeyboardEvent): void => e.stopPropagation();
+      document.addEventListener("keydown", vimiumLike, { capture: true });
+      try {
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "b", ctrlKey: true, bubbles: true, cancelable: true }),
+        );
+      } finally {
+        document.removeEventListener("keydown", vimiumLike, { capture: true });
+      }
+
+      expect(handle)
+        .withContext("window-capture listener must run before document-capture, regardless of registration order")
+        .toHaveBeenCalled();
+    });
+
+    it("removes the window listener on destroy (DestroyRef cleanup)", () => {
+      const fixture = create();
+      const keyboard = TestBed.inject(KeyboardService);
+      const handle = spyOn(keyboard, "handleKeydown").and.callThrough();
+
+      fixture.destroy();
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "b", ctrlKey: true }));
+
+      expect(handle).not.toHaveBeenCalled();
+    });
+  });
+
   describe("toast placement", () => {
     it("stacks bottom-right at desktop width", () => {
       fakeMatchMedia(false);

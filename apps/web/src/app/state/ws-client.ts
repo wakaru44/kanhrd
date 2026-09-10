@@ -8,6 +8,7 @@ import type {
   WsRequest,
   WsServerMessage,
 } from "@kanhrd/schema";
+import { COPY } from "../shared/copy";
 import { ToastService } from "./toast.service";
 
 const INITIAL_BACKOFF_MS = 500;
@@ -33,8 +34,16 @@ export class WsClient {
   /** Human-readable reason the socket is currently down, if any. */
   readonly lastError = signal<string | null>(null);
 
-  /** Id of the persistent "connection lost" toast while one is showing, so it can be dismissed on reconnect. */
-  private connectionLostToastId: number | null = null;
+  /**
+   * Dedup identity of the bridge's connection notice. One key for the whole
+   * app: a retry loop that keeps failing updates this notice rather than
+   * stacking another (docs/UX-GUIDELINES.md, "quiet under load"), and
+   * reconnecting removes it by this key.
+   */
+  private static readonly CONNECTION_NOTICE_KEY = "bridge:connection";
+
+  /** Whether the connection notice is currently showing, so reconnect only announces a real outage. */
+  private connectionLost = false;
 
   private readonly eventsSubject = new Subject<WsEvent>();
   /** Every event frame pushed by the bridge, across all hosts. */
@@ -90,9 +99,10 @@ export class WsClient {
       this.reconnectAttempt = 0;
       this.lastError.set(null);
       this.connected.set(true);
-      if (this.connectionLostToastId !== null) {
-        this.toast.dismiss(this.connectionLostToastId);
-        this.connectionLostToastId = null;
+      if (this.connectionLost) {
+        this.connectionLost = false;
+        this.toast.dismissByKey(WsClient.CONNECTION_NOTICE_KEY);
+        this.toast.push({ level: "info", message: COPY.toast.bridgeReconnected });
       }
     });
 
@@ -105,13 +115,16 @@ export class WsClient {
       this.connected.set(false);
       this.rejectAllPending(new Error("ws connection closed"));
       this.scheduleReconnect();
-      // Only surface the persistent "connection lost" toast once per
-      // outage, not on every retry that also fails to connect.
-      if (wasConnected && this.connectionLostToastId === null) {
-        this.connectionLostToastId = this.toast.push({
+      // Only surface the "connection lost" notice once per outage, not on
+      // every retry that also fails to connect. The key makes that true
+      // even if this guard is ever relaxed.
+      if (wasConnected && !this.connectionLost) {
+        this.connectionLost = true;
+        this.toast.push({
           level: "warn",
-          message: "Connection to the bridge was lost — reconnecting…",
+          message: COPY.toast.bridgeDisconnected,
           persistent: true,
+          key: WsClient.CONNECTION_NOTICE_KEY,
         });
       }
     });

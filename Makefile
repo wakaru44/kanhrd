@@ -38,8 +38,9 @@ install: ## Install workspace dependencies (pnpm --frozen-lockfile).
 	pnpm install --frozen-lockfile
 
 .PHONY: hooks
-hooks: ## Install the pre-commit git hooks locally.
-	pre-commit install
+hooks: ## Install git-lfs filters and the pre-commit git hooks locally.
+	git lfs install --local --force
+	pre-commit install --hook-type pre-commit --hook-type pre-push
 
 ## Run (built once, no watch)
 .PHONY: run

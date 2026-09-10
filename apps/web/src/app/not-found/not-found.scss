@@ -1,0 +1,49 @@
+/*
+ * The 404. Same page-level empty-state treatment as the board's
+ * (docs/DESIGN-SYSTEM.md, "Empty state"): the page is the surface, so no
+ * fill, no radius, no shadow — a display-serif heading and one control.
+ */
+
+:host {
+  display: block;
+}
+
+.not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  max-width: var(--content-max-width);
+  margin: var(--sp-8) auto;
+  padding: var(--sp-6) var(--sp-4);
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-h2);
+    line-height: var(--lh-h2);
+    font-weight: var(--fw-regular);
+    color: var(--ink);
+  }
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  padding: 0 var(--sp-4);
+  border: var(--elev-3);
+  border-radius: var(--radius-md);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semi);
+  text-decoration: none;
+
+  &:hover {
+    background: var(--ochre-tint);
+  }
+}

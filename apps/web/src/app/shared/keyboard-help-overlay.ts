@@ -27,16 +27,6 @@ interface CategoryGroup {
 const CATEGORY_ORDER: readonly ShortcutCategory[] = ["Navigation", "Lifecycle", "View", "Help"];
 
 /**
- * Strings this overlay needs that `shared/copy.ts` does not carry yet. This
- * lane may not edit `copy.ts`; lift these into it under a `help.*` group and
- * delete this block.
- */
-const PENDING_COPY = {
-  close: "close",
-  prefixNote: "prefix — press it, release, then the action key within 2 seconds.",
-} as const;
-
-/**
  * The keyboard-shortcut reference, grouped by category. A plain
  * conditionally-visible dialog like `ConfirmModal`; the parent (`App`) owns
  * the `open` state via `KeyboardService.helpOpen`.
@@ -55,7 +45,6 @@ const PENDING_COPY = {
 export class KeyboardHelpOverlay implements OnDestroy {
   protected readonly keyboard = inject(KeyboardService);
   protected readonly copy = COPY;
-  protected readonly pending = PENDING_COPY;
 
   readonly open = input<boolean>(false);
   readonly closed = output<void>();
@@ -73,6 +62,15 @@ export class KeyboardHelpOverlay implements OnDestroy {
         this.release = null;
       }
     });
+  }
+
+  /**
+   * What the user reads above a section. `ShortcutCategory` is a code
+   * identifier — capitalised, not copy — so the label comes from
+   * `copy.help.categories` rather than being the enum value printed raw.
+   */
+  protected categoryLabel(category: ShortcutCategory): string {
+    return COPY.help.categories[category];
   }
 
   ngOnDestroy(): void {

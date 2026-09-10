@@ -4,7 +4,7 @@ import { ActivatedRoute, convertToParamMap } from "@angular/router";
 import { BehaviorSubject, Subject, of } from "rxjs";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
-import type { HostSummary, WsEvent } from "@kanhrd/schema";
+import type { HostSummary, Pane, WsEvent } from "@kanhrd/schema";
 import { PaneDetail } from "./pane-detail";
 import { TerminalThemeService } from "../state/terminal-theme.service";
 import {
@@ -12,6 +12,7 @@ import {
   TERMINAL_FONT_SIZES,
   TerminalFontSizeService,
 } from "../state/terminal-font-size.service";
+import { BoardReturnService } from "../state/board-return.service";
 import { COPY } from "../shared/copy";
 import { PanesStore } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
@@ -37,6 +38,21 @@ class FakeWsClient {
   });
 }
 
+function paneOutput(content: string, subscriptionId = "sub-1"): WsEvent<"pane.output"> {
+  return {
+    host: "laptop",
+    event: "pane.output",
+    payload: {
+      subscription_id: subscriptionId,
+      pane_id: "pane-1",
+      revision: 2,
+      content,
+      format: "ansi",
+      truncated: false,
+    },
+  };
+}
+
 async function flushMicrotasks(): Promise<void> {
   // The send queue chains `.catch().then().catch()` per enqueued send, so a
   // failed-then-next-send sequence needs several microtask hops to settle.
@@ -44,6 +60,79 @@ async function flushMicrotasks(): Promise<void> {
     await Promise.resolve();
   }
 }
+
+/**
+ * Metadata strip: herdr's own git provenance for the pane's workspace,
+ * rendered in FULL here (the board card shows a computed tail instead) and
+ * omitted entirely — no placeholder row — when the workspace resolves
+ * outside a repository. Own TestBed so the shared one above keeps its empty
+ * pane map.
+ */
+describe("PaneDetail metadata strip — project provenance", () => {
+  const CHECKOUT = "/home/op/workspace/src/github.com/wakaru44/kanhrd";
+
+  async function renderWith(pane: Partial<Pane> | null): Promise<HTMLElement> {
+    const panes = new Map<string, Pane>();
+    if (pane) {
+      panes.set("laptop:pane-1", {
+        id: "pane-1",
+        host: "laptop",
+        workspace: { id: "w1", name: "kanhrd" },
+        tab: { id: "t1", name: "main" },
+        agent_status: "working",
+        ...pane,
+      });
+    }
+
+    await TestBed.configureTestingModule({
+      imports: [PaneDetail],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WsClient, useValue: new FakeWsClient() },
+        {
+          provide: PanesStore,
+          useValue: {
+            panesSignal: () => panes,
+            capabilitiesSignal: () => new Map(),
+            hostsSignal: () => [{ name: "laptop", connected: true }],
+          },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { paramMap: of(convertToParamMap({ host: "laptop", id: "pane-1" })) },
+        },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it("shows the repo name and the whole checkout path, not the card's truncated form", async () => {
+    const el = await renderWith({
+      project: { repo_name: "kanhrd", checkout_path: CHECKOUT, is_linked_worktree: false },
+    });
+
+    expect(el.querySelector(".meta-strip .repo-name")?.textContent?.trim()).toBe("kanhrd");
+    expect(el.querySelector(".meta-strip .checkout-path")?.textContent?.trim()).toBe(CHECKOUT);
+  });
+
+  it("omits both rows entirely when the pane has no project", async () => {
+    const el = await renderWith({});
+
+    expect(el.querySelector(".meta-strip .repo-name")).toBeNull();
+    expect(el.querySelector(".meta-strip .checkout-path")).toBeNull();
+  });
+
+  it("titles the header with the operator's own label when there is one", async () => {
+    const el = await renderWith({ label: "fix the backlog storm", agent: { name: "claude" } });
+
+    expect(el.querySelector(".pane-title")?.textContent?.trim()).toBe("fix the backlog storm");
+  });
+});
 
 describe("PaneDetail", () => {
   let ws: FakeWsClient;
@@ -54,6 +143,11 @@ describe("PaneDetail", () => {
   /** DOM-level view of the reliability state, asserted through the markup rather than a protected signal. */
   function stateEl(selector: string): Element | null {
     return fixture.nativeElement.querySelector(selector) as Element | null;
+  }
+
+  /** Pushes a `pane.output` frame for the pane under test onto the fake socket. */
+  function emitOutput(content: string, subscriptionId = "sub-1"): void {
+    ws.events$.next(paneOutput(content, subscriptionId));
   }
 
   beforeEach(async () => {
@@ -92,7 +186,11 @@ describe("PaneDetail", () => {
       format: "ansi",
       source: "recent",
     });
-    expect(ws.request).toHaveBeenCalledWith("laptop", "pane.subscribe_output", { pane_id: "pane-1" });
+    expect(ws.request).toHaveBeenCalledWith("laptop", "pane.subscribe_output", {
+      pane_id: "pane-1",
+      source: "recent",
+      format: "ansi",
+    });
 
     const readIndex = ws.request.calls.allArgs().findIndex(([, method]) => method === "pane.read");
     const subscribeIndex = ws.request.calls
@@ -138,7 +236,70 @@ describe("PaneDetail", () => {
     });
 
     expect(resetSpy).toHaveBeenCalled();
-    expect(writeSpy).toHaveBeenCalledWith("updated");
+    // The repaint passes a completion callback (it restores the reader's
+    // scroll offset once the snapshot has been parsed), so match on the data.
+    expect(writeSpy.calls.mostRecent().args[0]).toBe("updated");
+  });
+
+  it("appends the new tail instead of repainting when a snapshot only grew", async () => {
+    const writeSpy = spyOn(Terminal.prototype, "write");
+    const resetSpy = spyOn(Terminal.prototype, "reset");
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    writeSpy.calls.reset();
+    resetSpy.calls.reset();
+
+    // The initial read returned "hello"; this snapshot is that plus a tail.
+    emitOutput("hello, and one more line\r\n");
+
+    // The whole point: history above the viewport is never cleared, so the
+    // scrollback the initial `recent` read painted survives every poll.
+    expect(resetSpy).not.toHaveBeenCalled();
+    expect(writeSpy.calls.allArgs().map((args) => args[0])).toEqual([", and one more line\r\n"]);
+  });
+
+  it("keeps a scrolled-up reader where they were when a redraw lands", async () => {
+    spyOn(Terminal.prototype, "write").and.callFake(((_data: string, done?: () => void) => {
+      done?.();
+    }) as never);
+    spyOn(Terminal.prototype, "reset");
+    const scrollToLine = spyOn(Terminal.prototype, "scrollToLine");
+    // Scrolled up: the viewport's top line sits well above the last screenful.
+    spyOnProperty(Terminal.prototype, "buffer", "get").and.returnValue({
+      active: { viewportY: 12, baseY: 400 },
+    } as never);
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    scrollToLine.calls.reset();
+
+    // Not a prefix of "hello" — a full-screen redraw, which still resets.
+    emitOutput("a completely different screen");
+
+    expect(scrollToLine).toHaveBeenCalledWith(12);
+  });
+
+  it("follows the tail after a redraw when the reader was already at the bottom", async () => {
+    spyOn(Terminal.prototype, "write").and.callFake(((_data: string, done?: () => void) => {
+      done?.();
+    }) as never);
+    spyOn(Terminal.prototype, "reset");
+    const scrollToLine = spyOn(Terminal.prototype, "scrollToLine");
+    spyOnProperty(Terminal.prototype, "buffer", "get").and.returnValue({
+      active: { viewportY: 400, baseY: 400 },
+    } as never);
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    scrollToLine.calls.reset();
+
+    emitOutput("a completely different screen");
+
+    expect(scrollToLine).not.toHaveBeenCalled();
   });
 
   it("ignores pane.output events for a different subscription id", async () => {
@@ -286,7 +447,11 @@ describe("PaneDetail", () => {
       format: "ansi",
       source: "recent",
     });
-    expect(ws.request).toHaveBeenCalledWith("laptop", "pane.subscribe_output", { pane_id: "pane-1" });
+    expect(ws.request).toHaveBeenCalledWith("laptop", "pane.subscribe_output", {
+      pane_id: "pane-1",
+      source: "recent",
+      format: "ansi",
+    });
   });
 
   it("refetches when the route params change to a different pane, without remounting", async () => {
@@ -315,7 +480,11 @@ describe("PaneDetail", () => {
       format: "ansi",
       source: "recent",
     });
-    expect(ws.request).toHaveBeenCalledWith("laptop", "pane.subscribe_output", { pane_id: "pane-2" });
+    expect(ws.request).toHaveBeenCalledWith("laptop", "pane.subscribe_output", {
+      pane_id: "pane-2",
+      source: "recent",
+      format: "ansi",
+    });
   });
   // --- reliability states (docs/UX-GUIDELINES.md, "Reliability states tell
   // the truth"). Asserted through the rendered markup, not the protected
@@ -525,6 +694,50 @@ describe("PaneDetail", () => {
     // First focusable element in the header.
     const focusable = fixture.nativeElement.querySelectorAll("header a, header button");
     expect(focusable[0]).toBe(back);
+  });
+
+  // --- back to where the card was opened from (section 17.6) -------------
+
+  /** Renders the view and returns its header back link. */
+  async function backLink(): Promise<HTMLAnchorElement> {
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+    return fixture.nativeElement.querySelector("header .back") as HTMLAnchorElement;
+  }
+
+  it("returns to the scoped board the card was opened from", async () => {
+    TestBed.inject(BoardReturnService).rememberBoard({
+      url: "/workspace/w6/tab/w6:t2",
+      scrollLeft: 0,
+      scrollTops: {},
+    });
+
+    expect((await backLink()).getAttribute("href")).toBe("/workspace/w6/tab/w6:t2");
+  });
+
+  it("returns to the unscoped board when the pane was reached by a deep link", async () => {
+    TestBed.inject(BoardReturnService).clear();
+    expect((await backLink()).getAttribute("href")).toBe("/");
+  });
+
+  it("points every back path at the same place, not just the header one", async () => {
+    TestBed.inject(BoardReturnService).rememberBoard({
+      url: "/workspace/w6",
+      scrollLeft: 0,
+      scrollTops: {},
+    });
+    await backLink();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const hrefs = Array.from(root.querySelectorAll<HTMLAnchorElement>(".back, .state-back")).map(
+      (a) => a.getAttribute("href"),
+    );
+    expect(hrefs.length).toBeGreaterThan(0);
+    for (const href of hrefs) {
+      expect(href).toBe("/workspace/w6");
+    }
   });
 
   it("makes no promise about an unshipped feature and no claim about the poll interval", async () => {

@@ -1,11 +1,38 @@
+@if (showRename()) {
+  <app-rename-modal
+    [initialValue]="pane()?.label ?? ''"
+    (saved)="onRenameSaved($event)"
+    (cancelled)="showRename.set(false)"
+  />
+}
+
 <div class="pane-detail">
   <header class="detail-header">
-    <a routerLink="/" class="back">
+    <a [routerLink]="backUrl" class="back">
       <svg lucideArrowLeft class="icon" aria-hidden="true"></svg>
       <span>{{ copy.nav.backToBoard }}</span>
     </a>
 
     <h1 class="pane-title" [title]="title()">{{ title() }}</h1>
+
+    @if (paneRenameAvailable()) {
+      <!--
+        Visible in the header on first render — never a hover-revealed
+        pencil. It borrows `.retry`'s button rule (the component's only
+        button style, already touch-sized under `pointer: coarse`) because
+        `pane-detail.scss` is held by a concurrent lane; a dedicated
+        `.rename-control` rule belongs there once that lane lands.
+      -->
+      <button
+        type="button"
+        class="retry rename-control"
+        [attr.aria-label]="copy.card.renameAction"
+        (click)="showRename.set(true)"
+      >
+        <svg lucidePencil class="icon" aria-hidden="true"></svg>
+        <span>{{ copy.card.renameAction }}</span>
+      </button>
+    }
 
     <span class="host-seal">{{ host() }}</span>
 
@@ -14,6 +41,11 @@
         <span class="status-dot" [class]="statusKey()" aria-hidden="true"></span>
         {{ statusLabel() }}
       </span>
+      <!-- herdr's own git provenance: repo name, then the FULL checkout path (the card shows a computed tail). -->
+      @if (project(); as p) {
+        <span class="repo-name">{{ p.repo_name }}</span>
+        <span class="checkout-path">{{ p.checkout_path }}</span>
+      }
       <span class="pane-id">{{ id() }}</span>
       <span class="revision">{{ revisionLabel() }}</span>
       <span class="updated">{{ lastPollLabel() }}</span>
@@ -49,7 +81,7 @@
                   <svg lucideRefreshCw class="icon" aria-hidden="true"></svg>
                   {{ copy.loading.retry }}
                 </button>
-                <a routerLink="/" class="state-back">{{ copy.nav.backToBoard }}</a>
+                <a [routerLink]="backUrl" class="state-back">{{ copy.nav.backToBoard }}</a>
               </div>
             </div>
           }
@@ -60,7 +92,7 @@
                 {{ copy.state.unavailable }}
               </p>
               <div class="state-actions">
-                <a routerLink="/" class="state-back">{{ copy.nav.backToBoard }}</a>
+                <a [routerLink]="backUrl" class="state-back">{{ copy.nav.backToBoard }}</a>
               </div>
             </div>
           }

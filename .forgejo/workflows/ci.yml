@@ -11,6 +11,7 @@ env:
   # Pin here; bump alongside a future `packageManager` field in package.json.
   NODE_VERSION: '22'
   PNPM_VERSION: '10'
+  PYTHON_VERSION: '3.12'
 
 jobs:
   lint-and-typecheck:
@@ -28,24 +29,31 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
       - name: install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: install pre-commit
+        run: python -m pip install --disable-pip-version-check pre-commit
+
+      - name: cache pre-commit hook environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
       - name: typecheck (schema, bridge, web)
         run: pnpm typecheck
 
       - name: lint
-        run: |
-          # No package currently declares a "lint" script (checked
-          # apps/bridge, apps/web, packages/schema). If the L-PRECOMMIT
-          # lane lands a shared linter config with per-package "lint"
-          # scripts, this step picks them up automatically; until then it
-          # skips with a clear, visible reason instead of failing the job.
-          if pnpm -r exec -- node -e 'const p=require("./package.json"); if(!p.scripts || !p.scripts.lint) process.exit(1)' >/dev/null 2>&1; then
-            pnpm -r --if-present lint
-          else
-            echo "::warning::lint skipped — no package.json declares a \"lint\" script yet (expected from L-PRECOMMIT)"
-          fi
+        # Root `lint` script is `pre-commit run --all-files`, which includes
+        # the tools/lint-scss-tokens.sh design-token gate. It needs the pnpm
+        # workspace installed (the web-lint hook shells out to pnpm) and
+        # Python + pre-commit, both set up above.
+        run: pnpm lint
 
   unit-tests:
     name: unit tests (bridge + web)

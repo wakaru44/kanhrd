@@ -163,6 +163,13 @@
   display: flex;
   min-height: 0;
   min-width: 0;
+  /*
+   * Page gutter. The terminal sheet is inset from the window on the left,
+   * right and bottom; the top gap is smaller because the header hairline
+   * already separates the two. Padding here (not on `.terminal-container`)
+   * keeps it out of FitAddon's measurement — see `.terminal-wrap`.
+   */
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
 }
 
 .terminal-wrap {
@@ -181,6 +188,13 @@
    * clips.
    */
   padding: var(--sp-2);
+  /*
+   * Hairline over shadow: the sheet's edge is a rule, so the gutter above
+   * reads as a deliberate margin rather than a gap — including when the
+   * terminal palette is not the one that matches `--paper`.
+   */
+  border: var(--elev-1);
+  border-radius: var(--radius-md);
 }
 
 /* The terminal owns its own overflow; it never widens the page. */
@@ -345,6 +359,11 @@
 
   .detail-header {
     padding: var(--sp-2) var(--sp-3);
+  }
+
+  /* Narrower gutter at phone width: the terminal keeps its columns. */
+  .detail-body {
+    padding: var(--sp-2);
   }
 
   .detail-header .pane-title {

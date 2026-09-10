@@ -1,0 +1,148 @@
+name: ci
+
+'on':
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+env:
+  # ponytail: no packageManager field / .nvmrc in the repo yet to read from.
+  # Pin here; bump alongside a future `packageManager` field in package.json.
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10'
+  PYTHON_VERSION: '3.12'
+
+# Never run `pnpm test:e2e` or `pnpm test:int` here. Both drive a real herdr
+# daemon (unix socket + CLI on PATH), which a hosted GitHub runner does not
+# and must not have. The e2e suite is additionally gated behind
+# KANHRD_E2E_LIVE_HERDR=1 — do not set that variable in this workflow, in a
+# repository/environment secret, or in a new job. Those suites belong on a
+# self-hosted runner with herdr available (see .forgejo/workflows/ci.yml).
+
+jobs:
+  lint-and-typecheck:
+    name: lint & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: install pre-commit
+        run: python -m pip install --disable-pip-version-check pre-commit
+
+      - name: cache pre-commit hook environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: typecheck (schema, bridge, web)
+        run: pnpm typecheck
+
+      - name: lint
+        # Root `lint` script is `pre-commit run --all-files`, which includes
+        # the tools/lint-scss-tokens.sh design-token gate. It needs the pnpm
+        # workspace installed (the web-lint hook shells out to pnpm) and
+        # Python + pre-commit, both set up above.
+        run: pnpm lint
+
+  unit-tests:
+    name: unit tests (bridge + web)
+    needs: lint-and-typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: resolve headless chrome (for karma-chrome-launcher)
+        id: chrome
+        # The ubuntu-latest image ships Google Chrome; fall back to an apt
+        # chromium install if a future image drops it, rather than failing
+        # inside karma with an unhelpful "no binary" error.
+        run: |
+          for c in google-chrome google-chrome-stable chromium-browser chromium; do
+            BIN="$(command -v "$c" || true)"
+            if [ -n "$BIN" ]; then break; fi
+          done
+          if [ -z "$BIN" ]; then
+            sudo apt-get update
+            sudo apt-get install -y chromium-browser
+            BIN="$(command -v chromium-browser)"
+          fi
+          echo "bin=$BIN" >> "$GITHUB_OUTPUT"
+          "$BIN" --version
+
+      - name: bridge unit tests
+        run: pnpm --filter @kanhrd/bridge test
+
+      - name: web unit tests
+        run: pnpm --filter @kanhrd/web test
+        env:
+          CHROME_BIN: ${{ steps.chrome.outputs.bin }}
+
+  build:
+    name: build (schema, web, bridge)
+    needs: lint-and-typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: build schema
+        run: pnpm --filter @kanhrd/schema build
+
+      - name: build web
+        run: pnpm --filter @kanhrd/web build
+
+      - name: build bridge
+        run: pnpm --filter @kanhrd/bridge build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist/web/browser/
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bridge-dist
+          path: apps/bridge/dist/
+          retention-days: 7

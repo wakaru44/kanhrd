@@ -1,0 +1,39 @@
+<div class="modal-backdrop" (click)="onCancel()">
+  <div
+    #dialog
+    class="modal"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    [attr.aria-label]="title()"
+    (click)="$event.stopPropagation()"
+    (keydown.escape)="onCancel()"
+  >
+    <h2 class="modal-title">{{ title() }}</h2>
+
+    <label class="field-label" for="rename-field">{{ fieldLabel() }}</label>
+    <input
+      #field
+      id="rename-field"
+      class="field"
+      type="text"
+      autocomplete="off"
+      spellcheck="false"
+      (input)="onInput($event)"
+      (keydown.enter)="onSave()"
+      [attr.aria-invalid]="error() ? 'true' : null"
+      [attr.aria-describedby]="error() ? 'rename-error' : null"
+    />
+    @if (error(); as reason) {
+      <p id="rename-error" class="field-error" role="alert">{{ reason }}</p>
+    }
+
+    <div class="modal-actions">
+      <button type="button" class="btn" (click)="onCancel()">{{ copy.confirm.cancel }}</button>
+      @if (initialValue() !== "") {
+        <button type="button" class="btn" (click)="onClear()">{{ copy.card.renameClear }}</button>
+      }
+      <button type="button" class="btn primary" (click)="onSave()">{{ copy.card.renameSave }}</button>
+    </div>
+  </div>
+</div>

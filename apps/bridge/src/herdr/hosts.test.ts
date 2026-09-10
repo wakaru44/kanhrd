@@ -142,6 +142,56 @@ describe("HostRuntime — subscription stability under pane churn", () => {
       host.stop();
     }
   });
+
+  /**
+   * `pane.updated` is how a rename made anywhere — this board, herdr's own
+   * interface, another client — reaches the board. It is a GLOBAL
+   * subscription (no `pane_id`), so it joins the fixed spec set without
+   * reintroducing the resubscribe-on-pane-churn storm the tests above guard.
+   */
+  it("subscribes to pane.updated globally and relays it as a projected pane", async () => {
+    const host = new HostRuntime({ name: "test", socket: socketPath });
+    const bridgeEvents: WsEvent[] = [];
+    host.on("bridge-event", (e: WsEvent) => bridgeEvents.push(e));
+
+    host.start();
+    try {
+      await waitFor(() => host.state().connected);
+      const updatedSpec = lastSubscribeSpecs.find((spec) => spec.type === "pane.updated");
+      expect(updatedSpec).toBeDefined();
+      expect(updatedSpec?.pane_id).toBeUndefined();
+
+      subscribeSocket?.write(
+        `${JSON.stringify({
+          event: "pane_updated",
+          data: {
+            pane: {
+              pane_id: "p1",
+              workspace_id: "w1",
+              tab_id: "t1",
+              agent_status: "idle",
+              revision: 1,
+              label: "fix the backlog storm",
+            },
+          },
+        })}\n`,
+      );
+
+      await waitFor(() => bridgeEvents.some((e) => e.event === "pane.updated"));
+      const relayed = bridgeEvents.find((e) => e.event === "pane.updated") as WsEvent<"pane.updated">;
+      expect(relayed.host).toBe("test");
+      expect(relayed.payload.pane.id).toBe("p1");
+      expect(relayed.payload.pane.label).toBe("fix the backlog storm");
+
+      // The agent-status poll is untouched by this: no synthetic status
+      // event was emitted for a pane whose status did not change.
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(bridgeEvents.some((e) => e.event === "pane.agent_status_changed")).toBe(false);
+      expect(subscribeCount).toBe(1);
+    } finally {
+      host.stop();
+    }
+  });
 });
 
 describe("HostRuntime — agent-status polling", () => {

@@ -115,6 +115,7 @@ export type BridgeMethod =
   | "pane.split"
   | "pane.close"
   | "pane.move"
+  | "pane.rename"
   | "tab.create"
   | "tab.rename"
   | "tab.close"
@@ -196,6 +197,13 @@ export interface BridgeMethodParams {
    * operation as `tab.move`/reordering.
    */
   "pane.move": { pane_id: string; destination: HerdrPaneMoveDestination; focus?: boolean };
+  /**
+   * Sets herdr's user-authored `PaneInfo.label`. Mirrors herdr's
+   * `PaneRenameParams` (see `HerdrPaneRenameParams`): only `pane_id` is
+   * required and `label` is nullable, so `null` CLEARS the name — unlike
+   * `tab.rename`/`workspace.rename`, which have no unset form.
+   */
+  "pane.rename": { pane_id: string; label?: string | null };
   /** Creates a new tab. Omitting `workspace_id` creates it in the currently-focused workspace on that host. */
   "tab.create": {
     workspace_id?: string;
@@ -258,6 +266,13 @@ export interface BridgeCapabilities {
   paneClose: boolean;
   /** Tier-3. Whether `pane.move` (reparent) can succeed. */
   paneMove: boolean;
+  /**
+   * Whether `pane.rename` can succeed. Deliberately separate from
+   * `paneCreate`/`paneClose`/`paneMove` for the same reason those are
+   * separate from each other: the SPA disables only the rename action on a
+   * pen that cannot serve it.
+   */
+  paneRename: boolean;
   /** Tier-3. Whether `tab.create` / `tab.rename` / `tab.close` / `tab.move` can all succeed. */
   tabCrud: boolean;
   /** Tier-3. Whether `workspace.create` / `workspace.rename` / `workspace.close` can all succeed. */
@@ -330,6 +345,8 @@ export interface BridgeMethodResult {
     closed_workspace_id?: string;
     closed_tab_id?: string;
   };
+  /** The updated pane, so the caller can apply the new `label` without waiting for the paired `pane.updated` broadcast. */
+  "pane.rename": { pane: Pane };
   "tab.create": { tab: TabSummary; pane: Pane };
   "tab.rename": { tab: TabSummary };
   /** Empty on success, same rationale as `pane.close` — rely on the paired `tab.closed` event. */
@@ -419,6 +436,13 @@ export interface BridgeEventPayload {
    * `pane.move` method result above, minus `changed`/`reason` (an event only
    * fires when something actually changed).
    */
+  /**
+   * herdr's `EventData::PaneUpdated`, projected. Fires for every pane
+   * mutation herdr broadcasts — a rename from this board, from herdr's own
+   * interface, or from another client — carrying the WHOLE pane, so the
+   * store applies it as a plain upsert.
+   */
+  "pane.updated": { pane: Pane };
   "pane.moved": {
     pane: Pane;
     previous_workspace_id: string;

@@ -49,7 +49,8 @@ export type EventKind =
   | "tab.closed"
   | "tab.renamed"
   | "tab.moved"
-  | "pane.moved";
+  | "pane.moved"
+  | "pane.updated";
 
 /**
  * `pane.output` and `pane.graphics_frame` are BRIDGE-SYNTHESIZED and have no
@@ -210,7 +211,16 @@ export type HerdrEventEnvelope =
         closed_workspace_id?: string;
         closed_tab_id?: string;
       };
-    };
+    }
+  /**
+   * `EventData::PaneUpdated` — carries the WHOLE `PaneInfo`, not a delta, so
+   * a rename made in herdr's own interface (or by any other client) reaches
+   * the board without a refetch. `Subscription::PaneUpdated` is global (no
+   * `pane_id`), which is why the bridge's fixed subscription spec set stays
+   * fixed. See the `pane.rename` round trip in
+   * `openspec/changes/add-pane-workdir-and-task-title/design.md`.
+   */
+  | { event: "pane.updated"; data: { type: "pane_updated"; pane: HerdrPaneInfo } };
 
 /**
  * Bridge-projected pane, one per kanban card. This is NOT a herdr wire
@@ -224,8 +234,26 @@ export interface Pane {
   host: string;
   workspace: { id: string; name: string };
   tab: { id: string; name: string };
+  /**
+   * herdr's user-authored pane name, set by `pane.rename` and cleared by
+   * `pane.rename` with `label: null`. The only name on a pane the operator
+   * wrote themselves, which is why it outranks agent identity and `title`
+   * in the card's title precedence. Absent (never `null`/`""`) when unset.
+   */
+  label?: string;
   title?: string;
   agent?: { name: string };
+  /**
+   * Git provenance of the pane's OWNING WORKSPACE, joined by the bridge from
+   * `HerdrWorkspaceDetail.worktree`. Absent when the workspace resolves
+   * outside any repository. `repo_key`/`repo_root` are deliberately not
+   * projected — nothing renders them.
+   */
+  project?: {
+    repo_name: string;
+    checkout_path: string;
+    is_linked_worktree: boolean;
+  };
   agent_status: AgentStatus;
   /**
    * Not derivable from `pane.list` or the tier-1 event payloads above —
@@ -536,6 +564,18 @@ export interface HerdrTabCreateParams {
   env?: Record<string, string>;
 }
 
+/**
+ * `Method::PaneRename` params. Source: herdr's `PaneRenameParams` —
+ * `label: ["string","null"]`, `pane_id: "string"`, `required: ["pane_id"]`.
+ * Unlike `HerdrTabRenameParams`/`HerdrWorkspaceRenameParams` below, the
+ * label IS optional and nullable here: `null` is herdr's first-class unset
+ * form (`herdr pane rename <pane_id> --clear`).
+ */
+export interface HerdrPaneRenameParams {
+  pane_id: string;
+  label?: string | null;
+}
+
 /** `Method::TabRename` params. Source: src/api/schema/tabs.rs:28-31. Both fields required — there is no "unset label" form. */
 export interface HerdrTabRenameParams {
   tab_id: string;
@@ -630,7 +670,8 @@ export interface HerdrWorkspaceDetail {
   tab_count: number;
   active_tab_id: string;
   agent_status: AgentStatus;
-  tokens: Record<string, string>;
+  /** Optional: herdr's `WorkspaceInfo.required` list omits both `tokens` and `worktree`. */
+  tokens?: Record<string, string>;
   worktree?: HerdrWorkspaceWorktreeInfo;
 }
 

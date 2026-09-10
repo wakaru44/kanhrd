@@ -16,11 +16,17 @@
                 class="edit-input"
                 type="text"
                 [value]="editingValue()"
+                [disabled]="renamePending()"
+                [attr.aria-invalid]="renameError() ? 'true' : null"
+                [attr.aria-describedby]="renameError() ? 'rail-rename-error' : null"
                 (input)="editingValue.set($any($event.target).value)"
                 (keydown)="onEditKeydown($event)"
                 (blur)="cancelRename()"
                 autofocus
               />
+              @if (renameError(); as reason) {
+                <p id="rail-rename-error" class="edit-error" role="alert">{{ reason }}</p>
+              }
             } @else {
               <button type="button" class="row-nav" (click)="onWorkspaceClick(group.workspace)">
                 <span class="workspace-name">{{ group.workspace.name }}</span>
@@ -30,7 +36,7 @@
                   <button
                     type="button"
                     class="row-menu-trigger"
-                    [attr.aria-label]="railCopy.moreActions"
+                    [attr.aria-label]="copy.nav.moreActions"
                     [attr.aria-expanded]="
                       isMenuOpen(rowKey('workspace', group.workspace.host, group.workspace.id))
                     "
@@ -73,11 +79,17 @@
                   class="edit-input"
                   type="text"
                   [value]="editingValue()"
+                  [disabled]="renamePending()"
+                  [attr.aria-invalid]="renameError() ? 'true' : null"
+                  [attr.aria-describedby]="renameError() ? 'rail-rename-error' : null"
                   (input)="editingValue.set($any($event.target).value)"
                   (keydown)="onEditKeydown($event)"
                   (blur)="cancelRename()"
                   autofocus
                 />
+                @if (renameError(); as reason) {
+                  <p id="rail-rename-error" class="edit-error" role="alert">{{ reason }}</p>
+                }
               } @else {
                 <button type="button" class="row-nav" (click)="onTabClick(tab)">
                   <span class="tab-name">{{ tab.name }}</span>
@@ -87,7 +99,7 @@
                     <button
                       type="button"
                       class="row-menu-trigger"
-                      [attr.aria-label]="railCopy.moreActions"
+                      [attr.aria-label]="copy.nav.moreActions"
                       [attr.aria-expanded]="isMenuOpen(rowKey('tab', tab.host, tab.id))"
                       aria-haspopup="menu"
                       (click)="toggleMenu(rowKey('tab', tab.host, tab.id), $event)"

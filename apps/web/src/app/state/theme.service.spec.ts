@@ -86,6 +86,50 @@ describe("ThemeService", () => {
     expect(service.theme()).toBe("dark");
   });
 
+  // --- section 15.1: migration from the pre-redesign build ---------------
+  //
+  // The redesign renamed the THEMES (light -> washi, dark -> sumi) but not
+  // the stored values: `kanhrd.theme` still holds `'light'` / `'dark'`, so
+  // an existing user lands on the palette they already chose and the key
+  // they already have is left exactly as it was. There is no rewrite step
+  // to get wrong, and these tests exist to keep it that way.
+
+  it("lands a stored 'light' user on washi and leaves the stored key untouched", async () => {
+    localStorage.setItem("kanhrd.theme", "light");
+    const service = create();
+
+    expect(service.theme()).toBe("light");
+    await settle();
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    expect(localStorage.getItem("kanhrd.theme")).toBe("light");
+  });
+
+  it("lands a stored 'dark' user on sumi and leaves the stored key untouched", async () => {
+    localStorage.setItem("kanhrd.theme", "dark");
+    const service = create();
+
+    expect(service.theme()).toBe("dark");
+    await settle();
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(localStorage.getItem("kanhrd.theme")).toBe("dark");
+  });
+
+  it("a stored preference beats the OS preference in both directions", () => {
+    expect(resolveTheme({ getItem: () => "light" }, true)).toBe("light");
+    expect(resolveTheme({ getItem: () => "dark" }, false)).toBe("dark");
+  });
+
+  it("a missing key follows the OS, defaulting to washi when there is no signal", () => {
+    expect(resolveTheme({ getItem: () => null }, false)).toBe("light");
+    expect(resolveTheme({ getItem: () => null }, true)).toBe("dark");
+  });
+
+  it("writes no theme key merely by reading, so a first visit stays OS-driven until the effect runs", () => {
+    localStorage.removeItem("kanhrd.theme");
+    expect(loadTheme()).toBeNull();
+    expect(localStorage.getItem("kanhrd.theme")).toBeNull();
+  });
+
   it("persists the theme to localStorage and stamps data-theme on <html>", async () => {
     const service = create();
     service.set("light");

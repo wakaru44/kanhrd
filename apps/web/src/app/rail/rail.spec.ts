@@ -187,6 +187,130 @@ describe("Rail", () => {
     ]);
   });
 
+  // --- inline rename: a refused edit keeps what was typed ----------------
+  //
+  // Section 17.11. The failure mode this replaces: the field closed first
+  // and the request went out with `void`, so a rejection was unhandled —
+  // no reason, no retry, and the typed value gone.
+
+  /** Opens the first field row's rename field and types `value` into it. */
+  async function startRename(value: string): Promise<HTMLInputElement> {
+    (fixture.nativeElement.querySelector(".row-menu-trigger") as HTMLElement).click();
+    await settle();
+    (fixture.nativeElement.querySelector(".row-menu-item") as HTMLElement).click();
+    await settle();
+    const input = fixture.nativeElement.querySelector(".edit-input") as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event("input"));
+    await settle();
+    return input;
+  }
+
+  function commit(input: HTMLInputElement): void {
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+  }
+
+  function input(): HTMLInputElement | null {
+    return fixture.nativeElement.querySelector(".edit-input");
+  }
+
+  function errorText(): string | null {
+    return fixture.nativeElement.querySelector(".edit-error")?.textContent?.trim() ?? null;
+  }
+
+  it("closes the field and sends the new name when the rename succeeds", async () => {
+    const field = await startRename("renamed");
+    commit(field);
+    await settle();
+
+    expect(store.renameWorkspace).toHaveBeenCalledWith("local", "w1", "renamed");
+    expect(input()).withContext("the field closes on success").toBeNull();
+    expect(errorText()).toBeNull();
+  });
+
+  it("keeps the typed value in the field when herdr refuses", async () => {
+    store.renameWorkspace.and.rejectWith(new Error('Workspace "Main" is read-only'));
+    const field = await startRename("renamed");
+    commit(field);
+    await settle();
+
+    expect(input()).withContext("the field stays open").not.toBeNull();
+    expect(input()!.value).toBe("renamed");
+  });
+
+  it("shows herdr's reason inline, verbatim, beside the value that produced it", async () => {
+    store.renameWorkspace.and.rejectWith(new Error('Workspace "Main" is read-only'));
+    const field = await startRename("renamed");
+    commit(field);
+    await settle();
+
+    expect(errorText()).toBe('couldn\'t rename. herdr said: Workspace "Main" is read-only');
+    expect(input()!.getAttribute("aria-invalid")).toBe("true");
+    expect(input()!.getAttribute("aria-describedby")).toBe("rail-rename-error");
+  });
+
+  it("puts the cursor back in the failed field so the fix is an edit", async () => {
+    store.renameWorkspace.and.rejectWith(new Error("nope"));
+    const field = await startRename("renamed");
+    commit(field);
+    await settle();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(document.activeElement).toBe(input());
+  });
+
+  it("does not let a blur throw away a value that failed", async () => {
+    store.renameWorkspace.and.rejectWith(new Error("nope"));
+    const field = await startRename("renamed");
+    commit(field);
+    await settle();
+
+    input()!.dispatchEvent(new FocusEvent("blur"));
+    await settle();
+
+    expect(input()?.value).toBe("renamed");
+    expect(errorText()).not.toBeNull();
+  });
+
+  it("still lets Escape discard a failed edit", async () => {
+    store.renameWorkspace.and.rejectWith(new Error("nope"));
+    const field = await startRename("renamed");
+    commit(field);
+    await settle();
+
+    pressEscape(input()!);
+    await settle();
+
+    expect(input()).toBeNull();
+  });
+
+  it("retries from the corrected value without a second notice", async () => {
+    store.renameWorkspace.and.rejectWith(new Error("nope"));
+    const field = await startRename("renamed");
+    commit(field);
+    await settle();
+
+    store.renameWorkspace.and.resolveTo(undefined);
+    const reopened = input()!;
+    reopened.value = "renamed properly";
+    reopened.dispatchEvent(new Event("input"));
+    commit(reopened);
+    await settle();
+
+    expect(store.renameWorkspace.calls.mostRecent().args).toEqual(["local", "w1", "renamed properly"]);
+    expect(input()).toBeNull();
+    expect(errorText()).toBeNull();
+  });
+
+  it("blurring an ordinary edit still cancels it", async () => {
+    const field = await startRename("renamed");
+    field.dispatchEvent(new FocusEvent("blur"));
+    await settle();
+
+    expect(input()).toBeNull();
+    expect(store.renameWorkspace).not.toHaveBeenCalled();
+  });
+
   // --- drawer: focus trap + restore (assertions 33, 34) ------------------
 
   it("moves focus into the drawer on open", async () => {

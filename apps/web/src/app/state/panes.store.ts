@@ -26,6 +26,7 @@ export function fallbackCapabilities(): BridgeCapabilities {
     paneCreate: false,
     paneClose: false,
     paneMove: false,
+    paneRename: false,
     tabCrud: false,
     workspaceCrud: false,
   };
@@ -150,6 +151,11 @@ export function applyEvent(panes: PaneMap, evt: WsEvent): PaneMap {
       );
     case "pane.moved":
       return applyPaneCreated(panes, (evt.payload as BridgeEventPayload["pane.moved"]).pane);
+    // herdr broadcasts the WHOLE pane on `pane.updated` (a rename from this
+    // board, from herdr's own interface, or from another client), so this is
+    // the same plain upsert `pane.created` does.
+    case "pane.updated":
+      return applyPaneCreated(panes, (evt.payload as BridgeEventPayload["pane.updated"]).pane);
     default:
       return panes;
   }
@@ -288,6 +294,7 @@ export function applyLifecycleEvent(state: LifecycleState, evt: WsEvent): Lifecy
     case "pane.created":
     case "pane.closed":
     case "pane.agent_status_changed":
+    case "pane.updated":
       return { ...state, panes: applyEvent(state.panes, evt) };
 
     case "workspace.created": {
@@ -407,6 +414,7 @@ const ALL_EVENT_KINDS = [
   "pane.created",
   "pane.closed",
   "pane.agent_status_changed",
+  "pane.updated",
   "workspace.created",
   "workspace.closed",
   "workspace.renamed",
@@ -676,6 +684,21 @@ export class PanesStore {
   async closePane(host: string, paneId: string) {
     const result = await this.ws.request(host, "pane.close", { pane_id: paneId });
     this.panesSignal.update((panes) => applyPaneClosed(panes, { id: paneId, host }));
+    return result;
+  }
+
+  /**
+   * Sets herdr's user-authored pane label; `null` clears it. Applied
+   * optimistically from the response for the same reason `renameTab` is (see
+   * its note): the paired `pane.updated` broadcast can lag for a resource
+   * this session owns, and every reducer here is an idempotent upsert, so
+   * the event landing later re-applies the same value harmlessly.
+   */
+  async renamePane(host: string, paneId: string, label: string | null) {
+    const result = await this.ws.request(host, "pane.rename", { pane_id: paneId, label });
+    if (result) {
+      this.panesSignal.update((panes) => applyPaneCreated(panes, result.pane));
+    }
     return result;
   }
 

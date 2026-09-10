@@ -80,7 +80,12 @@ describe("KeyboardHelpOverlay", () => {
   it("renders every category section with at least one shortcut when open", () => {
     open();
     const headings = Array.from(el().querySelectorAll(".shortcut-group h3")).map((h) => h.textContent);
-    expect(headings).toEqual(["Navigation", "Lifecycle", "View", "Help"]);
+    expect(headings).toEqual([
+      COPY.help.categories.Navigation,
+      COPY.help.categories.Lifecycle,
+      COPY.help.categories.View,
+      COPY.help.categories.Help,
+    ]);
     const keyboardService = TestBed.inject(KeyboardService);
     expect(el().querySelectorAll(".shortcut-row").length).toBe(keyboardService.shortcuts().size);
   });
@@ -94,7 +99,7 @@ describe("KeyboardHelpOverlay", () => {
     open();
     const label = Array.from(el().querySelectorAll(".shortcut-row"))
       .map((row) => row.textContent ?? "")
-      .find((text) => text.includes("help overlay"));
+      .find((text) => text.includes(COPY.help.shortcuts.help));
     expect(label).toContain("Ctrl+B + ?");
     expect(label).not.toContain("? or");
   });

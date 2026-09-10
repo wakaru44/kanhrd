@@ -14,32 +14,16 @@ import { KeyValuePipe } from "@angular/common";
 import { Router } from "@angular/router";
 import type { TabSummary, WorkspaceSummary } from "@kanhrd/schema";
 import { LucideMoreHorizontal } from "../shared/icons";
-import { COPY } from "../shared/copy";
+import { COPY, fill } from "../shared/copy";
 import { isWorkspaceGroupCloseRequiredError, paneKey, PanesStore } from "../state/panes.store";
 import { LayoutService } from "../state/layout.service";
+import { ToastService } from "../state/toast.service";
 import { ConfirmModal } from "../shared/confirm-modal";
 
 interface WorkspaceGroup {
   workspace: WorkspaceSummary;
   tabs: TabSummary[];
 }
-
-/**
- * Rail-local copy that `docs/BRAND.md`'s approved-copy table does not yet
- * carry. Kept in one object (never inlined in the template) so promoting it
- * is a copy/paste into the table plus `shared/copy.ts` — a maintainer's edit,
- * not this lane's. Voice matches the table: lowercase, terse, verbs.
- *
- * TODO(brand): promote to `COPY.rail.*` once `docs/BRAND.md` gains the rows.
- */
-const RAIL_COPY = {
-  navigation: "fields and lanes",
-  renameField: "rename field",
-  renameLane: "rename lane",
-  moreActions: "more actions",
-  lastFieldRefusal:
-    "this is the only field open on this pen. closing it would leave nothing to watch. open another field first.",
-} as const;
 
 /** Elements that can hold focus inside the drawer. */
 const FOCUSABLE =
@@ -80,10 +64,11 @@ export class Rail implements OnDestroy {
   protected readonly layout = inject(LayoutService);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
+  private readonly toast = inject(ToastService);
   private readonly hostEl = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
   protected readonly copy = COPY;
-  protected readonly railCopy = RAIL_COPY;
+  protected readonly railCopy = COPY.rail;
 
   protected readonly hostGroups = computed(() => {
     const workspaces = this.store.workspacesSignal();
@@ -170,6 +155,10 @@ export class Rail implements OnDestroy {
 
   protected readonly editing = signal<{ kind: RowKind; host: string; id: string } | null>(null);
   protected readonly editingValue = signal("");
+  /** True while a rename is in flight: the field stays mounted and holds what was typed. */
+  protected readonly renamePending = signal(false);
+  /** Why the last attempt was refused, shown beside the field it belongs to. */
+  protected readonly renameError = signal<string | null>(null);
 
   protected isEditing(kind: RowKind, host: string, id: string): boolean {
     const e = this.editing();
@@ -179,6 +168,7 @@ export class Rail implements OnDestroy {
   protected startRenameWorkspace(workspace: WorkspaceSummary, event: Event): void {
     event.stopPropagation();
     this.closeMenu();
+    this.renameError.set(null);
     this.editing.set({ kind: "workspace", host: workspace.host, id: workspace.id });
     this.editingValue.set(workspace.name);
   }
@@ -186,38 +176,96 @@ export class Rail implements OnDestroy {
   protected startRenameTab(tab: TabSummary, event: Event): void {
     event.stopPropagation();
     this.closeMenu();
+    this.renameError.set(null);
     this.editing.set({ kind: "tab", host: tab.host, id: tab.id });
     this.editingValue.set(tab.name);
   }
 
+  /**
+   * Abandons the edit. Refuses while a rename is in flight, and while a
+   * failure is on screen: the whole point of keeping the text is that the
+   * user gets to look at it, and a blur onto the toast that reported the
+   * failure must not be what throws it away. Escape still discards.
+   */
   protected cancelRename(): void {
+    if (this.renamePending() || this.renameError() !== null) {
+      return;
+    }
     this.editing.set(null);
   }
 
-  protected confirmRename(): void {
+  /** Escape: discard unconditionally, error or not. */
+  protected discardRename(): void {
+    this.renamePending.set(false);
+    this.renameError.set(null);
+    this.editing.set(null);
+  }
+
+  /**
+   * Commits the edit, and keeps it on the screen until the wire agrees.
+   *
+   * The previous shape closed the field first and fired the request with
+   * `void`, so a rejection was unhandled: no reason, no retry, and whatever
+   * had been typed was simply gone. Now the field stays mounted (disabled)
+   * for the round trip; success closes it, failure leaves the typed value
+   * exactly where it was and puts herdr's reason underneath it
+   * (docs/UX-GUIDELINES.md, "Reliability states tell the truth").
+   */
+  protected async confirmRename(): Promise<void> {
     const target = this.editing();
     const value = this.editingValue().trim();
-    this.editing.set(null);
     if (!target || !value) {
+      this.discardRename();
       return;
     }
-    if (target.kind === "workspace") {
-      void this.store.renameWorkspace(target.host, target.id, value);
-    } else {
-      void this.store.renameTab(target.host, target.id, value);
+    this.renameError.set(null);
+    this.renamePending.set(true);
+    const notice = this.toast.progress(
+      `rename:${target.host}:${target.kind}:${target.id}`,
+      COPY.toast.working,
+    );
+    try {
+      if (target.kind === "workspace") {
+        await this.store.renameWorkspace(target.host, target.id, value);
+      } else {
+        await this.store.renameTab(target.host, target.id, value);
+      }
+      notice.resolve();
+      this.renamePending.set(false);
+      this.editing.set(null);
+    } catch (err) {
+      const message = fill(COPY.toast.renameFailed, {
+        reason: err instanceof Error ? err.message : String(err),
+      });
+      notice.fail(message);
+      this.renamePending.set(false);
+      this.renameError.set(message);
+      this.focusEditInput();
     }
+  }
+
+  /** Puts the cursor back in the field that just failed, so the fix is an edit. */
+  private focusEditInput(): void {
+    afterNextRender(
+      () => {
+        const input = this.hostEl.querySelector<HTMLInputElement>(".edit-input");
+        input?.focus();
+        input?.select();
+      },
+      { injector: this.injector },
+    );
   }
 
   protected onEditKeydown(event: KeyboardEvent): void {
     if (event.key === "Enter") {
       event.preventDefault();
-      this.confirmRename();
+      void this.confirmRename();
     } else if (event.key === "Escape") {
       // `preventDefault` doubles as the signal to `onEscape` that this Escape
       // was consumed by the rename field and must not close the drawer.
       event.preventDefault();
       event.stopPropagation();
-      this.cancelRename();
+      this.discardRename();
     }
   }
 
@@ -454,7 +502,7 @@ export class Rail implements OnDestroy {
     if (!target) {
       return null;
     }
-    return this.store.workspaceCountForHost(target.host) <= 1 ? RAIL_COPY.lastFieldRefusal : null;
+    return this.store.workspaceCountForHost(target.host) <= 1 ? COPY.rail.lastFieldRefusal : null;
   });
 
   /**

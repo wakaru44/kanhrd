@@ -75,6 +75,11 @@ const LIFECYCLE_EVENT_KINDS: EventKind[] = [
   "tab.renamed",
   "tab.moved",
   "pane.moved",
+  // Global (`Subscription::PaneUpdated {}`, no `pane_id`), so the spec set
+  // below stays fixed. Carries a whole `PaneInfo`, which is how a rename
+  // made in herdr's own interface reaches the board without a refetch —
+  // the agent-status poll only synthesizes `agent_status` transitions.
+  "pane.updated",
 ];
 
 /**
@@ -262,6 +267,29 @@ export class HostRuntime extends EventEmitter {
     this.untrackPane(params.pane_id);
   }
 
+  /**
+   * Sets herdr's user-authored `PaneInfo.label`; `label: null` clears it.
+   * Serialized through `writeQueue` (per pane, like `pane.send_text`) rather
+   * than the per-host `mutationQueue`: this writes one pane's own field and
+   * has no cascading workspace/tab side effects to order against.
+   *
+   * The bridge does NOT cache the label — `projectPane` reads it back off
+   * herdr's response — and never touches `pane.report_metadata`, `title`,
+   * `display_agent`, `state_labels` or any `tokens` entry.
+   */
+  async paneRename(params: BridgeMethodParams["pane.rename"]): Promise<BridgeMethodResult["pane.rename"]> {
+    if (!this.connected) throw new HostUnavailableError(this.name);
+    return this.writeQueue.enqueue(this.name, params.pane_id, async () => {
+      const requestParams: Record<string, unknown> = { pane_id: params.pane_id };
+      // `undefined` means "no change" and must not be sent; `null` is
+      // herdr's explicit clear and must be.
+      if (params.label !== undefined) requestParams.label = params.label;
+      const result = await this.client.request<{ pane: HerdrPaneInfo }>("pane.rename", requestParams);
+      this.trackPane(result.pane);
+      return { pane: projectPane(this.name, result.pane, this.names) };
+    });
+  }
+
   async paneMove(params: BridgeMethodParams["pane.move"]): Promise<BridgeMethodResult["pane.move"]> {
     if (!this.connected) throw new HostUnavailableError(this.name);
     return this.mutationQueue.enqueue(this.name, async () => {
@@ -409,7 +437,7 @@ export class HostRuntime extends EventEmitter {
   }
 
   private trackWorkspace(workspace: HerdrWorkspaceDetail): void {
-    this.names.setWorkspace(workspace.workspace_id, workspace.label);
+    this.names.setWorkspace(workspace.workspace_id, workspace.label, workspace.worktree);
   }
 
   /** Drops a batch of cascade-closed pane ids from the agent-status baseline (name cache is already purged by the caller). */
@@ -574,6 +602,18 @@ export class HostRuntime extends EventEmitter {
           host,
           event: "pane.closed",
           payload: { id: paneId, host, workspace: { id: workspaceId } },
+        };
+        this.emit("bridge-event", event);
+        return;
+      }
+      case "pane.updated": {
+        const pane = (data as { pane?: HerdrPaneInfo } | undefined)?.pane;
+        if (!pane) return;
+        this.trackPane(pane);
+        const event: WsEvent<"pane.updated"> = {
+          host,
+          event: "pane.updated",
+          payload: { pane: projectPane(host, pane, this.names) },
         };
         this.emit("bridge-event", event);
         return;

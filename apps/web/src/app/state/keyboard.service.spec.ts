@@ -17,6 +17,7 @@ import { PanesStore, paneKey } from "./panes.store";
 import { LayoutService } from "./layout.service";
 import { ThemeService } from "./theme.service";
 import { ToastService } from "./toast.service";
+import { COPY } from "../shared/copy";
 
 function keyEvent(key: string, mods: Partial<{ ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }> = {}): KeyboardEvent {
   return new KeyboardEvent("keydown", { key, cancelable: true, ...mods });
@@ -192,6 +193,33 @@ describe("KeyboardService", () => {
     });
   });
 
+  it("sources every description from copy.ts, never a literal typed here", () => {
+    const approved = new Set<string>([
+      COPY.create.pane,
+      ...Object.values(COPY.help.shortcuts),
+    ]);
+    for (const binding of TestBed.inject(KeyboardService).shortcuts().values()) {
+      expect(approved.has(binding.description))
+        .withContext(`${binding.action}: "${binding.description}" is not in copy.ts`)
+        .toBeTrue();
+    }
+  });
+
+  it("describes the new-card chord with the same words as the board's create menu", () => {
+    // `prefix + c` and the `+` menu's first item run the same action; they
+    // must not describe it in two voices.
+    const binding = TestBed.inject(KeyboardService).shortcuts().get("new-pane");
+    expect(binding?.description).toBe(COPY.create.pane);
+  });
+
+  it("speaks the renamed vocabulary in every description the user reads", () => {
+    for (const binding of TestBed.inject(KeyboardService).shortcuts().values()) {
+      expect(binding.description)
+        .withContext(binding.action)
+        .not.toMatch(/\bpane\b|\btab\b|\bworkspace\b|\bhost\b/);
+    }
+  });
+
   it("shortcuts() returns every documented action, each with a description", () => {
     const shortcuts = service.shortcuts();
     for (const action of [
@@ -308,5 +336,103 @@ describe("KeyboardService", () => {
     const before = themeService.theme();
     service.handleKeydown(keyEvent("t"), document.body);
     expect(themeService.theme()).not.toBe(before);
+  });
+
+  describe("propagation (fix-keyboard-shortcut-suppression)", () => {
+    it("stops propagation on the prefix keydown once it arms the chord", () => {
+      const event = keyEvent("b", { ctrlKey: true });
+      service.handleKeydown(event, document.body);
+      expect(event.defaultPrevented).toBe(true);
+      expect(event.cancelBubble).toBe(true);
+    });
+
+    it("stops propagation on a recognized bound action key", () => {
+      service.handleKeydown(keyEvent("b", { ctrlKey: true }), document.body);
+      const event = keyEvent("t"); // bound non-chord action
+      service.handleKeydown(event, document.body);
+      expect(event.defaultPrevented).toBe(true);
+      expect(event.cancelBubble).toBe(true);
+    });
+
+    it("leaves an unrecognized key completely untouched", () => {
+      const event = keyEvent("q"); // not bound to anything
+      service.handleKeydown(event, document.body);
+      expect(event.defaultPrevented).toBe(false);
+      expect(event.cancelBubble).toBe(false);
+    });
+
+    it("leaves the prefix keystroke untouched while an input is focused", () => {
+      const input = document.createElement("input");
+      const event = keyEvent("b", { ctrlKey: true });
+      service.handleKeydown(event, input);
+      expect(event.defaultPrevented).toBe(false);
+      expect(event.cancelBubble).toBe(false);
+    });
+  });
+});
+
+/**
+ * Reproduces (and proves the fix for) the real-world symptom Juan diagnosed
+ * live: Vimium/Vimium C — or any extension — installs a keydown listener at
+ * `document` (or lower) in the CAPTURE phase, and calls `stopPropagation()`
+ * when it recognizes a bound key (Vimium binds `Ctrl+B` to "scroll up a
+ * page", the classic less/vi pager convention). No real extension is
+ * installed in karma, so these tests simulate the mechanism directly with a
+ * plain `document`-level capture listener standing in for it — this proves
+ * the DOM event-ordering claim the fix relies on is real and testable, not
+ * merely plausible.
+ */
+describe("keydown capture-phase ordering vs. a page-level extension (fix-keyboard-shortcut-suppression)", () => {
+  let vimiumLike: (e: KeyboardEvent) => void;
+
+  afterEach(() => {
+    document.removeEventListener("keydown", vimiumLike, { capture: true });
+  });
+
+  function dispatchCtrlB(): void {
+    const event = new KeyboardEvent("keydown", { key: "b", ctrlKey: true, bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+  }
+
+  it("BUG repro: a document-capture listener that stops propagation prevents a window-BUBBLE listener (the old @HostListener shape) from firing", () => {
+    let bubbleFired = false;
+    vimiumLike = (e) => e.stopPropagation();
+    const ourOldBubbleHandler = () => {
+      bubbleFired = true;
+    };
+    document.addEventListener("keydown", vimiumLike, { capture: true });
+    window.addEventListener("keydown", ourOldBubbleHandler); // bubble phase, capture: false (default) — mirrors the old @HostListener('window:keydown') attachment
+
+    try {
+      dispatchCtrlB();
+      expect(bubbleFired).withContext("old bubble-phase window listener never sees the stopped event").toBe(false);
+    } finally {
+      window.removeEventListener("keydown", ourOldBubbleHandler);
+    }
+  });
+
+  it("FIX proof: a window-CAPTURE listener fires before, and can pre-empt, a document-capture listener registered ahead of it", () => {
+    let windowCaptureFired = false;
+    let vimiumFired = false;
+    vimiumLike = () => {
+      vimiumFired = true;
+    };
+    const ourNewCaptureHandler = (e: KeyboardEvent) => {
+      windowCaptureFired = true;
+      e.stopPropagation(); // what KeyboardService.handleKeydown now does for a recognized key
+    };
+    // Registered BEFORE our listener, to prove this isn't about registration
+    // order — window's capture phase always runs ahead of document's for
+    // listeners on different nodes, regardless of which was attached first.
+    document.addEventListener("keydown", vimiumLike, { capture: true });
+    window.addEventListener("keydown", ourNewCaptureHandler, { capture: true });
+
+    try {
+      dispatchCtrlB();
+      expect(windowCaptureFired).toBe(true);
+      expect(vimiumFired).withContext("window-capture stopPropagation pre-empts document-capture entirely").toBe(false);
+    } finally {
+      window.removeEventListener("keydown", ourNewCaptureHandler, { capture: true });
+    }
   });
 });

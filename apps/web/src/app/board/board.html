@@ -5,8 +5,8 @@
     <button
       type="button"
       class="scope-pill-close"
-      title="Clear scope"
-      aria-label="Clear scope"
+      [title]="copy.emptyState.scopeEmptyAction"
+      [attr.aria-label]="copy.emptyState.scopeEmptyAction"
       (click)="clearScope()"
     >
       <svg lucideX class="icon"></svg>
@@ -19,19 +19,25 @@
 
   @if (plusMenuAvailable()) {
     <div class="plus-menu-wrap">
-      <button type="button" class="plus-button" title="Create" (click)="togglePlusMenu()">
+      <button
+        type="button"
+        class="plus-button"
+        [title]="copy.create.menu"
+        [attr.aria-label]="copy.create.menu"
+        (click)="togglePlusMenu()"
+      >
         <svg lucidePlus class="icon"></svg>
       </button>
       @if (plusMenuOpen()) {
         <div class="plus-menu">
           @if (newPaneAvailable()) {
-            <button type="button" (click)="newPane()">New pane</button>
+            <button type="button" (click)="newPane()">{{ copy.create.pane }}</button>
           }
           @if (newTabAvailable()) {
-            <button type="button" (click)="newTab()">New tab</button>
+            <button type="button" (click)="newTab()">{{ copy.create.lane }}</button>
           }
           @if (newWorkspaceAvailable()) {
-            <button type="button" (click)="newWorkspace()">New workspace</button>
+            <button type="button" (click)="newWorkspace()">{{ copy.create.field }}</button>
           }
         </div>
       }

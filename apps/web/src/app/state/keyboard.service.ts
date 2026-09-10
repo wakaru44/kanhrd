@@ -4,6 +4,7 @@ import { PanesStore } from "./panes.store";
 import { LayoutService } from "./layout.service";
 import { ThemeService } from "./theme.service";
 import { ToastService } from "./toast.service";
+import { COPY } from "../shared/copy";
 
 export type ShortcutCategory = "Navigation" | "Lifecycle" | "View" | "Help";
 
@@ -42,76 +43,92 @@ interface StoredKeyboardSettings {
 
 /** Herdr-style tmux-convention bindings. Only `prefix` is user-rebindable today (see `KeyboardService` doc); individual action keys are fixed. */
 const SHORTCUT_LIST: readonly ShortcutBinding[] = [
-  { action: "new-pane", keys: "c", description: "New pane", category: "Lifecycle", chord: true },
-  { action: "next-tab", keys: "n", description: "Next tab", category: "Navigation", chord: true },
-  { action: "prev-tab", keys: "p", description: "Previous tab", category: "Navigation", chord: true },
+  // `description` is what the user reads, so every one of these comes from
+  // `shared/copy.ts` — never a literal typed here. `new-pane` reuses
+  // `create.pane` because it is the same action the board's `+` menu
+  // performs; the rest live under `help.shortcuts`.
+  { action: "new-pane", keys: "c", description: COPY.create.pane, category: "Lifecycle", chord: true },
+  {
+    action: "next-tab",
+    keys: "n",
+    description: COPY.help.shortcuts.nextTab,
+    category: "Navigation",
+    chord: true,
+  },
+  {
+    action: "prev-tab",
+    keys: "p",
+    description: COPY.help.shortcuts.prevTab,
+    category: "Navigation",
+    chord: true,
+  },
   {
     action: "last-tab",
     keys: "l",
-    description: "Last tab (jump back to the previous one)",
+    description: COPY.help.shortcuts.lastTab,
     category: "Navigation",
     chord: true,
   },
   {
     action: "open-rail",
     keys: "w",
-    description: "Open and focus the workspace rail",
+    description: COPY.help.shortcuts.openRail,
     category: "View",
     chord: true,
   },
   {
     action: "close-tab",
     keys: "&",
-    description: "Close current tab (asks for confirmation)",
+    description: COPY.help.shortcuts.closeTab,
     category: "Lifecycle",
     chord: true,
   },
   {
     action: "close-pane",
     keys: "x",
-    description: "Close current pane — coming soon (no focused-pane model in the board view yet)",
+    description: COPY.help.shortcuts.closePane,
     category: "Lifecycle",
     chord: true,
   },
   {
     action: "rename-tab",
     keys: ",",
-    description: "Rename current tab",
+    description: COPY.help.shortcuts.renameTab,
     category: "Lifecycle",
     chord: true,
   },
   {
     action: "jump-tab",
     keys: "0-9",
-    description: "Jump to tab 0-9 in the current workspace's tab list",
+    description: COPY.help.shortcuts.jumpTab,
     category: "Navigation",
     chord: true,
   },
   {
     action: "help",
     keys: "?",
-    description: "Open this help overlay",
+    description: COPY.help.shortcuts.help,
     category: "Help",
     chord: false,
   },
   {
     action: "toggle-theme",
     keys: "t",
-    description: "Toggle light/dark theme",
+    description: COPY.help.shortcuts.toggleTheme,
     category: "View",
     chord: false,
   },
   {
     action: "focus-search",
     keys: "/",
-    description: "Focus search — coming soon",
+    description: COPY.help.shortcuts.focusSearch,
     category: "View",
     chord: false,
   },
   {
     action: "close-overlay",
     keys: "Escape",
-    description: "Close the open modal, help overlay, plus menu, or rail drawer",
+    description: COPY.help.shortcuts.closeOverlay,
     category: "Help",
     chord: false,
   },
@@ -308,16 +325,23 @@ export class KeyboardService {
     if (this.chordArmedSignal()) {
       this.disarmChord();
       this.dispatchChordAction(event);
-      return;
-    }
-
-    if (matchesPrefix(this.prefix(), event)) {
+    } else if (matchesPrefix(this.prefix(), event)) {
       event.preventDefault();
       this.armChord();
-      return;
+    } else {
+      this.dispatchNonChordAction(event);
     }
 
-    this.dispatchNonChordAction(event);
+    // `App` now attaches this in the CAPTURE phase at `window` specifically
+    // so this can win a race against a page-level browser extension's own
+    // capture-phase listener (e.g. Vimium binding `Ctrl+B` to scroll-up —
+    // see openspec's fix-keyboard-shortcut-suppression). Only stop
+    // propagation for a key we actually recognized (every branch above
+    // that acts on the event calls `preventDefault()` first) — an
+    // unrecognized key must reach the page/terminal/extension untouched.
+    if (event.defaultPrevented) {
+      event.stopPropagation();
+    }
   }
 
   private armChord(): void {

@@ -1,15 +1,7 @@
 import { Component, DestroyRef, inject, signal } from "@angular/core";
 import { LucideInfo, LucideTriangleAlert, LucideX } from "./icons";
+import { COPY } from "./copy";
 import { ToastService, type ToastLevel } from "../state/toast.service";
-
-/**
- * Strings this host needs that `shared/copy.ts` does not carry yet. This lane
- * may not edit `copy.ts`; lift this into it as `toast.dismiss` and delete the
- * block.
- */
-const PENDING_COPY = {
-  dismiss: "dismiss",
-} as const;
 
 /** Mirrors `--breakpoint-mobile` (900px) in `shared/tokens.scss`. Placement is decided here rather than in a media query so it is assertable in a unit test. */
 const MOBILE_BREAKPOINT = "(max-width: 900px)";
@@ -35,7 +27,7 @@ const MOBILE_BREAKPOINT = "(max-width: 900px)";
 export class ToastHost {
   protected readonly toastService = inject(ToastService);
   protected readonly toasts = this.toastService.toasts;
-  protected readonly pending = PENDING_COPY;
+  protected readonly copy = COPY;
 
   /** True below `--breakpoint-mobile`, where the stack moves to the top. */
   protected readonly compact = signal(false);

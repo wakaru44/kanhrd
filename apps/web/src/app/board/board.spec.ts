@@ -6,6 +6,8 @@ import { HttpTestingController, provideHttpClientTesting } from "@angular/common
 import { BehaviorSubject, Subject } from "rxjs";
 import type { WsEvent } from "@kanhrd/schema";
 import { Board, SCOPE_RESOLVE_GRACE_MS, nearestVisibleStatus, pageIndex } from "./board";
+import { BoardReturnService } from "../state/board-return.service";
+import { COPY } from "../shared/copy";
 import { VIRTUAL_ITEM_SIZE, isCompact, isVirtualized } from "./column";
 import { ClockTick } from "../util/clock";
 import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from "../state/panes.store";
@@ -35,6 +37,22 @@ async function flushMicrotasks(): Promise<void> {
     await Promise.resolve();
   }
 }
+
+/**
+ * `PanesStore` persists filters to `localStorage['kanhrd.filters']` through
+ * an effect, and `loadFilters()` reads them back in every later store. The
+ * suites below deliberately hide statuses, so without this the last one to
+ * run leaves hidden statuses behind and whichever suite jasmine schedules
+ * next renders a board with columns missing — a real, order-dependent flake
+ * (jasmine randomises spec order), not a slow render.
+ *
+ * Resetting `filtersSignal` is not enough: the persist effect may not have
+ * flushed by teardown. The key itself has to go.
+ */
+const FILTERS_STORAGE_KEY = "kanhrd.filters";
+
+beforeEach(() => localStorage.removeItem(FILTERS_STORAGE_KEY));
+afterEach(() => localStorage.removeItem(FILTERS_STORAGE_KEY));
 
 /** Same helper as panes.store.spec.ts: lets root effects (PanesStore's, created in its own constructor) flush. */
 async function settle(fixture: ComponentFixture<unknown>): Promise<void> {
@@ -142,9 +160,11 @@ describe("Board + Rail integration: New tab flow (full component tree)", () => {
     fixture.detectChanges();
 
     const newTabButton = Array.from(el.querySelectorAll<HTMLButtonElement>(".plus-menu button")).find(
-      (btn) => btn.textContent?.trim() === "New tab",
+      (btn) => btn.textContent?.trim() === COPY.create.lane,
     );
-    expect(newTabButton).withContext("New tab button should render once tabCrud capability is true").toBeTruthy();
+    expect(newTabButton)
+      .withContext(`"${COPY.create.lane}" should render once tabCrud capability is true`)
+      .toBeTruthy();
     newTabButton?.click();
     fixture.detectChanges();
 
@@ -158,6 +178,84 @@ describe("Board + Rail integration: New tab flow (full component tree)", () => {
     expect(el.querySelectorAll(".card").length)
       .withContext("board DOM should have one more .card")
       .toBe(cardsBefore + 1);
+  });
+
+  // The board's chrome used to inline its own strings: "Create", "New pane",
+  // "New tab", "New workspace", "Clear scope" — Title Case, herdr's
+  // vocabulary, and invisible to `copy.ts`. `style-lint.spec.ts` guards that
+  // no literal came back; these guard what the user actually reads.
+
+  /** Mounts the board against a pen advertising every tier-3 create capability. */
+  async function mountWithCreateCapabilities(): Promise<HTMLElement> {
+    ws.request.and.callFake((_host: string, method: string) => {
+      if (method === "pane.list") {
+        return Promise.resolve({
+          panes: [
+            {
+              id: "p-existing",
+              host: "local",
+              workspace: { id: "w6", name: "kanhrd" },
+              tab: { id: "t-existing", name: "1" },
+              agent_status: "idle",
+            },
+          ],
+        });
+      }
+      if (method === "events.subscribe") return Promise.resolve({ subscription_id: "s1" });
+      return Promise.resolve({
+        tier: 3,
+        terminal: true,
+        paneResize: false,
+        paneGraphics: false,
+        outputPollIntervalMs: 150,
+        paneCreate: true,
+        paneClose: true,
+        paneMove: true,
+        paneRename: true,
+        tabCrud: true,
+        workspaceCrud: true,
+      });
+    });
+
+    fixture = TestBed.createComponent(Board);
+    fixture.detectChanges();
+    await settle(fixture);
+    for (const req of httpMock.match("/api/hosts")) {
+      if (!req.cancelled) {
+        req.flush({ hosts: [{ name: "local", connected: true }] });
+      }
+    }
+    await settle(fixture);
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it("labels the create menu from copy.ts, in the renamed vocabulary", async () => {
+    const el = await mountWithCreateCapabilities();
+    el.querySelector<HTMLButtonElement>(".plus-button")?.click();
+    fixture.detectChanges();
+
+    const labels = Array.from(el.querySelectorAll<HTMLButtonElement>(".plus-menu button")).map(
+      (button) => button.textContent?.trim() ?? "",
+    );
+    expect(labels).toEqual([COPY.create.pane, COPY.create.lane, COPY.create.field]);
+    for (const label of labels) {
+      expect(label).withContext(`"${label}" must be lowercase`).toBe(label.toLowerCase());
+      expect(label)
+        .withContext(`"${label}" must speak the renamed vocabulary`)
+        .not.toMatch(/\bpane\b|\btab\b|\bworkspace\b/);
+    }
+  });
+
+  it("names the create trigger itself, rather than leaning on a title attribute", async () => {
+    const trigger = (await mountWithCreateCapabilities()).querySelector(".plus-button");
+    expect(trigger?.getAttribute("aria-label")).toBe(COPY.create.menu);
+    expect(trigger?.getAttribute("title")).toBe(COPY.create.menu);
+  });
+
+  it("names the scope pill's clear control from the key that already existed", () => {
+    // `emptyState.scopeEmptyAction` is the approved string for this action;
+    // the pill had its own hand-typed "Clear scope" beside it.
+    expect(COPY.emptyState.scopeEmptyAction).toBe("clear scope");
   });
 });
 
@@ -404,6 +502,7 @@ describe("Board: URL scope (rail = navigator, decision locked)", () => {
           paneCreate: false,
           paneClose: false,
           paneMove: false,
+          paneRename: false,
           tabCrud: false,
           workspaceCrud: false,
         });
@@ -585,6 +684,7 @@ describe("Board: filter interaction with the pager", () => {
           paneCreate: false,
           paneClose: false,
           paneMove: false,
+          paneRename: false,
           tabCrud: false,
           workspaceCrud: false,
         });
@@ -707,6 +807,7 @@ describe("Board: an invalid scope is reported, never silently swallowed", () => 
           paneCreate: false,
           paneClose: false,
           paneMove: false,
+          paneRename: false,
           tabCrud: false,
           workspaceCrud: false,
         });
@@ -788,5 +889,241 @@ describe("Board: an invalid scope is reported, never silently swallowed", () => 
     expect(el.querySelector(".state-unavailable")).toBeNull();
     expect(el.querySelector(".board-strip")).not.toBeNull();
     expect(store.scopeSignal()).toEqual({ host: "local", workspaceId: "w6", tabId: null });
+  });
+});
+
+
+/**
+ * Section 17.6: coming out of a pane puts the user back where they were.
+ *
+ * The scope half is the URL the pane's back control points at (asserted in
+ * `pane-detail.spec.ts`); this covers the two halves `Board` owns — writing
+ * the position down as it is torn down, and applying it on the way back in.
+ *
+ * `PanesStore` is root-provided, so it survives between the two fixtures
+ * here exactly as it survives a real navigation: the second board mounts
+ * against the same store, already loaded. That is the point — the return is
+ * a remount, not a reload.
+ */
+describe("Board: returning from a pane", () => {
+  let ws: FakeWsClient;
+  let fixture: ComponentFixture<Board>;
+  let httpMock: HttpTestingController;
+  let boardReturn: BoardReturnService;
+  let store: PanesStore;
+  let currentUrl: string;
+
+  const BOARD_URL = "/workspace/w6";
+
+  function pane(id: string, status = "working") {
+    return {
+      id,
+      host: "local",
+      workspace: { id: "w6", name: "jmorales" },
+      tab: { id: "w6:t1", name: "one" },
+      agent_status: status,
+    };
+  }
+
+  const PANES = [pane("w6:p1"), pane("w6:p2")];
+
+  async function createBoard(): Promise<ComponentFixture<Board>> {
+    const created = TestBed.createComponent(Board);
+    created.detectChanges();
+    await settle(created);
+    for (const req of httpMock.match("/api/hosts")) {
+      if (!req.cancelled) {
+        req.flush({ hosts: [{ name: "local", connected: true }] });
+      }
+    }
+    await settle(created);
+    return created;
+  }
+
+  /** Lets the restore pump's retry timer fire, and the resulting render land. */
+  async function pump(target: ComponentFixture<Board>): Promise<void> {
+    for (let i = 0; i < 4; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      await settle(target);
+    }
+  }
+
+  function openCard(target: ComponentFixture<Board>, key: string): void {
+    const link = (target.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      `app-card[data-pane="${key}"] a.card-open`,
+    );
+    expect(link).withContext(`${key} must render as a link`).not.toBeNull();
+    link!.click();
+  }
+
+  function focusedPane(): string | null | undefined {
+    return document.activeElement?.closest("app-card")?.getAttribute("data-pane");
+  }
+
+  beforeEach(async () => {
+    ws = new FakeWsClient();
+    ws.request.and.callFake((_host: string, method: string) => {
+      if (method === "pane.list") return Promise.resolve({ panes: PANES });
+      if (method === "events.subscribe") return Promise.resolve({ subscription_id: "s1" });
+      if (method === "bridge.capabilities") {
+        return Promise.resolve({
+          tier: 2,
+          terminal: true,
+          paneResize: false,
+          paneGraphics: false,
+          outputPollIntervalMs: 150,
+          paneCreate: false,
+          paneClose: false,
+          paneMove: false,
+          paneRename: false,
+          tabCrud: false,
+          workspaceCrud: false,
+        });
+      }
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+
+    await TestBed.configureTestingModule({
+      imports: [Board],
+      providers: [
+        provideZonelessChangeDetection(),
+        // Catch-all so a card's `routerLink` resolves: this suite asserts
+        // what the click RECORDS, not where the router lands.
+        provideRouter([{ path: "**", children: [] }]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: ws },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({})) } },
+      ],
+    }).compileComponents();
+
+    httpMock = TestBed.inject(HttpTestingController);
+    boardReturn = TestBed.inject(BoardReturnService);
+    store = TestBed.inject(PanesStore);
+
+    // The real Router, so `routerLink` on the cards works, with a drivable
+    // `url` shadowing the getter that would otherwise read the test page's.
+    currentUrl = BOARD_URL;
+    Object.defineProperty(TestBed.inject(Router), "url", {
+      get: () => currentUrl,
+      configurable: true,
+    });
+
+    fixture = await createBoard();
+  });
+
+  afterEach(() => {
+    boardReturn.clear();
+  });
+
+  it("renders the two cards the rest of this suite depends on", () => {
+    const cards = (fixture.nativeElement as HTMLElement).querySelectorAll("app-card[data-pane]");
+    expect(Array.from(cards).map((c) => c.getAttribute("data-pane"))).toEqual([
+      "local:w6:p1",
+      "local:w6:p2",
+    ]);
+  });
+
+  it("writes down the board URL it is leaving, so the pane can come back to it", () => {
+    expect(boardReturn.boardUrl()).withContext("nothing remembered yet").toBe("/");
+    fixture.destroy();
+    expect(boardReturn.boardUrl()).toBe(BOARD_URL);
+  });
+
+  it("remembers the board URL it was ON, not the pane URL the router already moved to", () => {
+    openCard(fixture, "local:w6:p2");
+    // The router commits the navigation before the outgoing component is
+    // torn down, so by `ngOnDestroy` `Router.url` already names the pane.
+    currentUrl = "/pane/local/w6:p2";
+    fixture.destroy();
+
+    expect(boardReturn.boardUrl()).toBe(BOARD_URL);
+  });
+
+  it("carries the clicked card, its column and its position into that record", () => {
+    openCard(fixture, "local:w6:p2");
+    fixture.destroy();
+
+    const record = boardReturn.take();
+    expect(record?.paneKey).toBe("local:w6:p2");
+    expect(record?.status).toBe("working");
+    expect(record?.index).toBe(1);
+    expect(record?.url).toBe(BOARD_URL);
+  });
+
+  it("records a departure that opened no card, so the scroll still comes back", () => {
+    fixture.destroy();
+    const record = boardReturn.take();
+
+    expect(record?.paneKey).toBeNull();
+    expect(record?.url).toBe(BOARD_URL);
+  });
+
+  it("puts focus back on the card that was opened", async () => {
+    openCard(fixture, "local:w6:p2");
+    fixture.destroy();
+
+    const returned = await createBoard();
+    await pump(returned);
+
+    expect(focusedPane()).toBe("local:w6:p2");
+    returned.destroy();
+  });
+
+  it("falls back to the card standing in its place when the opened one is gone", async () => {
+    openCard(fixture, "local:w6:p2");
+    fixture.destroy();
+
+    // That pane closed while the user was inside it; another took its slot.
+    store.panesSignal.update((panes) => {
+      const next = new Map(panes);
+      next.delete("local:w6:p2");
+      next.set("local:w6:p3", pane("w6:p3") as never);
+      return next;
+    });
+
+    const returned = await createBoard();
+    await pump(returned);
+
+    expect(focusedPane()).toBe("local:w6:p3");
+    returned.destroy();
+  });
+
+  it("does not take focus the user has already placed somewhere else", async () => {
+    openCard(fixture, "local:w6:p2");
+    fixture.destroy();
+
+    const elsewhere = document.createElement("button");
+    document.body.appendChild(elsewhere);
+    elsewhere.focus();
+
+    const returned = await createBoard();
+    await pump(returned);
+
+    expect(document.activeElement).toBe(elsewhere);
+    elsewhere.remove();
+    returned.destroy();
+  });
+
+  it("restores nothing when the board comes up at a different URL", async () => {
+    openCard(fixture, "local:w6:p2");
+    fixture.destroy();
+    currentUrl = "/workspace/somewhere-else";
+
+    const returned = await createBoard();
+    await pump(returned);
+
+    expect(focusedPane()).toBeFalsy();
+    returned.destroy();
+  });
+
+  it("consumes the record, so a later visit is not yanked around by an old one", async () => {
+    openCard(fixture, "local:w6:p2");
+    fixture.destroy();
+
+    const returned = await createBoard();
+    await pump(returned);
+    expect(boardReturn.take()).toBeNull();
+    returned.destroy();
   });
 });

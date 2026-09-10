@@ -10,7 +10,7 @@ import type { Locator, Page } from "@playwright/test";
  * workspace CRUD, workspace rail, cascade purge, destructive-op
  * confirmation, capability gating, cold-load pane-detail routing).
  * Mirrors CONTRACT-TIER3.md and L3C's UX notes (tmp/foreman/kanhrd.md):
- * header "+" acts on a single "primary host"; "New tab"/"New workspace"
+ * header "+" acts on a single "primary host"; the create menu's lane/field
  * create-then-rename via an inline edit field; the tier-2 cold-load gap
  * (apps/web/e2e/README.md) is fixed, so this suite is the first to exercise
  * `page.goto('/pane/:host/:id')` directly instead of working around it.
@@ -223,10 +223,10 @@ test.describe("tab CRUD lifecycle", () => {
     const beforeCount = await waitForStableCount(rail(app).locator(".tab-row"));
 
     await plusButton(app).click();
-    await expect(plusMenuItem(app, "New tab")).toBeVisible();
-    await plusMenuItem(app, "New tab").click();
+    await expect(plusMenuItem(app, COPY.create.lane)).toBeVisible();
+    await plusMenuItem(app, COPY.create.lane).click();
 
-    // New tab shows up in the rail within 2s.
+    // The new lane shows up in the rail within 2s.
     await expect(rail(app).locator(".tab-row")).toHaveCount(beforeCount + 1, { timeout: 2_000 });
 
     // Immediately in inline-rename mode (create-then-rename UX, per L3C's notes).
@@ -309,7 +309,7 @@ test("closing a pane's card shows a danger-styled confirmation; cancel keeps it,
   try {
     const before = await herdrTabList();
     await plusButton(app).click();
-    await plusMenuItem(app, "New tab").click();
+    await plusMenuItem(app, COPY.create.lane).click();
     const editInput = tabRowInEditMode(app).locator(".edit-input");
     await expect(editInput).toBeVisible({ timeout: 2_000 });
     const name = `kanhrd-e2e-${Date.now()}`;
@@ -372,7 +372,7 @@ test("closing a tab cascades to purge its pane from the board client-side, even 
   try {
     const before = await herdrTabList();
     await plusButton(app).click();
-    await plusMenuItem(app, "New tab").click();
+    await plusMenuItem(app, COPY.create.lane).click();
     const editInput = tabRowInEditMode(app).locator(".edit-input");
     await expect(editInput).toBeVisible({ timeout: 2_000 });
     const name = `kanhrd-e2e-${Date.now()}`;
