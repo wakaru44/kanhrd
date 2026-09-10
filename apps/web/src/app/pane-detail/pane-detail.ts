@@ -22,9 +22,29 @@ import { classifyInput } from "./key-mapping";
 import { TerminalThemeService } from "../state/terminal-theme.service";
 import { ToastService } from "../state/toast.service";
 import { ClockTick, formatElapsed } from "../util/clock";
+import { COPY, fill } from "../shared/copy";
+import {
+  LucideArrowLeft,
+  LucideRefreshCw,
+  LucideTriangleAlert,
+  LucideUnplug,
+} from "../shared/icons";
 
+/**
+ * xterm.js takes a font *string*, not a CSS custom property, so the
+ * `--font-mono` role from docs/DESIGN-SYSTEM.md is transcribed here. Keep
+ * this stack in step with `--font-mono` in shared/typography.scss.
+ */
 const XTERM_FONT_FAMILY =
-  'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
+  '"JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
+
+/**
+ * The reliability states this view can be in. They are mutually exclusive
+ * and none of them is faked — see docs/UX-GUIDELINES.md ("Reliability
+ * states tell the truth"). `stale` and `unavailable` never blank the
+ * terminal: whatever already rendered stays on screen underneath.
+ */
+export type PaneViewState = "loading" | "failed" | "unavailable" | "stale" | "empty" | "live";
 
 /**
  * Tier-2 terminal detail view: an xterm.js terminal fed by `pane.read` +
@@ -32,10 +52,16 @@ const XTERM_FONT_FAMILY =
  * `pane.send_keys`. See CONTRACT-TIER2.md section 6 — `pane.resize` never
  * succeeds in this tier, so window/container resizing is a pure client-side
  * (`FitAddon`) cosmetic concern with no wire call.
+ *
+ * This component registers **no global keyboard handler**. An unmodified
+ * `Escape` or a bare `?` bound at the document would be swallowed away from
+ * vim, less, fzf and every other TUI running inside the pane; the visible
+ * back control in the header is the escape hatch, and app-level bindings
+ * stay with the existing explicit prefix-shortcut mechanism.
  */
 @Component({
   selector: "app-pane-detail",
-  imports: [RouterLink],
+  imports: [RouterLink, LucideArrowLeft, LucideRefreshCw, LucideTriangleAlert, LucideUnplug],
   templateUrl: "./pane-detail.html",
   styleUrl: "./pane-detail.scss",
 })
@@ -47,8 +73,16 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   private readonly toast = inject(ToastService);
   protected readonly clock = inject(ClockTick);
 
+  protected readonly copy = COPY;
+
   /** True from the moment a `pane.read` request goes out until its first content lands (or fails). Drives the `.terminal-loading` overlay. */
   protected readonly loading = signal(false);
+  /** Set when a `pane.read` rejects. Cleared on the next attempt. Carries herdr's own wording, quoted verbatim. */
+  protected readonly failure = signal<string | null>(null);
+  /** True once a read or an output frame has landed for the current pane, whether or not it carried any bytes. */
+  private readonly frameReceived = signal(false);
+  /** True while the terminal is showing content the user can read. A disconnect must never flip this back to false. */
+  private readonly hasContent = signal(false);
 
   @ViewChild("terminalContainer", { static: true })
   private readonly containerRef!: ElementRef<HTMLDivElement>;
@@ -63,9 +97,26 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   );
 
   protected readonly pane = computed(() => this.store.panesSignal().get(paneKey(this.host(), this.id())));
-  protected readonly capabilities = computed(() => this.store.capabilitiesSignal().get(this.host()));
-  protected readonly graphicsAvailable = computed(() => this.capabilities()?.paneGraphics === true);
-  protected readonly pollIntervalMs = computed(() => this.capabilities()?.outputPollIntervalMs ?? 150);
+
+  /** UI-sans title, never the display serif: this is a repeated technical identifier. */
+  protected readonly title = computed(
+    () => this.pane()?.agent?.name ?? this.pane()?.title ?? this.id(),
+  );
+  protected readonly statusKey = computed(() => this.pane()?.agent_status ?? "unknown");
+  protected readonly statusLabel = computed(() => {
+    const key = this.statusKey();
+    return key in COPY.status ? COPY.status[key as keyof typeof COPY.status] : COPY.status.unknown;
+  });
+
+  /**
+   * Whether the pen this pane lives on is currently in view. An unknown
+   * host is *not* reported as gone — only a host the bridge has told us
+   * about and marked disconnected.
+   */
+  private readonly penInSight = computed(() => {
+    const entry = this.store.hostsSignal().find((h) => h.name === this.host());
+    return entry ? entry.connected : true;
+  });
 
   private term: Terminal | null = null;
   private fitAddon: FitAddon | null = null;
@@ -96,20 +147,58 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     this.fitAddon?.fit();
   };
 
-  // --- stats strip: revision count, last-poll timestamp, subscription
+  // --- meta strip: revision count, last-poll timestamp, subscription
   // health. All from data already on the tier-2 wire surface (`pane.read`'s
   // and `pane.output`'s `revision` — see BridgeMethodResult/BridgeEventPayload
-  // in wire.ts) — no bridge change needed.
+  // in wire.ts) — no bridge change needed. Elapsed is observed client time,
+  // never presented as a server-authoritative duration.
   protected readonly revision = signal<number | null>(null);
   protected readonly lastPollAt = signal<number | null>(null);
   protected readonly subscribed = signal(false);
 
+  /**
+   * Data readouts, not product copy (see the header comment in
+   * `shared/copy.ts`): a revision id and an observed elapsed duration.
+   * They are formatted here rather than in the template so the template
+   * itself carries no free-standing string.
+   */
+  protected readonly revisionLabel = computed(() => {
+    const rev = this.revision();
+    return rev === null ? "rev —" : `rev ${rev}`;
+  });
   protected readonly lastPollLabel = computed(() => {
     const at = this.lastPollAt();
     if (at === null) {
-      return "never";
+      return "updated —";
     }
-    return `${formatElapsed(this.clock.now() - at)} ago`;
+    return `updated ${formatElapsed(this.clock.now() - at)} ago`;
+  });
+
+  /** herdr's own wording for the failed read, quoted verbatim and never rewritten. */
+  protected readonly failureReason = computed(() => this.failure() ?? "");
+
+  /**
+   * The single source of truth for what the terminal area shows. Order
+   * matters: a disconnected pen outranks everything, a failure only wins
+   * while there is nothing to read, and content that already rendered is
+   * marked stale rather than thrown away.
+   */
+  protected readonly viewState = computed<PaneViewState>(() => {
+    if (!this.penInSight()) {
+      return "unavailable";
+    }
+    if (this.hasContent()) {
+      const settled = !this.loading();
+      const lost = !this.ws.connected() || (settled && !this.subscribed());
+      return lost ? "stale" : "live";
+    }
+    if (this.failure() !== null) {
+      return "failed";
+    }
+    if (this.loading() || !this.frameReceived()) {
+      return "loading";
+    }
+    return "empty";
   });
 
   constructor() {
@@ -184,6 +273,16 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     this.term = null;
   }
 
+  /** Failed state's only action: re-run the same load for the pane in the route. */
+  protected retry(): void {
+    const host = this.host();
+    const id = this.id();
+    if (!host || !id) {
+      return;
+    }
+    void this.loadForPane(host, id);
+  }
+
   private teardownSubscription(): void {
     if (this.subscriptionId && this.subscriptionHost) {
       void this.ws.request(this.subscriptionHost, "pane.unsubscribe_output", {
@@ -201,6 +300,9 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     }
     this.teardownSubscription();
     this.term.reset();
+    this.frameReceived.set(false);
+    this.hasContent.set(false);
+    this.failure.set(null);
     this.loading.set(true);
     try {
       const result = await this.ws.request(host, "pane.read", {
@@ -215,8 +317,12 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
         this.term.write(result.content);
         this.revision.set(result.revision);
         this.lastPollAt.set(Date.now());
+        this.frameReceived.set(true);
+        this.hasContent.set(result.content.length > 0);
       }
-      this.loading.set(false);
+      // `loading` stays true across the subscribe round-trip on purpose:
+      // it suppresses a one-frame `stale` flash between the read landing
+      // and the subscription being confirmed.
       try {
         const sub = await this.ws.request(host, "pane.subscribe_output", { pane_id: id });
         if (this.host() !== host || this.id() !== id) {
@@ -233,14 +339,18 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       } catch (err) {
         this.toast.push({
           level: "error",
-          message: `Live updates unavailable for this pane: ${err instanceof Error ? err.message : String(err)}`,
+          message: fill(COPY.toast.liveUpdatesUnavailable, {
+            reason: err instanceof Error ? err.message : String(err),
+          }),
         });
       }
-    } catch {
+    } catch (err) {
       // Bridge unreachable, tier-1 bridge, or connection dropped mid-load —
       // per the runtime/client boundary guardrail this is a client-local
       // outcome: leave the terminal showing whatever it already has rather
-      // than tearing down the view or the WS connection.
+      // than tearing down the view or the WS connection. With content on
+      // screen this reads as `stale`; with nothing on screen, as `failed`.
+      this.failure.set(err instanceof Error ? err.message : String(err));
     } finally {
       this.loading.set(false);
     }
@@ -258,6 +368,8 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     this.term.write(payload.content);
     this.revision.set(payload.revision);
     this.lastPollAt.set(Date.now());
+    this.frameReceived.set(true);
+    this.hasContent.set(payload.content.length > 0);
   }
 
   private handleInput(data: string): void {

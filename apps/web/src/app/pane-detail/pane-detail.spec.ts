@@ -1,10 +1,11 @@
-import { provideZonelessChangeDetection, signal } from "@angular/core";
+import { WritableSignal, provideZonelessChangeDetection, signal } from "@angular/core";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { ActivatedRoute, convertToParamMap } from "@angular/router";
 import { BehaviorSubject, Subject, of } from "rxjs";
 import { Terminal } from "@xterm/xterm";
-import type { WsEvent } from "@kanhrd/schema";
+import type { HostSummary, WsEvent } from "@kanhrd/schema";
 import { PaneDetail } from "./pane-detail";
+import { COPY } from "../shared/copy";
 import { PanesStore } from "../state/panes.store";
 import { WsClient } from "../state/ws-client";
 
@@ -41,9 +42,16 @@ describe("PaneDetail", () => {
   let ws: FakeWsClient;
   let fixture: ComponentFixture<PaneDetail>;
   let paramMap$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+  let hosts: WritableSignal<HostSummary[]>;
+
+  /** DOM-level view of the reliability state, asserted through the markup rather than a protected signal. */
+  function stateEl(selector: string): Element | null {
+    return fixture.nativeElement.querySelector(selector) as Element | null;
+  }
 
   beforeEach(async () => {
     ws = new FakeWsClient();
+    hosts = signal<HostSummary[]>([{ name: "laptop", connected: true }]);
     paramMap$ = new BehaviorSubject(convertToParamMap({ host: "laptop", id: "pane-1" }));
 
     await TestBed.configureTestingModule({
@@ -53,7 +61,11 @@ describe("PaneDetail", () => {
         { provide: WsClient, useValue: ws },
         {
           provide: PanesStore,
-          useValue: { panesSignal: () => new Map(), capabilitiesSignal: () => new Map() },
+          useValue: {
+            panesSignal: () => new Map(),
+            capabilitiesSignal: () => new Map(),
+            hostsSignal: () => hosts(),
+          },
         },
         {
           provide: ActivatedRoute,
@@ -297,5 +309,225 @@ describe("PaneDetail", () => {
       source: "recent",
     });
     expect(ws.request).toHaveBeenCalledWith("laptop", "pane.subscribe_output", { pane_id: "pane-2" });
+  });
+  // --- reliability states (docs/UX-GUIDELINES.md, "Reliability states tell
+  // the truth"). Asserted through the rendered markup, not the protected
+  // signal, so a refactor of the state machine that keeps the same visible
+  // behaviour keeps these tests green.
+
+  it("shows the keeping-watch loading state before the first frame, and nothing else", async () => {
+    ws.connected.set(false);
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(stateEl(".terminal-loading")).not.toBeNull();
+    expect(stateEl(".terminal-loading")?.textContent).toContain(COPY.loading.pane);
+    expect(stateEl(".terminal-failed")).toBeNull();
+    expect(stateEl(".terminal-empty")).toBeNull();
+    expect(stateEl(".stale-marker")).toBeNull();
+  });
+
+  it("clears every state overlay once content has landed and the subscription is live", async () => {
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(stateEl(".terminal-loading")).toBeNull();
+    expect(stateEl(".terminal-failed")).toBeNull();
+    expect(stateEl(".terminal-empty")).toBeNull();
+    expect(stateEl(".terminal-unavailable")).toBeNull();
+    expect(stateEl(".stale-marker")).toBeNull();
+  });
+
+  it("renders the empty state when the read succeeds with no bytes", async () => {
+    ws.request.and.callFake((_host: string, method: string) => {
+      switch (method) {
+        case "pane.read":
+          return Promise.resolve({ content: "", revision: 1, truncated: false, format: "ansi", source: "recent" });
+        case "pane.subscribe_output":
+          return Promise.resolve({ subscription_id: "sub-1" });
+        default:
+          return Promise.resolve({});
+      }
+    });
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(stateEl(".terminal-empty")?.textContent).toContain(COPY.emptyState.penEmpty);
+    expect(stateEl(".terminal-loading")).toBeNull();
+  });
+
+  it("replaces loading with a retry and a back path when the read fails with nothing on screen", async () => {
+    ws.request.and.callFake((_host: string, method: string) => {
+      if (method === "pane.read") {
+        return Promise.reject(new Error("herdr said no"));
+      }
+      return Promise.resolve({});
+    });
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    const failed = stateEl(".terminal-failed");
+    expect(failed).not.toBeNull();
+    // herdr's own wording is quoted verbatim, never rewritten.
+    expect(failed?.textContent).toContain("herdr said no");
+    expect(failed?.querySelector("button.retry")?.textContent).toContain(COPY.loading.retry);
+    expect(failed?.querySelector("a.state-back")?.textContent).toContain(COPY.nav.backToBoard);
+    // Never left spinning.
+    expect(stateEl(".terminal-loading")).toBeNull();
+  });
+
+  it("retries the read from the failed state", async () => {
+    let attempt = 0;
+    ws.request.and.callFake((_host: string, method: string) => {
+      switch (method) {
+        case "pane.read":
+          attempt += 1;
+          return attempt === 1
+            ? Promise.reject(new Error("herdr said no"))
+            : Promise.resolve({ content: "back", revision: 2, truncated: false, format: "ansi", source: "recent" });
+        case "pane.subscribe_output":
+          return Promise.resolve({ subscription_id: "sub-1" });
+        default:
+          return Promise.resolve({});
+      }
+    });
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    (stateEl("button.retry") as HTMLButtonElement).click();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(attempt).toBe(2);
+    expect(stateEl(".terminal-failed")).toBeNull();
+  });
+
+  it("marks a single disconnect stale and keeps the already-rendered content", async () => {
+    const writeSpy = spyOn(Terminal.prototype, "write");
+    const resetSpy = spyOn(Terminal.prototype, "reset");
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(writeSpy).toHaveBeenCalledWith("hello");
+    writeSpy.calls.reset();
+    resetSpy.calls.reset();
+
+    // One pen/bridge disconnect.
+    ws.connected.set(false);
+    fixture.detectChanges();
+
+    expect(stateEl(".stale-marker")?.textContent).toContain(COPY.state.stale);
+    // Content survives: nothing is cleared and nothing is rewritten.
+    expect(resetSpy).not.toHaveBeenCalled();
+    expect(writeSpy).not.toHaveBeenCalled();
+    // And it is not misreported as a fresh load or a failure.
+    expect(stateEl(".terminal-loading")).toBeNull();
+    expect(stateEl(".terminal-failed")).toBeNull();
+  });
+
+  it("reports a disconnected pen as unavailable, with a back path, without blanking content", async () => {
+    const writeSpy = spyOn(Terminal.prototype, "write");
+    const resetSpy = spyOn(Terminal.prototype, "reset");
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+    writeSpy.calls.reset();
+    resetSpy.calls.reset();
+
+    hosts.set([{ name: "laptop", connected: false }]);
+    fixture.detectChanges();
+
+    const unavailable = stateEl(".terminal-unavailable");
+    expect(unavailable?.textContent).toContain(COPY.state.unavailable);
+    expect(unavailable?.querySelector("a.state-back")?.textContent).toContain(COPY.nav.backToBoard);
+    expect(resetSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not claim a pen is unavailable merely because the bridge has not listed it yet", async () => {
+    hosts.set([]);
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(stateEl(".terminal-unavailable")).toBeNull();
+  });
+
+  // --- keyboard: the terminal owns its keys.
+
+  it("registers no global keyboard handler on document or window", async () => {
+    const docSpy = spyOn(document, "addEventListener").and.callThrough();
+    const winSpy = spyOn(window, "addEventListener").and.callThrough();
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+
+    const keyTypes = [...docSpy.calls.allArgs(), ...winSpy.calls.allArgs()]
+      .map(([type]) => String(type))
+      .filter((type) => type.startsWith("key"));
+    expect(keyTypes)
+      .withContext("a global key handler would swallow Escape / ? away from vim, less and fzf")
+      .toEqual([]);
+  });
+
+  it("leaves unmodified Escape and a bare ? unhandled at the document", async () => {
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+
+    for (const key of ["Escape", "?"]) {
+      const evt = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+      document.dispatchEvent(evt);
+      expect(evt.defaultPrevented).withContext(`${key} must reach the terminal`).toBe(false);
+    }
+  });
+
+  // --- copy and glyphs.
+
+  it("routes the back control through copy.ts and renders a lucide icon, not an entity arrow", async () => {
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    const back = stateEl("header .back") as HTMLAnchorElement;
+    expect(back.textContent).toContain(COPY.nav.backToBoard);
+    expect(back.querySelector("svg")).not.toBeNull();
+    expect(back.textContent).not.toContain("\u2190");
+    // First focusable element in the header.
+    const focusable = fixture.nativeElement.querySelectorAll("header a, header button");
+    expect(focusable[0]).toBe(back);
+  });
+
+  it("makes no promise about an unshipped feature and no claim about the poll interval", async () => {
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? "";
+    expect(text.toLowerCase()).not.toContain("coming soon");
+    expect(text.toLowerCase()).not.toContain("updates every");
   });
 });
