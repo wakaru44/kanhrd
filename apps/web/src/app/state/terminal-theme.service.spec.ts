@@ -2,10 +2,11 @@ import { TestBed } from "@angular/core/testing";
 import { provideZonelessChangeDetection } from "@angular/core";
 import { ThemeService } from "./theme.service";
 import {
+  TERMINAL_THEME_OPTIONS,
   TerminalThemeService,
-  XTERM_THEME_DARK,
-  XTERM_THEME_LIGHT,
   XTERM_THEME_MONOKAI,
+  XTERM_THEME_SUMI,
+  XTERM_THEME_WASHI,
   loadTerminalThemeName,
 } from "./terminal-theme.service";
 
@@ -37,6 +38,11 @@ describe("loadTerminalThemeName", () => {
     const storage = { getItem: () => "not-a-real-theme" };
     expect(loadTerminalThemeName(storage)).toBe("auto");
   });
+
+  it("migrates the pre-redesign palette names to washi/sumi", () => {
+    expect(loadTerminalThemeName({ getItem: () => "standard-light" })).toBe("washi");
+    expect(loadTerminalThemeName({ getItem: () => "standard-dark" })).toBe("sumi");
+  });
 });
 
 describe("TerminalThemeService", () => {
@@ -61,10 +67,32 @@ describe("TerminalThemeService", () => {
     expect(service.name()).toBe("auto");
 
     themeService.set("dark");
-    expect(service.theme()).toEqual(XTERM_THEME_DARK);
+    expect(service.theme()).toEqual(XTERM_THEME_SUMI);
 
     themeService.set("light");
-    expect(service.theme()).toEqual(XTERM_THEME_LIGHT);
+    expect(service.theme()).toEqual(XTERM_THEME_WASHI);
+  });
+
+  it("offers washi and sumi as explicitly selectable palettes", () => {
+    themeService.set("dark");
+    service.set("washi");
+    expect(service.theme()).toEqual(XTERM_THEME_WASHI);
+    expect(service.theme().background).toBe("#f4ede0");
+    expect(service.theme().foreground).toBe("#1a1815");
+
+    themeService.set("light");
+    service.set("sumi");
+    expect(service.theme()).toEqual(XTERM_THEME_SUMI);
+    expect(service.theme().background).toBe("#161311");
+    expect(service.theme().foreground).toBe("#ece3d1");
+  });
+
+  it("lists washi and sumi in the settings options and drops the old standard names", () => {
+    const values: string[] = TERMINAL_THEME_OPTIONS.map((option) => option.value);
+    expect(values).toContain("washi");
+    expect(values).toContain("sumi");
+    expect(values).not.toContain("standard-light");
+    expect(values).not.toContain("standard-dark");
   });
 
   it("an explicit theme overrides the SPA theme regardless of dark/light", () => {

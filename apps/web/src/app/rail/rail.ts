@@ -1,9 +1,22 @@
-import { Component, computed, effect, inject, signal, untracked } from "@angular/core";
+import {
+  afterNextRender,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  OnDestroy,
+  signal,
+  untracked,
+} from "@angular/core";
 import { KeyValuePipe } from "@angular/common";
 import { Router } from "@angular/router";
-import { LucidePencil, LucideX } from "@lucide/angular";
 import type { TabSummary, WorkspaceSummary } from "@kanhrd/schema";
+import { LucideMoreHorizontal } from "../shared/icons";
+import { COPY } from "../shared/copy";
 import { isWorkspaceGroupCloseRequiredError, paneKey, PanesStore } from "../state/panes.store";
+import { LayoutService } from "../state/layout.service";
 import { ConfirmModal } from "../shared/confirm-modal";
 
 interface WorkspaceGroup {
@@ -12,24 +25,65 @@ interface WorkspaceGroup {
 }
 
 /**
- * Rail = navigator (decision locked): per host, a workspace list, each
- * workspace listing its tabs. Hovering a workspace/tab reveals rename
- * (pencil) and close (×) actions, gated on `workspaceCrud`/`tabCrud`.
- * Clicking a workspace or tab NAVIGATES to `/workspace/:workspaceId` or
- * `/workspace/:workspaceId/tab/:tabId` — it does not write
- * `PanesStore.scopeSignal` directly; `Board`'s route-sync effect derives
- * that from the URL. Clicking the already-active workspace/tab navigates
- * back to `/` (unscoped).
+ * Rail-local copy that `docs/BRAND.md`'s approved-copy table does not yet
+ * carry. Kept in one object (never inlined in the template) so promoting it
+ * is a copy/paste into the table plus `shared/copy.ts` — a maintainer's edit,
+ * not this lane's. Voice matches the table: lowercase, terse, verbs.
+ *
+ * TODO(brand): promote to `COPY.rail.*` once `docs/BRAND.md` gains the rows.
+ */
+const RAIL_COPY = {
+  navigation: "fields and lanes",
+  renameField: "rename field",
+  renameLane: "rename lane",
+  moreActions: "more actions",
+  lastFieldRefusal:
+    "this is the only field open on this pen. closing it would leave nothing to watch. open another field first.",
+} as const;
+
+/** Elements that can hold focus inside the drawer. */
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** `--breakpoint-mobile` (900px) as a media query; at or above it the rail is inline. */
+const DESKTOP_QUERY = "(min-width: 900px)";
+
+type RowKind = "workspace" | "tab";
+
+/**
+ * Rail = navigator (decision locked): per pen, a field list, each field
+ * listing its lanes. Row actions live in a visible overflow menu (never
+ * hover-only). Clicking a field or lane NAVIGATES to `/workspace/:workspaceId`
+ * or `/workspace/:workspaceId/tab/:tabId` — it does not write
+ * `PanesStore.scopeSignal` directly; `Board`'s route-sync effect derives that
+ * from the URL. Clicking the already-active field/lane navigates back to `/`.
+ *
+ * Below 900px the same component is the mobile **overlay drawer**: `.rail` is
+ * `display:none` (board.scss), the header hamburger flips
+ * `LayoutService.railOpen`, and `Board` renders the `.rail-backdrop`. This
+ * component owns the drawer's *behaviour*: focus moves in and is trapped,
+ * background content is `inert`, focus returns to the hamburger on close, and
+ * Escape is scoped to this component's host — never a global binding, because
+ * the terminal owns unmodified Escape.
  */
 @Component({
   selector: "app-rail",
-  imports: [ConfirmModal, KeyValuePipe, LucidePencil, LucideX],
+  imports: [ConfirmModal, KeyValuePipe, LucideMoreHorizontal],
   templateUrl: "./rail.html",
   styleUrl: "./rail.scss",
+  host: {
+    "(keydown.escape)": "onEscape($any($event))",
+  },
 })
-export class Rail {
+export class Rail implements OnDestroy {
   protected readonly store = inject(PanesStore);
+  protected readonly layout = inject(LayoutService);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+  private readonly hostEl = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+
+  protected readonly copy = COPY;
+  protected readonly railCopy = RAIL_COPY;
 
   protected readonly hostGroups = computed(() => {
     const workspaces = this.store.workspacesSignal();
@@ -57,24 +111,81 @@ export class Rail {
     return this.store.capabilitiesSignal().get(host)?.tabCrud === true;
   }
 
+  // --- row overflow menu (replaces the removed hover affordances) ---------
+
+  private readonly openMenu = signal<string | null>(null);
+
+  protected rowKey(kind: RowKind, host: string, id: string): string {
+    return `${kind}:${host}:${id}`;
+  }
+
+  protected isMenuOpen(key: string): boolean {
+    return this.openMenu() === key;
+  }
+
+  protected toggleMenu(key: string, event: Event): void {
+    event.stopPropagation();
+    this.openMenu.update((open) => (open === key ? null : key));
+  }
+
+  protected closeMenu(): void {
+    this.openMenu.set(null);
+  }
+
+  /** Escape inside an open menu closes it and returns focus to its trigger, without touching the drawer. */
+  protected onMenuKeydown(event: KeyboardEvent): void {
+    const menu = event.currentTarget as HTMLElement;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      this.closeMenu();
+      (menu.parentElement?.querySelector<HTMLElement>(".row-menu-trigger"))?.focus();
+      return;
+    }
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+      return;
+    }
+    event.preventDefault();
+    const items = Array.from(menu.querySelectorAll<HTMLElement>(".row-menu-item"));
+    if (items.length === 0) {
+      return;
+    }
+    const current = items.indexOf(document.activeElement as HTMLElement);
+    const step = event.key === "ArrowDown" ? 1 : -1;
+    const next = (current + step + items.length) % items.length;
+    items[next]!.focus();
+  }
+
+  /** Focus leaving the menu subtree closes it — no document-level click listener. */
+  protected onMenuFocusOut(event: FocusEvent): void {
+    const wrap = event.currentTarget as HTMLElement;
+    const next = event.relatedTarget;
+    if (next instanceof Node && wrap.contains(next)) {
+      return;
+    }
+    this.closeMenu();
+  }
+
   // --- inline rename -------------------------------------------------
 
-  protected readonly editing = signal<{ kind: "workspace" | "tab"; host: string; id: string } | null>(null);
+  protected readonly editing = signal<{ kind: RowKind; host: string; id: string } | null>(null);
   protected readonly editingValue = signal("");
 
-  protected isEditing(kind: "workspace" | "tab", host: string, id: string): boolean {
+  protected isEditing(kind: RowKind, host: string, id: string): boolean {
     const e = this.editing();
     return e !== null && e.kind === kind && e.host === host && e.id === id;
   }
 
   protected startRenameWorkspace(workspace: WorkspaceSummary, event: Event): void {
     event.stopPropagation();
+    this.closeMenu();
     this.editing.set({ kind: "workspace", host: workspace.host, id: workspace.id });
     this.editingValue.set(workspace.name);
   }
 
   protected startRenameTab(tab: TabSummary, event: Event): void {
     event.stopPropagation();
+    this.closeMenu();
     this.editing.set({ kind: "tab", host: tab.host, id: tab.id });
     this.editingValue.set(tab.name);
   }
@@ -102,7 +213,10 @@ export class Rail {
       event.preventDefault();
       this.confirmRename();
     } else if (event.key === "Escape") {
+      // `preventDefault` doubles as the signal to `onEscape` that this Escape
+      // was consumed by the rename field and must not close the drawer.
       event.preventDefault();
+      event.stopPropagation();
       this.cancelRename();
     }
   }
@@ -151,6 +265,151 @@ export class Rail {
         this.store.consumePendingCloseTab();
       });
     });
+
+    // Drawer open/close side effects: focus in + trap + inert on open,
+    // release + restore on close.
+    effect(() => {
+      const open = this.layout.railOpen();
+      untracked(() => (open ? this.onDrawerOpened() : this.onDrawerClosed()));
+    });
+
+    this.desktopQuery?.addEventListener("change", this.onDesktopChange);
+  }
+
+  // --- mobile overlay drawer --------------------------------------------
+
+  private readonly desktopQuery: MediaQueryList | null =
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia(DESKTOP_QUERY)
+      : null;
+
+  /** Element focus returns to when the drawer closes (the header hamburger). */
+  private restoreFocusTo: HTMLElement | null = null;
+  /** Elements this component marked `inert`, so only those are cleared again. */
+  private inerted: HTMLElement[] = [];
+  /** Set when the close was caused by crossing up past 900px: focus the now-inline rail instead. */
+  private focusInlineRailOnClose = false;
+
+  private readonly onDesktopChange = (event: MediaQueryListEvent): void => {
+    // Crossing up past 900px: the drawer state is meaningless on the inline
+    // rail, so clear it rather than leaving the desktop rail in drawer mode.
+    // Rotation lands here too — same width rule, no orientation branch.
+    if (event.matches && this.layout.railOpen()) {
+      this.focusInlineRailOnClose = true;
+      this.layout.closeRail();
+    }
+  };
+
+  private navEl(): HTMLElement | null {
+    return this.hostEl.querySelector<HTMLElement>("nav.rail");
+  }
+
+  private onDrawerOpened(): void {
+    this.restoreFocusTo =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    this.applyInert();
+    afterNextRender(
+      {
+        read: () => {
+          const first = this.navEl()?.querySelector<HTMLElement>(FOCUSABLE) ?? this.navEl();
+          first?.focus();
+        },
+      },
+      { injector: this.injector }
+    );
+  }
+
+  private onDrawerClosed(): void {
+    this.clearInert();
+    this.closeMenu();
+    const restore = this.focusInlineRailOnClose
+      ? this.navEl()
+      : (this.restoreFocusTo ?? document.querySelector<HTMLElement>(".hamburger"));
+    this.focusInlineRailOnClose = false;
+    this.restoreFocusTo = null;
+    if (restore?.isConnected) {
+      restore.focus();
+    }
+  }
+
+  /**
+   * Mark every ancestor-sibling of this component `inert`, which is the
+   * whole page minus the drawer. `.rail-backdrop` is skipped deliberately:
+   * it is board-owned chrome that must stay tappable to dismiss the drawer.
+   */
+  private applyInert(): void {
+    let node: HTMLElement | null = this.hostEl;
+    while (node && node !== document.body) {
+      const parent: HTMLElement | null = node.parentElement;
+      if (!parent) {
+        break;
+      }
+      for (const sibling of Array.from(parent.children)) {
+        if (sibling === node || !(sibling instanceof HTMLElement) || sibling.inert) {
+          continue;
+        }
+        if (sibling.classList.contains("rail-backdrop")) {
+          continue;
+        }
+        sibling.inert = true;
+        this.inerted.push(sibling);
+      }
+      node = parent;
+    }
+  }
+
+  private clearInert(): void {
+    for (const el of this.inerted) {
+      el.inert = false;
+    }
+    this.inerted = [];
+  }
+
+  /**
+   * Escape scoped to this component's host — NOT a global binding. While a
+   * pane's xterm has focus, unmodified Escape must reach the terminal, so
+   * nothing here listens on `document`.
+   */
+  protected onEscape(event: KeyboardEvent): void {
+    if (event.defaultPrevented || !this.layout.railOpen()) {
+      return;
+    }
+    event.preventDefault();
+    this.layout.closeRail();
+  }
+
+  /** Tab/Shift+Tab wrap inside the open drawer. */
+  protected onDrawerKeydown(event: KeyboardEvent): void {
+    if (event.key !== "Tab" || !this.layout.railOpen()) {
+      return;
+    }
+    const nav = this.navEl();
+    if (!nav) {
+      return;
+    }
+    const items = Array.from(nav.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+      (el) => el.offsetParent !== null || el === document.activeElement
+    );
+    if (items.length === 0) {
+      return;
+    }
+    const first = items[0]!;
+    const last = items[items.length - 1]!;
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !nav.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.desktopQuery?.removeEventListener("change", this.onDesktopChange);
+    this.clearInert();
+    // The drawer never persists across a route change to pane detail.
+    this.layout.closeRail();
   }
 
   // --- navigation (rail = navigator) ------------------------------------
@@ -166,6 +425,9 @@ export class Rail {
   }
 
   protected onTabClick(tab: TabSummary): void {
+    // Close before navigating so the drawer is gone by the time the board
+    // re-renders under it.
+    this.layout.closeRail();
     if (this.isTabFilterActive(tab.host, tab.id)) {
       void this.router.navigate(["/"]);
     } else {
@@ -174,6 +436,7 @@ export class Rail {
   }
 
   protected onWorkspaceClick(workspace: WorkspaceSummary): void {
+    this.layout.closeRail();
     if (this.isWorkspaceScopeActive(workspace.id)) {
       void this.router.navigate(["/"]);
     } else {
@@ -181,7 +444,7 @@ export class Rail {
     }
   }
 
-  // --- close: workspace --------------------------------------------------
+  // --- close: field (workspace) ------------------------------------------
 
   protected readonly closeWorkspaceTarget = signal<WorkspaceSummary | null>(null);
   protected readonly closeWorkspaceGroupRequired = signal(false);
@@ -191,13 +454,20 @@ export class Rail {
     if (!target) {
       return null;
     }
-    return this.store.workspaceCountForHost(target.host) <= 1
-      ? "This is the only open workspace on this host. Closing it would leave you with zero open workspaces — close or open another workspace first."
-      : null;
+    return this.store.workspaceCountForHost(target.host) <= 1 ? RAIL_COPY.lastFieldRefusal : null;
   });
+
+  /**
+   * Care softens the prompt, never the fact: the honest body names the
+   * sessions as ending and unrecoverable, and the field being closed.
+   */
+  protected closeWorkspaceBody(target: WorkspaceSummary): string {
+    return `${COPY.confirm.closeFieldBody} ${target.name}`;
+  }
 
   protected requestCloseWorkspace(workspace: WorkspaceSummary, event: Event): void {
     event.stopPropagation();
+    this.closeMenu();
     this.closeWorkspaceGroupRequired.set(false);
     this.closeWorkspaceTarget.set(workspace);
   }
@@ -230,7 +500,7 @@ export class Rail {
     }
   }
 
-  // --- close: tab ----------------------------------------------------
+  // --- close: lane (tab) --------------------------------------------------
 
   protected readonly closeTabTarget = signal<TabSummary | null>(null);
 
@@ -242,8 +512,14 @@ export class Rail {
     return this.store.tabCountForWorkspace(target.host, target.workspace.id) <= 1;
   });
 
+  protected closeTabBody(target: TabSummary): string {
+    const body = `${COPY.confirm.closeLaneBody} ${target.name}`;
+    return this.closeTabIsLastInWorkspace() ? `${body} ${COPY.confirm.lastLaneNote}` : body;
+  }
+
   protected requestCloseTab(tab: TabSummary, event?: Event): void {
     event?.stopPropagation();
+    this.closeMenu();
     this.closeTabTarget.set(tab);
   }
 

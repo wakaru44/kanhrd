@@ -8,6 +8,15 @@ Glossary for **kanhrd** — a web UI for herdr with a kanban view as its distinc
 
 **Name**: `kanhrd` = kanban + herdr. npm and github handle both free at time of decision.
 
+**Presentation layer**: this glossary covers the domain. The brand,
+design tokens and interaction rules built on top of it live in
+[`BRAND.md`](BRAND.md) (identity, voice, and the user-facing
+pen / field / lane / card rename of these same terms),
+[`DESIGN-SYSTEM.md`](DESIGN-SYSTEM.md) (the authoritative token
+contract), and [`UX-GUIDELINES.md`](UX-GUIDELINES.md) (interaction
+patterns). The renames there are copy-only — the terms in this glossary
+remain the wire and code vocabulary.
+
 ## Terms
 
 ### Card

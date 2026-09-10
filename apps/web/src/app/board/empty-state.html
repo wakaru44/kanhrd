@@ -1,13 +1,33 @@
 @if (show()) {
-  <div class="empty-state">
-    <h2>{{ noHostsConfigured() ? "Connect a herdr host to get started" : "Waiting for herdr to come online" }}</h2>
-    <p>Add a host to <code>kanhrd.config.yaml</code>:</p>
-    <pre class="config-snippet">{{ configSnippet }}</pre>
-    <p>Then start the bridge:</p>
-    <pre class="config-snippet">{{ startCommand }}</pre>
-    <div class="heartbeat">
-      <span class="pulse-dot"></span>
-      <span>waiting for host…</span>
+  @if (variant() === 'noMatches') {
+    <div class="empty-state no-matches">
+      <h2>{{ copy.emptyState.noMatches }}</h2>
+      <button type="button" class="action" (click)="clearFilters.emit()">
+        {{ copy.emptyState.noMatchesAction }}
+      </button>
     </div>
-  </div>
+  } @else {
+    <div class="empty-state">
+      <h2>{{ copy.emptyState.noPens }}</h2>
+      <p>{{ copy.emptyState.noPensBody }}</p>
+      <div class="snippet-row">
+        <pre class="config-snippet">{{ configSnippet }}</pre>
+        <button type="button" class="action copy-action" (click)="copySnippet()">
+          <svg lucideCopy class="icon"></svg>
+          <span>{{ copied() ? 'copied' : 'copy' }}</span>
+        </button>
+      </div>
+      <p>{{ copy.emptyState.noPensThen }}</p>
+      <pre class="config-snippet">{{ startCommand }}</pre>
+      <p>
+        <a class="guide-link" [href]="operatingGuideUrl" target="_blank" rel="noreferrer">
+          {{ copy.emptyState.noPensDocsLink }}
+        </a>
+      </p>
+      <div class="heartbeat">
+        <span class="pulse-dot"></span>
+        <span>{{ copy.emptyState.waitingForPen }}</span>
+      </div>
+    </div>
+  }
 }

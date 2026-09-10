@@ -1,88 +1,160 @@
+/*
+ * Pane detail — tokens only (docs/DESIGN-SYSTEM.md). The title is
+ * `--font-ui` at `--fw-medium`: a pane title is a repeated technical
+ * identifier and the display serif never lands on one. Ids, revisions and
+ * durations are `--font-mono` with tabular numerals so the strip does not
+ * shimmer as it updates.
+ */
+
 .pane-detail {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
+  font-family: var(--font-ui);
+  color: var(--ink);
+}
+
+.icon {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  flex: none;
+  stroke: currentColor;
 }
 
 .detail-header {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.6rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-1);
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: var(--elev-2);
+  background: var(--paper-sunk);
   flex: none;
 
   .back {
-    color: var(--text-dim);
-    text-decoration: none;
-    font-size: 0.85rem;
-    flex: none;
-  }
-
-  .title-block {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
+    gap: var(--sp-2);
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: var(--fs-small);
+    line-height: var(--lh-small);
+    font-weight: var(--fw-semi);
+    padding: var(--sp-1) var(--sp-2);
+    border-radius: var(--radius-md);
+    flex: none;
+    order: 0;
 
-    h1 {
-      margin: 0;
-      font-size: 1rem;
-      font-weight: 600;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+    &:hover,
+    &:focus-visible {
+      color: var(--ink);
     }
   }
 
-  .status-dot {
+  .pane-title {
+    order: 1;
+    margin: 0;
+    min-width: 0;
+    flex: 1 1 auto;
+    font-family: var(--font-ui);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    font-weight: var(--fw-medium);
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Host seal (hanko): hairline ochre outline, mono glyph, never filled. */
+  .host-seal {
+    order: 2;
     flex: none;
-    width: 0.6rem;
-    height: 0.6rem;
-    border-radius: 50%;
-    background: var(--status-unknown);
+    padding: 0 var(--sp-2);
+    border: 1px solid var(--ochre-line);
+    border-radius: var(--radius-sm);
+    background: none;
+    font-family: var(--font-mono);
+    font-size: var(--fs-caption);
+    line-height: var(--lh-caption);
+    color: var(--ink-soft);
+  }
+
+  /* Metadata wraps beneath the title rather than truncating it. */
+  .meta-strip {
+    order: 3;
+    flex: 1 0 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-1) var(--sp-3);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--fs-caption);
+    line-height: var(--lh-caption);
+    color: var(--ink-mute);
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    font-family: var(--font-ui);
+    color: var(--status-unknown-ink);
 
     &.working {
-      background: var(--status-working);
+      color: var(--status-working-ink);
     }
 
     &.blocked {
-      background: var(--status-blocked);
+      color: var(--status-blocked-ink);
     }
 
     &.idle {
-      background: var(--status-idle);
+      color: var(--status-idle-ink);
     }
 
     &.done {
-      background: var(--status-done);
+      color: var(--status-done-ink);
     }
   }
 
-  .host-chip {
-    flex: none;
-    padding: 0.1rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
+  .stale-marker {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    font-family: var(--font-ui);
+    color: var(--ink-mute);
+
+    .icon {
+      width: var(--icon-sm);
+      height: var(--icon-sm);
+    }
+  }
+}
+
+.status-dot {
+  flex: none;
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: var(--radius-pill);
+  background: var(--status-unknown);
+
+  &.working {
+    background: var(--status-working);
   }
 
-  .pane-id {
-    flex: none;
-    font-family: monospace;
-    font-size: 0.75rem;
-    color: var(--text-dim);
+  &.blocked {
+    background: var(--status-blocked);
   }
 
-  .live-indicator {
-    margin-left: auto;
-    flex: none;
-    font-size: 0.75rem;
-    color: var(--text-dim);
+  &.idle {
+    background: var(--status-idle);
+  }
+
+  &.done {
+    background: var(--status-done);
   }
 }
 
@@ -90,6 +162,7 @@
   flex: 1;
   display: flex;
   min-height: 0;
+  min-width: 0;
 }
 
 .terminal-wrap {
@@ -97,43 +170,185 @@
   flex: 1;
   min-width: 0;
   display: flex;
+  /*
+   * The terminal's breathing room lives here, not on
+   * `.terminal-container`. `FitAddon` sizes the terminal from the computed
+   * height of its parent and subtracts only the *terminal's* own padding,
+   * never the parent's — and `box-sizing: border-box` (styles.scss) makes
+   * that computed height include the parent's padding. Padding on the
+   * container therefore reads to the addon as usable space and it fits a
+   * row more than fits, which the container's `overflow: hidden` then
+   * clips.
+   */
+  padding: var(--sp-2);
 }
 
+/* The terminal owns its own overflow; it never widens the page. */
 .terminal-container {
   flex: 1;
   min-width: 0;
-  padding: 0.5rem;
-  background: var(--bg);
+  overflow: hidden;
+
+  /*
+   * The terminal owns the vertical axis. Nothing in the chain above it
+   * scrolls at phone size, so without this reservation the browser treats
+   * a vertical swipe over the terminal as a page gesture and Chrome on a
+   * phone turns a downward one into pull-to-refresh. `pan-x` and
+   * `pinch-zoom` stay with the browser — only `pan-y` is claimed — and
+   * taps are unaffected, so tap-to-focus and the on-screen keyboard still
+   * work. `Terminal.scrollLines` is driven from the touch handlers in
+   * pane-detail.ts; `overscroll-behavior-y` is the belt for any Chromium
+   * that still starts a chain here.
+   */
+  touch-action: pan-x pinch-zoom;
+  overscroll-behavior-y: contain;
+  background: var(--paper);
+  font-family: var(--font-mono);
 }
 
-.terminal-loading {
+.terminal-status {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--bg) 70%, transparent);
-  color: var(--text-dim);
-  font-size: 0.85rem;
+  pointer-events: none;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.terminal-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  max-width: var(--content-max-width);
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: var(--elev-1);
+  border-radius: var(--radius-md);
+  pointer-events: auto;
+
+  .state-line {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: 0;
+  }
+
+  .state-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+  }
+}
+
+/* Loading: an ochre dot pulse, no spinner icon — see the icon set doc. */
+.terminal-loading {
+  flex-direction: row;
+  color: var(--ink-mute);
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+  border: none;
   pointer-events: none;
 }
 
-.stats-strip {
-  flex: none;
-  display: flex;
-  gap: 0.75rem;
-  padding: 0.3rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-1);
-  color: var(--text-dim);
-  font-size: 0.72rem;
+.pulse-dot {
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: var(--radius-pill);
+  background: var(--ochre);
+  animation: pane-detail-pulse var(--motion-slow) var(--ease-in-out) infinite alternate;
 }
 
-.graphics-panel {
-  flex: none;
-  width: 240px;
-  border-left: 1px solid var(--border);
-  padding: 0.75rem;
-  color: var(--text-dim);
-  font-size: 0.8rem;
+@keyframes pane-detail-pulse {
+  from {
+    opacity: 0.35;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.terminal-failed .state-line {
+  color: var(--status-blocked-ink);
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: var(--elev-3);
+  border-radius: var(--radius-md);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font: inherit;
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--ochre-line);
+  }
+}
+
+.state-back {
+  color: var(--ochre-ink);
+  font-weight: var(--fw-semi);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+}
+
+:where(a, button):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Touch: every control in this view clears the 40x40 minimum. */
+@media (pointer: coarse) {
+  .detail-header .back,
+  .retry,
+  .state-back {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Full-screen terminal; the header stays put so the back control is
+     visible without scrolling. */
+  .pane-detail {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .detail-header {
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .detail-header .pane-title {
+    flex: 1 0 100%;
+    order: 1;
+  }
 }

@@ -2,7 +2,8 @@ import { provideZonelessChangeDetection } from "@angular/core";
 import { TestBed } from "@angular/core/testing";
 import { provideRouter } from "@angular/router";
 import type { BridgeCapabilities, Pane } from "@kanhrd/schema";
-import { Card } from "./card";
+import { CARD_COPY, Card } from "./card";
+import { COPY } from "../shared/copy";
 import { PanesStore } from "../state/panes.store";
 
 class FakePanesStore {
@@ -62,16 +63,22 @@ describe("Card", () => {
   function renderFixture(
     p: Pane,
     capabilities: ReadonlyMap<string, BridgeCapabilities> = capsWithTerminal(p.host),
+    compact = false,
   ) {
     const fixture = TestBed.createComponent(Card);
     fixture.componentRef.setInput("pane", p);
     fixture.componentRef.setInput("capabilities", capabilities);
+    fixture.componentRef.setInput("compact", compact);
     fixture.detectChanges();
     return fixture;
   }
 
-  function render(p: Pane, capabilities: ReadonlyMap<string, BridgeCapabilities> = capsWithTerminal(p.host)) {
-    return renderFixture(p, capabilities).nativeElement as HTMLElement;
+  function render(
+    p: Pane,
+    capabilities: ReadonlyMap<string, BridgeCapabilities> = capsWithTerminal(p.host),
+    compact = false,
+  ) {
+    return renderFixture(p, capabilities, compact).nativeElement as HTMLElement;
   }
 
   /** Clicks `selector` inside `fixture` and flushes a change-detection pass so signal-driven `@if`s re-render. */
@@ -80,19 +87,23 @@ describe("Card", () => {
     fixture.detectChanges();
   }
 
+  const tier3 = { paneClose: true, paneCreate: true };
+
+  // --- content ------------------------------------------------------------
+
   it("shows the agent name when present", () => {
     const el = render(pane({ agent: { name: "claude" } }));
-    expect(el.querySelector(".agent-name")?.textContent).toContain("claude");
+    expect(el.querySelector(".card-open")?.textContent).toContain("claude");
   });
 
   it("falls back to title when agent name is absent", () => {
     const el = render(pane({ agent: undefined, title: "fix the bug" }));
-    expect(el.querySelector(".agent-name")?.textContent).toContain("fix the bug");
+    expect(el.querySelector(".card-open")?.textContent).toContain("fix the bug");
   });
 
   it("falls back to a short pane id when both agent and title are absent", () => {
     const el = render(pane({ agent: undefined, title: undefined, id: "abcdefgh-1234" }));
-    expect(el.querySelector(".agent-name")?.textContent).toContain("abcdefgh");
+    expect(el.querySelector(".card-open")?.textContent).toContain("abcdefgh");
   });
 
   it("shows the workspace / tab path", () => {
@@ -100,28 +111,95 @@ describe("Card", () => {
     expect(el.querySelector(".path")?.textContent).toContain("kanhrd / main");
   });
 
-  it("shows the host chip and status dot", () => {
-    const el = render(pane({ host: "desktop", agent_status: "blocked" }));
-    expect(el.querySelector(".host-chip")?.textContent).toContain("desktop");
-    expect(el.querySelector(".status-dot.blocked")).toBeTruthy();
+  it("renders the title in --font-ui at --fw-medium, never the display serif", () => {
+    for (const compact of [false, true]) {
+      const title = render(pane(), capsWithTerminal("laptop"), compact).querySelector(".card-open");
+      const style = getComputedStyle(title as Element);
+      expect(style.fontWeight).toBe("500");
+      expect(style.fontFamily).toContain("Inter");
+      expect(style.fontFamily).not.toContain("Shippori");
+    }
   });
+
+  // --- host seal ----------------------------------------------------------
+
+  it("renders the host as an unfilled outline seal, not a filled colour swatch", () => {
+    const seal = render(pane({ host: "desktop" })).querySelector(".host-seal") as HTMLElement;
+    expect(seal.textContent).toContain("desktop");
+    // the old treatment was [style.background]="hostColor()" — a per-host fill
+    expect(seal.getAttribute("style")).toBeNull();
+    const style = getComputedStyle(seal);
+    expect(style.backgroundColor).toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
+    expect(style.borderTopWidth).toBe("1px");
+  });
+
+  // --- status is never colour alone --------------------------------------
+
+  it("pairs a status dot with a visible status word from copy.ts", () => {
+    for (const status of ["working", "blocked", "done", "idle", "unknown"] as const) {
+      const el = render(pane({ agent_status: status }));
+      expect(el.querySelector(`.status-dot.${status}`)).withContext(status).toBeTruthy();
+      const label = el.querySelector(`.status-label.${status}`);
+      expect(label?.textContent?.trim()).toBe(COPY.status[status]);
+    }
+  });
+
+  it("keeps the status word in the compact variant", () => {
+    const el = render(pane({ agent_status: "blocked" }), capsWithTerminal("laptop"), true);
+    expect(el.querySelector(".status-dot.blocked")).toBeTruthy();
+    expect(el.querySelector(".status-label")?.textContent?.trim()).toBe(COPY.status.blocked);
+    expect(getComputedStyle(el.querySelector(".status-label") as Element).display).not.toBe("none");
+  });
+
+  it("marks the compact variant on the host element", () => {
+    expect(render(pane(), capsWithTerminal("laptop"), true).classList).toContain("compact");
+    expect(render(pane(), capsWithTerminal("laptop"), false).classList).not.toContain("compact");
+  });
+
+  // --- navigation target --------------------------------------------------
 
   it("renders as a link to the pane detail route when the host bridge supports terminal", () => {
     const el = render(pane({ host: "laptop" }), capsWithTerminal("laptop"));
-    const link = el.querySelector("a.card");
+    const link = el.querySelector("a.card-open");
     expect(link).toBeTruthy();
     expect(link?.getAttribute("href")).toBe("/pane/laptop/pane-12345678");
   });
 
   it("renders as a non-clickable card when the host bridge lacks terminal support", () => {
     const el = render(pane({ host: "laptop" }), new Map());
-    expect(el.querySelector("a.card")).toBeFalsy();
+    expect(el.querySelector("a.card-open")).toBeFalsy();
     expect(el.querySelector("div.card--static")).toBeTruthy();
-    // content still renders even without the click affordance
-    expect(el.querySelector(".agent-name")?.textContent?.length).toBeGreaterThan(0);
+    expect(el.querySelector(".card-open")?.textContent?.length).toBeGreaterThan(0);
   });
 
-  it("shows the close button when paneClose capability is true, as a lucide svg icon (not '×' text)", () => {
+  // --- structure: no nested interactive elements ---------------------------
+
+  it("keeps the card's link and its action controls as siblings, never nested", () => {
+    const el = render(pane({ host: "laptop" }), capsWithTerminal("laptop", tier3));
+    const link = el.querySelector("a.card-open") as HTMLElement;
+    const buttons = Array.from(el.querySelectorAll("button"));
+
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const button of buttons) {
+      expect(link.contains(button)).withContext(button.className).toBe(false);
+      expect(button.closest("a")).toBeNull();
+    }
+    expect(link.parentElement).toBe(el.querySelector(".card-actions")?.parentElement ?? null);
+  });
+
+  it("gives the link and every action an accessible name", () => {
+    const el = render(pane({ agent: { name: "claude" }, host: "laptop" }), capsWithTerminal("laptop", tier3));
+    expect(el.querySelector("a.card-open")?.textContent?.trim()).toBe("claude");
+    for (const button of Array.from(el.querySelectorAll("button"))) {
+      const name = button.getAttribute("aria-label") ?? button.textContent?.trim() ?? "";
+      expect(name.length).withContext(button.className).toBeGreaterThan(0);
+      expect(name).toContain("claude");
+    }
+  });
+
+  // --- actions ------------------------------------------------------------
+
+  it("shows the close action when paneClose is true, as a lucide svg icon (not '×' text)", () => {
     const el = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneClose: true }));
     const closeButton = el.querySelector(".card-action.close");
     expect(closeButton).toBeTruthy();
@@ -129,26 +207,93 @@ describe("Card", () => {
     expect(closeButton?.textContent?.trim()).toBe("");
   });
 
-  it("hides the close button when paneClose capability is false", () => {
+  it("hides the close action when paneClose capability is false", () => {
     const el = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneClose: false }));
     expect(el.querySelector(".card-action.close")).toBeFalsy();
   });
 
-  it("shows the split button when paneCreate capability is true, hides it otherwise", () => {
+  it("shows both split directions when paneCreate is true, hides them otherwise", () => {
     const shown = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneCreate: true }));
-    const splitButton = shown.querySelector(".card-action.split");
-    expect(splitButton).toBeTruthy();
-    expect(splitButton?.querySelector("svg")).toBeTruthy();
+    expect(shown.querySelector(".card-action.split-right svg")).toBeTruthy();
+    expect(shown.querySelector(".card-action.split-down svg")).toBeTruthy();
 
     const hidden = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneCreate: false }));
-    expect(hidden.querySelector(".card-action.split")).toBeFalsy();
+    expect(hidden.querySelector(".card-action.split-right")).toBeFalsy();
   });
+
+  it("renders no action row at all when the bridge supports neither split nor close", () => {
+    const el = render(pane({ host: "laptop" }), capsWithTerminal("laptop"));
+    expect(el.querySelector(".card-actions")).toBeFalsy();
+  });
+
+  it("exposes the actions on first render without any hover simulation", () => {
+    const el = render(pane({ host: "laptop" }), capsWithTerminal("laptop", tier3));
+    const actions = el.querySelector(".card-actions") as HTMLElement;
+    const style = getComputedStyle(actions);
+    expect(style.opacity).toBe("1");
+    expect(style.pointerEvents).not.toBe("none");
+    // the overflow trigger (the compact/touch route to the same actions) is
+    // itself a visible control, present from the first render
+    expect(el.querySelector(".card-action.overflow-trigger")).toBeTruthy();
+  });
+
+  it("opens the overflow menu with the capability-supported actions and closes it on Escape", () => {
+    const fixture = renderFixture(pane({ host: "laptop" }), capsWithTerminal("laptop", tier3));
+    const el = fixture.nativeElement as HTMLElement;
+    const trigger = el.querySelector<HTMLButtonElement>(".card-action.overflow-trigger");
+
+    expect(trigger?.getAttribute("aria-expanded")).toBe("false");
+    clickAndSettle(fixture, ".card-action.overflow-trigger");
+
+    const items = Array.from(el.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+    expect(items.map((i) => i.textContent?.trim())).toEqual([
+      CARD_COPY.splitRight,
+      CARD_COPY.splitDown,
+      CARD_COPY.close,
+    ]);
+    expect(trigger?.getAttribute("aria-expanded")).toBe("true");
+
+    items[0].focus();
+    el.querySelector(".actions-overflow")?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    fixture.detectChanges();
+
+    expect(el.querySelector('[role="menu"]')).toBeFalsy();
+    expect(document.activeElement).toBe(trigger as HTMLButtonElement);
+  });
+
+  it("splits through the overflow menu", () => {
+    const fixture = renderFixture(pane({ host: "laptop" }), capsWithTerminal("laptop", tier3));
+    clickAndSettle(fixture, ".card-action.overflow-trigger");
+    clickAndSettle(fixture, '[role="menuitem"]');
+
+    expect(store.splitPane).toHaveBeenCalledWith("laptop", {
+      target_pane_id: "pane-12345678",
+      direction: "right",
+    });
+  });
+
+  it("splits through the inline action", () => {
+    const fixture = renderFixture(pane({ host: "laptop" }), capsWithTerminal("laptop", tier3));
+    clickAndSettle(fixture, ".card-action.split-down");
+
+    expect(store.splitPane).toHaveBeenCalledWith("laptop", {
+      target_pane_id: "pane-12345678",
+      direction: "down",
+    });
+  });
+
+  // --- close confirmation --------------------------------------------------
 
   it("clicking close opens a confirmation modal instead of closing immediately", () => {
     const fixture = renderFixture(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneClose: true }));
     clickAndSettle(fixture, ".card-action.close");
 
-    expect((fixture.nativeElement as HTMLElement).querySelector("app-confirm-modal")).toBeTruthy();
+    const modal = (fixture.nativeElement as HTMLElement).querySelector("app-confirm-modal");
+    expect(modal).toBeTruthy();
+    expect(modal?.querySelector(".modal-title")?.textContent?.trim()).toBe(COPY.confirm.closePane);
+    expect(modal?.querySelector(".modal-body")?.textContent?.trim()).toBe(COPY.confirm.closePaneBody);
     expect(store.closePane).not.toHaveBeenCalled();
   });
 
@@ -158,36 +303,57 @@ describe("Card", () => {
       capsWithTerminal("laptop", { paneClose: true }),
     );
     clickAndSettle(fixture, ".card-action.close");
-    clickAndSettle(fixture, "app-confirm-modal .modal-actions .btn.danger");
+
+    const confirm = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        "app-confirm-modal .modal-actions .btn",
+      ),
+    ).find((b) => b.textContent?.trim() === COPY.confirm.closePaneAction);
+    confirm?.click();
+    fixture.detectChanges();
 
     expect(store.closePane).toHaveBeenCalledWith("laptop", "pane-12345678");
   });
 
-  it("stats badge shows the agent status and an elapsed-time segment", () => {
+  // --- meta ---------------------------------------------------------------
+
+  it("shows an elapsed-time readout of observed client time", () => {
     const el = render(pane({ agent_status: "working" }));
-    const badge = el.querySelector(".stats-badge");
-    expect(badge).toBeTruthy();
-    expect(badge?.textContent).toContain("working");
-    expect(badge?.textContent).toMatch(/\d+[smh]/);
+    expect(el.querySelector(".meta .elapsed")?.textContent).toMatch(/^\d+[smh]$/);
   });
 
-  it("stats badge shows a line count when last_output_snippet is present", () => {
-    const el = render(pane({ last_output_snippet: "line one\nline two\nline three" }));
-    expect(el.querySelector(".stats-badge")?.textContent).toContain("3 lines");
+  it("shows a line count when last_output_snippet is present and omits it when absent", () => {
+    const withSnippet = render(pane({ last_output_snippet: "line one\nline two\nline three" }));
+    expect(withSnippet.querySelector(".meta")?.textContent).toContain("3 lines");
+
+    const without = render(pane({ last_output_snippet: undefined }));
+    expect(without.querySelector(".meta")?.textContent).not.toContain("lines");
   });
 
-  it("stats badge hides the line-count segment when last_output_snippet is absent", () => {
-    const el = render(pane({ last_output_snippet: undefined }));
-    expect(el.querySelector(".stats-badge")?.textContent).not.toContain("lines");
+  // --- no hardcoded copy ---------------------------------------------------
+
+  it("renders no user-facing string that is not copy or pane data", () => {
+    const el = render(
+      pane({ agent: { name: "claude" }, host: "laptop", agent_status: "blocked" }),
+      capsWithTerminal("laptop", tier3),
+    );
+    // Everything the card renders at standard density: pane data, the two
+    // mono data readouts, and the status word from copy.ts. Strip them and
+    // nothing must be left over — an inlined literal would survive.
+    const data = ["claude", "laptop", "kanhrd / main", COPY.status.blocked];
+    let text = (el.querySelector(".card") as HTMLElement).textContent ?? "";
+    for (const value of data) {
+      text = text.replace(value, "");
+    }
+    text = text.replace(/\d+[smh]/, "").replace(/\d+ lines/, "");
+    expect(text.trim()).toBe("");
   });
 
-  it("clicking the close/split buttons does not navigate the card link", () => {
-    const el = render(pane({ host: "laptop" }), capsWithTerminal("laptop", { paneClose: true, paneCreate: true }));
-    const closeEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
-    spyOn(closeEvent, "preventDefault").and.callThrough();
-
-    el.querySelector<HTMLButtonElement>(".card-action.close")?.dispatchEvent(closeEvent);
-
-    expect(closeEvent.defaultPrevented).toBe(true);
+  it("labels its actions from copy, with the sanctioned close verb", () => {
+    expect(CARD_COPY.close).toBe(COPY.confirm.closePaneAction);
+    const el = render(pane({ agent: { name: "claude" }, host: "laptop" }), capsWithTerminal("laptop", tier3));
+    expect(el.querySelector(".card-action.close")?.getAttribute("aria-label")).toContain(
+      COPY.confirm.closePaneAction,
+    );
   });
 });

@@ -6,8 +6,34 @@ Playwright driver L5B used during tier-2 validation
 (`tmp/foreman/VALIDATION-TIER2.md`); future tiers extend this suite instead
 of re-implementing a driver from `/tmp/`.
 
+## This suite drives a REAL herdr — read this first
+
+These specs are not sandboxed. They call the `herdr` CLI against whatever
+server is running on this machine, take a pane out of `herdr pane list`, and
+act on it: `tier2` types `echo <marker>` into it, and `tier3` exercises
+lifecycle, which **closes real tabs and workspaces**. On a developer machine
+that is a live session.
+
+So the suite is **opt-in**:
+
+```bash
+KANHRD_E2E_LIVE_HERDR=1 pnpm --filter @kanhrd/web test:e2e
+```
+
+Without it every spec skips with an explanatory message. Reachability is not
+consent — a herdr being up says nothing about whether its panes are yours to
+type into. This mirrors how the bridge's integration suite gates on
+`KANHRD_INT_HERDR_SOCKET`.
+
+Why the gate exists: on 2026-09-10 a suite run typed `echo <marker>` into the
+operator's real panes, one of which was running an agent, which executed it as
+a prompt. Nothing was damaged — the payload is deliberately non-destructive —
+but it should not have been possible without an explicit opt-in.
+
 ## Prerequisites
 
+0. `KANHRD_E2E_LIVE_HERDR=1` in the environment (see above), and a herdr whose
+   panes you are willing to have typed into and closed.
 1. A local herdr server reachable at `~/.config/herdr/herdr.sock`, with at
    least one open pane. The suite pre-flight-checks this in `beforeAll` and
    skips with a clear message (not a hard fail) if herdr isn't running or has
@@ -64,9 +90,11 @@ pnpm test:e2e:ui       # interactive debug UI
 - **`fixtures/kanhrd.ts`** — Playwright `test.extend` providing:
   - `app`: navigates to `/` and waits for the board's loading state to
     resolve, so specs don't repeat that boilerplate.
-  - `panePicker`: reads the first available card's `{ host, id }` from its
-    `/pane/:host/:id` link, so tests never hardcode a pane id that may not
-    exist on the next run.
+  - `panePicker`: reads the first terminal-capable card's `{ host, id }`
+    from its `<a class="card-open">` link, so tests never hardcode a pane id
+    that may not exist on the next run. The card is a `<div class="card">`
+    grid whose opening link and `.card-actions` are siblings — `.card` is
+    not an anchor, so never read `href` off it.
 - **`fixtures/herdr.ts`** — thin wrapper around the `herdr` CLI (assumed on
   `PATH`) for driving/verifying real herdr state independently of the
   bridge and browser: `herdrPaneList`, `herdrPaneRead`, `herdrPaneSendText`,
@@ -132,12 +160,28 @@ and `mobile` projects in one go; each project's `testMatch`/`testIgnore`
 keeps `mobile.spec.ts` off the desktop project and the tier specs off the
 mobile project.
 
-Known layout quirks at this width (intentional, not bugs — see comments in
-`mobile.spec.ts`):
+`mobile.spec.ts` implements the numbered acceptance criteria in
+`docs/UX-GUIDELINES.md` § "E2E-assertable requirements" — each test title
+carries the criteria numbers it covers, so a renumbering there is traceable
+here. Coverage: board populated (1-9), board paging and the status switcher
+(10-22), board empty (23-24), pane detail (25-28), settings (29-31), the nav
+drawer (32-36) and toasts (37-38).
 
-- `.rail` (workspace/tab nav) is `display: none` below 900px, with no
-  toggle affordance replacing it yet.
-- `.board-grid` switches to horizontal scroll-snap columns below 1100px.
+Criterion 13 ("a hard fling must not skip a column") is the one
+individually skipped test in the suite. `scroll-snap-stop: always` is
+declared and asserted by criterion 10; headless Chromium's synthesized
+gesture path does not honour it (a bare control page with only those CSS
+declarations overshoots identically), while real iOS/Android do. The skip
+carries that reason inline.
+
+Layout facts at this width (intentional, not bugs):
+
+- `.rail` (field/lane nav) is `display: none` below 900px; the header
+  hamburger (`LucideMenu`) opens it as an overlay drawer with a backdrop.
+- The board becomes a one-column-per-screen pager: `.board-strip` with
+  `scroll-snap-type: x mandatory` and `flex: 0 0 100%` columns, driven by
+  the `app-status-switcher` segmented control. The specs select
+  `.board-strip`, never the `.board-grid` compatibility alias.
 
 ## Adding a new tier's tests
 
@@ -156,3 +200,22 @@ side-effect-free shell commands), never destructive input. A pane under
 test may be a plain shell (as used here) or, in principle, a real running
 agent — harmless markers keep the suite safe to run against either without
 special-casing which one it is.
+
+## Conventions this suite holds itself to
+
+- **No hover-reveal assertions.** Card and rail-row actions are visible on
+  first render (`docs/UX-GUIDELINES.md`, "Visible affordances"); rail rows
+  and compact/touch cards act through a visible `LucideMoreHorizontal`
+  overflow trigger. A spec that hovers before clicking is a stale spec.
+- **Expected copy is imported, never retyped.** Confirmation titles, bodies
+  and toast text come from `src/app/shared/copy.ts` (`COPY.confirm.*`,
+  `COPY.toast.*`), so the next copy change fails in exactly one place. The
+  settings screen's own `SETTINGS_COPY` block is the one exception — it
+  still lives in `src/app/settings/settings.ts` pending a lift into
+  `copy.ts`.
+- **Keyboard bindings are narrow on purpose.** An unmodified `?` is not
+  forwarded at all and an unmodified `Escape` only while app chrome is
+  open; help is `prefix + ?`. Specs assert that narrowing rather than the
+  old global behaviour.
+- **`--danger-fill` is reserved** for irrecoverable local-data loss, so a
+  confirm button is matched on `.btn.primary`, not `.btn.danger`.

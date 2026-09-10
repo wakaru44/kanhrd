@@ -1,46 +1,44 @@
 <div class="settings">
   <header class="settings-header">
-    <a routerLink="/" class="back">&larr; Back to board</a>
-    <h1>Settings</h1>
+    <a routerLink="/" class="back">
+      <svg lucideArrowLeft class="icon"></svg>
+      <span>{{ copy.nav.backToBoard }}</span>
+    </a>
+    <h1>{{ copy.nav.settings }}</h1>
   </header>
 
   <section class="settings-section">
-    <h2>Appearance</h2>
+    <h2>{{ text.appearance }}</h2>
 
     <div class="setting-row">
-      <span class="setting-label">Theme</span>
-      <button type="button" class="btn" (click)="toggleTheme()">
-        {{ themeService.theme() === "dark" ? "Switch to light" : "Switch to dark" }}
-      </button>
+      <span class="setting-label">{{ text.theme }}</span>
+      <button type="button" class="btn" (click)="toggleTheme()">{{ themeLabel() }}</button>
     </div>
 
     <div class="setting-row">
-      <span class="setting-label">Density</span>
+      <span class="setting-label">{{ text.density }}</span>
       <div class="segmented">
         <button
           type="button"
           class="segment"
           [class.active]="density() === 'comfortable'"
           (click)="setDensity('comfortable')"
-        >Comfortable</button>
+        >{{ text.comfortable }}</button>
         <button
           type="button"
           class="segment"
           [class.active]="density() === 'compact'"
           (click)="setDensity('compact')"
-        >Compact</button>
+        >{{ text.compact }}</button>
       </div>
     </div>
   </section>
 
   <section class="settings-section">
-    <h2>Terminal</h2>
-    <p class="section-note">
-      Applied to every open terminal the same way — panes are told apart by title, host chip, and labels,
-      not by terminal color.
-    </p>
+    <h2>{{ text.terminal }}</h2>
+    <p class="section-note">{{ text.terminalNote }}</p>
     <div class="setting-row">
-      <label class="setting-label" for="terminal-theme">Color theme</label>
+      <label class="setting-label" for="terminal-theme">{{ text.terminalTheme }}</label>
       <select
         id="terminal-theme"
         class="text-input"
@@ -52,31 +50,42 @@
         }
       </select>
     </div>
+
+    <div class="setting-row">
+      <span class="setting-label" id="terminal-font-size-label">{{ text.terminalFontSize }}</span>
+      <div class="segmented" role="group" aria-labelledby="terminal-font-size-label">
+        @for (size of terminalFontSizes; track size) {
+          <button
+            type="button"
+            class="segment segment-numeric"
+            [class.active]="terminalFontSizeService.size() === size"
+            [attr.aria-pressed]="terminalFontSizeService.size() === size"
+            (click)="setTerminalFontSize(size)"
+          >{{ size }}</button>
+        }
+      </div>
+    </div>
   </section>
 
   <section class="settings-section">
-    <h2>Runtime</h2>
-    <p class="section-note">
-      The output poll interval is bridge-owned. Each connected host advertises its own cadence below.
-    </p>
+    <h2>{{ text.runtime }}</h2>
+    <p class="section-note">{{ text.runtimeNote }}</p>
 
     @if (hosts().length === 0) {
-      <p class="empty">No hosts connected yet.</p>
+      <p class="empty">{{ text.noPensConnected }}</p>
     } @else {
       <div class="host-poll-list">
         @for (host of hosts(); track host.name) {
           <div class="setting-row">
-            <span class="setting-label">{{ host.name }}</span>
-            <span class="setting-value">
-              {{ advertisedPollInterval(host.name) ? advertisedPollInterval(host.name) + "ms" : "n/a" }}
-            </span>
+            <span class="setting-label pen-name">{{ host.name }}</span>
+            <span class="setting-value">{{ advertisedPollLabel(host.name) }}</span>
           </div>
         }
       </div>
     }
 
     <div class="setting-row">
-      <label class="setting-label" for="requested-poll-ms">Requested override (ms)</label>
+      <label class="setting-label" for="requested-poll-ms">{{ text.pollOverride }}</label>
       <input
         id="requested-poll-ms"
         type="number"
@@ -86,28 +95,24 @@
         (input)="onRequestedPollIntervalInput($any($event.target).value)"
       />
     </div>
-    <p class="section-note coming-soon">
-      Coming soon — the bridge doesn't yet accept a per-subscription poll-interval override, so this value
-      is saved locally but has no effect on live polling.
-    </p>
+    <p class="section-note">{{ text.pollOverrideNote }}</p>
   </section>
 
   <section class="settings-section">
-    <h2>Servers / hosts</h2>
+    <h2>{{ text.pens }}</h2>
     <p class="section-note">
-      The host list is bridge-owned. To add, remove, or reconfigure a host, edit
-      <code>kanhrd.config.yaml</code> on the bridge host — this screen is read-only.
+      {{ text.pensNote }} <code>{{ text.pensNoteFile }}</code> {{ text.pensNoteTail }}
     </p>
 
     @if (hosts().length === 0) {
-      <p class="empty">No hosts configured.</p>
+      <p class="empty">{{ text.noPens }}</p>
     } @else {
       <ul class="host-list">
         @for (host of hosts(); track host.name) {
           <li class="host-row">
             <span class="conn-dot" [class.ok]="host.connected" [class.err]="!host.connected"></span>
             <span class="host-name">{{ host.name }}</span>
-            <span class="host-status">{{ host.connected ? "connected" : "not connected" }}</span>
+            <span class="host-status">{{ host.connected ? text.connected : text.notConnected }}</span>
             @if (host.last_error) {
               <span class="host-error">{{ host.last_error }}</span>
             }
@@ -118,53 +123,51 @@
   </section>
 
   <section class="settings-section">
-    <h2>Keyboard</h2>
-    <p class="section-note">
-      Herdr-style prefix shortcuts (tmux convention: press the prefix, release, then the action key).
-      Rebinding isn't available yet — this table is read-only besides resetting the prefix.
-    </p>
+    <h2>{{ text.keyboard }}</h2>
+    <p class="section-note">{{ text.keyboardNote }}</p>
     <p class="current-prefix">
-      Current prefix: <kbd>{{ currentPrefix() }}</kbd>
+      current prefix: <kbd>{{ currentPrefix() }}</kbd>
       <span class="prefix-source">({{ prefixSourceLabel() }})</span>
     </p>
 
-    <table class="shortcut-table">
-      <thead>
-        <tr>
-          <th>Action</th>
-          <th>Default</th>
-          <th>Current</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (binding of shortcutRows(); track binding.action) {
+    <div class="table-scroll">
+      <table class="shortcut-table">
+        <thead>
           <tr>
-            <td>{{ binding.description }}</td>
-            <td><kbd>{{ defaultBindingLabel(binding) }}</kbd></td>
-            <td><kbd>{{ currentBindingLabel(binding) }}</kbd></td>
+            <th>{{ text.colAction }}</th>
+            <th>{{ text.colDefault }}</th>
+            <th>{{ text.colCurrent }}</th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (binding of shortcutRows(); track binding.action) {
+            <tr>
+              <td>{{ binding.description }}</td>
+              <td><kbd>{{ defaultBindingLabel(binding) }}</kbd></td>
+              <td><kbd>{{ currentBindingLabel(binding) }}</kbd></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
 
-    <button type="button" class="btn" (click)="resetKeyboardDefaults()">Reset to defaults</button>
+    <button type="button" class="btn" (click)="resetKeyboardDefaults()">{{ text.resetDefaults }}</button>
   </section>
 
   <section class="settings-section">
-    <h2>Data</h2>
-    <p class="section-note">
-      Clears filters, theme, density, and every other kanhrd setting stored in this browser. This does not
-      affect the bridge or any host.
-    </p>
-    <button type="button" class="btn danger" (click)="requestClearData()">Clear local data</button>
+    <h2>{{ text.data }}</h2>
+    <p class="section-note">{{ text.dataNote }}</p>
+    <button type="button" class="btn danger" (click)="requestClearData()">{{ text.clearData }}</button>
   </section>
 </div>
 
 @if (showClearConfirm()) {
   <app-confirm-modal
-    title="Clear local data?"
-    body="This clears filters, theme, density, and other saved settings from this browser and reloads the page. This cannot be undone."
-    confirmLabel="Clear data"
+    [title]="text.clearTitle"
+    [body]="text.clearBody"
+    [previewItems]="clearPreview"
+    [confirmLabel]="text.clearAction"
+    [cancelLabel]="copy.confirm.keep"
     [danger]="true"
     (confirmed)="confirmClearData()"
     (cancelled)="cancelClearData()"

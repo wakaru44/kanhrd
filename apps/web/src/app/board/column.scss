@@ -1,54 +1,95 @@
+/*
+ * Status column — docs/DESIGN-SYSTEM.md "Status column". No background
+ * fill, no radius, no shadow: a hairline under a display-serif title with a
+ * mono count on the right. No drag affordance of any kind.
+ */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
 .column {
   display: flex;
   flex-direction: column;
-  min-width: 260px;
-  scroll-snap-align: start;
-  background: var(--surface-1);
-  border-radius: 10px;
-  /* Settings > Appearance > density scales this via --density-scale (styles.scss). */
-  padding: calc(0.75rem * var(--density-scale, 1));
-  gap: calc(0.6rem * var(--density-scale, 1));
+  min-width: 0;
+  height: 100%;
+  /* Settings > Appearance > density scales padding only, never a control. */
+  gap: calc(var(--sp-2) * var(--density-scale, 1));
 }
 
 .column-header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-
-  h2 {
-    margin: 0;
-    font-size: calc(0.85rem * var(--density-text-scale, 1));
-    line-height: var(--density-line-height, 1.4);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-dim);
-  }
-
-  .count {
-    font-size: calc(0.75rem * var(--density-text-scale, 1));
-    color: var(--text-dim);
-    background: var(--surface-2);
-    border-radius: 999px;
-    padding: 0.05rem 0.5rem;
-  }
+  gap: var(--sp-2);
+  padding-bottom: calc(var(--sp-2) * var(--density-scale, 1));
+  border-bottom: 1px solid var(--rule-strong);
 }
 
-.drop-list {
+.column-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  font-weight: var(--fw-regular);
+  color: var(--ink);
+}
+
+.count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-mute);
+}
+
+.column-body {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  min-height: 2rem;
+  gap: var(--card-gap);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  /* The card list is the board's vertical scroller; a swipe past either
+   * end stays with it rather than becoming page overscroll (which a phone
+   * browser reads as pull-to-refresh). */
+  overscroll-behavior-y: contain;
+
+  /* An empty column keeps its slot and header; the body collapses. No prose. */
+  &.is-empty {
+    min-height: 0;
+  }
 }
 
 .virtual-viewport {
-  // Virtual scroll needs a bounded height to compute which items are
-  // visible — a column with >20 cards gets a tall-but-capped scroll area
-  // instead of growing the whole page.
-  height: min(32rem, 70vh);
+  /* Virtual scroll needs a bounded height to know what is visible; the
+   * column body is that bound at every width. A `vh` height here would
+   * make the virtualized column the only element on the board with its
+   * own scroll geometry. */
+  height: 100%;
+  /* The viewport, not `.column-body`, is the scroller in this path. */
+  overscroll-behavior-y: contain;
 
+  /*
+   * `itemSize` is a promise about the rendered row: exactly
+   * --card-compact-height + --card-gap. The compact card only reaches
+   * that height when its vertical padding is zeroed (touch); on a fine
+   * pointer its content overshoots by a fraction of a pixel, and the CDK
+   * multiplies that fraction by the item count — the scroll range and the
+   * real content drift apart, so the last rows never come fully into
+   * view. The column owns the arithmetic, so it pins the row box.
+   */
   ::ng-deep .cdk-virtual-scroll-content-wrapper > app-card {
     display: block;
-    margin-bottom: 0.5rem;
+    height: var(--card-compact-height);
+    margin-bottom: var(--card-gap);
+  }
+}
+
+@media (max-width: 900px) {
+  .column {
+    /* One column per screen: the page gutters live here, inside the strip. */
+    padding: 0 var(--sp-4) var(--sp-4);
   }
 }
