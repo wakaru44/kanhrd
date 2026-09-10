@@ -1,0 +1,67 @@
+apps/web/src/app/board/status-switcher.ts
+  s_cc22a38b40f3d3::t_fbde9d5ae35cd6 29-36
+apps/web/src/app/board/swimlane.scss
+  s_cc22a38b40f3d3::t_c6da60748b9c00 1-91
+apps/web/src/app/board/swimlane.spec.ts
+  s_cc22a38b40f3d3::t_e9520367af9423 3,7,10-15,108-112
+  s_cc22a38b40f3d3::t_7bc0552eec618b 1-2,4-6,8-9,16-107,113-157
+apps/web/src/app/board/status-switcher.html
+  s_cc22a38b40f3d3::t_fbde9d5ae35cd6 10
+apps/web/src/app/settings/settings.spec.ts
+  s_cc22a38b40f3d3::t_74c7b92821f627 195-198
+apps/web/src/app/board/filter-bar.spec.ts
+  s_cc22a38b40f3d3::t_74c7b92821f627 190-191
+  s_cc22a38b40f3d3::t_a477f71dff8fad 6-7,109-189
+apps/web/src/app/board/board.spec.ts
+  s_cc22a38b40f3d3::t_865cff2c9bf446 1131-1397
+  s_cc22a38b40f3d3::t_06630373b0ff9e 7,15
+  s_cc22a38b40f3d3::t_74c7b92821f627 1532-1533
+  s_cc22a38b40f3d3::t_816c4080d53f31 1398-1531
+apps/web/src/app/shared/copy.ts
+  s_cc22a38b40f3d3::t_9e8975ee170ecc 260-261
+  s_cc22a38b40f3d3::t_295c113db4bda9 106-120
+apps/web/src/app/board/swimlane.html
+  s_cc22a38b40f3d3::t_1955dd0edb7d94 8-10
+  s_cc22a38b40f3d3::t_ecaa8bd9c79c2c 2,4-5,7,11-18
+  s_cc22a38b40f3d3::t_c6da60748b9c00 6
+  s_cc22a38b40f3d3::t_41b0c06467648d 1
+  s_cc22a38b40f3d3::t_44d1844fc6825d 3
+apps/web/src/app/settings/settings.ts
+  s_cc22a38b40f3d3::t_9e8975ee170ecc 121
+apps/web/src/app/board/board.ts
+  s_cc22a38b40f3d3::t_5def89ca2acc4a 21,47-50,52,97,124-130,135-147
+  s_cc22a38b40f3d3::t_41b0c06467648d 23,148-152
+apps/web/src/app/board/board.scss
+  s_cc22a38b40f3d3::t_79907566c58fdc 248-258
+  s_cc22a38b40f3d3::t_874b96dfd89ca3 259
+apps/web/src/app/board/swimlane.ts
+  s_cc22a38b40f3d3::t_599538e0896c80 15-28
+  s_cc22a38b40f3d3::t_55ecb983a34db6 1-12,14,29-30,88-108,113-183
+  s_cc22a38b40f3d3::t_bdc9299411a4be 13,31-87,109-112
+apps/web/src/app/board/filter-bar.html
+  s_cc22a38b40f3d3::t_8a78400666c873 38-59
+apps/web/src/app/board/filter-bar.scss
+  s_cc22a38b40f3d3::t_3d124afdd673d2 108,122-125
+  s_cc22a38b40f3d3::t_e4449c7426a9ce 104-107,109-121,126
+apps/web/src/app/board/filter-bar.ts
+  s_cc22a38b40f3d3::t_8a78400666c873 5,8-19,29,31,34-44
+  s_cc22a38b40f3d3::t_3725b6997cb20a 45
+apps/web/src/app/board/board.html
+  s_cc22a38b40f3d3::t_cf43325d2218ef 92,100,104-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0bf90e8ac2b4e667bfd25cebe876cb4ad0862b5d",
+  "prompts": {},
+  "sessions": {
+    "s_cc22a38b40f3d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93fe3ed2-366b-4659-9492-d600bcf7a5d9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
