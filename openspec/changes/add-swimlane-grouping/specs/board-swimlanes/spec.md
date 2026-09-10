@@ -2,21 +2,39 @@
 
 ### Requirement: The board groups cards into swimlanes by a chosen dimension
 The board SHALL support grouping cards into horizontal swimlanes by one
-of: none, host, working directory, or tab. `none` SHALL be the default
-and SHALL render the board exactly as it renders today.
+of: none, host, repository, checkout path, or tab. `none` SHALL be the
+default and SHALL render the board exactly as it renders today.
 
-Each swimlane SHALL contain the full set of visible status columns.
-Status columns SHALL remain the vertical axis and SHALL keep their
-order, their filter behaviour and their empty slots within every
-swimlane.
+Repository and checkout path SHALL both be offered, from
+`Pane.project.repo_name` and `Pane.project.checkout_path`. They are not
+interchangeable: grouping by repository holds linked worktrees of one
+repo together, while grouping by checkout path separates them, and both
+layouts are in real use.
+
+Each swimlane SHALL contain the full set of visible columns — status
+columns and any user-created parked columns alike. Columns are the
+vertical axis and swimlanes the horizontal one; a band cuts across every
+column rather than replacing any of them.
+
+Status columns SHALL keep their order, their filter behaviour and their
+empty slots within every swimlane. A swimlane holding no cards in any
+column SHALL NOT be rendered.
 
 Grouping SHALL be a browser-held board arrangement. It SHALL NOT call
 any wire method, alter any pane's workspace, tab or status, or persist
 to herdr.
 
-#### Scenario: Grouping by working directory
-- **WHEN** the operator groups by working directory and cards span three checkouts
-- **THEN** the board renders three bands, each showing every visible status column, and each card appears in the band matching its checkout
+#### Scenario: Grouping by checkout path
+- **WHEN** the operator groups by checkout path and cards span three checkouts of one repository
+- **THEN** the board renders three bands, each showing every visible column, and each card appears in the band matching its checkout
+
+#### Scenario: Grouping by repository
+- **WHEN** the operator groups by repository and those same three checkouts are linked worktrees of one repo
+- **THEN** the board renders one band containing all of their cards
+
+#### Scenario: An empty band
+- **WHEN** filters leave a band with no cards in any column
+- **THEN** that band is not rendered, and the remaining bands close up
 
 #### Scenario: Status keeps its meaning
 - **WHEN** a swimlane dimension is active
@@ -38,6 +56,10 @@ operation with its own capability requirements and is out of scope.
 #### Scenario: No drag affordance on a band
 - **WHEN** the pointer or keyboard focuses a card in a grouped board
 - **THEN** nothing implies the card can be dragged to another band
+
+#### Scenario: A parked column inside a band
+- **WHEN** a parked column exists and a swimlane dimension is active
+- **THEN** the parked column appears in every rendered band, beside the status columns, and parking a card changes its column without changing its band
 
 ### Requirement: The grouping choice persists and is reachable
 The chosen dimension SHALL persist in the browser under kanhrd's

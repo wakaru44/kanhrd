@@ -165,7 +165,13 @@
 - [x] 14.4 Style-lint test: no raw hex outside `tokens.scss`; no HTML
       entity glyph in templates
 - [x] 14.5 Playwright: empty state renders sample config + start
-      command; open a scoped URL, confirm scope pill and clear action
+      command; open a scoped URL, confirm scope pill and clear action.
+      Evidence: `e2e/empty-state.spec.ts:45-68` asserts both
+      `.config-snippet` blocks, the `.copy-action`, `COPY.emptyState.noHostsThen`,
+      a non-trivial start command and the `.guide-link`;
+      `e2e/rail-nav.spec.ts:51-94` opens a scoped URL, asserts the
+      `.scope-pill` is visible and names the tab, clicks
+      `.scope-pill-close` and asserts the pill is gone.
 - [x] 14.6 Playwright `mobile` project: extend `e2e/mobile.spec.ts` to
       the board pager and switcher per the numbered assertions in
       `docs/UX-GUIDELINES.md` — full-width column with no visible
@@ -173,11 +179,30 @@
       skip, resting offset is a multiple of the strip width, every
       status reachable from the switcher, selected segment count matches
       the rendered card count, filtered-out status repaging, and the
-      all-hidden empty-state fallback
+      all-hidden empty-state fallback.
+      Evidence: `e2e/mobile.spec.ts` — [10] snap contract, [11] one
+      column fills the strip with no neighbour peeking, [12][14] one
+      swipe advances one column and never rests between pages,
+      [15][16][17][18] the switcher reaches every status and is the
+      strip's selection, [19] the switcher stays put while cards scroll,
+      [20] hiding the current status repages to a visible column, [21]
+      hiding every status falls back to the no-matches empty state.
+      [13] (hard fling) is a documented `test.skip`: headless Chromium
+      ignores `scroll-snap-stop` on synthesized gestures, so the
+      declaration is asserted by [10] instead.
 - [x] 14.7 Playwright `mobile` project: extend `e2e/mobile.spec.ts` to
       pane detail, settings and the drawer per the same numbered
       assertions (focus containment, Escape restore, 900px resize,
-      terminal key ownership, stacked setting rows, top toast stack)
+      terminal key ownership, stacked setting rows, top toast stack).
+      Evidence: `e2e/mobile.spec.ts` — [25][27] tapping a card opens the
+      terminal without horizontal scroll, [26] the back control is
+      visible and focusable first, [28] Escape and `?` reach the
+      terminal not the app, [29][30][31] settings rows stack and stay
+      tappable, [32][35] the drawer opens as an overlay and the backdrop
+      dismisses it, [33][34] focus containment and Escape restore,
+      [36] crossing back above 900px restores the inline rail,
+      [37] toasts stack below the header, [38] a dialog's buttons stay
+      hittable while a toast shows.
 
 ## 15. Migration and cutover
 
