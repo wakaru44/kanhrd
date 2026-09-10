@@ -20,6 +20,16 @@ export class FilterBar {
     return COPY.status[status];
   }
 
+  /**
+   * Live pane total for the chip's status. Reflects the panes store's own
+   * scope- and host-filtered view, but ignores the status-visibility filter
+   * the chip itself controls, so a hidden chip keeps reporting how many
+   * panes are still in that status.
+   */
+  protected statusCount(status: AgentStatus): number {
+    return this.store.statusCountsSignal()[status];
+  }
+
   protected isHostExcluded(host: string): boolean {
     return this.store.filtersSignal().excludedHosts.has(host);
   }

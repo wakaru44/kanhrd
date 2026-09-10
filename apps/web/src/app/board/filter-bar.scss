@@ -38,16 +38,31 @@
     background: var(--paper-raised);
   }
 
-  /* Hidden reads as hidden without relying on colour or opacity alone. */
+  /* Hidden reads as hidden without relying on colour or opacity alone.
+   * The line-through lives on `.chip-label`, not the whole chip, so the
+   * trailing count stays legible on a hidden chip — that count is the
+   * whole reason to leave the chip in place instead of hiding it. */
   &.excluded {
     color: var(--ink-mute);
-    text-decoration: line-through;
     border: var(--elev-1);
+
+    .chip-label {
+      text-decoration: line-through;
+    }
   }
 }
 
 .chip-label {
   white-space: nowrap;
+}
+
+/* Trailing pane count on status chips. Monospace so the numeral keeps a
+ * steady width as it ticks, and `--ink-mute` so the number sits quieter
+ * than the label without being colour-only signal. */
+.chip-count {
+  font-family: var(--font-mono);
+  color: var(--ink-mute);
+  margin-left: var(--sp-1);
 }
 
 .conn-dot,

@@ -111,7 +111,7 @@ export function applyPaneClosed(panes: PaneMap, evt: { id: string; host: string 
 
 export function applyPaneAgentStatusChanged(
   panes: PaneMap,
-  evt: { id: string; host: string; agent_status: AgentStatus },
+  evt: { id: string; host: string; agent_status: AgentStatus; status_since?: number },
 ): PaneMap {
   const key = paneKey(evt.host, evt.id);
   const existing = panes.get(key);
@@ -119,7 +119,15 @@ export function applyPaneAgentStatusChanged(
     return panes;
   }
   const next = new Map(panes);
-  next.set(key, { ...existing, agent_status: evt.agent_status });
+  // The status and the bridge's observation time for it move together: the
+  // cached pane's old `status_since` belongs to the status it just left, so
+  // carrying it forward would age the new status by the previous one's
+  // lifetime. An event without one (older bridge) clears it instead — no
+  // duration beats the wrong duration.
+  const updated: Pane = { ...existing, agent_status: evt.agent_status };
+  if (evt.status_since === undefined) delete updated.status_since;
+  else updated.status_since = evt.status_since;
+  next.set(key, updated);
   return next;
 }
 
@@ -496,6 +504,34 @@ export class PanesStore {
 
   /** Per-host `bridge.capabilities` result; a tier-1 bridge (or a failed probe) yields `fallbackCapabilities()`. */
   readonly capabilitiesSignal = signal<ReadonlyMap<string, BridgeCapabilities>>(new Map());
+
+  /**
+   * Per-status pane totals ignoring the filter bar's own status toggles but
+   * honouring host exclusion and the URL scope. Feeds the filter-bar status
+   * chips so a chip toggled off still reports how many panes WOULD sit in
+   * that column if it were unhidden — the whole point of the counts is to
+   * watch a status while its column is out of view.
+   */
+  readonly statusCountsSignal = computed<Record<AgentStatus, number>>(() => {
+    const scope = this.scopeSignal();
+    const excludedHosts = this.filtersSignal().excludedHosts;
+    const counts: Record<AgentStatus, number> = {
+      idle: 0,
+      working: 0,
+      blocked: 0,
+      done: 0,
+      unknown: 0,
+    };
+    for (const pane of this.panesSignal().values()) {
+      if (excludedHosts.has(pane.host)) continue;
+      if (scope) {
+        if (pane.host !== scope.host || pane.workspace.id !== scope.workspaceId) continue;
+        if (scope.tabId !== null && pane.tab.id !== scope.tabId) continue;
+      }
+      counts[pane.agent_status] += 1;
+    }
+    return counts;
+  });
 
   readonly columnsSignal = computed(() => {
     const scope = this.scopeSignal();
