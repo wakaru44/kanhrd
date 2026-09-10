@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal } from "@angular/core";
+import { Injectable, computed, inject, signal } from "@angular/core";
 import { Router } from "@angular/router";
 import { PanesStore } from "./panes.store";
 import { LayoutService } from "./layout.service";
@@ -131,20 +131,34 @@ export function formatBinding(binding: ShortcutBinding, prefix: string): string 
 
 /** Pure read, unit-testable without DI — mirrors `loadTheme` in theme.service.ts. */
 export function loadPrefix(storage: Pick<Storage, "getItem"> = localStorage): string {
+  return loadPrefixOverride(storage) ?? DEFAULT_PREFIX;
+}
+
+/**
+ * Like `loadPrefix`, but returns `null` instead of `DEFAULT_PREFIX` when
+ * nothing valid is stored — the distinction `KeyboardService.prefix`
+ * needs to tell "the user explicitly rebound this" apart from "no override
+ * exists yet, fall through to the herdr-mirrored or hardcoded default."
+ */
+export function loadPrefixOverride(storage: Pick<Storage, "getItem"> = localStorage): string | null {
   try {
     const raw = storage.getItem(STORAGE_KEY);
     if (!raw) {
-      return DEFAULT_PREFIX;
+      return null;
     }
     const parsed = JSON.parse(raw) as Partial<StoredKeyboardSettings>;
-    return typeof parsed.prefix === "string" && parsed.prefix.trim() ? parsed.prefix : DEFAULT_PREFIX;
+    return typeof parsed.prefix === "string" && parsed.prefix.trim() ? parsed.prefix : null;
   } catch {
-    return DEFAULT_PREFIX;
+    return null;
   }
 }
 
 export function savePrefix(prefix: string, storage: Pick<Storage, "setItem"> = localStorage): void {
   storage.setItem(STORAGE_KEY, JSON.stringify({ prefix } satisfies StoredKeyboardSettings));
+}
+
+export function clearStoredPrefix(storage: Pick<Storage, "removeItem"> = localStorage): void {
+  storage.removeItem(STORAGE_KEY);
 }
 
 /** True when a keydown on `el` should be left alone for the app's shortcuts (the user is typing) — includes xterm.js, whose hidden input IS a real `<textarea>`. */
@@ -219,7 +233,33 @@ export class KeyboardService {
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
 
-  readonly prefix = signal<string>(loadPrefix());
+  /**
+   * The user's explicit Settings > Keyboard rebind, if any — `null` means
+   * "no override, fall through to the herdr-mirrored or hardcoded
+   * default." Only `setPrefix`/`resetToDefault` (explicit user action)
+   * write to this and to `localStorage`; merely computing a default never
+   * does, unlike the old always-persist-on-load behavior.
+   */
+  private readonly prefixOverride = signal<string | null>(loadPrefixOverride());
+
+  /**
+   * Effective prefix, in precedence order: (1) `prefixOverride`, (2) the
+   * primary host's `bridge.capabilities.hostKeybinds.prefix` (mirrors
+   * herdr's own configured prefix — see the `add-host-keybinds-passthrough`
+   * openspec change), (3) the hardcoded `DEFAULT_PREFIX`.
+   */
+  readonly prefix = computed<string>(
+    () => this.prefixOverride() ?? this.store.primaryHostKeybinds()?.prefix ?? DEFAULT_PREFIX,
+  );
+
+  /** Where `prefix()`'s current value came from, for Settings > Keyboard's source label. */
+  readonly prefixSource = computed<"override" | "herdr-config" | "default">(() => {
+    if (this.prefixOverride() !== null) {
+      return "override";
+    }
+    return this.store.primaryHostKeybinds() ? "herdr-config" : "default";
+  });
+
   readonly helpOpen = signal(false);
 
   private readonly chordArmedSignal = signal(false);
@@ -230,22 +270,18 @@ export class KeyboardService {
   /** The tab shown before the current `tabFilterSignal`, for `prefix+l` ("last tab"). Only tracks keyboard-driven switches. */
   private previousTab: { host: string; tabId: string } | null = null;
 
-  constructor() {
-    effect(() => {
-      savePrefix(this.prefix());
-    });
-  }
-
   shortcuts(): ReadonlyMap<ShortcutAction, ShortcutBinding> {
     return SHORTCUT_MAP;
   }
 
   setPrefix(prefix: string): void {
-    this.prefix.set(prefix);
+    this.prefixOverride.set(prefix);
+    savePrefix(prefix);
   }
 
   resetToDefault(): void {
-    this.prefix.set(DEFAULT_PREFIX);
+    this.prefixOverride.set(null);
+    clearStoredPrefix();
   }
 
   openHelp(): void {

@@ -123,6 +123,10 @@
       Herdr-style prefix shortcuts (tmux convention: press the prefix, release, then the action key).
       Rebinding isn't available yet — this table is read-only besides resetting the prefix.
     </p>
+    <p class="current-prefix">
+      Current prefix: <kbd>{{ currentPrefix() }}</kbd>
+      <span class="prefix-source">({{ prefixSourceLabel() }})</span>
+    </p>
 
     <table class="shortcut-table">
       <thead>

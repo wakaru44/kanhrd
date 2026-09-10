@@ -58,6 +58,15 @@
   font-style: italic;
 }
 
+.current-prefix {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+
+  .prefix-source {
+    color: var(--text-dim);
+  }
+}
+
 .setting-row {
   display: flex;
   align-items: center;

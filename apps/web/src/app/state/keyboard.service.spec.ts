@@ -2,6 +2,7 @@ import { TestBed } from "@angular/core/testing";
 import { provideZonelessChangeDetection, signal } from "@angular/core";
 import { Router } from "@angular/router";
 import type { TabSummary } from "@kanhrd/schema";
+import type { BridgeCapabilities } from "@kanhrd/schema";
 import {
   DEFAULT_PREFIX,
   KeyboardService,
@@ -30,8 +31,12 @@ class FakePanesStore {
   readonly tabsSignal = signal<ReadonlyMap<string, TabSummary>>(new Map());
   readonly tabFilterSignal = signal<{ host: string; tabId: string } | null>(null);
   readonly scopeSignal = signal<{ host: string; workspaceId: string; tabId: string | null } | null>(null);
+  readonly hostKeybindsSignal = signal<BridgeCapabilities["hostKeybinds"] | null>(null);
 
   findHostForCapability = jasmine.createSpy("findHostForCapability").and.returnValue(null);
+  primaryHostKeybinds = jasmine
+    .createSpy("primaryHostKeybinds")
+    .and.callFake(() => this.hostKeybindsSignal());
   splitPane = jasmine.createSpy("splitPane").and.resolveTo(undefined);
   setScope = jasmine
     .createSpy("setScope")
@@ -151,6 +156,40 @@ describe("KeyboardService", () => {
     service.setPrefix("Ctrl+A");
     service.resetToDefault();
     expect(service.prefix()).toBe(DEFAULT_PREFIX);
+  });
+
+  describe("herdr-mirrored default prefix", () => {
+    it("uses the primary host's hostKeybinds.prefix when the user has no explicit override", () => {
+      store.hostKeybindsSignal.set({ prefix: "Ctrl+Space", source: "config-file" });
+
+      expect(service.prefix()).toBe("Ctrl+Space");
+      expect(service.prefixSource()).toBe("herdr-config");
+    });
+
+    it("an explicit user override wins over a herdr-mirrored prefix", () => {
+      store.hostKeybindsSignal.set({ prefix: "Ctrl+Space", source: "config-file" });
+      service.setPrefix("Ctrl+A");
+
+      expect(service.prefix()).toBe("Ctrl+A");
+      expect(service.prefixSource()).toBe("override");
+    });
+
+    it("falls back to the hardcoded Ctrl+B default when no host reports hostKeybinds", () => {
+      store.hostKeybindsSignal.set(null);
+
+      expect(service.prefix()).toBe(DEFAULT_PREFIX);
+      expect(service.prefixSource()).toBe("default");
+    });
+
+    it("resetToDefault() clears the override back to the herdr-mirrored prefix, not the hardcoded one, when a host reports one", () => {
+      store.hostKeybindsSignal.set({ prefix: "Ctrl+Space", source: "config-file" });
+      service.setPrefix("Ctrl+A");
+
+      service.resetToDefault();
+
+      expect(service.prefix()).toBe("Ctrl+Space");
+      expect(service.prefixSource()).toBe("herdr-config");
+    });
   });
 
   it("shortcuts() returns every documented action, each with a description", () => {

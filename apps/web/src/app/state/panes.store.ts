@@ -828,6 +828,25 @@ export class PanesStore {
     }
     return null;
   }
+
+  /**
+   * First host in `hostsSignal` order whose `bridge.capabilities` reports
+   * `hostKeybinds` — same "first host in config order" idea as
+   * `findHostForCapability`, generalized to an object-valued capability
+   * instead of a boolean. Used by `KeyboardService` to mirror herdr's
+   * configured prefix as kanhrd's default (see the
+   * `add-host-keybinds-passthrough` openspec change).
+   */
+  primaryHostKeybinds(): BridgeCapabilities["hostKeybinds"] | null {
+    const capabilities = this.capabilitiesSignal();
+    for (const host of this.hostsSignal()) {
+      const hostKeybinds = capabilities.get(host.name)?.hostKeybinds;
+      if (hostKeybinds) {
+        return hostKeybinds;
+      }
+    }
+    return null;
+  }
 }
 
 /** True when `err` is the wire error `workspace.close` returns for CONTRACT-TIER3.md section 5.4's linked-worktree-group gate. */

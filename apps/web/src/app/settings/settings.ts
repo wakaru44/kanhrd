@@ -64,6 +64,18 @@ export class Settings {
   // --- keyboard shortcuts --------------------------------------------------
 
   protected readonly shortcutRows = computed(() => [...this.keyboardService.shortcuts().values()]);
+  protected readonly currentPrefix = this.keyboardService.prefix;
+  protected readonly prefixSource = this.keyboardService.prefixSource;
+  protected readonly prefixSourceLabel = computed(() => {
+    switch (this.prefixSource()) {
+      case "override":
+        return "your override";
+      case "herdr-config":
+        return "from herdr config";
+      default:
+        return "default";
+    }
+  });
 
   protected defaultBindingLabel(binding: ShortcutBinding): string {
     return formatBinding(binding, DEFAULT_PREFIX);

@@ -15,18 +15,19 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
-    "@kanhrd/schema": "workspace:*",
     "@fastify/static": "^8.0.4",
     "@fastify/websocket": "^11.0.2",
+    "@kanhrd/schema": "workspace:*",
     "fastify": "^5.1.0",
     "pino": "^9.5.0",
+    "smol-toml": "^1.8.0",
     "yaml": "^2.6.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/ws": "^8.5.13",
-    "typescript": "^5.7.0",
     "tsx": "^4.19.2",
+    "typescript": "^5.7.0",
     "vitest": "^2.1.5",
     "ws": "^8.18.0"
   }

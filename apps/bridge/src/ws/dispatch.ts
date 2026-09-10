@@ -37,10 +37,15 @@ export interface DispatchHost {
   workspaceCreate(params: BridgeMethodParams["workspace.create"]): Promise<BridgeMethodResult["workspace.create"]>;
   workspaceRename(params: BridgeMethodParams["workspace.rename"]): Promise<BridgeMethodResult["workspace.rename"]>;
   workspaceClose(params: { workspace_id: string; close_group?: boolean }): Promise<void>;
+
+  /** Bridge-process-local, cached — see `HostRuntime.getHostKeybinds()` doc. */
+  getHostKeybinds(): NonNullable<BridgeCapabilities["hostKeybinds"]>;
 }
 
 export interface DispatchHostSource {
   get(host: string): DispatchHost | undefined;
+  /** Configured hosts in config order — first entry is the "primary" host `bridge.capabilities.hostKeybinds` resolves from. */
+  list(): DispatchHost[];
 }
 
 /**
@@ -82,6 +87,24 @@ const NOT_SUPPORTED = {
 } as const;
 
 /**
+ * Populates `hostKeybinds` from the primary host (first in
+ * `DispatchHostSource.list()` config order — same "first host in config
+ * order" idea `PanesStore.findHostForCapability` already uses client-side).
+ * Answered identically regardless of which `host` the request named,
+ * matching `bridge.capabilities`'s existing bridge-level-not-per-host
+ * behavior. Omits the field entirely when there is no configured host to
+ * resolve one from (e.g. an empty `hosts` config) rather than reporting a
+ * fabricated default.
+ */
+function withHostKeybinds(base: BridgeCapabilities, hosts: DispatchHostSource): BridgeCapabilities {
+  const primary = hosts.list()[0];
+  if (!primary) {
+    return base;
+  }
+  return { ...base, hostKeybinds: primary.getHostKeybinds() };
+}
+
+/**
  * Routes one `WsRequest` to the matching herdr call and returns the
  * `WsResponse` to send back. Pure with respect to the WebSocket connection —
  * `ws/server.ts` owns the socket and event fan-out; this only decides what a
@@ -92,7 +115,7 @@ export async function dispatch(request: WsRequest, ctx: DispatchContext): Promis
 
   // Bridge-owned, no herdr host involved — answer even if `host` isn't configured.
   if ((method as BridgeMethod) === "bridge.capabilities") {
-    return { id, host, ok: true, data: CAPABILITIES };
+    return { id, host, ok: true, data: withHostKeybinds(CAPABILITIES, ctx.hosts) };
   }
 
   const runtime = ctx.hosts.get(host);

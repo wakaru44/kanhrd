@@ -13,6 +13,7 @@ class FakePanesStore {
   readonly tabFilterSignal = signal(null);
   readonly scopeSignal = signal(null);
   findHostForCapability = jasmine.createSpy("findHostForCapability").and.returnValue(null);
+  primaryHostKeybinds = jasmine.createSpy("primaryHostKeybinds").and.returnValue(null);
   splitPane = jasmine.createSpy("splitPane").and.resolveTo(undefined);
   setScope = jasmine.createSpy("setScope");
   requestPendingRename = jasmine.createSpy("requestPendingRename");

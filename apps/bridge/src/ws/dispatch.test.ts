@@ -38,13 +38,14 @@ function noopHost(overrides: Partial<DispatchHost> = {}): DispatchHost {
     workspaceCreate: () => Promise.resolve({ workspace: SAMPLE_WORKSPACE, tab: SAMPLE_TAB, pane: SAMPLE_PANE }),
     workspaceRename: () => Promise.resolve({ workspace: SAMPLE_WORKSPACE }),
     workspaceClose: () => Promise.resolve(),
+    getHostKeybinds: () => ({ prefix: "Ctrl+B", source: "default" }),
     ...overrides,
   };
 }
 
 function hostsWith(panes: Pane[]): DispatchHostSource {
   const host = noopHost({ listPanes: () => Promise.resolve(panes) });
-  return { get: (name) => (name === "local" ? host : undefined) };
+  return { get: (name) => (name === "local" ? host : undefined), list: () => [host] };
 }
 
 function baseCtx(overrides: Partial<DispatchContext> = {}): DispatchContext {
@@ -114,7 +115,7 @@ describe("dispatch", () => {
     const host = noopHost({ listPanes: () => Promise.reject(new HostUnavailableError("local")) });
     const request: WsRequest = { id: "5", host: "local", method: "pane.list", params: {} };
 
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(response.ok).toBe(false);
     if (!response.ok) expect(response.error.code).toBe("host_unavailable");
@@ -139,8 +140,33 @@ describe("dispatch", () => {
         paneMove: true,
         tabCrud: true,
         workspaceCrud: true,
+        hostKeybinds: { prefix: "Ctrl+B", source: "default" },
       },
     });
+  });
+
+  it("bridge.capabilities populates hostKeybinds from the primary (first-listed) host, regardless of the requested host", async () => {
+    const request: WsRequest = { id: "6b", host: "ghost", method: "bridge.capabilities", params: {} };
+    const primary = noopHost({ getHostKeybinds: () => ({ prefix: "Ctrl+Space", source: "config-file" }) });
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => undefined, list: () => [primary] } }));
+
+    expect(response.ok).toBe(true);
+    if (response.ok) {
+      expect((response.data as { hostKeybinds?: unknown }).hostKeybinds).toEqual({
+        prefix: "Ctrl+Space",
+        source: "config-file",
+      });
+    }
+  });
+
+  it("bridge.capabilities omits hostKeybinds when there is no configured host at all", async () => {
+    const request: WsRequest = { id: "6c", host: "ghost", method: "bridge.capabilities", params: {} };
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => undefined, list: () => [] } }));
+
+    expect(response.ok).toBe(true);
+    if (response.ok) {
+      expect((response.data as { hostKeybinds?: unknown }).hostKeybinds).toBeUndefined();
+    }
   });
 
   it("proxies pane.read to the host and returns its projected result", async () => {
@@ -162,7 +188,7 @@ describe("dispatch", () => {
       method: "pane.read",
       params: { pane_id: "p1" },
     };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(response).toEqual({
       id: "7",
@@ -217,7 +243,7 @@ describe("dispatch", () => {
       method: "pane.send_keys",
       params: { pane_id: "p1", keys: ["ctrl+c"] },
     };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(paneSendKeys).toHaveBeenCalledWith({ pane_id: "p1", keys: ["ctrl+c"] });
     expect(response).toEqual({ id: "11", host: "local", ok: true, data: {} });
@@ -232,7 +258,7 @@ describe("dispatch", () => {
       method: "pane.send_text",
       params: { pane_id: "p1", text: "hi" },
     };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(paneSendText).toHaveBeenCalledWith({ pane_id: "p1", text: "hi" });
     expect(response).toEqual({ id: "12", host: "local", ok: true, data: {} });
@@ -292,7 +318,7 @@ describe("dispatch", () => {
       method: "pane.split",
       params: { direction: "right", target_pane_id: "pane-1" },
     };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(paneSplit).toHaveBeenCalledWith({ direction: "right", target_pane_id: "pane-1" });
     expect(response).toEqual({ id: "16", host: "local", ok: true, data: { pane: SAMPLE_PANE } });
@@ -310,7 +336,7 @@ describe("dispatch", () => {
     const paneClose = vi.fn(() => Promise.resolve());
     const host = noopHost({ paneClose });
     const request: WsRequest = { id: "18", host: "local", method: "pane.close", params: { pane_id: "pane-1" } };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(paneClose).toHaveBeenCalledWith({ pane_id: "pane-1" });
     expect(response).toEqual({ id: "18", host: "local", ok: true, data: {} });
@@ -333,7 +359,7 @@ describe("dispatch", () => {
       method: "pane.move",
       params: { pane_id: "pane-1", destination: { type: "new_tab" } },
     };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(paneMove).toHaveBeenCalledWith({ pane_id: "pane-1", destination: { type: "new_tab" } });
     expect(response).toEqual({
@@ -367,7 +393,7 @@ describe("dispatch", () => {
     const tabCreate = vi.fn(() => Promise.resolve({ tab: SAMPLE_TAB, pane: SAMPLE_PANE }));
     const host = noopHost({ tabCreate });
     const request: WsRequest = { id: "21", host: "local", method: "tab.create" };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(tabCreate).toHaveBeenCalledWith({});
     expect(response).toEqual({ id: "21", host: "local", ok: true, data: { tab: SAMPLE_TAB, pane: SAMPLE_PANE } });
@@ -382,7 +408,7 @@ describe("dispatch", () => {
       method: "tab.rename",
       params: { tab_id: "tab-1", label: "Renamed" },
     };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(tabRename).toHaveBeenCalledWith({ tab_id: "tab-1", label: "Renamed" });
     expect(response).toEqual({ id: "22", host: "local", ok: true, data: { tab: SAMPLE_TAB } });
@@ -405,7 +431,7 @@ describe("dispatch", () => {
     const tabClose = vi.fn(() => Promise.resolve());
     const host = noopHost({ tabClose });
     const request: WsRequest = { id: "24", host: "local", method: "tab.close", params: { tab_id: "tab-1" } };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(tabClose).toHaveBeenCalledWith({ tab_id: "tab-1" });
     expect(response).toEqual({ id: "24", host: "local", ok: true, data: {} });
@@ -420,7 +446,7 @@ describe("dispatch", () => {
       method: "tab.move",
       params: { tab_id: "tab-1", insert_index: 0 },
     };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(tabMove).toHaveBeenCalledWith({ tab_id: "tab-1", insert_index: 0 });
     expect(response).toEqual({ id: "25", host: "local", ok: true, data: { tabs: [SAMPLE_TAB] } });
@@ -432,7 +458,7 @@ describe("dispatch", () => {
     );
     const host = noopHost({ workspaceCreate });
     const request: WsRequest = { id: "26", host: "local", method: "workspace.create" };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(workspaceCreate).toHaveBeenCalledWith({});
     expect(response).toEqual({
@@ -452,7 +478,7 @@ describe("dispatch", () => {
       method: "workspace.rename",
       params: { workspace_id: "ws-1", label: "Renamed" },
     };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(workspaceRename).toHaveBeenCalledWith({ workspace_id: "ws-1", label: "Renamed" });
     expect(response).toEqual({ id: "27", host: "local", ok: true, data: { workspace: SAMPLE_WORKSPACE } });
@@ -467,7 +493,7 @@ describe("dispatch", () => {
       method: "workspace.close",
       params: { workspace_id: "ws-1", close_group: true },
     };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(workspaceClose).toHaveBeenCalledWith({ workspace_id: "ws-1", close_group: true });
     expect(response).toEqual({ id: "28", host: "local", ok: true, data: {} });
@@ -502,7 +528,7 @@ describe("dispatch", () => {
       method: "workspace.close",
       params: { workspace_id: "ws-1" },
     };
-    const response = await dispatch(request, baseCtx({ hosts: { get: () => host } }));
+    const response = await dispatch(request, baseCtx({ hosts: { get: () => host, list: () => [host] } }));
 
     expect(response.ok).toBe(false);
     if (!response.ok) {
