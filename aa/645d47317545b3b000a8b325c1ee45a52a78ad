@@ -1,0 +1,19 @@
+openspec/incoming/backlog.md
+  s_77c1efab0f1694::t_6f524c16fabcbe 1-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "aa645d47317545b3b000a8b325c1ee45a52a78ad",
+  "prompts": {},
+  "sessions": {
+    "s_77c1efab0f1694": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08a2c-3205-70c1-a322-e1a510c2ac60",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
