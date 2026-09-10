@@ -177,10 +177,21 @@ describe('D. tier-3 lifecycle', () => {
  * live activity. This test asserts that signature directly: every
  * `pane.created`/`tab.created`/`workspace.created` event received during
  * the window names an id that genuinely exists in herdr right after the
- * window closes (small residual race risk if that exact resource closes in
- * the few hundred ms between the window ending and the follow-up
- * `pane/tab/workspace.list` call — acceptable, matches this suite's existing
- * tolerance for shared-sandbox noise per the D. suite's own header). The
+ * window closes, OR that the window itself saw close. herdr's own one-off
+ * backlog replay on a new subscription is drained first and never asserted
+ * on — see the phase comment in the test body. That second clause is
+ * not a nicety: on this shared sandbox a lane routinely creates a pane and
+ * closes it well inside 5s, and the first clause alone called that a phantom
+ * (it is what made this test fail on main). Panes need the widest forgiveness
+ * of the three, because only a direct `pane.close` emits `pane.closed` —
+ * `purgeCascade` (hosts.ts) drops a closed tab's or workspace's panes with no
+ * per-pane event at all, so a pane is also forgiven when its owning tab or
+ * workspace closed in-window.
+ *
+ * A replay storm still fails this: its events name ids that neither exist now
+ * nor were closed during the window. A storm that replayed a matching close
+ * would slip through, which is the price of running against a live sandbox —
+ * the deterministic proof is the unit suite, below. The
  * `HostRuntime` unit tests in `src/herdr/hosts.test.ts` are the
  * deterministic, environment-independent proof of the actual fix
  * (subscribe-once, no resubscribe-on-churn); this integration test is a
@@ -222,10 +233,27 @@ describe('E. no phantom lifecycle-event storm on a steady-state host', () => {
       });
       expect(sub.subscription_id).toBeTruthy();
 
-      // Long enough to surface a resubscribe-driven backlog replay
-      // (which, when it happened, delivered its whole burst well inside
-      // this window) without making the suite slow.
-      await new Promise((resolve) => setTimeout(resolve, 5_000));
+      // Three phases, because herdr replays its buffered backlog to any NEW
+      // subscription on builds predating herdr `20a500a7` (hosts.ts's
+      // AGENT_STATUS_POLL_INTERVAL_MS doc; herdr 0.8.2 here still does it).
+      // That one replay is herdr's, not the bridge's, and this subscription
+      // is itself new — so it is unavoidable and must be drained, not
+      // asserted on. Measured on this sandbox: ~115 events arrive by 2.5s and
+      // the stream is then quiet, so 3s drains it with margin.
+      //
+      // What the bridge's fix actually promises is that no FURTHER replay
+      // follows, however much the host churns — the subscription is opened
+      // once and never rebuilt (buildSubscriptionSpecs). That is what the
+      // assert window checks.
+      //
+      // The grace tail exists so a resource created at the very end of the
+      // assert window still has time to show its close; judging creates right
+      // up to the snapshot instant left two unexplained ids per run.
+      await new Promise((resolve) => setTimeout(resolve, 3_000));
+      const drained = new Set(client.eventsFor(() => true));
+      await new Promise((resolve) => setTimeout(resolve, 2_500));
+      const assertWindow = new Set(client.eventsFor(() => true).filter((e) => !drained.has(e)));
+      await new Promise((resolve) => setTimeout(resolve, 1_500));
 
       const lifecycleEvents = client.eventsFor(
         (e) =>
@@ -246,16 +274,57 @@ describe('E. no phantom lifecycle-event storm on a steady-state host', () => {
         herdrTabList().then((tabs) => new Set(tabs.map((t) => t.tab_id))),
         herdrWorkspaceList().then((workspaces) => new Set(workspaces.map((w) => w.workspace_id))),
       ]);
+      // Ids the window itself explains as gone. A resource created and then
+      // removed inside the 5s window is legitimate live activity, not a
+      // replay, so its absence from the post-window list proves nothing.
+      // Panes vanish three ways and only the first emits `pane.closed`:
+      // `purgeCascade` (hosts.ts) drops a closed tab's or workspace's panes
+      // without emitting a per-pane close, so a pane must also be forgiven
+      // when its OWNING tab or workspace closed in-window.
+      const closedIn = (kind: string): Set<string> =>
+        new Set(
+          lifecycleEvents
+            .filter((e) => e.event === kind)
+            .map((e) => (e.payload as { id: string }).id)
+        );
+      const closedPaneIds = closedIn('pane.closed');
+      const closedTabIds = closedIn('tab.closed');
+      const closedWorkspaceIds = closedIn('workspace.closed');
+
       for (const event of lifecycleEvents) {
         if (event.event === 'pane.created') {
-          const id = (event.payload as { pane: { id: string } }).pane.id;
-          expect(currentPaneIds.has(id)).toBe(true);
+          if (!assertWindow.has(event)) continue;
+          const pane = (
+            event.payload as {
+              pane: { id: string; tab: { id: string }; workspace: { id: string } };
+            }
+          ).pane;
+          const explained =
+            closedPaneIds.has(pane.id) ||
+            closedTabIds.has(pane.tab.id) ||
+            closedWorkspaceIds.has(pane.workspace.id);
+          expect(
+            currentPaneIds.has(pane.id) || explained,
+            `phantom pane.created: ${pane.id} is absent from herdr's current pane list and ` +
+              'no pane/tab/workspace close in this window accounts for it'
+          ).toBe(true);
         } else if (event.event === 'tab.created') {
-          const id = (event.payload as { tab: { id: string } }).tab.id;
-          expect(currentTabIds.has(id)).toBe(true);
+          if (!assertWindow.has(event)) continue;
+          const tab = (event.payload as { tab: { id: string; workspace: { id: string } } }).tab;
+          const explained = closedTabIds.has(tab.id) || closedWorkspaceIds.has(tab.workspace.id);
+          expect(
+            currentTabIds.has(tab.id) || explained,
+            `phantom tab.created: ${tab.id} is absent from herdr's current tab list and ` +
+              'no tab/workspace close in this window accounts for it'
+          ).toBe(true);
         } else if (event.event === 'workspace.created') {
+          if (!assertWindow.has(event)) continue;
           const id = (event.payload as { workspace: { id: string } }).workspace.id;
-          expect(currentWorkspaceIds.has(id)).toBe(true);
+          expect(
+            currentWorkspaceIds.has(id) || closedWorkspaceIds.has(id),
+            `phantom workspace.created: ${id} is absent from herdr's current workspace list ` +
+              'and no workspace close in this window accounts for it'
+          ).toBe(true);
         }
       }
     } finally {
