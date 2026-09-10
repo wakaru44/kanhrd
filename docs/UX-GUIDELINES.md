@@ -289,9 +289,9 @@ There is no inline rail, no bottom tab bar, and no push-content drawer.
   width minus gutters, with its clear (`LucideX`) button tappable.
 - Filter bar chips wrap onto multiple rows rather than scrolling
   horizontally, so no chip is unreachable.
-- Status columns become a horizontal scroll-snap strip: one column
-  occupies ~85vw so the next column's edge is visible as an affordance,
-  `scroll-snap-type: x mandatory`, one column per snap position.
+- The board becomes a **one-column-per-screen pager**. See _Board paging
+  model_ below — it is the load-bearing part of the mobile board and is
+  specified in full there.
 - Every card renders in the **compact** single-row variant, regardless
   of the density setting.
 - Card contents must not overflow: the title truncates with an ellipsis;
@@ -305,6 +305,96 @@ There is no inline rail, no bottom tab bar, and no push-content drawer.
   its right edge ≤ viewport width. It flips or shifts rather than
   clipping.
 - The page itself never scrolls horizontally.
+
+#### Board paging model
+
+A desktop kanban is two-dimensional: columns across, cards down. A phone
+can afford **one** scroll direction at a time. Below
+`--breakpoint-mobile` the board therefore stops being a strip you graze
+and becomes a pager you turn.
+
+The rule that makes it work is that a resting position shows exactly one
+column. A partly visible neighbour is not an affordance — it is an
+invitation to hunt, and it costs the width that made the column readable.
+
+One status column per screen:
+
+- The paging strip spans the board's full width inside the page gutters.
+  Each status column is `flex: 0 0 100%` of that strip — the column
+  fills the strip, and no part of any other column is visible at rest.
+- `scroll-snap-type: x mandatory`, each column `scroll-snap-align:
+start`, and **`scroll-snap-stop: always`** so one swipe advances
+  exactly one column. A hard fling must not skip past a column.
+- There is no free-scrolling resting state between two columns. If a
+  gesture ends mid-page, the strip settles on one column or the other,
+  never between them.
+- The current column index is `Math.round(scrollLeft / clientWidth)` —
+  deterministic, and the value the switcher reads.
+- Column order is `STATUS_COLUMN_ORDER` (`working`, `blocked`, `idle`,
+  `done`, `unknown`) — the same order as desktop. Paging never reorders
+  columns, and neither does the card count.
+- Vertical scrolling belongs to the current column's card list, not the
+  page. The header, filter bar and switcher stay put while cards scroll
+  under them.
+- Empty columns are still pages. An empty status column is paged to
+  normally and shows its header with the count `0` and no prose,
+  exactly as on desktop.
+
+The status switcher:
+
+- A **persistent segmented control**, pinned directly under the filter
+  bar and above the paging strip. It is visible at every scroll
+  position; it does not scroll away with the cards.
+- One segment per **visible** status, in `STATUS_COLUMN_ORDER`. The
+  number of segments is how the user knows how many columns exist, and
+  the selected segment is how they know which one they are on — so no
+  separate "3 of 5" indicator is needed or wanted.
+- Each segment's label is the status name from `copy.status.*`. The
+  **selected** segment additionally shows the current column's card
+  count in `--font-mono` with tabular numerals; unselected segments show
+  no count.
+- Segments are `flex: 1 1 0` with `min-width: --touch-target-min`; the
+  selected segment takes `flex: 1.6 1 0` so its label plus count fits
+  without truncating. Unselected labels may truncate with an ellipsis;
+  the selected label and its count may not.
+- Height is `--switcher-height` (40px), so every segment already meets
+  the 40×40 minimum. Segments sit flush with `--sp-1` separation and a
+  `--rule` hairline underneath the control.
+- Selection is marked by text weight (`--fw-semi`) and a 2px
+  `--ochre-line` underline on the selected segment — never by colour
+  alone, and never by a filled background.
+- Tapping a segment pages the strip to that column
+  (`scrollIntoView({ inline: 'start' })`, `behavior: 'smooth'`, or
+  `'auto'` under `prefers-reduced-motion: reduce`). Swiping the strip
+  updates the selected segment. The two are the same state.
+- Semantics: the control is a `role="tablist"` with `role="tab"`
+  segments and `aria-selected`; the paging strip's columns are the
+  corresponding `role="tabpanel"`. Left/right arrow keys move between
+  segments. The accessible name of a segment is
+  `copy.nav.statusSwitcherItem` — `{status} — {count} cards`.
+- The switcher is **mobile only**. At ≥ 900px the columns are side by
+  side and the switcher is not rendered.
+
+Interaction with the filter bar:
+
+- Hiding a status in the filter bar removes its segment and its page.
+  The remaining segments re-flex; order is unchanged.
+- If the currently-shown status is hidden, the board pages to the
+  nearest visible column to its left, or to the first visible column if
+  there is none to the left. It never lands on a hidden status and never
+  leaves the strip on a blank page.
+- Un-hiding a status re-inserts its segment and page at its
+  `STATUS_COLUMN_ORDER` position without moving the current page.
+- If **every** status is hidden, the switcher and the strip are replaced
+  by the `nothing matches these filters.` empty state with its
+  `clear filters` action — not an empty pager.
+
+What this model does not do:
+
+- It does not add a drag affordance. Paging moves the viewport, never a
+  card, and status membership stays herdr's fact.
+- It does not reorder or merge columns by "importance", and it does not
+  become an activity feed. One status per page, in the canonical order.
 
 #### Board — empty
 
@@ -417,7 +507,8 @@ cannot hit two at once.
 ### Horizontal overflow rule
 
 Exactly one element may scroll horizontally on the board route: the
-status-column strip. Everything else fits.
+status-column **paging strip**, and it scrolls one full-width column at
+a time (see _Board paging model_). Everything else fits.
 
 - `document.documentElement.scrollWidth` must not exceed
   `clientWidth` on any route at 390px.
@@ -433,49 +524,108 @@ project. They are the acceptance criteria for the mobile test lane.
 
 #### Assertions — board, populated
 
-1. `document.documentElement.scrollWidth <= clientWidth + 1` on `/`.
-2. `nav.rail` is hidden on load.
-3. Every visible card matches the compact variant (single row: the
-   card's bounding-box height equals the compact row height token).
-4. For each card, the bounding boxes of `.agent-name`, the host seal and
-   the overflow trigger are each ≤ viewport width and do not intersect.
-5. Every card exposes a `LucideMoreHorizontal` overflow trigger queryable
-   by role without simulating hover.
-6. Opening a card's overflow menu renders every action; each menu item's
-   bounding box is ≥ 40 × 40.
-7. `.board-grid` has `scroll-snap-type: x mandatory`; scrolling by one
-   viewport width lands on the next column's snap position.
-8. Every `.chip` in the filter bar is ≥ 40 × 40 (already asserted).
-9. The `+` menu, when open, has `x >= 0` and `x + width <= viewport
+- **1.** `document.documentElement.scrollWidth <= clientWidth + 1` on `/`.
+- **2.** `nav.rail` is hidden on load.
+- **3.** Every visible card matches the compact variant: its bounding-box
+  height equals `--card-compact-height`.
+- **4.** For each card, the bounding boxes of `.agent-name`, the host seal and
+  the overflow trigger are each ≤ viewport width and do not intersect.
+- **5.** Every card exposes a `LucideMoreHorizontal` overflow trigger queryable
+  by role without simulating hover.
+- **6.** Opening a card's overflow menu renders every action; each menu item's
+  bounding box is ≥ 40 × 40.
+- **7.** Every `.chip` in the filter bar is ≥ 40 × 40 (already asserted).
+- **8.** The `+` menu, when open, has `x >= 0` and `x + width <= viewport
 width` (already asserted).
-10. Header hamburger, theme toggle and settings link are all visible and
-    each ≥ 40 × 40.
+- **9.** Header hamburger, theme toggle and settings link are all visible and
+  each ≥ 40 × 40.
 
-**Board — empty** 11. With no pens configured, the config snippet block's own
-`scrollWidth > clientWidth` is permitted, while the document's is
-not. 12. The copy button and the operating-guide link are both visible and
-≥ 40 × 40.
+#### Assertions — board paging
 
-**Pane detail** 13. Tapping a card navigates to `/pane/:host/:id` and xterm renders
-non-empty content (already asserted). 14. The back control is visible without scrolling and is the first
-focusable element in the header. 15. `document.documentElement.scrollWidth <= clientWidth + 1` on the
-pane route. 16. With the terminal focused, `page.keyboard.press('Escape')` and
-`'?'` do not change the URL and do not open the help overlay.
+- **10.** The paging strip has computed `scroll-snap-type: x mandatory` and
+  each column has `scroll-snap-align: start` and
+  `scroll-snap-stop: always`.
+- **11.** **Full width, no peek.** For the column at rest, its bounding-box
+  width equals the strip's `clientWidth` (± 1px), and every other
+  column's bounding box lies entirely outside the strip's visible
+  rect — no second column is partially visible.
+- **12.** **One swipe, one column.** From `scrollLeft === 0`, a single swipe
+  (or `strip.scrollBy({ left: clientWidth })`) settles at
+  `scrollLeft === clientWidth` (± 1px), i.e.
+  `Math.round(scrollLeft / clientWidth)` advances by exactly 1.
+- **13.** **No skipping.** A fast fling of 3 × `clientWidth` still settles at
+  `Math.round(scrollLeft / clientWidth) === 1`.
+- **14.** **No resting between pages.** After any settle,
+  `scrollLeft % clientWidth` is 0 (± 1px).
+- **15.** **Switcher reaches every status.** The switcher renders one
+  `role="tab"` per visible status in `STATUS_COLUMN_ORDER`; tapping
+  each in turn settles the strip on the matching column, and after the
+  last one every status has been visited.
+- **16.** Tapping a switcher segment sets `aria-selected="true"` on it and
+  `false` on all others; swiping the strip moves `aria-selected` to
+  the segment matching the new index.
+- **17.** The selected segment displays the current column's card count and it
+  equals the number of cards rendered in that column; unselected
+  segments display no count.
+- **18.** Every switcher segment's bounding box is ≥ 40 × 40.
+- **19.** The switcher stays visible after scrolling the current column's card
+  list to its bottom (it does not scroll away with the cards).
+- **20.** Hiding the currently-shown status via its filter chip removes that
+  segment and leaves the strip settled on a visible column, with
+  `aria-selected` on a rendered segment.
+- **21.** Hiding every status replaces the switcher and the strip with the
+  `nothing matches these filters.` empty state and its
+  `clear filters` action.
+- **22.** No element in the board carries `cdkDrag` enabled, a drag handle, or
+  `cursor: grab`.
 
-**Settings** 17. `document.documentElement.scrollWidth <= clientWidth + 1` on
-`/settings`. 18. Each `.setting-row` is stacked: the label's bounding box bottom is
-≤ the control's bounding box top. 19. The terminal-theme `<select>`, the poll `<input>`, both density
-segments and the theme button are each ≥ 40 × 40.
+#### Assertions — board, empty
 
-**Drawer** 20. Tapping the hamburger shows `nav.rail` and `.rail-backdrop`; tapping
-the backdrop hides both (already asserted). 21. While the drawer is open, `document.activeElement` is inside the
-drawer, and Tab cycles without leaving it. 22. Escape closes the drawer and focus returns to `.hamburger`. 23. Every drawer row is ≥ 40 × 40. 24. Resizing the viewport to 1000px wide while the drawer is open leaves
-`nav.rail` visible as the inline rail and `.rail-backdrop` hidden.
+- **23.** With no pens configured, the config snippet block's own
+  `scrollWidth > clientWidth` is permitted, while the document's is
+  not.
+- **24.** The copy button and the operating-guide link are both visible and
+  ≥ 40 × 40.
 
-**Toasts** 25. A toast raised at 390px has a bounding-box top ≥ the header's
-bounding-box bottom. 26. With a confirm dialog open and a toast visible, the dialog's `keep`
-and destructive buttons are still hittable
-(`toBeVisible` + a successful click).
+#### Assertions — pane detail
+
+- **25.** Tapping a card navigates to `/pane/:host/:id` and xterm renders
+  non-empty content (already asserted).
+- **26.** The back control is visible without scrolling and is the first
+  focusable element in the header.
+- **27.** `document.documentElement.scrollWidth <= clientWidth + 1` on the
+  pane route.
+- **28.** With the terminal focused, `page.keyboard.press('Escape')` and `'?'`
+  do not change the URL and do not open the help overlay.
+
+#### Assertions — settings
+
+- **29.** `document.documentElement.scrollWidth <= clientWidth + 1` on
+  `/settings`.
+- **30.** Each `.setting-row` is stacked: the label's bounding box bottom is
+  ≤ the control's bounding box top.
+- **31.** The terminal-theme `<select>`, the poll `<input>`, both density
+  segments and the theme button are each ≥ 40 × 40.
+
+#### Assertions — drawer
+
+- **32.** Tapping the hamburger shows `nav.rail` and `.rail-backdrop`; tapping
+  the backdrop hides both (already asserted).
+- **33.** While the drawer is open, `document.activeElement` is inside the
+  drawer, and Tab cycles without leaving it.
+- **34.** Escape closes the drawer and focus returns to `.hamburger`.
+- **35.** Every drawer row is ≥ 40 × 40.
+- **36.** Resizing the viewport to 1000px wide while the drawer is open leaves
+  `nav.rail` visible as the inline rail, `.rail-backdrop` hidden, and
+  the status switcher not rendered.
+
+#### Assertions — toasts
+
+- **37.** A toast raised at 390px has a bounding-box top ≥ the header's
+  bounding-box bottom.
+- **38.** With a confirm dialog open and a toast visible, the dialog's `keep`
+  and destructive buttons are still hittable
+  (`toBeVisible` + a successful click).
 
 ## Anti-patterns (rejects at review)
 
@@ -503,3 +653,7 @@ and destructive buttons are still hittable
 - Virtualizing at 20 cards; compact is 20, virtualization is 50.
 - Constraining the board to a reading width.
 - A mobile multi-pane or split terminal view.
+- A mobile board that rests showing part of a second status column; the
+  pager shows exactly one column per screen.
+- A mobile board that reorders or merges status columns by "importance",
+  or replaces the pager with an activity feed.

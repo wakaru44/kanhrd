@@ -153,6 +153,8 @@ product copy and stay in the template.
 | `nav.settings`                    | `settings`                                                                                                                    |
 | `nav.toggleNav`                   | `toggle navigation`                                                                                                           |
 | `nav.help`                        | `keyboard shortcuts`                                                                                                          |
+| `nav.statusSwitcher`              | `status columns`                                                                                                              |
+| `nav.statusSwitcherItem`          | `{status} — {count} cards`                                                                                                    |
 | `notShipped`                      | `not yet.`                                                                                                                    |
 
 `{pen}`, `{name}` and `{reason}` are interpolation slots. A `{reason}`

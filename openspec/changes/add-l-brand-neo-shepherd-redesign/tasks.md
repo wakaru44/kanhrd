@@ -112,10 +112,29 @@
 
 ## 11. Board layout
 
-- [ ] 11.1 Lanes remain side-by-side with `min-width: 260px` on wide
-      viewports; horizontal overflow stays inside the board; snap-scroll below 900px
-- [ ] 11.2 Board initial skeleton: hairline lane titles + 3
+- [ ] 11.1 Status columns remain side-by-side with `min-width: 260px`
+      on wide viewports; horizontal overflow stays inside the board
+- [ ] 11.2 Board initial skeleton: hairline status column titles + 3
       placeholder cards each; no spinner over the wordmark
+- [ ] 11.3 Below 900px the board becomes a one-column-per-screen pager:
+      each column `flex: 0 0 100%` of the paging strip,
+      `scroll-snap-type: x mandatory`, `scroll-snap-align: start`,
+      `scroll-snap-stop: always`; no neighbouring column visible at
+      rest and no resting position between two columns
+- [ ] 11.4 Persistent mobile status switcher between the filter bar and
+      the paging strip: tablist of the visible statuses in
+      `STATUS_COLUMN_ORDER`, selected segment shows the current column's
+      card count, selection by weight + `--ochre-line` underline,
+      `--switcher-height` 40px segments, arrow-key navigation, two-way
+      sync with the strip; not rendered at or above 900px
+- [ ] 11.5 Switcher/filter interaction: hiding a status removes its
+      segment and page; hiding the shown status pages to the nearest
+      visible column to its left; all statuses hidden falls back to the
+      no-matches empty state with `clear filters`
+- [ ] 11.6 Remove `--column-snap-width` from
+      `apps/web/src/app/shared/tokens.scss` and add
+      `--switcher-height: 40px`; add `copy.ts` keys
+      `nav.statusSwitcher` and `nav.statusSwitcherItem`
 
 ## 12. Pane detail
 
@@ -147,6 +166,18 @@
       entity glyph in templates
 - [ ] 14.5 Playwright: empty state renders sample config + start
       command; open a scoped URL, confirm scope pill and clear action
+- [ ] 14.6 Playwright `mobile` project: extend `e2e/mobile.spec.ts` to
+      the board pager and switcher per the numbered assertions in
+      `docs/UX-GUIDELINES.md` — full-width column with no visible
+      neighbour, one swipe advances exactly one column, a fling does not
+      skip, resting offset is a multiple of the strip width, every
+      status reachable from the switcher, selected segment count matches
+      the rendered card count, filtered-out status repaging, and the
+      all-hidden empty-state fallback
+- [ ] 14.7 Playwright `mobile` project: extend `e2e/mobile.spec.ts` to
+      pane detail, settings and the drawer per the same numbered
+      assertions (focus containment, Escape restore, 900px resize,
+      terminal key ownership, stacked setting rows, top toast stack)
 
 ## 15. Migration and cutover
 
@@ -156,7 +187,8 @@
       light on absence of signal)
 - [ ] 15.2 `kanhrd.settings` `density` key preserved; no data loss
 - [ ] 15.3 Screenshot review: capture before/after of board (empty +
-      populated), pane detail, settings, mobile drawer under both
+      populated), pane detail, settings, mobile drawer and the mobile
+      board pager (first, middle and last status column) under both
       themes; attach to the PR description
 
 ## 16. Documentation and release notes

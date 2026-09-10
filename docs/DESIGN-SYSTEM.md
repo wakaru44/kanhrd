@@ -294,13 +294,21 @@ Layout constants:
 --breakpoint-mobile: 900px;
 --card-compact-height: 44px; /* compact card row, excluding gap */
 --card-gap: 8px; /* vertical gap between cards in a column */
---column-snap-width: 85vw; /* one column per snap position below 900px */
+--switcher-height: 40px; /* mobile status switcher, also its tap target */
 ```
 
 `--card-compact-height` + `--card-gap` = **52px**, which is the exact
 `itemSize` the CDK virtual viewport must use. A mismatch clips rows.
 `--card-compact-height` is ≥ `--touch-target-min`, so a compact card is
 already a safe tap target.
+
+There is deliberately **no** mobile column-width token. Below
+`--breakpoint-mobile` a status column is `flex: 0 0 100%` of the paging
+strip — a structural value, not a design decision, and a token holding
+`100%` would only invite a value other than 100%. The earlier
+`--column-snap-width: 85vw` is **removed**: a partly visible neighbouring
+column turns paging back into hunting. See `UX-GUIDELINES.md`
+§ Board paging model.
 
 `--content-max-width` constrains explanatory text. It is never applied to
 the board: the board uses the full viewport width.
@@ -455,6 +463,10 @@ tab — see `BRAND.md`).
 - Minimum width `--column-min-width`. When columns do not fit, the board
   region scrolls horizontally; cards never shrink and the page never
   overflows.
+- Below `--breakpoint-mobile` the columns become a one-column-per-screen
+  pager: each column is `flex: 0 0 100%` of the paging strip, with
+  `scroll-snap-align: start` and `scroll-snap-stop: always`, driven by
+  the status switcher. No neighbouring column is visible at rest.
 - An empty column keeps its horizontal slot and header; only its body
   collapses to a single hairline row with the count `0`. No prose.
 - Emphasis order: `blocked` strongest, `working` next; `done`, `idle`,
@@ -480,6 +492,28 @@ tab — see `BRAND.md`).
 - The only pill in the system. `--radius-pill`, `--paper-raised`,
   `--elev-1`, an `--status-working` dot to signal an active scope.
 - Clear-scope is a `LucideX` button inside the pill, visible on render.
+
+### Status switcher (mobile only)
+
+Rendered below `--breakpoint-mobile` only; the desktop board has
+side-by-side columns and no switcher.
+
+- A segmented control, `role="tablist"`, one `role="tab"` segment per
+  **visible** status in `STATUS_COLUMN_ORDER`.
+- Height `--switcher-height` (40px) — every segment therefore already
+  meets `--touch-target-min`. `--sp-1` between segments, a `--rule`
+  hairline underneath the control.
+- Segments are `flex: 1 1 0`, `min-width: --touch-target-min`; the
+  selected segment is `flex: 1.6 1 0` so its label plus count fits.
+- Label: the status name at `--fs-caption` in `--font-ui`. The selected
+  segment appends the current column's card count in `--font-mono` with
+  tabular numerals; unselected segments show no count.
+- Selected state: `--fw-semi` plus a 2px `--ochre-line` underline. No
+  filled background, and never colour alone.
+- Resting fill is transparent; the control adds no surface of its own.
+
+See `UX-GUIDELINES.md` § Board paging model for its behaviour, its
+filter-bar interaction, and its e2e criteria.
 
 ### Buttons
 
@@ -709,32 +743,33 @@ recorded so nobody reintroduces them:
 
 ## Migration map (from current SCSS)
 
-| Current                                                                    | New token                                                                                                             |
-| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `--bg` `#14161c` / `#f4f5f7`                                               | `--paper` (`#161311` dark / `#f4ede0` light)                                                                          |
-| `--surface-1` `#1b1e26` / `#ffffff`                                        | `--paper-sunk`                                                                                                        |
-| `--surface-2` `#232733` / `#eceef2`                                        | `--paper-raised`                                                                                                      |
-| `--border` `#2e333f` / `#d7dae1`                                           | `--rule`                                                                                                              |
-| `--border-hover` `#3c4252` / `#b9bfcb`                                     | `--rule-strong`                                                                                                       |
-| _(none)_                                                                   | `--rule-control` — new, for enabled control boundaries                                                                |
-| `--text` `#e6e8ee` / `#1b1e26`                                             | `--ink`                                                                                                               |
-| `--text-dim` `#8b91a1` / `#5b6273`                                         | `--ink-soft`, or `--ink-mute` for captions                                                                            |
-| `--status-working` `#61c98e` / `#2f9e63`                                   | `--status-working` `#d69746` / `#aa6f20`                                                                              |
-| `--status-blocked` `#e0616c` / `#c73b46`                                   | `--status-blocked` `#c4553d` / `#b6412a`                                                                              |
-| `--status-idle` `#e5c07b` / `#a5760a`                                      | `--status-idle` `#5f7ea0` / `#2f4a6b`                                                                                 |
-| `--status-done` `#6d8fe0` / `#3f63c0`                                      | `--status-done` `#86975f` / `#6b7d4a`                                                                                 |
-| `--status-unknown` `#5a6072` / `#8b91a1`                                   | `--status-unknown` `#8f8879` / `#827d70`                                                                              |
-| `card.html` `[style.background]="hostColor()"` on the host chip            | host seal: outline `--ochre`, no fill                                                                                 |
-| ad-hoc `0.7 / 0.8 / 0.85 / 1 / 1.05 / 1.4rem`                              | `--fs-caption` … `--fs-h2`                                                                                            |
-| `border-radius: 6px / 8px / 10px`                                          | `--radius-md` / `--radius-md` / `--radius-lg`                                                                         |
-| `XTERM_THEME_DARK` `#14161c`/`#e6e8ee`                                     | Sumi palette above                                                                                                    |
-| `XTERM_THEME_LIGHT` `#f4f5f7`/`#1b1e26`                                    | Washi palette above                                                                                                   |
-| `.icon { width: 1rem }` in `styles.scss`                                   | `--icon-md`                                                                                                           |
-| `×` in `keyboard-help-overlay.html`                                        | `LucideX`                                                                                                             |
-| `&larr;` in `pane-detail.html`                                             | `LucideArrowLeft`                                                                                                     |
-| `column.html` `itemSize="84"` at > 20 panes                                | compact at > 20, virtualize at > 50; `itemSize` = `--card-compact-height` + `--card-gap` = 52                         |
-| `board.scss` snap-scroll at `max-width: 1100px`, `grid-auto-columns: 80vw` | snap-scroll below `--breakpoint-mobile` (900px) at `--column-snap-width` (85vw); 900–1100px uses side-by-side columns |
-| `column.html` count `"no working panes"`                                   | mono `0` (see `copy.ts`)                                                                                              |
+| Current                                                                    | New token                                                                                                                                                                              |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--bg` `#14161c` / `#f4f5f7`                                               | `--paper` (`#161311` dark / `#f4ede0` light)                                                                                                                                           |
+| `--surface-1` `#1b1e26` / `#ffffff`                                        | `--paper-sunk`                                                                                                                                                                         |
+| `--surface-2` `#232733` / `#eceef2`                                        | `--paper-raised`                                                                                                                                                                       |
+| `--border` `#2e333f` / `#d7dae1`                                           | `--rule`                                                                                                                                                                               |
+| `--border-hover` `#3c4252` / `#b9bfcb`                                     | `--rule-strong`                                                                                                                                                                        |
+| _(none)_                                                                   | `--rule-control` — new, for enabled control boundaries                                                                                                                                 |
+| `--text` `#e6e8ee` / `#1b1e26`                                             | `--ink`                                                                                                                                                                                |
+| `--text-dim` `#8b91a1` / `#5b6273`                                         | `--ink-soft`, or `--ink-mute` for captions                                                                                                                                             |
+| `--status-working` `#61c98e` / `#2f9e63`                                   | `--status-working` `#d69746` / `#aa6f20`                                                                                                                                               |
+| `--status-blocked` `#e0616c` / `#c73b46`                                   | `--status-blocked` `#c4553d` / `#b6412a`                                                                                                                                               |
+| `--status-idle` `#e5c07b` / `#a5760a`                                      | `--status-idle` `#5f7ea0` / `#2f4a6b`                                                                                                                                                  |
+| `--status-done` `#6d8fe0` / `#3f63c0`                                      | `--status-done` `#86975f` / `#6b7d4a`                                                                                                                                                  |
+| `--status-unknown` `#5a6072` / `#8b91a1`                                   | `--status-unknown` `#8f8879` / `#827d70`                                                                                                                                               |
+| `card.html` `[style.background]="hostColor()"` on the host chip            | host seal: outline `--ochre`, no fill                                                                                                                                                  |
+| ad-hoc `0.7 / 0.8 / 0.85 / 1 / 1.05 / 1.4rem`                              | `--fs-caption` … `--fs-h2`                                                                                                                                                             |
+| `border-radius: 6px / 8px / 10px`                                          | `--radius-md` / `--radius-md` / `--radius-lg`                                                                                                                                          |
+| `XTERM_THEME_DARK` `#14161c`/`#e6e8ee`                                     | Sumi palette above                                                                                                                                                                     |
+| `XTERM_THEME_LIGHT` `#f4f5f7`/`#1b1e26`                                    | Washi palette above                                                                                                                                                                    |
+| `.icon { width: 1rem }` in `styles.scss`                                   | `--icon-md`                                                                                                                                                                            |
+| `×` in `keyboard-help-overlay.html`                                        | `LucideX`                                                                                                                                                                              |
+| `&larr;` in `pane-detail.html`                                             | `LucideArrowLeft`                                                                                                                                                                      |
+| `column.html` `itemSize="84"` at > 20 panes                                | compact at > 20, virtualize at > 50; `itemSize` = `--card-compact-height` + `--card-gap` = 52                                                                                          |
+| `board.scss` snap-scroll at `max-width: 1100px`, `grid-auto-columns: 80vw` | below `--breakpoint-mobile` (900px): one-column-per-screen pager, columns `flex: 0 0 100%`, `scroll-snap-stop: always`, plus the status switcher; 900–1100px uses side-by-side columns |
+| `tokens.scss` `--column-snap-width: 85vw` (shipped)                        | **delete**; replaced by `--switcher-height: 40px`                                                                                                                                      |
+| `column.html` count `"no working panes"`                                   | mono `0` (see `copy.ts`)                                                                                                                                                               |
 
 ## Lint gate
 

@@ -312,8 +312,9 @@ visibility preferences SHALL remain effective.
 The shell SHALL use the available viewport width. Column minimum width
 SHALL be 260px; when columns do not fit, the board region SHALL scroll
 horizontally instead of shrinking cards or overflowing the whole page.
-Below 900px the rail becomes a drawer and columns use horizontal snap
-scroll. Empty columns retain their horizontal slot and header; only
+Below 900px the rail becomes a drawer and the board becomes a
+one-column-per-screen pager as specified in the mobile board requirement
+below. Empty columns retain their horizontal slot and header; only
 their empty body collapses. Settings and long explanatory copy SHALL
 use a readable content width rather than stretching across the board.
 
@@ -324,6 +325,73 @@ use a readable content width rather than stretching across the board.
 #### Scenario: A column becomes empty
 - **WHEN** the final card leaves a status column
 - **THEN** its header and zero count remain in the same position, and neighbouring columns do not jump
+
+### Requirement: The mobile board pages one status column per screen
+Below 900px the board SHALL present exactly one status column per
+screen. Each status column SHALL occupy the full width of the paging
+strip inside the page gutters; no part of another status column SHALL be
+visible at a resting scroll position. The strip SHALL use mandatory
+horizontal snapping with `scroll-snap-stop: always`, so a single swipe
+advances exactly one column and a fast fling SHALL NOT skip a column.
+There SHALL be no resting position between two columns. Vertical
+scrolling SHALL belong to the current column's card list, not to the
+page, and the paging strip SHALL remain the only horizontally scrolling
+element on the board route. Column order SHALL remain
+`STATUS_COLUMN_ORDER` and SHALL NOT be reordered, merged, or replaced by
+an activity feed. Paging SHALL move the viewport only; it SHALL NOT
+expose a drag handle, grab cursor, or drop target, and SHALL NOT change
+any card's status.
+
+#### Scenario: One column fills the screen
+- **WHEN** the populated board renders at 390×844
+- **THEN** the resting status column's width equals the paging strip's client width and no second status column is partially visible
+
+#### Scenario: One swipe advances one column
+- **WHEN** the user swipes the board horizontally once from the first column
+- **THEN** the strip settles on the second column, with the scroll offset an exact multiple of the strip's client width
+
+#### Scenario: A fling does not skip a column
+- **WHEN** the user flings the board horizontally by more than three column widths from the first column
+- **THEN** the strip still settles on the second column
+
+### Requirement: A persistent status switcher navigates the mobile board
+Below 900px the board SHALL render a persistent status switcher between
+the filter bar and the paging strip. It SHALL remain visible while the
+current column's cards scroll. It SHALL render one segment per visible
+status in `STATUS_COLUMN_ORDER`, so the segment count communicates how
+many status columns exist and the selected segment communicates which
+one is shown. The selected segment SHALL additionally display the
+current column's card count; unselected segments SHALL NOT display a
+count. Selecting a segment SHALL page the strip to that status, and
+swiping the strip SHALL update the selected segment; the two SHALL
+reflect one state. The switcher SHALL be a tablist whose segments are
+tabs with `aria-selected`, SHALL support left/right arrow keys, and each
+segment SHALL meet the 40×40 touch-target minimum. Selection SHALL be
+conveyed by weight and an underline in addition to colour. The switcher
+SHALL NOT render at or above 900px.
+
+When the filter bar hides a status, its segment and its page SHALL be
+removed. If the currently shown status is hidden, the board SHALL page
+to the nearest visible column to its left, or to the first visible
+column when there is none, and SHALL NOT rest on a hidden or blank page.
+When every status is hidden, the switcher and the strip SHALL be
+replaced by the no-matches empty state and its clear-filters action.
+
+#### Scenario: The switcher reaches every status
+- **WHEN** a user taps each switcher segment in turn at 390×844
+- **THEN** the strip settles on the matching status column each time, and every visible status has been reached without swiping
+
+#### Scenario: The selected segment reports its count
+- **WHEN** the board pages to a status column containing 7 cards
+- **THEN** that status's segment is the selected segment and displays the count 7, and no other segment displays a count
+
+#### Scenario: The shown status is filtered out
+- **WHEN** the user hides the currently shown status with its filter chip
+- **THEN** its segment is removed and the board settles on the nearest remaining visible column, with the selection marked on a rendered segment
+
+#### Scenario: Every status is hidden
+- **WHEN** the user hides every status in the filter bar
+- **THEN** the switcher and paging strip are replaced by the no-matches empty state with a clear-filters action
 
 ### Requirement: Typography distinguishes identity from operational data
 The SPA SHALL use Shippori Mincho for the wordmark and display headings,
