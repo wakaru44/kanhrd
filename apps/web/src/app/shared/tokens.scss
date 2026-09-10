@@ -188,3 +188,65 @@
   --density-text-scale: 0.92;
   --density-line-height: 1.25;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+ * TEMPORARY — pre-redesign compatibility aliases. DELETE THESE.
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * The old names below were removed from styles.scss with the token layer,
+ * but the twelve component stylesheets still reference them and would
+ * render transparent backgrounds, invisible borders and unset text until
+ * their wave lands (openspec change add-l-brand-neo-shepherd-redesign,
+ * sections 7-12). These aliases keep the board runnable and reviewable in
+ * the meantime. They are NOT tokens: no component may reference them in
+ * new code, and nothing else may be added to this block.
+ *
+ * Mapping is the migration map in docs/DESIGN-SYSTEM.md. Each alias is a
+ * `var()` reference, never a literal, so both themes are covered by this
+ * one block: the new tokens are redeclared on the same element (<html>)
+ * by `[data-theme="dark"]`, so an alias resolves to whichever palette is
+ * in effect.
+ *
+ * DELETION CONDITION — delete an alias the moment its usage count reaches
+ * zero: `grep -rc "var(--<name>)" apps/web/src/app --include='*.scss'`.
+ * Delete the whole block, and this comment, when all seven are gone.
+ *
+ * Remaining dependents at the time of writing (file: occurrences):
+ *
+ *   --bg (4)            settings 1, rail 1, pane-detail 2
+ *   --surface-1 (13)    settings 1, board 2, card 2, column 1,
+ *                       empty-state 1, keyboard-help-overlay 1,
+ *                       confirm-modal 1, toast-host 1, rail 1,
+ *                       pane-detail 2
+ *   --surface-2 (20)    app 1, settings 4, filter-bar 1, card 2, board 3,
+ *                       column 1, empty-state 1,
+ *                       keyboard-help-overlay 1, confirm-modal 1,
+ *                       rail 4, pane-detail 1
+ *   --border (30)       app 2, settings 7, filter-bar 2, board 3, card 4,
+ *                       empty-state 2, keyboard-help-overlay 2,
+ *                       confirm-modal 2, toast-host 1, rail 1,
+ *                       pane-detail 4
+ *   --border-hover (9)  app 1, settings 2, board 1, card 2,
+ *                       confirm-modal 1, rail 2
+ *   --text (19)         app 2, settings 4, board 3, filter-bar 1, card 2,
+ *                       empty-state 1, keyboard-help-overlay 1,
+ *                       confirm-modal 1, toast-host 1, rail 3
+ *   --text-dim (34)     settings 8, board 3, card 3, column 2,
+ *                       empty-state 2, keyboard-help-overlay 4,
+ *                       confirm-modal 1, toast-host 1, rail 3,
+ *                       pane-detail 7
+ *
+ * (Paths are under apps/web/src/app/; `app` is app.scss.)
+ */
+
+:root {
+  --bg: var(--paper);
+  --surface-1: var(--paper-sunk);
+  --surface-2: var(--paper-raised);
+  --border: var(--rule);
+  --border-hover: var(--rule-strong);
+  --text: var(--ink);
+  --text-dim: var(--ink-soft); /* captions that want quieter ink use --ink-mute post-migration */
+}
+
+/* ═══ end TEMPORARY compatibility aliases ══════════════════════════ */
