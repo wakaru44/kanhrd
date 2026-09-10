@@ -1,0 +1,21 @@
+docs/research/agent-vendor-icons.md
+  s_a62153c2b8328e::t_d96e3894af380c 3,235
+docs/adr/0006-remote-herdr-hosts.md
+  s_a62153c2b8328e::t_d96e3894af380c 25,27-28,118-119,123,167,197-198
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fa54ee022ba3ea7ee07128ced8e5175b3bd75b35",
+  "prompts": {},
+  "sessions": {
+    "s_a62153c2b8328e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fae23786-fdaa-46af-b39c-69a564a2b7c2",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
