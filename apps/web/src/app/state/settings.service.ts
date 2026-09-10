@@ -2,6 +2,13 @@ import { Injectable, effect, signal } from "@angular/core";
 
 export type Density = "comfortable" | "compact";
 
+/**
+ * Which dimension the board bands cards by. `none` is today's board: one
+ * implicit band, no band chrome. See `groupIntoSwimlanes` in panes.store.ts
+ * for how each value derives a band key/label from a pane.
+ */
+export type SwimlaneDimension = "none" | "host" | "repository" | "checkout" | "tab";
+
 const STORAGE_KEY = "kanhrd.settings";
 
 export interface StoredSettings {
@@ -15,10 +22,17 @@ export interface StoredSettings {
    * that lands; the Settings screen flags it "coming soon".
    */
   requestedOutputPollIntervalMs: number | null;
+  /**
+   * Board arrangement, not a herdr concept: which dimension the board
+   * groups cards into swimlanes by. Deliberately NOT stamped onto
+   * `documentElement` the way `density` is — density keys the token layer,
+   * swimlanes are structure the board component owns.
+   */
+  swimlaneDimension: SwimlaneDimension;
 }
 
 export function defaultSettings(): StoredSettings {
-  return { density: "comfortable", requestedOutputPollIntervalMs: null };
+  return { density: "comfortable", requestedOutputPollIntervalMs: null, swimlaneDimension: "none" };
 }
 
 /** Pure read, unit-testable without DI — mirrors `loadFilters` in panes.store.ts. */
@@ -60,6 +74,10 @@ export class SettingsService {
 
   setDensity(density: Density): void {
     this.settings.update((current) => ({ ...current, density }));
+  }
+
+  setSwimlaneDimension(dimension: SwimlaneDimension): void {
+    this.settings.update((current) => ({ ...current, swimlaneDimension: dimension }));
   }
 
   setRequestedPollIntervalMs(ms: number | null): void {
