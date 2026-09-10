@@ -1,0 +1,24 @@
+openspec/specs/tier-2-terminal/spec.md
+  s_f8e4251c591816::t_453ef4df37baba 47-55,64-70
+  s_f8e4251c591816::t_951eb4c354d247 71
+openspec/specs/terminal-scrollback/spec.md
+  s_f8e4251c591816::t_453ef4df37baba 1-69
+openspec/specs/pane-workdir-and-task-title/spec.md
+  s_f8e4251c591816::t_453ef4df37baba 1-371
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ca543781e884184c1dfd4f5530f7f8abf60f1e59",
+  "prompts": {},
+  "sessions": {
+    "s_f8e4251c591816": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d12f5dab-ef42-467f-8f5f-833d86b7562a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
