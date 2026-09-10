@@ -86,6 +86,29 @@ describe('panes.store reducers', () => {
     expect(next).toBe(empty);
   });
 
+  it('moves status_since with the status, and clears it when the event carries none', () => {
+    const p = { ...pane(), status_since: 1_000 };
+    const panes: PaneMap = new Map([[paneKey(p.host, p.id), p]]);
+
+    const stamped = applyPaneAgentStatusChanged(panes, {
+      id: p.id,
+      host: p.host,
+      agent_status: 'done',
+      status_since: 9_000,
+    });
+    expect(stamped.get(paneKey(p.host, p.id))?.status_since).toBe(9_000);
+
+    // An older bridge sends no observation with the transition. Keeping the
+    // previous one would age the NEW status by the old one's lifetime, so
+    // the field goes away and the card shows no duration.
+    const unvouched = applyPaneAgentStatusChanged(panes, {
+      id: p.id,
+      host: p.host,
+      agent_status: 'done',
+    });
+    expect('status_since' in unvouched.get(paneKey(p.host, p.id))!).toBe(false);
+  });
+
   it('applyEvent dispatches pane.created/pane.closed/pane.agent_status_changed', () => {
     const p = pane();
     let panes: PaneMap = new Map();
@@ -274,6 +297,76 @@ describe('PanesStore capabilities probing', () => {
     await settle();
 
     expect(store.capabilitiesSignal().get('laptop')).toEqual(fallbackCapabilities());
+  });
+});
+
+describe('PanesStore.statusCountsSignal', () => {
+  function setUp(): PanesStore {
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: new FakeWsClient() },
+      ],
+    });
+    return TestBed.inject(PanesStore);
+  }
+
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true });
+    localStorage.removeItem('kanhrd.filters');
+  });
+
+  it('counts panes per status, honouring host exclusion and scope but not hiddenStatuses', () => {
+    const store = setUp();
+    const seed: PaneMap = new Map();
+    let panes: PaneMap = seed;
+    panes = applyPaneCreated(panes, pane({ id: 'a', host: 'laptop', agent_status: 'working' }));
+    panes = applyPaneCreated(panes, pane({ id: 'b', host: 'laptop', agent_status: 'working' }));
+    panes = applyPaneCreated(panes, pane({ id: 'c', host: 'laptop', agent_status: 'blocked' }));
+    panes = applyPaneCreated(
+      panes,
+      pane({ id: 'd', host: 'laptop', workspace: { id: 'w2', name: 'w2' }, agent_status: 'idle' })
+    );
+    panes = applyPaneCreated(panes, pane({ id: 'e', host: 'desktop', agent_status: 'working' }));
+    store.panesSignal.set(panes);
+
+    // hiddenStatuses must NOT affect the count — that's what the chip toggles.
+    store.filtersSignal.set({ excludedHosts: new Set(), hiddenStatuses: new Set(['working']) });
+    expect(store.statusCountsSignal()).toEqual({
+      working: 3,
+      blocked: 1,
+      idle: 1,
+      done: 0,
+      unknown: 0,
+    });
+
+    // excluded hosts DO drop out of the count.
+    store.filtersSignal.set({ excludedHosts: new Set(['desktop']), hiddenStatuses: new Set() });
+    expect(store.statusCountsSignal().working).toBe(2);
+
+    // Scope narrows counts to the current workspace/tab, same as columnsSignal.
+    store.filtersSignal.set({ excludedHosts: new Set(), hiddenStatuses: new Set() });
+    store.setScope('laptop', 'w1', null);
+    expect(store.statusCountsSignal()).toEqual({
+      working: 2,
+      blocked: 1,
+      idle: 0,
+      done: 0,
+      unknown: 0,
+    });
+  });
+
+  it('reports 0 for every status when no panes match', () => {
+    const store = setUp();
+    expect(store.statusCountsSignal()).toEqual({
+      working: 0,
+      blocked: 0,
+      idle: 0,
+      done: 0,
+      unknown: 0,
+    });
   });
 });
 

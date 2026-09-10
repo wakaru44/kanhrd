@@ -175,7 +175,8 @@ a.card-open::after {
   }
 }
 
-/* Meta row: durations and counts in mono. Elapsed is observed client time. */
+/* Meta row: durations and counts in mono. Elapsed is the bridge's observation
+ * of when the pane entered its status, and is absent when it has none. */
 .meta {
   grid-area: meta;
   display: flex;
@@ -188,6 +189,12 @@ a.card-open::after {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* All three parts of the meta row are optional and can be absent at once; an
+   empty flex box would still claim its column's gaps. Nothing to say, no box. */
+.meta:empty {
+  display: none;
 }
 
 /* The agent identity a card name displaced — muted, never louder than the title. */

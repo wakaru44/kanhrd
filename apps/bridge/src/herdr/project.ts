@@ -13,8 +13,18 @@ import type { WorkspaceTabNameCache } from './names.js';
  * per-host name cache, and the configured host name (herdr doesn't know
  * about hosts — that's a kanhrd concept). See CONTRACT.md section 4 for the
  * field-by-field mapping this implements.
+ *
+ * `statusSince` is the caller's (i.e. `HostRuntime`'s) observation time for
+ * this pane's current `agent_status`, in epoch ms. Pass `undefined` — and the
+ * field is omitted entirely — whenever the bridge has not watched this pane
+ * enter its status; see `Pane.status_since`.
  */
-export function projectPane(host: string, pane: HerdrPaneInfo, names: WorkspaceTabNameCache): Pane {
+export function projectPane(
+  host: string,
+  pane: HerdrPaneInfo,
+  names: WorkspaceTabNameCache,
+  statusSince?: number
+): Pane {
   const agentName = pane.display_agent ?? pane.agent;
 
   const projected: Pane = {
@@ -32,6 +42,7 @@ export function projectPane(host: string, pane: HerdrPaneInfo, names: WorkspaceT
   if (typeof pane.label === 'string' && pane.label !== '') projected.label = pane.label;
   if (pane.title !== undefined) projected.title = pane.title;
   if (agentName !== undefined) projected.agent = { name: agentName };
+  if (statusSince !== undefined) projected.status_since = statusSince;
 
   // Git provenance is a WORKSPACE property in herdr; the join is the same
   // one that already resolves `workspace.name`, carrying one more value.

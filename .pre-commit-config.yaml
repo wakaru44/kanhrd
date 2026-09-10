@@ -17,7 +17,10 @@ exclude: >
   (?x)^(
     openspec/|
     docs/adr/|
+    docs/CONTEXT\.md|
+    docs/OPERATING\.md|
     README\.md|
+    tmp/foreman/|
     pnpm-lock\.yaml|
     \.claude/|
     docs/history/

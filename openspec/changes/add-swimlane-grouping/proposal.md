@@ -21,7 +21,8 @@ ships no feature using it; this is that feature.
 ## What Changes
 
 - A board setting chooses the swimlane dimension: **none** (today's
-  board, and the default), **host**, **working directory**, or **tab**.
+  board, and the default), **host**, **repository**, **checkout path**,
+  or **tab**.
 - With a dimension chosen, the board renders one horizontal band per
   distinct value, in a defined order, each band containing the full set
   of status columns.
@@ -44,33 +45,47 @@ group by: working directory
   └─────────────────────────────────────────────────┘
 ```
 
-## Open questions for the maintainer
+## Maintainer decisions — resolved 2026-09-10
 
-Deliberately unanswered — each one changes the design materially.
+Do not re-ask these.
 
-1. **Working directory from where?** `Pane.project` carries
-   `repo_name`, `checkout_path` and `is_linked_worktree`, and there is
-   an in-flight `pane-workdir-and-task-title` capability. Grouping by
-   repository is not the same as grouping by checkout path, and linked
-   worktrees make them diverge exactly where it matters.
-2. **What happens to an empty band?** Status columns keep empty slots so
-   neighbours do not jump. A swimlane with no cards in any column is a
-   band of five empty columns — probably hidden, but that is a decision.
-3. **Mobile.** The board below 900px is a one-column-per-screen pager.
-   Swimlanes on top of paging is a second axis on a screen that already
-   struggles with one. Options: swimlanes desktop-only, or the pager
-   pages within the current band.
-4. **Interaction with `add-parked-columns`.** That in-flight change adds
-   user-created columns holding manually placed cards. A parked card
-   inside a swimlane belongs to a band by its host/workdir/tab and to a
-   column by the operator's choice — do parked columns appear in every
-   band, in one band, or outside the swimlane structure entirely? These
-   two features must be designed against each other before either
-   ships, and this proposal does not assume which lands first.
-5. **Virtualization.** Columns virtualize above 50 cards. Bands multiply
-   the number of independent scrollers, and the current
-   `cdk-virtual-scroll-viewport` per column assumes one scroll context
-   per status.
+**Q1 — group by repository or by checkout path? Both.** Grouping by
+repository keeps linked worktrees of one repo together, which is the
+point of having the repo name at all. But the operator's own layout is
+`../services` as the working root with checkouts at
+`../services/aservice`, where the checkout path is the meaningful
+grouping and the repository is not. Both are already on `Pane.project`
+(`repo_name`, `checkout_path`), so this is one extra enum value and one
+extra label resolver — a setting, not a design fork. Ship both.
+
+**Q4 — how do swimlanes compose with `add-parked-columns`? They are
+orthogonal, and there was no real conflict.** A parked column is a
+*column*: it sits on the vertical axis beside the status columns and
+behaves like one. A swimlane is a *band*: it sits on the horizontal axis
+and cuts across every column, parked or status. A card's band is derived
+from its data; its column is either derived from `agent_status` or set
+by the operator parking it. The two axes never contend for the same
+card, so each feature can be built without waiting on the other.
+
+The only real interaction is that a parked column appears **in every
+band**, exactly as a status column does — a band renders the full set of
+visible columns, and "parked" is one of them.
+
+**Q2 — an empty band is hidden.** Status columns keep their slots so
+neighbours do not jump horizontally; that reasoning does not carry to
+bands, where an empty band is dead vertical space between two populated
+ones. A band with no cards in any column is not rendered.
+
+**Q3 — mobile: the pager pages within the current band.** Swimlanes stay
+below 900px rather than becoming desktop-only, because grouping by host
+matters most on the screen with the least room. The band is chosen
+first, then the existing one-column-per-screen pager operates inside it.
+
+**Q5 — one virtual scroller per column per band.** The existing
+threshold (virtualize above 50 cards in a column) applies per column per
+band, which is the correct granularity: a band's column is the scrolling
+region. Bands multiply the scrollers, so verify the count stays sane at
+the documented fixture size before shipping.
 
 ## Impact
 
@@ -82,7 +97,6 @@ Deliberately unanswered — each one changes the design materially.
 
 ## Status
 
-**Proposal only.** Not scheduled, not scoped for implementation, and
-open questions 1 and 4 are blocking. Written now so the vocabulary
-change has a real referent for `lane`, and so the parked-columns work
-can be designed with this in view rather than around it.
+**Proposal.** Every gate question is answered, so this is implementable
+whenever it is scheduled. It does not block and is not blocked by
+`add-parked-columns`: the two features occupy different axes.

@@ -128,4 +128,17 @@ describe('projectPane', () => {
 
     expect('project' in result).toBe(false);
   });
+
+  it('carries status_since when the caller observed the transition, and omits the key otherwise', () => {
+    const names = new WorkspaceTabNameCache();
+    names.setWorkspace('ws-1', 'Inbox');
+
+    expect(projectPane('local', pane(), names, 1_700_000_000_000).status_since).toBe(
+      1_700_000_000_000
+    );
+    // No observation -> no key. Not `0`, not `null`, not the current time:
+    // the card renders nothing rather than a fabricated duration.
+    expect('status_since' in projectPane('local', pane(), names)).toBe(false);
+    expect('status_since' in projectPane('local', pane(), names, undefined)).toBe(false);
+  });
 });

@@ -259,6 +259,25 @@ export interface Pane {
   };
   agent_status: AgentStatus;
   /**
+   * Epoch milliseconds, on the BRIDGE's clock, at which this bridge first
+   * observed the pane holding its current `agent_status`. Bridge-injected;
+   * herdr's `PaneInfo` carries no time field of any kind, so there is
+   * nothing authoritative to mirror here.
+   *
+   * Three properties a reader must not overstate:
+   *   - It is the bridge's OBSERVATION, never herdr's record.
+   *   - It resets when the bridge restarts or reconnects to its host: a
+   *     bridge that finds a pane already `working` does not know when that
+   *     began, and omits the field rather than guessing.
+   *   - Its resolution is one `AGENT_STATUS_POLL_INTERVAL_MS`, not the
+   *     millisecond it happens to be expressed in.
+   *
+   * Absent means "the bridge cannot vouch" — including panes seen for the
+   * first time at connect, and any bridge predating this field. It is never
+   * `0`, `null` or "now"; consumers render no duration rather than a zero.
+   */
+  status_since?: number;
+  /**
    * Not derivable from `pane.list` or the tier-1 event payloads above —
    * herdr only exposes output via a separate `pane.read` call
    * (src/api/schema/panes.rs:355-367), which tier-1 does not call per pane.

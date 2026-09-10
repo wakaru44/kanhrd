@@ -65,7 +65,7 @@ Chose subprocess (`node --import tsx src/main.ts --port 0`) over importing
 `main()` as a library function. `apps/bridge/src/main.ts` isn't structured
 as an importable entry point today (top-level `main().catch(...)` with
 `process.exit`), and a subprocess is also the more honest test of what this
-suite is meant to prove — that the *actual* CLI-launched bridge process
+suite is meant to prove — that the _actual_ CLI-launched bridge process
 starts, binds, and serves correctly, not just that its internals compose
 when driven in-process. `tsx` (already a bridge devDependency, used by its
 own `dev` script) avoids a `dist/` build step, so `pnpm install` →
@@ -83,11 +83,11 @@ crashed mid-way, so a crashed run doesn't strand state silently.
 
 See the top-level lane report for the full table; the essentials:
 
-| Suite check | Historical ad-hoc equivalent |
-|---|---|
-| A1-A3 (start, `/api/hosts`, `/api/hosts/:host/panes`) | VALIDATION.md checks 1-3 (manual `tsx watch` + `curl`) |
-| A4 (churn survives) | VALIDATION-TIER3.md's flapping-host root-cause investigation — regression test for the stale-`pane_id`-kills-the-connection bug |
-| B1-B7 (WS methods) | VALIDATION-TIER2.md checklist items 3-10 (raw-WS Node script, `/tmp/kanhrd-ws-test.mjs`) |
-| C1 (burst-send ordering) | VALIDATION-TIER2.md round-1 Finding B / round-2 re-verification (`ndl-2r-5akbmkaherr` scramble) |
-| C2 (live-update polling) | VALIDATION-TIER2.md round-1 Finding A / round-2 re-verification (stuck-at-zero `revision`, content-hash fallback) |
-| D1-D2 (tab CRUD + events) | VALIDATION-TIER3.md's manual tab-CRUD smoke (only static-reviewed there, blocked by the connectivity bug) |
+| Suite check                                           | Historical ad-hoc equivalent                                                                                                    |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| A1-A3 (start, `/api/hosts`, `/api/hosts/:host/panes`) | VALIDATION.md checks 1-3 (manual `tsx watch` + `curl`)                                                                          |
+| A4 (churn survives)                                   | VALIDATION-TIER3.md's flapping-host root-cause investigation — regression test for the stale-`pane_id`-kills-the-connection bug |
+| B1-B7 (WS methods)                                    | VALIDATION-TIER2.md checklist items 3-10 (raw-WS Node script, `/tmp/kanhrd-ws-test.mjs`)                                        |
+| C1 (burst-send ordering)                              | VALIDATION-TIER2.md round-1 Finding B / round-2 re-verification (`ndl-2r-5akbmkaherr` scramble)                                 |
+| C2 (live-update polling)                              | VALIDATION-TIER2.md round-1 Finding A / round-2 re-verification (stuck-at-zero `revision`, content-hash fallback)               |
+| D1-D2 (tab CRUD + events)                             | VALIDATION-TIER3.md's manual tab-CRUD smoke (only static-reviewed there, blocked by the connectivity bug)                       |

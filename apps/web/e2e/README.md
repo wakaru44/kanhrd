@@ -50,6 +50,7 @@ but it should not have been possible without an explicit opt-in.
    from `apps/web/dist/web/browser/` and proxies `/api` + `/ws` to herdr. If a
    bridge is already running on `127.0.0.1:5173`, the config reuses it
    (`reuseExistingServer: true`) instead of spawning a second one.
+
 3. First time only, install the Chromium browser Playwright drives:
 
    ```bash
@@ -81,10 +82,10 @@ pnpm test:e2e:ui       # interactive debug UI
 - **`tier2.terminal.spec.ts`** — click card → `/pane/:host/:id` → xterm.js
   terminal: mount + initial content render, an adversarial fast-typing test
   that types a marker character-by-character with no delay and verifies it
-  lands *in order* at the real pane via the `herdr` CLI (the exact scenario
+  lands _in order_ at the real pane via the `herdr` CLI (the exact scenario
   that broke keystroke ordering in tier-2 round 1 — see
   `tmp/foreman/VALIDATION-TIER2.md`), and a live-update test that sends text
-  to the pane *externally* (bypassing the browser) and asserts it appears in
+  to the pane _externally_ (bypassing the browser) and asserts it appears in
   the terminal DOM within 3s (proves the `pane.output` polling/dedup path
   is actually delivering events end-to-end).
 

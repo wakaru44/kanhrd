@@ -377,6 +377,20 @@ The status switcher:
 - The switcher is **mobile only**. At ≥ 900px the columns are side by
   side and the switcher is not rendered.
 
+Status chip counts:
+
+- Every status chip in the filter bar carries a live pane count trailing
+  its label — `blocked 3`, `idle 0`, `unknown 12` — so a status stays
+  monitorable while its column is hidden. The count is a small
+  `--font-mono` numeral in `--ink-mute`, sitting after the label.
+- A chip toggled off is drawn with the label struck through and dimmed;
+  the count stays legible and keeps updating. Hiding the column is the
+  whole reason to leave the number visible.
+- Counts respect host exclusion and the URL scope, but ignore the
+  status-visibility filter itself — a hidden chip reports how many panes
+  _would_ be in that column if it were unhidden. Zero-count chips still
+  render `0`; watching the drop is the point.
+
 Interaction with the filter bar:
 
 - Hiding a status in the filter bar removes its segment and its page.
@@ -649,9 +663,11 @@ width` (already asserted).
 - Any drag affordance on a status column.
 - A global unmodified `Escape` or `?` binding.
 - Per-pane terminal themes; the terminal palette is app-wide.
-- Fabricated data for decoration — a server-sounding duration that is
-  really observed client time, or a card fetching terminal output it
-  does not need.
+- Fabricated data for decoration — a duration measured from something
+  other than what it claims to measure (the card's elapsed readout is
+  the bridge's observation of when the pane entered its status, and is
+  omitted entirely when the bridge has none: absent beats wrong), or a
+  card fetching terminal output it does not need.
 - Virtualizing at 20 cards; compact is 20, virtualization is 50.
 - Constraining the board to a reading width.
 - A mobile multi-pane or split terminal view.

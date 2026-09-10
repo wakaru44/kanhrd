@@ -45,11 +45,14 @@
 - [x] 4.1 `pnpm --filter @kanhrd/web test`
 - [x] 4.2 `pnpm --filter @kanhrd/web build`
 - [x] 4.3 `bash tools/lint-scss-tokens.sh`
-- [ ] 4.4 NOT DONE — needs the operator's live board (a running herdr).
-      The two hit-test specs above cover the same two failures in karma:
-      before the fix, `elementFromPoint` at the overlap returned the
-      neighbour's control and 2 of 4 menu items were unhittable at the end
-      of a scrolling container; after it, both pass.
-      Original wording: Manual: reproduce the original report — open the menu on a card
-      with a card below it and confirm the last item is both visible and
-      clickable.
+- [x] 4.4 Reproduced on the operator's live board (dark theme, 1512x798,
+      `working` column, two cards). The menu now renders in
+      `.cdk-overlay-container` and is no longer inside any `app-card`.
+      It still overlaps the next card's buttons — a dropdown must — but
+      `document.elementFromPoint()` at the overlap centre returns the
+      `rest` menu item instead of the neighbour's control:
+      `menuIsInOverlayContainer: true`, `menuIsInsideACard: false`,
+      `overlaps: true`, `topElementAtOverlapIsInMenu: true`,
+      `hitText: "rest"`. The same probe before the fix returned a node
+      outside the menu. Karma's two hit-test specs cover the same
+      failures headlessly.

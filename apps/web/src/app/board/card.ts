@@ -183,16 +183,25 @@ export class Card {
 
   // --- meta row ----------------------------------------------------------
   // Only data already on the `Pane` surface: the pane's own `agent_status`
-  // plus how long it's held that status. herdr/the bridge send no timestamp,
-  // so "since when" is observed client time — when this client last saw the
-  // status change — never presented as a server-authoritative duration. The
-  // optional line count reads `last_output_snippet` if a bridge populated it;
-  // no card ever fetches terminal output for decoration.
+  // plus how long it's held that status. The duration comes from the
+  // bridge's `status_since` — the bridge watches the transition and outlives
+  // every board mount, virtual-scroll recycle and page reload the card does
+  // not. Nothing here reads the clock at construction: that was the defect
+  // this replaces (every card showed the same number, and all of them reset
+  // on every visit to the board).
+  //
+  // A bridge that cannot vouch for the value omits it, and the card then
+  // renders no duration at all. There is no fallback to client time: a
+  // missing readout is honest, a zero would be a fabrication.
+  //
+  // The optional line count reads `last_output_snippet` if a bridge
+  // populated it; no card ever fetches terminal output for decoration.
 
-  private readonly statusSince = signal(Date.now());
-  private lastObservedStatus: Pane['agent_status'] | null = null;
-
-  protected readonly elapsed = computed(() => formatElapsed(this.clock.now() - this.statusSince()));
+  protected readonly elapsed = computed(() => {
+    const since = this.pane().status_since;
+    if (since === undefined) return null;
+    return formatElapsed(this.clock.now() - since);
+  });
 
   protected readonly lineCount = computed(() => {
     const snippet = this.pane().last_output_snippet;
@@ -200,14 +209,6 @@ export class Card {
   });
 
   constructor() {
-    effect(() => {
-      const status = this.pane().agent_status;
-      if (this.lastObservedStatus !== null && this.lastObservedStatus !== status) {
-        this.statusSince.set(Date.now());
-      }
-      this.lastObservedStatus = status;
-    });
-
     // Opening the overflow menu moves focus into it (keyboard-first: the menu
     // is navigable with arrows and returns focus to its trigger on Escape).
     // `preventScroll`: the menu is an overlay over the board, so focusing it

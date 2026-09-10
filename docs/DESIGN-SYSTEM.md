@@ -434,8 +434,17 @@ pulse, static under reduced motion.
 - Title: `--font-ui`, `--fw-medium`, `--fs-lead` (standard) /
   `--fs-small` (compact). **Not the display serif.**
 - Meta row: `--fs-small`, `--font-mono` for durations, ids and counts.
-  Elapsed is observed client time since the status was first seen by
-  this client — never presented as a server-authoritative duration.
+  Elapsed is the BRIDGE's observation — the time since the bridge first
+  saw the pane in its current `agent_status`, carried on the wire as
+  `Pane.status_since`. herdr reports no timestamp of any kind, so this
+  is never a server-authoritative duration: it resets when the bridge
+  restarts, and it is accurate to one agent-status poll interval, not to
+  the second it is rendered in.
+- When the bridge cannot vouch for that observation — a pane already in
+  its status when the bridge connected, or a bridge predating the field
+  — `status_since` is absent and the card renders **no duration at all**.
+  No zero, no placeholder, no client-side approximation. Every part of
+  the meta row is optional, and the row is hidden when all of it is.
 - Visible status label in `--status-*-ink` next to the dot.
 - Host seal (hanko) as below.
 - Hover: border becomes `--elev-2`. No translate, no shadow, no scale.

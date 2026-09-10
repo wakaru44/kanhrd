@@ -1,10 +1,14 @@
 # `openspec validate --strict` is a stronger gate than prettier; ADRs and
 # history are frozen once written. See .pre-commit-config.yaml for the same
 # scope note. `apps/` and `packages/` used to sit here as a fence around
-# concurrent lanes — they are formatted like everything else now.
+# concurrent lanes — they are formatted like everything else now. The docs
+# entries below are still fenced while the docs lane is in flight.
 openspec/
 docs/adr/
-README.md
+docs/CONTEXT.md
+docs/OPERATING.md
+/README.md
+tmp/foreman/
 
 # Claude Code skill/command definitions: prompt structure, not prose docs.
 .claude/
