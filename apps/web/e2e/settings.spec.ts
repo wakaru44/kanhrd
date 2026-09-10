@@ -27,20 +27,19 @@ test("header gear icon navigates to /settings", async ({ app }) => {
 
 test("settings route renders every section", async ({ app }) => {
   await app.goto("/settings");
+  // Section headings are lowercase per docs/BRAND.md's voice, and the old
+  // "Servers / hosts" section is now "pens" (the user-facing rename of
+  // host). These strings live in `SETTINGS_COPY` in
+  // `src/app/settings/settings.ts`, not in `shared/copy.ts` — that block
+  // carries a TODO to be lifted into copy.ts; when it is, read them from
+  // there the way the other specs read `COPY`.
   const headings = app.locator(".settings-section h2");
-  await expect(headings).toHaveText([
-    "Appearance",
-    "Terminal",
-    "Runtime",
-    "Servers / hosts",
-    "Keyboard",
-    "Data",
-  ]);
+  await expect(headings).toHaveText(["appearance", "terminal", "runtime", "pens", "keyboard", "data"]);
 });
 
 test("toggling density on the settings screen persists to localStorage", async ({ app }) => {
   await app.goto("/settings");
-  const compact = app.locator(".segment", { hasText: "Compact" });
+  const compact = app.locator(".segmented .segment", { hasText: "compact" }).last();
   await compact.click();
   await expect(compact).toHaveClass(/active/);
 

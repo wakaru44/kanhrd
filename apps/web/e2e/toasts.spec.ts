@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { herdrAvailable } from "./fixtures/herdr";
+import { COPY } from "../src/app/shared/copy";
 
 /**
  * Feedback layer (L-UX2): toasts on a failing bridge method response. Uses
@@ -52,20 +53,27 @@ test("a failing pane.close request surfaces an error toast", async ({ page }) =>
   await page.goto("/");
   await expect(page.locator(".state.loading")).toHaveCount(0, { timeout: 10_000 });
 
+  // Capabilities arrive over the socket after the first cards render, so
+  // wait for the action cluster rather than snapshotting `.count()` the
+  // instant the board paints (that raced into a false skip).
   const closeButton = page.locator(".card-action.close").first();
-  test.skip(
-    (await closeButton.count()) === 0,
-    "no host advertises paneClose capability — nothing to click to trigger the failure",
-  );
+  const advertised = await closeButton
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  test.skip(!advertised, "no host advertises paneClose capability — nothing to click to trigger the failure");
 
-  // The close button only becomes hit-testable on `.card:hover` (card.scss:
-  // `.card-actions { opacity: 0; pointer-events: none }` until hovered) —
-  // hover the card first, mirroring apps/web/e2e/tier3.spec.ts's pattern.
-  await closeButton.locator("xpath=ancestor::*[contains(@class, 'card')][1]").hover();
+  // No hover: card actions are visible on first render (the
+  // `.card-actions { opacity: 0; pointer-events: none }` hover-reveal is
+  // gone — docs/UX-GUIDELINES.md, "Visible affordances").
+  await expect(closeButton).toBeVisible();
   await closeButton.click();
-  await page.locator("app-confirm-modal .modal-actions .btn.danger").click();
+  // A pane close is accent-filled, not `--danger-fill` (that is reserved
+  // for irrecoverable local-data loss), so the confirm is `.btn.primary`.
+  await page.locator("app-confirm-modal .modal-actions .btn.primary").click();
 
   const toast = page.locator(".toast.error");
   await expect(toast).toBeVisible({ timeout: 5_000 });
-  await expect(toast).toContainText("Could not close");
+  // Read the expected copy from the single source, never a literal.
+  await expect(toast).toContainText(COPY.toast.closeFailed.split("{")[0]!.trim());
 });

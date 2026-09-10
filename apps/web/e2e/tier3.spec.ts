@@ -1,7 +1,8 @@
 import { test, expect } from "./fixtures/kanhrd";
 import { herdr, herdrAvailable } from "./fixtures/herdr";
-import { allCards, xtermElement, xtermRows } from "./helpers/selectors";
-import { waitFor } from "./helpers/wait";
+import { allCards, cardActions, cardOverflowTrigger, xtermElement, xtermRows } from "./helpers/selectors";
+import { COPY } from "../src/app/shared/copy";
+import { waitFor, waitForStableCount } from "./helpers/wait";
 import type { Locator, Page } from "@playwright/test";
 
 /**
@@ -64,25 +65,45 @@ function modalTitle(page: Page): Locator {
   return modal(page).locator(".modal-title");
 }
 
-function modalDangerConfirm(page: Page): Locator {
-  return modal(page).locator(".modal-actions .btn.danger");
+/**
+ * The modal's confirm button. `--danger-fill` is reserved for irrecoverable
+ * local-data loss (docs/UX-GUIDELINES.md, "Destructive confirmations"), so a
+ * pane close is `.btn.primary` without `.danger` while the rail's
+ * lane/field closes still pass `[danger]="true"` — match on `.primary`,
+ * which both carry.
+ */
+function modalConfirm(page: Page): Locator {
+  return modal(page).locator(".modal-actions .btn.primary");
 }
 
 function modalCancelButton(page: Page): Locator {
-  // The non-danger button in the two-button (non-refusal) modal layout.
-  return modal(page).locator(".modal-actions .btn:not(.danger)");
+  // The non-primary button in the two-button (non-refusal) modal layout.
+  return modal(page).locator(".modal-actions .btn:not(.primary)");
 }
 
 function modalRefusalBody(page: Page): Locator {
   return modal(page).locator(".modal-body.refusal");
 }
 
-function cardActions(card: Locator): Locator {
-  return card.locator(".card-actions");
-}
-
 function cardCloseButton(card: Locator): Locator {
   return card.locator(".card-action.close");
+}
+
+/** A rail row's overflow-menu trigger — rail row actions are never hover-revealed. */
+function rowMenuTrigger(row: Locator): Locator {
+  return row.locator(".row-menu-trigger");
+}
+
+/** An item inside an open rail row overflow menu. */
+function rowMenuItem(row: Locator, label: string): Locator {
+  return row.locator(".row-menu .row-menu-item", { hasText: label });
+}
+
+/** Opens a rail row's overflow menu and clicks one of its items. No hover involved. */
+async function openRowMenuAndClick(row: Locator, label: string): Promise<void> {
+  await expect(rowMenuTrigger(row)).toBeVisible();
+  await rowMenuTrigger(row).click();
+  await rowMenuItem(row, label).click();
 }
 
 // --- herdr-side verification helpers (thin wrappers over the shared `herdr` CLI helper) ---
@@ -157,26 +178,32 @@ test("cold-loading a pane detail URL directly mounts a live terminal (L-E2E's ga
 
 // --- capability gating ------------------------------------------------------
 
-test("card hover reveals split and close affordances when pane lifecycle capabilities are enabled", async ({
-  app,
-}) => {
+test("card split and close affordances are visible on first render, no hover", async ({ app }) => {
   const cards = allCards(app);
   await expect(cards.first()).toBeVisible({ timeout: 10_000 });
-  const card = cards.first();
+  const card = cards.filter({ has: app.locator(".card-actions") }).first();
+  test.skip(
+    (await card.count()) === 0,
+    "no host advertises a pane lifecycle capability — no card renders an action cluster",
+  );
 
   const actions = cardActions(card);
-  await expect(actions.locator(".card-action.split")).toHaveCount(1);
+  // The hover-reveal (`.card-actions { opacity: 0; pointer-events: none }`)
+  // is deleted: actions render at --ink-mute and lift on hover/focus
+  // (docs/UX-GUIDELINES.md, "Visible affordances"). The split control also
+  // split in two: `.split-right` and `.split-down`.
+  await expect(actions).toBeVisible();
+  await expect(actions).toHaveCSS("opacity", "1");
+  await expect(actions.locator(".card-action.split-right")).toHaveCount(1);
+  await expect(actions.locator(".card-action.split-down")).toHaveCount(1);
   await expect(actions.locator(".card-action.close")).toHaveCount(1);
 
-  // Hidden-until-hover per card.scss (.card-actions { opacity: 0; pointer-events: none })
-  // flipping to opacity:1/pointer-events:auto on `.card:hover .card-actions`.
-  await expect(actions).toHaveCSS("opacity", "0");
-  await expect(actions).toHaveCSS("pointer-events", "none");
-
-  await card.hover();
-
-  await expect(actions).toHaveCSS("opacity", "1");
-  await expect(actions).toHaveCSS("pointer-events", "auto");
+  // The overflow trigger is rendered but `display: none` at comfortable
+  // density on a fine pointer — it is the compact/touch path, and the
+  // mobile project asserts it there (mobile.spec.ts, criteria 5 and 6).
+  // Here it only has to exist, so the two paths cannot drift apart.
+  await expect(cardOverflowTrigger(card)).toHaveCount(1);
+  await expect(cardOverflowTrigger(card)).toBeHidden();
 });
 
 // --- tab CRUD lifecycle (throwaway tab) -------------------------------------
@@ -191,7 +218,9 @@ test.describe("tab CRUD lifecycle", () => {
 
   test("create (via + menu, inline rename) then close (via rail ×) a throwaway tab", async ({ app }) => {
     const before = await herdrTabList();
-    const beforeCount = await rail(app).locator(".tab-row").count();
+    // The rail renders once `pane.list` lands, so an instantaneous count
+    // right after the fixture's navigation can snapshot an empty rail.
+    const beforeCount = await waitForStableCount(rail(app).locator(".tab-row"));
 
     await plusButton(app).click();
     await expect(plusMenuItem(app, "New tab")).toBeVisible();
@@ -222,13 +251,12 @@ test.describe("tab CRUD lifecycle", () => {
       { timeoutMs: 3_000, message: `tab "${name}" never appeared in herdr's own tab list` },
     );
 
-    // Close it via the rail: hover -> × -> confirm.
+    // Close it via the rail: visible overflow trigger -> menu item -> confirm.
     const row = tabRowByName(app, name);
-    await row.hover();
-    await row.getByTitle("Close tab").click();
+    await openRowMenuAndClick(row, COPY.confirm.closeLaneAction);
 
-    await expect(modalTitle(app)).toHaveText("Close tab?");
-    await modalDangerConfirm(app).click();
+    await expect(modalTitle(app)).toHaveText(COPY.confirm.closeLane);
+    await modalConfirm(app).click();
 
     await expect(tabRowByName(app, name)).toHaveCount(0, { timeout: 2_000 });
 
@@ -256,13 +284,12 @@ test("closing the only open workspace shows a refusal with no confirm button (do
 
   const row = workspaceRowByName(app, target.label);
   await expect(row).toBeVisible({ timeout: 5_000 });
-  await row.hover();
-  await row.getByTitle("Close workspace").click();
+  await openRowMenuAndClick(row, COPY.confirm.closeFieldAction);
 
-  await expect(modalTitle(app)).toHaveText("Close workspace?");
+  await expect(modalTitle(app)).toHaveText(COPY.confirm.closeField);
   await expect(modalRefusalBody(app)).toBeVisible();
   // Refusal mode renders no confirm button at all — only a dismiss action.
-  await expect(modalDangerConfirm(app)).toHaveCount(0);
+  await expect(modalConfirm(app)).toHaveCount(0);
   await expect(modal(app).locator(".modal-actions .btn")).toHaveCount(1);
 
   await modal(app).locator(".modal-actions .btn").click();
@@ -305,11 +332,12 @@ test("closing a pane's card shows a danger-styled confirmation; cancel keeps it,
     const targetCard = app.locator(".card", { hasText: name });
     await expect(targetCard).toHaveCount(1, { timeout: 3_000 });
 
-    await targetCard.hover();
     await cardCloseButton(targetCard).click();
 
-    await expect(modalTitle(app)).toHaveText("Close pane?");
-    await expect(modalDangerConfirm(app)).toBeVisible();
+    await expect(modalTitle(app)).toHaveText(COPY.confirm.closePane);
+    await expect(modalConfirm(app)).toBeVisible();
+    // The care prompt is always paired with the honest body naming what ends.
+    await expect(modal(app).locator(".modal-body")).toHaveText(COPY.confirm.closePaneBody);
 
     // Cancel first — pane must still be there.
     await modalCancelButton(app).click();
@@ -317,9 +345,8 @@ test("closing a pane's card shows a danger-styled confirmation; cancel keeps it,
     await expect(app.locator(".card", { hasText: name })).toHaveCount(1);
 
     // Now actually confirm — safe, this is a throwaway tab/pane.
-    await targetCard.hover();
     await cardCloseButton(targetCard).click();
-    await modalDangerConfirm(app).click();
+    await modalConfirm(app).click();
 
     await expect(app.locator(".card", { hasText: name })).toHaveCount(0, { timeout: 3_000 });
 
@@ -370,10 +397,9 @@ test("closing a tab cascades to purge its pane from the board client-side, even 
     // (panes.store.ts's `tab.closed` handler) were missing, the card would
     // be left behind as a zombie.
     const row = tabRowByName(app, name);
-    await row.hover();
-    await row.getByTitle("Close tab").click();
-    await expect(modalTitle(app)).toHaveText("Close tab?");
-    await modalDangerConfirm(app).click();
+    await openRowMenuAndClick(row, COPY.confirm.closeLaneAction);
+    await expect(modalTitle(app)).toHaveText(COPY.confirm.closeLane);
+    await modalConfirm(app).click();
 
     await expect(tabRowByName(app, name)).toHaveCount(0, { timeout: 2_000 });
     await expect(app.locator(".card", { hasText: name })).toHaveCount(0, { timeout: 2_000 });
