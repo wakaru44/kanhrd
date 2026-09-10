@@ -1,0 +1,22 @@
+docs/README.md
+  s_f8e4251c591816::t_e1da404821165c 1-16,20-55,58-77
+  s_f8e4251c591816::t_132081fbb89122 17-19,56-57
+docs/CONTRIBUTING.md
+  s_f8e4251c591816::t_cfcc152d245e6c 1,3-4,6-66,81,101,104-107,121-156,169,180,187-189,194,204-243
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "305e4485608a649c346aa30d5654847ee124963e",
+  "prompts": {},
+  "sessions": {
+    "s_f8e4251c591816": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d12f5dab-ef42-467f-8f5f-833d86b7562a",
+        "model": "unknown"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
