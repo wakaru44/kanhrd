@@ -164,9 +164,9 @@
       preview list when `preview.length > 0` and no list otherwise
 - [x] 14.4 Style-lint test: no raw hex outside `tokens.scss`; no HTML
       entity glyph in templates
-- [ ] 14.5 Playwright: empty state renders sample config + start
+- [x] 14.5 Playwright: empty state renders sample config + start
       command; open a scoped URL, confirm scope pill and clear action
-- [ ] 14.6 Playwright `mobile` project: extend `e2e/mobile.spec.ts` to
+- [x] 14.6 Playwright `mobile` project: extend `e2e/mobile.spec.ts` to
       the board pager and switcher per the numbered assertions in
       `docs/UX-GUIDELINES.md` — full-width column with no visible
       neighbour, one swipe advances exactly one column, a fling does not
@@ -174,7 +174,7 @@
       status reachable from the switcher, selected segment count matches
       the rendered card count, filtered-out status repaging, and the
       all-hidden empty-state fallback
-- [ ] 14.7 Playwright `mobile` project: extend `e2e/mobile.spec.ts` to
+- [x] 14.7 Playwright `mobile` project: extend `e2e/mobile.spec.ts` to
       pane detail, settings and the drawer per the same numbered
       assertions (focus containment, Escape restore, 900px resize,
       terminal key ownership, stacked setting rows, top toast stack)
