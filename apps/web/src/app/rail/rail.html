@@ -1,15 +1,16 @@
 @if (hostGroups().size > 0) {
-  <nav class="rail">
+  <nav
+    class="rail"
+    tabindex="-1"
+    [attr.aria-label]="railCopy.navigation"
+    (keydown)="onDrawerKeydown($event)"
+  >
     @for (entry of hostGroups() | keyvalue; track entry.key) {
       <div class="host-group">
-        <div class="host-name">{{ entry.key }}</div>
+        <div class="host-seal">{{ entry.key }}</div>
 
         @for (group of entry.value; track group.workspace.id) {
-          <div
-            class="workspace-row"
-            [class.active]="isWorkspaceScopeActive(group.workspace.id)"
-            (click)="onWorkspaceClick(group.workspace)"
-          >
+          <div class="workspace-row" [class.active]="isWorkspaceScopeActive(group.workspace.id)">
             @if (isEditing("workspace", group.workspace.host, group.workspace.id)) {
               <input
                 class="edit-input"
@@ -18,36 +19,55 @@
                 (input)="editingValue.set($any($event.target).value)"
                 (keydown)="onEditKeydown($event)"
                 (blur)="cancelRename()"
-                (click)="$event.stopPropagation()"
                 autofocus
               />
             } @else {
-              <span class="workspace-name">{{ group.workspace.name }}</span>
+              <button type="button" class="row-nav" (click)="onWorkspaceClick(group.workspace)">
+                <span class="workspace-name">{{ group.workspace.name }}</span>
+              </button>
               @if (workspaceCrudAvailable(group.workspace.host)) {
-                <span class="row-actions">
+                <div class="row-menu-wrap" (focusout)="onMenuFocusOut($event)">
                   <button
                     type="button"
-                    class="row-action"
-                    title="Rename workspace"
-                    (click)="startRenameWorkspace(group.workspace, $event)"
-                  ><svg lucidePencil class="icon"></svg></button>
-                  <button
-                    type="button"
-                    class="row-action"
-                    title="Close workspace"
-                    (click)="requestCloseWorkspace(group.workspace, $event)"
-                  ><svg lucideX class="icon"></svg></button>
-                </span>
+                    class="row-menu-trigger"
+                    [attr.aria-label]="railCopy.moreActions"
+                    [attr.aria-expanded]="
+                      isMenuOpen(rowKey('workspace', group.workspace.host, group.workspace.id))
+                    "
+                    aria-haspopup="menu"
+                    (click)="
+                      toggleMenu(rowKey('workspace', group.workspace.host, group.workspace.id), $event)
+                    "
+                  >
+                    <svg lucideMoreHorizontal class="icon"></svg>
+                  </button>
+                  @if (isMenuOpen(rowKey("workspace", group.workspace.host, group.workspace.id))) {
+                    <div class="row-menu" role="menu" (keydown)="onMenuKeydown($event)">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        class="row-menu-item"
+                        (click)="startRenameWorkspace(group.workspace, $event)"
+                      >
+                        {{ railCopy.renameField }}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        class="row-menu-item danger"
+                        (click)="requestCloseWorkspace(group.workspace, $event)"
+                      >
+                        {{ copy.confirm.closeFieldAction }}
+                      </button>
+                    </div>
+                  }
+                </div>
               }
             }
           </div>
 
           @for (tab of group.tabs; track tab.id) {
-            <div
-              class="tab-row"
-              [class.active]="isTabFilterActive(tab.host, tab.id)"
-              (click)="onTabClick(tab)"
-            >
+            <div class="tab-row" [class.active]="isTabFilterActive(tab.host, tab.id)">
               @if (isEditing("tab", tab.host, tab.id)) {
                 <input
                   class="edit-input"
@@ -56,26 +76,45 @@
                   (input)="editingValue.set($any($event.target).value)"
                   (keydown)="onEditKeydown($event)"
                   (blur)="cancelRename()"
-                  (click)="$event.stopPropagation()"
                   autofocus
                 />
               } @else {
-                <span class="tab-name">{{ tab.name }}</span>
+                <button type="button" class="row-nav" (click)="onTabClick(tab)">
+                  <span class="tab-name">{{ tab.name }}</span>
+                </button>
                 @if (tabCrudAvailable(tab.host)) {
-                  <span class="row-actions">
+                  <div class="row-menu-wrap" (focusout)="onMenuFocusOut($event)">
                     <button
                       type="button"
-                      class="row-action"
-                      title="Rename tab"
-                      (click)="startRenameTab(tab, $event)"
-                    ><svg lucidePencil class="icon"></svg></button>
-                    <button
-                      type="button"
-                      class="row-action"
-                      title="Close tab"
-                      (click)="requestCloseTab(tab, $event)"
-                    ><svg lucideX class="icon"></svg></button>
-                  </span>
+                      class="row-menu-trigger"
+                      [attr.aria-label]="railCopy.moreActions"
+                      [attr.aria-expanded]="isMenuOpen(rowKey('tab', tab.host, tab.id))"
+                      aria-haspopup="menu"
+                      (click)="toggleMenu(rowKey('tab', tab.host, tab.id), $event)"
+                    >
+                      <svg lucideMoreHorizontal class="icon"></svg>
+                    </button>
+                    @if (isMenuOpen(rowKey("tab", tab.host, tab.id))) {
+                      <div class="row-menu" role="menu" (keydown)="onMenuKeydown($event)">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          class="row-menu-item"
+                          (click)="startRenameTab(tab, $event)"
+                        >
+                          {{ railCopy.renameLane }}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          class="row-menu-item danger"
+                          (click)="requestCloseTab(tab, $event)"
+                        >
+                          {{ copy.confirm.closeLaneAction }}
+                        </button>
+                      </div>
+                    }
+                  </div>
                 }
               }
             </div>
@@ -89,9 +128,10 @@
 @if (closeWorkspaceTarget(); as target) {
   @if (!closeWorkspaceGroupRequired()) {
     <app-confirm-modal
-      title="Close workspace?"
-      body="Close &quot;{{ target.name }}&quot; and every tab and pane inside it? This cannot be undone."
-      confirmLabel="Close workspace"
+      [title]="copy.confirm.closeField"
+      [body]="closeWorkspaceBody(target)"
+      [confirmLabel]="copy.confirm.closeFieldAction"
+      [cancelLabel]="copy.confirm.keep"
       [danger]="true"
       [refusalReason]="closeWorkspaceRefusalReason()"
       (confirmed)="confirmCloseWorkspace()"
@@ -102,9 +142,10 @@
 
 @if (closeWorkspaceGroupRequired()) {
   <app-confirm-modal
-    title="Close linked workspaces?"
-    body="This workspace shares a linked git worktree with other open workspaces. Closing it will close all of them too. This cannot be undone."
-    confirmLabel="Close all linked workspaces"
+    [title]="copy.confirm.closeLinkedFields"
+    [body]="copy.confirm.closeLinkedFieldsBody"
+    [confirmLabel]="copy.confirm.closeLinkedFieldsAction"
+    [cancelLabel]="copy.confirm.keep"
     [danger]="true"
     (confirmed)="confirmCloseWorkspace()"
     (cancelled)="cancelCloseWorkspace()"
@@ -113,13 +154,10 @@
 
 @if (closeTabTarget(); as target) {
   <app-confirm-modal
-    title="Close tab?"
-    [body]="
-      closeTabIsLastInWorkspace()
-        ? 'This is the last tab in its workspace. This will close the workspace too. This cannot be undone.'
-        : 'Close &quot;' + target.name + '&quot; and every pane inside it? This cannot be undone.'
-    "
-    confirmLabel="Close tab"
+    [title]="copy.confirm.closeLane"
+    [body]="closeTabBody(target)"
+    [confirmLabel]="copy.confirm.closeLaneAction"
+    [cancelLabel]="copy.confirm.keep"
     [danger]="true"
     (confirmed)="confirmCloseTab()"
     (cancelled)="cancelCloseTab()"

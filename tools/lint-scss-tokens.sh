@@ -25,7 +25,6 @@ LEGACY=(
   apps/web/src/app/board/column.scss
   apps/web/src/app/board/empty-state.scss
   apps/web/src/app/board/filter-bar.scss
-  apps/web/src/app/rail/rail.scss
   apps/web/src/app/settings/settings.scss
   apps/web/src/app/shared/confirm-modal.scss
   apps/web/src/app/shared/keyboard-help-overlay.scss
