@@ -21,6 +21,14 @@ const XTERM_FONT_FAMILY =
   '"JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
 
 /**
+ * `RIS` — the ECMA-48 full reset. Byte-for-byte what `Terminal.reset()` does
+ * (xterm routes `ESC c` to the same `fullReset()`), but as data on the write
+ * stream instead of an out-of-band call, so it can be delivered atomically
+ * with the frame that replaces the screen. See `paint()`.
+ */
+const RIS = '\x1bc';
+
+/**
  * The reliability states the *terminal itself* can be in. They are mutually
  * exclusive and none of them is faked — see docs/UX-GUIDELINES.md
  * ("Reliability states tell the truth"). `stale` never blanks the terminal:
@@ -391,10 +399,24 @@ export class PaneTerminal {
    *   printing more lines, which is nearly every snapshot. Only the suffix is
    *   written. No reset, no repaint of what is already on screen, and xterm.js
    *   leaves a scrolled-up viewport where it is when rows arrive at the bottom.
-   * - **Redraw.** Anything else (vim, htop, `clear`, a reflow). `reset()` +
-   *   full write, with the viewport's absolute line offset captured before and
-   *   restored after — except when the reader was already at the bottom, where
-   *   following the tail is the point.
+   * - **Redraw.** Anything else (vim, htop, `clear`, a reflow) — which is
+   *   every frame of an agent TUI. The reset and the replacement content go
+   *   out as ONE write, with the viewport's absolute line offset captured
+   *   before and restored after — except when the reader was already at the
+   *   bottom, where following the tail is the point.
+   *
+   * The redraw path must never call `Terminal.reset()`. `reset()` empties the
+   * screen straight away while the replacement content goes through xterm's
+   * *asynchronous* write queue, so the terminal renders at least one fully
+   * blank frame in between. At the bridge's 150ms poll
+   * (`OUTPUT_POLL_INTERVAL_MS`) that is a whole-screen strobe at ~6.5Hz on any
+   * pane running a full-screen TUI — measured at exactly one blank rendered
+   * frame per `pane.output` event. That is inside the 3-30Hz band WCAG 2.3.1
+   * calls a seizure risk, so it is an accessibility defect, not a cosmetic
+   * one. `RIS` is the same full reset delivered *inside* the write stream:
+   * xterm parses the reset and the new content in one pass and refreshes once,
+   * so no blank frame is ever painted. `e2e/terminal-flicker.spec.ts` holds
+   * the line.
    */
   private paint(term: Terminal, content: string): void {
     const previous = this.lastSnapshot;
@@ -411,8 +433,7 @@ export class PaneTerminal {
     // actually shown — equal means "pinned to the bottom".
     const anchoredAt = buffer.viewportY;
     const wasAtBottom = buffer.viewportY >= buffer.baseY;
-    term.reset();
-    term.write(content, () => {
+    term.write(RIS + content, () => {
       if (!wasAtBottom) {
         term.scrollToLine(anchoredAt);
       }
