@@ -262,6 +262,21 @@ export interface BridgeCapabilities {
   tabCrud: boolean;
   /** Tier-3. Whether `workspace.create` / `workspace.rename` / `workspace.close` can all succeed. */
   workspaceCrud: boolean;
+  /**
+   * Optional: a herdr-sourced default keybind prefix, mirrored from the
+   * primary host's own configured `[keys].prefix` (see herdr's
+   * `config.toml`) so kanhrd's `KeyboardService` default can match it. A
+   * bridge that doesn't implement this SHALL omit the field entirely
+   * (never null/empty) — the SPA falls back to its own hardcoded default.
+   * `source` is a full union for forward-compatibility even though herdr
+   * currently has no JSON API or CLI surface for keybinds, so only
+   * `"config-file"` and `"default"` are produced today.
+   */
+  hostKeybinds?: {
+    /** Human-readable display string, e.g. `"Ctrl+B"`, `"Ctrl+Space"`, `"F12"`. */
+    prefix: string;
+    source: "herdr-api" | "herdr-cli" | "config-file" | "default";
+  };
 }
 
 /** Per-method success `data`, keyed the same way as `BridgeMethod`. */

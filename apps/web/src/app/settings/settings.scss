@@ -80,6 +80,15 @@
   }
 }
 
+.current-prefix {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-small);
+
+  .prefix-source {
+    color: var(--ink-mute);
+  }
+}
+
 .setting-row {
   display: flex;
   align-items: center;

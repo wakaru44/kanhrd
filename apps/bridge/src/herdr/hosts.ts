@@ -30,6 +30,7 @@ import {
   type HerdrSubscriptionSpec,
 } from "./client.js";
 import { WorkspaceTabNameCache } from "./names.js";
+import { herdrConfigDir, resolveHostKeybinds, type HostKeybinds } from "./keybinds.js";
 import { projectPane, projectTab, projectWorkspace } from "./project.js";
 import { HostMutationQueue, PaneWriteQueue } from "./write-queue.js";
 
@@ -101,6 +102,8 @@ export class HostRuntime extends EventEmitter {
   private stopped = true;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private agentStatusPollTimer: ReturnType<typeof setInterval> | null = null;
+  /** Lazily resolved, cached for the life of this `HostRuntime` — see `getHostKeybinds()` doc. */
+  private hostKeybindsCache: HostKeybinds | undefined;
 
   constructor(
     private readonly config: HostConfig,
@@ -117,6 +120,27 @@ export class HostRuntime extends EventEmitter {
     const summary: HostSummary = { name: this.name, connected: this.connected };
     if (this.lastError !== undefined) summary.last_error = this.lastError;
     return summary;
+  }
+
+  /**
+   * Reads this host's `[keys].prefix` off the bridge process's own
+   * filesystem (herdr has no API/CLI surface for keybinds — see
+   * `keybinds.ts` doc), normalized to a display string. Every host this
+   * bridge supports today is a local Unix-domain-socket host, so "this
+   * host's config" and "the bridge process's own `~/.config/herdr/config.toml`"
+   * are the same file in practice; per-host resolution is kept here (rather
+   * than a bridge-global constant) so a future non-local-filesystem host
+   * has a natural place to instead return `undefined`.
+   *
+   * Cached after the first call for the life of this `HostRuntime` — a
+   * `config.toml` prefix change made while the bridge is already running
+   * is not picked up until restart (documented limitation).
+   */
+  getHostKeybinds(): HostKeybinds {
+    if (!this.hostKeybindsCache) {
+      this.hostKeybindsCache = resolveHostKeybinds(herdrConfigDir());
+    }
+    return this.hostKeybindsCache;
   }
 
   start(): void {

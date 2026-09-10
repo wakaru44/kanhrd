@@ -41,6 +41,13 @@ class FakePanesStore {
       ],
     ]),
   );
+
+  primaryHostKeybinds(): BridgeCapabilities["hostKeybinds"] | null {
+    for (const caps of this.capabilitiesSignal().values()) {
+      if (caps.hostKeybinds) return caps.hostKeybinds;
+    }
+    return null;
+  }
 }
 
 describe("Settings", () => {
@@ -130,6 +137,24 @@ describe("Settings", () => {
     const error = el().querySelector<HTMLElement>(".host-error");
     expect(error?.textContent).toContain("connection refused");
     expect(getComputedStyle(error!).whiteSpace).not.toBe("nowrap");
+  });
+
+  it("renders the current keyboard prefix with a default source label when no host reports hostKeybinds", () => {
+    expect(el().textContent).toContain("Ctrl+B");
+    expect(el().textContent).toContain("default");
+  });
+
+  it("renders the current keyboard prefix with a herdr-config source label when the primary host reports hostKeybinds", () => {
+    store.capabilitiesSignal.update((map) => {
+      const next = new Map(map);
+      const laptop = next.get("laptop");
+      if (laptop) next.set("laptop", { ...laptop, hostKeybinds: { prefix: "Ctrl+Space", source: "config-file" } });
+      return next;
+    });
+    fixture.detectChanges();
+
+    expect(el().textContent).toContain("Ctrl+Space");
+    expect(el().textContent).toContain("from herdr config");
   });
 
   it("says pens, never hosts or servers", () => {
