@@ -1,0 +1,27 @@
+openspec/changes/add-l-brand-neo-shepherd-redesign/tasks.md
+  s_628531aeead175::t_7a31c47791861c 225
+apps/web/e2e/viewport-matrix.spec.ts
+  s_628531aeead175::t_9064c547b6841c 1-137,144-246,251,261-283,289-366
+  s_628531aeead175::t_28f8c91f4f1ecc 247-250
+  s_628531aeead175::t_26ef100a8d9826 252-260
+  s_628531aeead175::t_1714bf6d4a6a90 138-143
+  s_628531aeead175::t_f7771476a3e288 284-288
+apps/web/e2e/fixtures/six-hundred-panes.ts
+  s_628531aeead175::t_ecb8bfbd791fb7 1-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "19df88e81dd0ea7604658e75490d69e43b26d6c5",
+  "prompts": {},
+  "sessions": {
+    "s_628531aeead175": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1b03176e-7d05-52aa-a18c-71ce02428c31",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
