@@ -111,10 +111,35 @@ See [feedback: no-adhoc-validation] in the maintainer's private memory.
 
 ### Tests must not touch the operator's live herdr
 
-Tests spawn a private herdr subprocess with `HERDR_SOCKET_PATH=/tmp/...`
-and a private bridge on an ephemeral port. **Never** the default socket
-at `~/.config/herdr/herdr.sock` — that's the operator's live workspace.
-This is enforced (in progress) by lane **L-TEST-ISOLATION**.
+**Never** the default socket at `~/.config/herdr/herdr.sock` — that's the
+operator's live workspace, with other lanes working in its panes.
+
+**Nothing enforces this today. Read the next paragraph before running any
+suite.** An earlier version of this file claimed lane L-TEST-ISOLATION
+enforced it "in progress"; that lane was never proposed, scheduled or
+built, and at least one archived change deferred its own live
+verification into it. Believing that claim is how a session ends up
+pointed at the live socket.
+
+What is actually true right now:
+
+- `pnpm test:int` (`apps/bridge/integration/**`) runs against the live
+  default socket. It subscribes and lists; it does not type into panes,
+  but it is the operator's real instance.
+- `apps/web/e2e`'s live specs **type into real panes** and are gated
+  behind `KANHRD_E2E_LIVE_HERDR=1`, which is the only real guard in the
+  repo. Do not set it without the operator's explicit say-so for that
+  run. Playwright's `webServer` starts the bridge with no `--config`, so
+  it too resolves to the default socket.
+- The bridge needs no new code to be isolated: `main.ts` takes
+  `--config <path>` and `config.ts` reads `hosts: [{ name, socket }]`
+  from it. `herdr --session <name>` gives a server its own socket
+  (`herdr session list` shows the path per session). The missing pieces
+  are the test fixtures and the Playwright `webServer` command.
+
+`add-test-herdr-isolation` is the change that closes this. Until it
+ships, treat any suite that reaches herdr as touching production and ask
+first.
 
 ### Dispatched agents do the work, they do NOT re-dispatch
 
