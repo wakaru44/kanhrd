@@ -49,7 +49,7 @@ const ADVANCE_MS = 7 * 60 * 1000;
 const SCREENSHOTS_DIR = resolve(__dirname, '../../../docs/screenshots');
 
 interface Capture {
-  /** Output basename, snake_case to match the existing `mobile_kanban.png`. */
+  /** Output basename, snake_case to match `docs/screenshots/`. */
   readonly file: string;
   readonly state: StateName;
   readonly width: number;
@@ -103,6 +103,12 @@ const TERMINAL_CONTENT = [
  * `viewport-matrix.spec.ts` exists to probe contrast, keyboard and paint
  * timing across every cell; it is not a gallery, and publishing 24 permanent
  * LFS blobs to illustrate one README section would be a poor trade.
+ *
+ * The phone shot (`docs/screenshots/mobile_kanban.jpg`) is deliberately NOT
+ * here. It is taken by hand against a live herdr, because this mock advertises
+ * tier-1: a generated phone capture renders no create button, no card overflow
+ * actions and no real elapsed times, making it a poorer image than the one it
+ * would overwrite. Capturing it here silently clobbered that file once already.
  */
 const CAPTURES: readonly Capture[] = [
   {
@@ -144,16 +150,6 @@ const CAPTURES: readonly Capture[] = [
     path: '/pane/local/local-ws1-tab1-p1',
     tier3: true,
     waitFor: '.xterm-screen',
-  },
-  {
-    file: 'mobile_kanban.png',
-    state: 'populated-600',
-    // The 390px reference viewport from docs/UX-GUIDELINES.md. Replaces a
-    // hand-taken capture that predated this harness and was the one image
-    // `make screenshots` could not reproduce.
-    width: 390,
-    height: 844,
-    why: 'the board on a phone — usable, not merely responsive',
   },
   {
     file: 'settings.png',

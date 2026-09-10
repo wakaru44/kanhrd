@@ -28,7 +28,7 @@ Two things keep that safe:
 
 ## What you can do today
 
-<img alt="kanhrd's kanban board on a phone, agent cards grouped by status" src="docs/screenshots/mobile_kanban.png" width="320">
+<img alt="kanhrd's kanban board on a phone, agent cards grouped by status" src="docs/screenshots/mobile_kanban.jpg" width="320">
 
 - **One board across every host.** Panes from every configured herdr socket land on the same board, grouped by agent status, with host chips and filters to narrow it.
 - **A live terminal per card.** Click a card and get a real xterm.js terminal for that pane — output streams in, typing goes back out (printable text via `pane.send_text`, control keys via `pane.send_keys`).
