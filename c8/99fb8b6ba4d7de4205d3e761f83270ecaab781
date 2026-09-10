@@ -1,0 +1,29 @@
+apps/web/src/index.html
+  s_f8e4251c591816::t_7caf32d049ab53 5,8-9
+apps/web/public/favicon-dark.svg
+  s_f8e4251c591816::t_1e576171c87cd5 2-3,6-7,57-59
+  s_f8e4251c591816::t_ddddd6b1e67440 1,4-5,8-56
+apps/web/public/favicon.svg
+  s_f8e4251c591816::t_1e576171c87cd5 2-3,6-7,57-59
+  s_f8e4251c591816::t_ddddd6b1e67440 1,4-5,8-56
+apps/web/public/mark/crook.svg
+  s_f8e4251c591816::t_ddddd6b1e67440 1,5-7,11-61
+  s_f8e4251c591816::t_1e576171c87cd5 2-4,62-63
+  s_f8e4251c591816::t_f94552c152e967 8-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "c899fb8b6ba4d7de4205d3e761f83270ecaab781",
+  "prompts": {},
+  "sessions": {
+    "s_f8e4251c591816": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d12f5dab-ef42-467f-8f5f-833d86b7562a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
