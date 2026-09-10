@@ -556,9 +556,54 @@ describe("Card", () => {
 
   // --- meta ---------------------------------------------------------------
 
-  it("shows an elapsed-time readout of observed client time", () => {
-    const el = render(pane({ agent_status: "working" }));
-    expect(el.querySelector(".meta .elapsed")?.textContent).toMatch(/^\d+[smh]$/);
+  it("derives the elapsed readout from the bridge's status_since, so two ages read differently", () => {
+    const now = Date.now();
+    const old = render(pane({ agent_status: "working", status_since: now - 3_600_000 }));
+    const fresh = render(pane({ agent_status: "working", status_since: now - 60_000 }));
+
+    expect(old.querySelector(".meta .elapsed")?.textContent).toBe("1h");
+    expect(fresh.querySelector(".meta .elapsed")?.textContent).toBe("1m");
+  });
+
+  it("renders no duration at all when the bridge cannot vouch for one", () => {
+    const el = render(pane({ agent_status: "working", status_since: undefined }));
+
+    // Absent, not a zero and not a placeholder — the readout is the bridge's
+    // observation or nothing (see openspec/changes/add-pane-status-since).
+    expect(el.querySelector(".meta .elapsed")).toBeNull();
+    expect(el.querySelector(".card")?.textContent).not.toMatch(/\d+[smh]/);
+  });
+
+  it("leaves the rest of the meta row alone when the duration is absent", () => {
+    const el = render(
+      pane({ agent: { name: "claude" }, label: "lane a", last_output_snippet: "one\ntwo" }),
+    );
+
+    const meta = el.querySelector(".meta") as HTMLElement;
+    expect(meta.querySelector(".elapsed")).toBeNull();
+    expect(meta.querySelector(".identity")?.textContent).toBe("claude");
+    expect(meta.textContent).toContain("2 lines");
+  });
+
+  it("hides the meta row entirely when every part of it is absent", () => {
+    // Identity, duration and line count are all optional and can all be
+    // missing at once; an empty box would still claim its column's gaps.
+    const el = render(pane({ agent: undefined, status_since: undefined }));
+    const meta = el.querySelector(".meta") as HTMLElement;
+
+    expect(meta.querySelector("*")).toBeNull();
+    expect(getComputedStyle(meta).display).toBe("none");
+  });
+
+  it("keeps the readout across a destroy/recreate with the same pane — it is not mount time", () => {
+    const p = pane({ agent_status: "working", status_since: Date.now() - 300_000 });
+    const first = renderFixture(p);
+    const before = (first.nativeElement as HTMLElement).querySelector(".meta .elapsed")?.textContent;
+    first.destroy();
+
+    const second = render(p);
+    expect(second.querySelector(".meta .elapsed")?.textContent).toBe(before!);
+    expect(before).toBe("5m");
   });
 
   it("shows a line count when last_output_snippet is present and omits it when absent", () => {

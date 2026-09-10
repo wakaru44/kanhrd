@@ -28,7 +28,12 @@
     @if (secondaryIdentity(); as agent) {
       <span class="identity">{{ agent }}</span>
     }
-    <span class="elapsed">{{ elapsed() }}</span>
+    <!-- Absent whenever the bridge has not watched this pane enter its
+         status (a bridge that just started, or one predating the field).
+         No placeholder stands in for it. -->
+    @if (elapsed(); as since) {
+      <span class="elapsed">{{ since }}</span>
+    }
     <!-- A data readout, not product copy (see the header of shared/copy.ts):
          a count and its unit, like the `12m` beside it. -->
     @if (lineCount(); as lines) {
