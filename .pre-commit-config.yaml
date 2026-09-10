@@ -76,6 +76,21 @@ repos:
   # docs/CONTRIBUTING.md). This hook is a placeholder that becomes a real
   # check the day that script exists; `--if-present` makes it a no-op until
   # then instead of failing every commit.
+  # Design-token gate for apps/web SCSS: no raw hex outside
+  # `shared/tokens.scss`, no raw `rem` outside `shared/typography.scss`
+  # (docs/DESIGN-SYSTEM.md, "Lint gate"). The global `exclude:` above hides
+  # apps/ from every hook's file list, so this one scans the tree itself
+  # instead of taking filenames; the not-yet-migrated component styles are
+  # ratcheted inside the script.
+  - repo: local
+    hooks:
+      - id: scss-design-tokens
+        name: scss design tokens (no raw hex / rem)
+        entry: bash tools/lint-scss-tokens.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+
   - repo: local
     hooks:
       - id: web-lint

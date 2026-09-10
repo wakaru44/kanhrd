@@ -1,79 +1,22 @@
-/* Global styles — dark by default to match herdr's terminal aesthetic. */
-@use "@xterm/xterm/css/xterm.css";
-
 /*
+ * Global styles — resets and document defaults only.
+ *
+ * All design values live in the two token files below; nothing in this
+ * file may introduce a raw colour, size or motion value. See
+ * docs/DESIGN-SYSTEM.md for the contract and tools/lint-scss-tokens.sh
+ * for the gate.
+ *
  * Theme: `ThemeService` (src/app/state/theme.service.ts) stamps
- * `data-theme="dark"|"light"` on <html>. `:root` alone stays the dark
- * palette so a stylesheet-only context (e.g. before the app bootstraps)
- * still renders dark, matching herdr's terminal aesthetic.
+ * `data-theme="dark"|"light"` on <html>. Bare `:root` is the washi light
+ * palette, so a stylesheet-only context (e.g. before the app bootstraps)
+ * renders paper — light is the reference theme.
  */
-:root,
-[data-theme="dark"] {
-  --bg: #14161c;
-  --surface-1: #1b1e26;
-  --surface-2: #232733;
-  --border: #2e333f;
-  --border-hover: #3c4252;
-  --text: #e6e8ee;
-  --text-dim: #8b91a1;
-  --status-working: #61c98e;
-  --status-blocked: #e0616c;
-  --status-idle: #e5c07b;
-  --status-done: #6d8fe0;
-  --status-unknown: #5a6072;
-}
-
-[data-theme="light"] {
-  --bg: #f4f5f7;
-  --surface-1: #ffffff;
-  --surface-2: #eceef2;
-  --border: #d7dae1;
-  --border-hover: #b9bfcb;
-  --text: #1b1e26;
-  --text-dim: #5b6273;
-  --status-working: #2f9e63;
-  --status-blocked: #c73b46;
-  --status-idle: #a5760a;
-  --status-done: #3f63c0;
-  --status-unknown: #8b91a1;
-}
-
-/*
- * Density: `SettingsService` (src/app/state/settings.service.ts) stamps
- * `data-density="comfortable"|"compact"` on <html>. Comfortable (default)
- * keeps every component's own padding/gap/font-size/line-height values
- * as-is; compact scales them down via two shared multipliers (spacing
- * shrinks a lot more than text — `--density-scale` for padding/gap,
- * `--density-text-scale` for font-size/line-height) so individual
- * components don't need their own compact variant.
- */
-:root,
-[data-density="comfortable"] {
-  --density-scale: 1;
-  --density-text-scale: 1;
-}
-
-[data-density="compact"] {
-  --density-scale: 0.65;
-  --density-text-scale: 0.92;
-  --density-line-height: 1.25;
-}
+@use '@xterm/xterm/css/xterm.css';
+@use './app/shared/tokens';
+@use './app/shared/typography';
 
 * {
   box-sizing: border-box;
-}
-
-/*
- * lucide-angular icons (@lucide/angular): every icon is `<svg lucideX>` etc.
- * — they stroke with `currentColor` by default, so the theme toggle "just
- * works" for free. This is the shared default size; individual call sites
- * override `.icon` width/height where a different scale is needed.
- */
-.icon {
-  display: inline-block;
-  flex: none;
-  width: 1rem;
-  height: 1rem;
 }
 
 html,
@@ -83,12 +26,49 @@ body {
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-weight: var(--fw-regular);
+}
+
+/*
+ * lucide icons (@lucide/angular): every icon is `<svg lucideX>` etc. —
+ * they stroke with `currentColor`, so the theme toggle works for free.
+ * This is the shared default size (`--icon-md`); call sites that need a
+ * different scale set `--icon-sm|lg|xl`.
+ */
+.icon {
+  display: inline-block;
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+/*
+ * Focus is never suppressed: 2px ring in the accent boundary colour at a
+ * 2px offset on every interactive element (docs/DESIGN-SYSTEM.md,
+ * "Non-colour rules").
+ */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/*
+ * Reduced motion: non-essential transitions and animations collapse to
+ * zero. Focus rings and status colour changes are instant either way, so
+ * nothing informational is lost.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
 }

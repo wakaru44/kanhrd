@@ -1,0 +1,81 @@
+/*
+ * kanhrd typography — families, scale and weights.
+ *
+ * Authority: docs/DESIGN-SYSTEM.md ("Typography"). This is the ONLY .scss
+ * file allowed to contain raw `rem` values (enforced by
+ * tools/lint-scss-tokens.sh via pre-commit); components read the
+ * `--fs-*` / `--lh-*` / `--fw-*` tokens.
+ *
+ * Loading: fonts are served locally from `apps/web/public/fonts/` with
+ * `font-display: swap` and the fallback stacks below. There is no CDN and
+ * no network dependency — a missing font file degrades to the fallback
+ * stack and MUST NOT block the board, so these @font-face rules use
+ * root-absolute URLs (not bundler-resolved relative ones) on purpose.
+ */
+
+/* ── Faces ────────────────────────────────────────────────────────── */
+
+/* Display serif — wordmark, headings, modal titles. Never per-card. */
+@font-face {
+  font-family: 'Shippori Mincho';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/shippori-mincho-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Shippori Mincho';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/shippori-mincho-600.woff2') format('woff2');
+}
+
+/* UI sans — everything else, including repeated agent titles. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/inter-variable.woff2') format('woff2-variations');
+}
+
+/* Mono — terminal, ids, counts, durations. */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-variable.woff2') format('woff2-variations');
+}
+
+/* ── Tokens ───────────────────────────────────────────────────────── */
+
+:root {
+  /* families — roles are binding, see docs/DESIGN-SYSTEM.md */
+  --font-display: 'Shippori Mincho', Georgia, 'Times New Roman', serif;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* scale — nothing below --fs-caption may be introduced */
+  --fs-caption: 0.75rem;
+  --lh-caption: 1.3;
+  --fs-small: 0.8125rem;
+  --lh-small: 1.4;
+  --fs-body: 0.9375rem;
+  --lh-body: 1.5;
+  --fs-lead: 1.0625rem;
+  --lh-lead: 1.5;
+  --fs-h3: 1.25rem;
+  --lh-h3: 1.35;
+  --fs-h2: 1.625rem;
+  --lh-h2: 1.25;
+  --fs-h1: 2.25rem;
+  --lh-h1: 1.15;
+
+  /* weights — no 700 in chrome; the display serif carries emphasis */
+  --fw-regular: 400; /* body */
+  --fw-medium: 500; /* UI emphasis, card and pane-detail titles */
+  --fw-semi: 600; /* interactive labels, buttons */
+}

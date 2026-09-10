@@ -4,14 +4,27 @@ export type Theme = "light" | "dark";
 
 const STORAGE_KEY = "kanhrd.theme";
 
-function systemPrefersLight(): boolean {
-  return typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: light)").matches;
+/** `true` only when the OS/browser actively asks for dark; absence of a signal reads as light. */
+export function systemPrefersDark(): boolean {
+  return typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
 /** Pure read, unit-testable without a real `ThemeService`/DOM — mirrors `loadFilters` in panes.store.ts. */
 export function loadTheme(storage: Pick<Storage, "getItem"> = localStorage): Theme | null {
   const raw = storage.getItem(STORAGE_KEY);
   return raw === "light" || raw === "dark" ? raw : null;
+}
+
+/**
+ * Theme in effect at startup: a valid stored preference always wins, else
+ * sumi (dark) when the OS prefers dark and washi (light) otherwise. Washi
+ * is the reference theme (docs/DESIGN-SYSTEM.md), so no signal means light.
+ */
+export function resolveTheme(
+  storage: Pick<Storage, "getItem"> = localStorage,
+  prefersDark: boolean = systemPrefersDark(),
+): Theme {
+  return loadTheme(storage) ?? (prefersDark ? "dark" : "light");
 }
 
 /**
@@ -23,7 +36,7 @@ export function loadTheme(storage: Pick<Storage, "getItem"> = localStorage): The
  */
 @Injectable({ providedIn: "root" })
 export class ThemeService {
-  readonly theme = signal<Theme>(loadTheme() ?? (systemPrefersLight() ? "light" : "dark"));
+  readonly theme = signal<Theme>(resolveTheme());
 
   constructor() {
     effect(() => {
