@@ -1,0 +1,57 @@
+README.md
+  s_847f44d3c67cda::t_350adcd8521767 31,52
+docs/DESIGN-SYSTEM.md
+  s_847f44d3c67cda::t_8e7a6a39da3e06 492-498
+  s_847f44d3c67cda::t_335e7a57ad0e13 417-420,422-423
+  s_847f44d3c67cda::t_392f288eacb21c 394-415,421
+  s_847f44d3c67cda::t_19c0cbd59fb701 416
+apps/web/e2e/capture.spec.ts
+  s_847f44d3c67cda::t_5416f77f4e8e25 52
+  s_847f44d3c67cda::t_390571807b1c5e 106-111
+.forgejo/README.md
+  s_cc22a38b40f3d3::t_6e4d860848450f 20-28,56-62,76,82
+deploy/oauth/README.md
+  s_cc22a38b40f3d3::t_6e4d860848450f 10-11,13-14,47-50
+docs/UX-GUIDELINES.md
+  s_847f44d3c67cda::t_392f288eacb21c 239,675
+  s_847f44d3c67cda::t_8e7a6a39da3e06 605-607,674,676
+  s_847f44d3c67cda::t_ca2faccdbbe29a 233-238,240-242
+openspec/changes/add-parked-columns/tasks.md
+  s_847f44d3c67cda::t_4246d8b3209cdb 21-24,105
+openspec/changes/add-parked-columns/proposal.md
+  s_847f44d3c67cda::t_4246d8b3209cdb 255-266
+docs/screenshots/desktop_board.png
+  s_847f44d3c67cda::t_94236fcbf2dd7f 2-3
+docs/screenshots/desktop_board_dense.png
+  s_847f44d3c67cda::t_66a2c4d4910aa5 2-3
+docs/screenshots/desktop_board_scoped.png
+  s_847f44d3c67cda::t_7344eb9d38e510 2-3
+docs/screenshots/empty_state.png
+  s_847f44d3c67cda::t_823c440946ac3c 2-3
+docs/screenshots/terminal_palettes.png
+  s_847f44d3c67cda::t_321498343445ae 2-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6c383bd7bc511106874c57d0dcc7d645032f4ef6",
+  "prompts": {},
+  "sessions": {
+    "s_847f44d3c67cda": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bec681b6-c1ec-4002-86ac-b9d2e635658e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    },
+    "s_cc22a38b40f3d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "93fe3ed2-366b-4659-9492-d600bcf7a5d9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
