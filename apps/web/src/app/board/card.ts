@@ -17,6 +17,7 @@ import { ClockTick, formatElapsed } from "../util/clock";
 import { paneSecondaryIdentity, paneTitle } from "../util/pane-title";
 import { pathTail } from "../util/path-tail";
 import { ToastService } from "../state/toast.service";
+import { BoardReturnService } from "../state/board-return.service";
 import { COPY, fill } from "../shared/copy";
 import {
   LucideArrowDown,
@@ -69,6 +70,7 @@ export class Card {
   private readonly store = inject(PanesStore);
   private readonly clock = inject(ClockTick);
   private readonly toast = inject(ToastService);
+  private readonly boardReturn = inject(BoardReturnService);
 
   readonly pane = input.required<Pane>();
   /** Per-host `bridge.capabilities` results, threaded down from the store via Board/Column. */
@@ -81,6 +83,12 @@ export class Card {
    * `false`, so `Column` can start passing it without a lockstep change here.
    */
   readonly compact = input(false);
+  /**
+   * This card's position in its status column, threaded down by `Column`.
+   * Only used to remember where to put focus back on return, so a card whose
+   * pane is gone by then can fall back to the card now standing in its place.
+   */
+  readonly indexInColumn = input(0);
 
   protected readonly copy = COPY;
   protected readonly action = CARD_COPY;
@@ -143,6 +151,10 @@ export class Card {
   );
 
   protected readonly showCloseConfirm = signal(false);
+  /** The value a failed rename kept, so reopening the dialog seeds it instead of the stored name. */
+  protected readonly renameDraft = signal<string | null>(null);
+  /** Inline reason on the rename dialog after a rejection; cleared on the next attempt. */
+  protected readonly renameError = signal<string | null>(null);
   protected readonly showRename = signal(false);
   protected readonly menuOpen = signal(false);
 
@@ -185,6 +197,20 @@ export class Card {
         this.menuItems(menu)[0]?.focus();
       }
     });
+  }
+
+  /**
+   * Opening a card is a round trip. Recording where it was opened from —
+   * before the router leaves — is what lets the board put the user back on
+   * the same page, scroll and card when they come out
+   * (`BoardReturnService`).
+   */
+  protected rememberReturn(): void {
+    this.boardReturn.rememberCard(
+      `${this.pane().host}:${this.pane().id}`,
+      this.pane().agent_status,
+      this.indexInColumn(),
+    );
   }
 
   /** Distinguishes one card's actions from its neighbours' for a screen reader. */
@@ -255,18 +281,29 @@ export class Card {
     this.showCloseConfirm.set(true);
   }
 
+  /**
+   * One notice identity per action per card (`ToastService.push`'s `key`):
+   * a retry replaces its own notice instead of stacking a second, while two
+   * cards failing the same way still each get to say so.
+   */
+  private noticeKey(action: string): string {
+    return `${action}:${this.pane().host}:${this.pane().id}`;
+  }
+
+  private static reason(err: unknown): string {
+    return err instanceof Error ? err.message : String(err);
+  }
+
   protected async confirmClose(): Promise<void> {
     this.showCloseConfirm.set(false);
+    const notice = this.toast.progress(this.noticeKey("close"), COPY.toast.working);
     try {
       await this.store.closePane(this.pane().host, this.pane().id);
+      notice.resolve();
     } catch (err) {
-      this.toast.push({
-        level: "error",
-        message: fill(COPY.toast.closeFailed, {
-          name: this.displayName(),
-          reason: err instanceof Error ? err.message : String(err),
-        }),
-      });
+      notice.fail(
+        fill(COPY.toast.closeFailed, { name: this.displayName(), reason: Card.reason(err) }),
+      );
     }
   }
 
@@ -278,37 +315,54 @@ export class Card {
    */
   protected onRenameClick(): void {
     this.closeMenu();
+    this.renameDraft.set(null);
+    this.renameError.set(null);
     this.showRename.set(true);
   }
 
+  /** Dismissing the dialog is the user discarding the draft — the next open starts from the stored name. */
+  protected onRenameCancelled(): void {
+    this.showRename.set(false);
+    this.renameDraft.set(null);
+    this.renameError.set(null);
+  }
+
+  /**
+   * A failed rename must not eat what the user typed. The dialog closes
+   * optimistically — the common case is success and a modal hanging around
+   * while the wire round-trips reads as a hang — but a rejection reopens it
+   * seeded with the attempted value and carrying the reason inline, so the
+   * fix is an edit rather than a retype (docs/UX-GUIDELINES.md,
+   * "Reliability states tell the truth").
+   */
   protected async onRenameSaved(label: string | null): Promise<void> {
     this.showRename.set(false);
+    this.renameError.set(null);
+    const notice = this.toast.progress(this.noticeKey("rename"), COPY.toast.working);
     try {
       await this.store.renamePane(this.pane().host, this.pane().id, label);
+      this.renameDraft.set(null);
+      notice.resolve();
     } catch (err) {
-      this.toast.push({
-        level: "error",
-        message: fill(COPY.toast.renameFailed, {
-          reason: err instanceof Error ? err.message : String(err),
-        }),
-      });
+      const message = fill(COPY.toast.renameFailed, { reason: Card.reason(err) });
+      notice.fail(message);
+      this.renameDraft.set(label ?? "");
+      this.renameError.set(message);
+      this.showRename.set(true);
     }
   }
 
   protected async doSplit(direction: SplitDirection): Promise<void> {
     this.closeMenu(false);
+    const notice = this.toast.progress(this.noticeKey(`split-${direction}`), COPY.toast.working);
     try {
       await this.store.splitPane(this.pane().host, {
         target_pane_id: this.pane().id,
         direction,
       });
+      notice.resolve();
     } catch (err) {
-      this.toast.push({
-        level: "error",
-        message: fill(COPY.toast.splitFailed, {
-          reason: err instanceof Error ? err.message : String(err),
-        }),
-      });
+      notice.fail(fill(COPY.toast.splitFailed, { reason: Card.reason(err) }));
     }
   }
 }

@@ -6,6 +6,7 @@ import { Column } from "../board/column";
 import { EmptyState } from "../board/empty-state";
 import { FilterBar } from "../board/filter-bar";
 import { StatusSwitcher } from "../board/status-switcher";
+import { NotFound } from "../not-found/not-found";
 import { PaneDetail } from "../pane-detail/pane-detail";
 import { Rail } from "../rail/rail";
 import { Settings } from "../settings/settings";
@@ -64,6 +65,7 @@ const COMPONENTS: readonly Type<unknown>[] = [
   EmptyState,
   FilterBar,
   StatusSwitcher,
+  NotFound,
   PaneDetail,
   Rail,
   Settings,
@@ -99,7 +101,7 @@ function templateSource(component: Type<unknown>): string {
 
 describe("style lint: components carry no raw values", () => {
   it("covers every component that ships a template or a stylesheet", () => {
-    expect(COMPONENTS.length).toBe(14);
+    expect(COMPONENTS.length).toBe(15);
     for (const component of COMPONENTS) {
       expect(() => compiled(component)).withContext(component.name).not.toThrow();
     }
@@ -146,6 +148,31 @@ describe("style lint: components carry no raw values", () => {
     // The glyph scan is only meaningful if the template text is visible here.
     expect(templateSource(ConfirmModal)).toContain("modal-title");
     expect(templateSource(Card)).toContain("status-dot");
+  });
+
+  /**
+   * The board's chrome used to inline its own strings — "Create",
+   * "New pane", "New tab", "New workspace", "Clear scope": Title Case,
+   * herdr's vocabulary, and invisible to `copy.ts`. An interpolated
+   * `{{ copy.* }}` leaves no literal behind, so their absence here is the
+   * regression guard.
+   */
+  it("renders no inlined chrome literal in the board template", () => {
+    const source = templateSource(Board);
+    for (const literal of ["Create", "New pane", "New tab", "New workspace", "Clear scope"]) {
+      // Quoted, so the compiler's own instruction names (`conditionalCreate`)
+      // cannot masquerade as an inlined "Create".
+      for (const quoted of [`'${literal}'`, `"${literal}"`]) {
+        expect(source).withContext(`${quoted} belongs in copy.ts`).not.toContain(quoted);
+      }
+    }
+  });
+
+  it("would catch a literal that a template really did inline", () => {
+    // The guard above is only worth having if a quoted static string is
+    // visible in the compiled output at all. `app-filter-bar` is a static
+    // element name in the same template, quoted the same way.
+    expect(templateSource(Board)).toContain("'app-filter-bar'");
   });
 
   it("catches a glyph that a template did render, so the scan is not vacuous", () => {

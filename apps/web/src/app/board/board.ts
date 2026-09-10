@@ -1,4 +1,16 @@
-import { Component, ElementRef, computed, effect, inject, signal, viewChild, viewChildren } from "@angular/core";
+import {
+  Component,
+  ElementRef,
+  Injector,
+  OnDestroy,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+  viewChildren,
+} from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { ActivatedRoute, Router } from "@angular/router";
 import { map } from "rxjs";
@@ -12,6 +24,11 @@ import { StatusSwitcher } from "./status-switcher";
 import { Rail } from "../rail/rail";
 import { LayoutService } from "../state/layout.service";
 import { ToastService } from "../state/toast.service";
+import {
+  BoardReturnService,
+  returnFocusTarget,
+  type BoardReturn,
+} from "../state/board-return.service";
 import { ClockTick } from "../util/clock";
 import { EmptyState } from "./empty-state";
 
@@ -35,6 +52,18 @@ export function pageIndex(scrollLeft: number, clientWidth: number): number {
 
 /** Three placeholder rows per skeleton column — a static skeleton, never a spinner. */
 export const SKELETON_ROWS = [0, 1, 2] as const;
+
+/**
+ * How long the board keeps trying to put the user back where they were
+ * before giving up and leaving them at the top. Cards arrive with
+ * `pane.list`, so the target may not exist for a beat after mount; past
+ * this, the data is late enough that a jump would be more surprising than
+ * the reset.
+ */
+export const RESTORE_GRACE_MS = 2000;
+
+/** How often the restore pump re-checks for a target that has not rendered yet. */
+const RESTORE_RETRY_MS = 50;
 
 /**
  * Where the pager should rest when `previous` may no longer be visible: the
@@ -77,10 +106,12 @@ export function nearestVisibleStatus(
   templateUrl: "./board.html",
   styleUrl: "./board.scss",
 })
-export class Board {
+export class Board implements OnDestroy {
   protected readonly store = inject(PanesStore);
   protected readonly layout = inject(LayoutService);
   private readonly toast = inject(ToastService);
+  private readonly boardReturn = inject(BoardReturnService);
+  private readonly injector = inject(Injector);
   private readonly clock = inject(ClockTick);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -303,6 +334,154 @@ export class Board {
       if (pageIndex(element.scrollLeft, element.clientWidth) !== index) {
         this.scrollToIndex(index);
       }
+    });
+
+    // Cards land with `pane.list`, well after mount, so a restore attempt is
+    // worth making again every time the columns change — not only on the
+    // pump's own timer.
+    effect(() => {
+      this.columns();
+      this.tryRestore();
+    });
+
+    this.startRestore();
+  }
+
+  // --- coming back from a pane ------------------------------------------
+  //
+  // Opening a card is a round trip (docs/UX-GUIDELINES.md, "Focus and
+  // terminal input survive navigation"): the scope is carried by the URL the
+  // pane's back control points at, and the rest — which page the strip
+  // rested on, how far each column was scrolled, which card had focus — is
+  // handed back by `BoardReturnService`.
+  //
+  // The record is consumed on mount but applied later: cards arrive with
+  // `pane.list`, so the target usually is not in the DOM yet. The pump
+  // retries until it lands or `RESTORE_GRACE_MS` runs out.
+
+  /** The position to restore, until it has been applied or has expired. */
+  private pendingReturn: BoardReturn | null = null;
+  private restoreDeadline = 0;
+  private restoreTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** `Router.url`, defensively: a test double (or a router mid-teardown) may not have one. */
+  private currentUrl(): string {
+    return this.router.url || "/";
+  }
+
+  private startRestore(): void {
+    const record = this.boardReturn.take();
+    if (!record) {
+      return;
+    }
+    this.pendingReturn = record;
+    this.restoreDeadline = Date.now() + RESTORE_GRACE_MS;
+    afterNextRender(() => this.pumpRestore(), { injector: this.injector });
+  }
+
+  private pumpRestore(): void {
+    if (!this.pendingReturn) {
+      return;
+    }
+    this.tryRestore();
+    if (this.pendingReturn) {
+      this.restoreTimer = setTimeout(() => this.pumpRestore(), RESTORE_RETRY_MS);
+    }
+  }
+
+  private tryRestore(): void {
+    const record = this.pendingReturn;
+    if (!record) {
+      return;
+    }
+    // A board that came up somewhere else has no use for someone else's
+    // position, and a record that has waited too long is stale.
+    if (record.url !== this.currentUrl() || Date.now() > this.restoreDeadline) {
+      this.finishRestore();
+      return;
+    }
+    const strip = this.strip()?.nativeElement;
+    if (!strip) {
+      return; // still on the skeleton
+    }
+
+    this.restoreScroll(record, strip);
+
+    const status = record.status;
+    if (!status) {
+      this.finishRestore(); // left the board without opening a card: scroll was the whole job
+      return;
+    }
+    const keys = (this.columns()[status] ?? []).map((pane) => `${pane.host}:${pane.id}`);
+    const target = returnFocusTarget(record.paneKey, record.index, keys);
+    if (!target) {
+      this.finishRestore();
+      return;
+    }
+    const card = strip.querySelector(`app-card[data-pane="${CSS.escape(target)}"]`);
+    const focusable = card?.querySelector<HTMLElement>("a[href], button");
+    if (!focusable) {
+      return; // not rendered yet — the pump will look again
+    }
+    // Never take focus the user has already placed somewhere themselves.
+    if (document.activeElement === null || document.activeElement === document.body) {
+      // `preventScroll` so restoring focus cannot undo the scroll just restored.
+      focusable.focus({ preventScroll: true });
+    }
+    this.finishRestore();
+  }
+
+  private restoreScroll(record: BoardReturn, strip: HTMLElement): void {
+    if (strip.scrollLeft !== record.scrollLeft && strip.clientWidth > 0) {
+      strip.scrollLeft = record.scrollLeft;
+      const status = this.visibleStatuses()[pageIndex(record.scrollLeft, strip.clientWidth)];
+      if (status) {
+        this.currentStatus.set(status);
+      }
+    }
+    for (const [status, top] of Object.entries(record.scrollTops)) {
+      const scroller = this.columnScroller(status as AgentStatus);
+      if (scroller && top !== undefined) {
+        scroller.scrollTop = top;
+      }
+    }
+  }
+
+  private finishRestore(): void {
+    this.pendingReturn = null;
+    clearTimeout(this.restoreTimer);
+    this.restoreTimer = undefined;
+  }
+
+  /** The element that actually scrolls a column: the CDK viewport when virtualized, the body otherwise. */
+  private columnScroller(status: AgentStatus): HTMLElement | null {
+    for (const ref of this.columnEls()) {
+      const element = ref.nativeElement as HTMLElement;
+      if (element.querySelector(`.column[data-status="${status}"]`)) {
+        return (
+          element.querySelector<HTMLElement>("cdk-virtual-scroll-viewport") ??
+          element.querySelector<HTMLElement>(".column-body")
+        );
+      }
+    }
+    return null;
+  }
+
+  /** Hand the next mount everything it needs to put the user back here. */
+  ngOnDestroy(): void {
+    clearTimeout(this.restoreTimer);
+    const strip = this.strip()?.nativeElement;
+    const scrollTops: Partial<Record<AgentStatus, number>> = {};
+    for (const status of this.visibleStatuses()) {
+      const scroller = this.columnScroller(status);
+      if (scroller && scroller.scrollTop > 0) {
+        scrollTops[status] = scroller.scrollTop;
+      }
+    }
+    this.boardReturn.rememberBoard({
+      url: this.currentUrl(),
+      scrollLeft: strip?.scrollLeft ?? 0,
+      scrollTops,
     });
   }
 

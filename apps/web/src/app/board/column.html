@@ -7,13 +7,13 @@
     @if (virtualized()) {
       <cdk-virtual-scroll-viewport [itemSize]="itemSize" class="virtual-viewport" (scroll)="onViewportScroll()">
         <app-card
-          *cdkVirtualFor="let pane of panes(); trackBy: trackPane"
+          *cdkVirtualFor="let pane of panes(); trackBy: trackPane; let i = index"
           [attr.data-pane]="trackPane(0, pane)"
-          [pane]="pane" [capabilities]="capabilities()" [compact]="compact()" />
+          [pane]="pane" [capabilities]="capabilities()" [compact]="compact()" [indexInColumn]="i" />
       </cdk-virtual-scroll-viewport>
     } @else {
       @for (pane of panes(); track trackPane($index, pane)) {
-        <app-card [attr.data-pane]="trackPane($index, pane)" [pane]="pane" [capabilities]="capabilities()" [compact]="compact()" />
+        <app-card [attr.data-pane]="trackPane($index, pane)" [pane]="pane" [capabilities]="capabilities()" [compact]="compact()" [indexInColumn]="$index" />
       }
     }
   </div>

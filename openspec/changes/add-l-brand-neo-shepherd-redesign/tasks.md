@@ -214,17 +214,17 @@
       verify long names and accessible truncation
 - [x] 17.5 Virtualize above 50 cards with matching compact row geometry;
       test 20/21 and 50/51 boundaries and keyboard focus recycling
-- [ ] 17.6 Add keyboard/menu/dialog/drawer focus behavior and board return
+- [x] 17.6 Add keyboard/menu/dialog/drawer focus behavior and board return
       restoration; preserve raw terminal Escape, arrows and question mark
 - [x] 17.7 Distinguish loading, no pens, no matches, stale data and invalid
       scope; add recovery and capability-aware creation paths
-- [ ] 17.8 Deduplicate error/progress/connection notices; one desktop
+- [x] 17.8 Deduplicate error/progress/connection notices; one desktop
       bottom-right stack, mobile top stack; reconnect removes by id
 - [x] 17.9 Hide status drag affordances; do not map status changes to
       pane.move. Relocation is outside this change
 - [ ] 17.10 Capture the spec's viewport/state matrix and 600-pane fixture;
       record local first-shell timing, contrast and keyboard checks
-- [ ] 17.11 Make closing consequences explicit; initial confirm focus on
+- [x] 17.11 Make closing consequences explicit; initial confirm focus on
       keep/cancel; preserve entered text on failed edits
 - [x] 17.12 Local font assets with swap/fallbacks; structural CSS values
       and documented breakpoints are exempt from design-token linting

@@ -110,6 +110,25 @@ export const COPY = {
     statusSwitcher: 'status columns',
     statusSwitcherItem: '{status} — {count} cards',
   },
+  /**
+   * The board's create menu. The verb is not a new one: the approved-copy
+   * table already calls this action *open* (`toast.createPaneFailed` reads
+   * `couldn't open a card`), so the control that performs it says the same
+   * word as the notice that reports it failing.
+   *
+   * PENDING BRAND TABLE: `docs/BRAND.md`'s approved-copy table has no rows
+   * for creation affordances yet. These five are derived from the rows it
+   * does have — the `create*Failed` verb plus the pen/field/lane/card
+   * rename — rather than introduced, but a maintainer still owns the final
+   * wording and should add them to the table.
+   */
+  create: {
+    /** Accessible name of the `+` trigger. */
+    menu: 'open',
+    pane: 'open a card',
+    lane: 'open a lane',
+    field: 'open a field',
+  },
   notShipped: 'not yet.',
 } as const;
 

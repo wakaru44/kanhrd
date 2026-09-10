@@ -35,6 +35,13 @@ export class RenameModal implements AfterViewInit, OnDestroy {
   readonly initialValue = input<string>("");
   readonly title = input<string>(COPY.card.renameModalTitle);
   readonly fieldLabel = input<string>(COPY.card.renameFieldLabel);
+  /**
+   * Why the last attempt was refused, shown under the field. The caller
+   * owns the wording (it is the same text as the failure toast, herdr's
+   * reason and all); this component only has to keep it visible next to
+   * the value that produced it.
+   */
+  readonly error = input<string | null>(null);
 
   /** `null` means "clear the name"; a string is the new name, already trimmed. */
   readonly saved = output<string | null>();

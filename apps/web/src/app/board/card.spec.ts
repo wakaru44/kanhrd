@@ -489,6 +489,89 @@ describe("Card", () => {
     expect(store.renamePane).toHaveBeenCalledWith("laptop", "pane-12345678", null);
   });
 
+  // Section 17.11: a refused rename must not eat what the user typed.
+
+  /** Opens the rename dialog and submits `value`, settling the async handler. */
+  async function submitRename(
+    fixture: ReturnType<typeof renderFixture>,
+    value: string,
+  ): Promise<void> {
+    clickAndSettle(fixture, ".overflow-trigger");
+    clickAndSettle(fixture, '[role="menuitem"].rename');
+    const field = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      "app-rename-modal .field",
+    );
+    field!.value = value;
+    field!.dispatchEvent(new Event("input"));
+    fixture.detectChanges();
+    clickAndSettle(fixture, "app-rename-modal .btn.primary");
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  it("reopens the rename dialog holding the attempted value when herdr refuses", async () => {
+    store.renamePane.and.rejectWith(new Error("pane 3 is busy"));
+    const fixture = renderFixture(
+      pane({ label: "old name" }),
+      capsWithTerminal("laptop", { paneRename: true }),
+    );
+    await submitRename(fixture, "new name");
+
+    const field = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      "app-rename-modal .field",
+    );
+    expect(field).withContext("the dialog comes back").not.toBeNull();
+    expect(field!.value).withContext("holding what was typed, not the stored label").toBe("new name");
+  });
+
+  it("shows herdr's reason inline on the reopened dialog", async () => {
+    store.renamePane.and.rejectWith(new Error("pane 3 is busy"));
+    const fixture = renderFixture(pane(), capsWithTerminal("laptop", { paneRename: true }));
+    await submitRename(fixture, "new name");
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector(".field-error")?.textContent?.trim()).toBe(
+      "couldn't rename. herdr said: pane 3 is busy",
+    );
+    expect(el.querySelector("app-rename-modal .field")?.getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("closes the dialog and forgets the draft once a rename succeeds", async () => {
+    const fixture = renderFixture(
+      pane({ label: "old name" }),
+      capsWithTerminal("laptop", { paneRename: true }),
+    );
+    await submitRename(fixture, "new name");
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector("app-rename-modal")).toBeNull();
+
+    clickAndSettle(fixture, ".overflow-trigger");
+    clickAndSettle(fixture, '[role="menuitem"].rename');
+    expect(el.querySelector<HTMLInputElement>("app-rename-modal .field")?.value).toBe("old name");
+  });
+
+  it("treats dismissing the reopened dialog as discarding the draft", async () => {
+    store.renamePane.and.rejectWith(new Error("pane 3 is busy"));
+    const fixture = renderFixture(
+      pane({ label: "old name" }),
+      capsWithTerminal("laptop", { paneRename: true }),
+    );
+    await submitRename(fixture, "new name");
+
+    const el = fixture.nativeElement as HTMLElement;
+    el.querySelector<HTMLElement>("app-rename-modal .modal")!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    fixture.detectChanges();
+    expect(el.querySelector("app-rename-modal")).toBeNull();
+
+    clickAndSettle(fixture, ".overflow-trigger");
+    clickAndSettle(fixture, '[role="menuitem"].rename');
+    expect(el.querySelector<HTMLInputElement>("app-rename-modal .field")?.value).toBe("old name");
+    expect(el.querySelector(".field-error")).toBeNull();
+  });
+
   it("returns focus to the overflow trigger when the rename modal is cancelled", () => {
     const fixture = renderFixture(pane(), capsWithTerminal("laptop", { paneRename: true }));
     clickAndSettle(fixture, ".overflow-trigger");

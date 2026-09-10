@@ -71,6 +71,9 @@
 .tab-row {
   display: flex;
   align-items: center;
+  /* A refused rename adds a full-width reason under the field; without
+     wrapping it would be squeezed into the row beside the input. */
+  flex-wrap: wrap;
   gap: var(--sp-2);
   border-radius: var(--radius-md);
   transition: background var(--motion-fast) var(--ease-out);
@@ -228,6 +231,30 @@
     outline: 2px solid var(--focus-ring);
     outline-offset: 0;
   }
+
+  /* In flight: the field keeps what was typed and stops accepting more,
+     which is not the same as unavailable — the ink stays full strength. */
+  &:disabled {
+    background: var(--paper-sunk);
+    cursor: progress;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--status-blocked);
+  }
+}
+
+/*
+ * herdr's reason for refusing, under the value that produced it.
+ * `--status-blocked-ink` is the contrast-tested text token (>= 4.5:1);
+ * `--status-blocked` above is the boundary one (>= 3:1).
+ */
+.edit-error {
+  flex: 0 0 100%;
+  margin: var(--sp-1) 0 0;
+  color: var(--status-blocked-ink);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
 }
 
 // --- touch targets ------------------------------------------------------

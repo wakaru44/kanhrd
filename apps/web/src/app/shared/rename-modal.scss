@@ -107,6 +107,25 @@
   }
 }
 
+/*
+ * A refused rename keeps the value AND says why, right where the value is.
+ * Both tokens are the contrast-tested pair: `--status-blocked` is an
+ * essential boundary (>= 3:1), `--status-blocked-ink` is text (>= 4.5:1).
+ * The field's own bottom margin collapses so the reason reads as attached
+ * to the field rather than floating above the buttons.
+ */
+.field[aria-invalid='true'] {
+  margin-bottom: var(--sp-1);
+  border-color: var(--status-blocked);
+}
+
+.field-error {
+  margin: 0 0 var(--sp-4);
+  color: var(--status-blocked-ink);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+}
+
 @media (pointer: coarse) {
   .btn {
     min-width: var(--touch-target-min);

@@ -21,7 +21,12 @@
       spellcheck="false"
       (input)="onInput($event)"
       (keydown.enter)="onSave()"
+      [attr.aria-invalid]="error() ? 'true' : null"
+      [attr.aria-describedby]="error() ? 'rename-error' : null"
     />
+    @if (error(); as reason) {
+      <p id="rename-error" class="field-error" role="alert">{{ reason }}</p>
+    }
 
     <div class="modal-actions">
       <button type="button" class="btn" (click)="onCancel()">{{ copy.confirm.cancel }}</button>
