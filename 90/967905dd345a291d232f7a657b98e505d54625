@@ -1,0 +1,23 @@
+docs/CONTEXT.md
+  s_e465e30f266fa2::t_c6651a8ea62a06 58-71
+openspec/specs/terminal-scrollback/spec.md
+  s_e465e30f266fa2::t_2193524cedad97 51-54
+docs/adr/0004-full-snapshot-terminal-output-via-polling.md
+  s_e465e30f266fa2::t_7f06788ea0760e 34-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "90967905dd345a291d232f7a657b98e505d54625",
+  "prompts": {},
+  "sessions": {
+    "s_e465e30f266fa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2c5b23d5-95a9-4f8a-9e19-5ebcf3fb7297",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
