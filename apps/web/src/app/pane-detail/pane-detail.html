@@ -36,26 +36,35 @@
       <span class="crumb crumb-tab">{{ tabName() }}</span>
     </p>
 
-    <h1 class="pane-title" [title]="title()">{{ title() }}</h1>
+    <!--
+      The title and the control that renames it are one unit: the pencil sits
+      at the title's trailing edge, so what it acts on is never ambiguous.
+      The row wraps as a pair, which is what keeps them together at phone
+      width too.
+    -->
+    <div class="title-row">
+      <h1 class="pane-title" [title]="title()">{{ title() }}</h1>
 
-    @if (paneRenameAvailable()) {
-      <!--
-        Visible in the header on first render — never a hover-revealed
-        pencil. It borrows `.retry`'s button rule (the component's only
-        button style, already touch-sized under `pointer: coarse`) because
-        `pane-detail.scss` is held by a concurrent work lane; a dedicated
-        `.rename-control` rule belongs there once that lands.
-      -->
-      <button
-        type="button"
-        class="retry rename-control"
-        [attr.aria-label]="copy.card.renameAction"
-        (click)="showRename.set(true)"
-      >
-        <svg lucidePencil class="icon" aria-hidden="true"></svg>
-        <span>{{ copy.card.renameAction }}</span>
-      </button>
-    }
+      @if (paneRenameAvailable()) {
+        <!--
+          Visible on first render, never a hover-revealed pencil (see
+          docs/UX-GUIDELINES.md, "Visible affordances"). Icon-only and
+          borderless: the title is the subject, and a bordered button beside
+          it reads as the louder element of the two. The name lives in
+          `aria-label` and in the tooltip, so nothing is lost to a reader or
+          to the keyboard.
+        -->
+        <button
+          type="button"
+          class="rename-control"
+          [attr.aria-label]="copy.card.renameAction"
+          [title]="copy.card.renameAction"
+          (click)="showRename.set(true)"
+        >
+          <svg lucidePencil class="icon" aria-hidden="true"></svg>
+        </button>
+      }
+    </div>
 
     <span class="host-seal">{{ host() }}</span>
 

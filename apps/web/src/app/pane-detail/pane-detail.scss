@@ -108,11 +108,44 @@
     min-width: 0;
   }
 
-  .pane-title {
+  /* Title + its rename control, kept adjacent at every width. */
+  .title-row {
     order: 2;
-    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
     min-width: 0;
     flex: 1 1 auto;
+  }
+
+  /*
+   * Borderless and icon-only: the title is the subject of this pair, and a
+   * bordered button beside it out-shouts the thing it acts on. Hairlines
+   * over shadows, and here not even a hairline — the hover/focus shift in
+   * ink is the affordance.
+   */
+  .rename-control {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-1);
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--ink-mute);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--ink);
+    }
+  }
+
+  .pane-title {
+    margin: 0;
+    min-width: 0;
+    flex: 0 1 auto;
     font-family: var(--font-ui);
     font-size: var(--fs-body);
     line-height: var(--lh-body);
@@ -396,6 +429,7 @@
 @media (pointer: coarse) {
   .detail-header .back,
   .detail-header .next-card,
+  .detail-header .rename-control,
   .retry,
   .state-back {
     min-height: var(--touch-target-min);
@@ -423,7 +457,7 @@
     padding: var(--sp-2);
   }
 
-  .detail-header .pane-title {
+  .detail-header .title-row {
     flex: 1 0 100%;
     order: 2;
   }
