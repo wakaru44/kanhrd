@@ -1,0 +1,21 @@
+Makefile
+  s_7901944abeeaba::t_356702d4ac8940 50,52-63
+  s_7901944abeeaba::t_1cc837d10af14e 51
+  s_7901944abeeaba::t_741da5d5b625fc 84-85,88-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d9d75688dff936569a0721013357cee06e864ab7",
+  "prompts": {},
+  "sessions": {
+    "s_7901944abeeaba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdce5a89-318c-4864-b71b-909fa85af141",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
