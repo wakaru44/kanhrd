@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { startBridge, waitForHostConnected, type RunningBridge } from './fixtures/bridge.js';
 import { IntegrationClient } from './fixtures/ws-client.js';
-import { herdrPaneList, herdrPaneSendText } from './fixtures/herdr-cli.js';
+import { herdrPaneSendText, seededWorld } from './fixtures/herdr-cli.js';
 import { requireHerdrOrSkipReason } from './fixtures/require-herdr.js';
 
 /**
@@ -23,8 +23,7 @@ describe('B. WebSocket protocol methods', () => {
     bridge = await startBridge();
     await waitForHostConnected(bridge, 'local');
     client = await IntegrationClient.connect(bridge.wsUrl);
-    const panes = await herdrPaneList();
-    panePid = panes[0].pane_id;
+    panePid = seededWorld().paneIds[0];
   });
 
   afterAll(async () => {

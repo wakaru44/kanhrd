@@ -1,3 +1,15 @@
+/**
+ * LIVE-ONLY — this file needs a real herdr session and skips without one.
+ *
+ * It exercises tier-3 lifecycle — creating, renaming and closing real tabs and workspaces — and cross-checks each step against herdr's own view of the world.
+ *
+ * The session it drives is the run's own throwaway one
+ * (`kanhrd-test-e2e`), started, seeded and disposed of by
+ * `fixtures/isolated-bridge.mjs`; the panes, tabs and workspaces it touches
+ * belong to that session and to nothing of the operator's. On a machine
+ * with no herdr, every test here skips with that reason — it never fails,
+ * and the mocked suite carries the coverage that must hold everywhere.
+ */
 import { test, expect } from './fixtures/kanhrd';
 import { herdr, herdrAvailable } from './fixtures/herdr';
 import {

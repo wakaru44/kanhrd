@@ -6,56 +6,69 @@ Playwright driver L5B used during tier-2 validation
 (`tmp/foreman/VALIDATION-TIER2.md`); future tiers extend this suite instead
 of re-implementing a driver from `/tmp/`.
 
-## This suite drives a REAL herdr — read this first
+## Isolation — read this first
 
-These specs are not sandboxed. They call the `herdr` CLI against whatever
-server is running on this machine, take a pane out of `herdr pane list`, and
-act on it: `tier2` types `echo <marker>` into it, and `tier3` exercises
-lifecycle, which **closes real tabs and workspaces**. On a developer machine
-that is a live session.
+These specs drive a **real herdr**, but never the operator's. Playwright's
+`webServer` is `e2e/fixtures/isolated-bridge.mjs`, which on every run:
 
-So the suite is **opt-in**:
+1. sweeps any `kanhrd-test-*` herdr session a crashed run leaked;
+2. starts its own headless session, `kanhrd-test-e2e`, at
+   `~/.config/herdr/sessions/kanhrd-test-e2e/herdr.sock`;
+3. seeds it with one workspace and two bare shell panes, cwd'd into this
+   repository;
+4. starts the bridge with `--config` naming that socket, on port 5273;
+5. stops and deletes the session when the run ends.
 
-```bash
-KANHRD_E2E_LIVE_HERDR=1 pnpm --filter @kanhrd/web test:e2e
-```
+So the panes these specs type into, split and close are the run's own, and
+`~/.config/herdr/herdr.sock` — the operator's live session — is never opened.
+`fixtures/herdr.ts` enforces it: every `herdr` call it makes is prefixed
+`--session kanhrd-test-e2e`, and it throws rather than falling back if the
+run has no session.
 
-Without it every spec skips with an explanatory message. Reachability is not
-consent — a herdr being up says nothing about whether its panes are yours to
-type into. This mirrors how the bridge's integration suite gates on
-`KANHRD_INT_HERDR_SOCKET`.
+Why this exists: on 2026-09-10 a suite run typed `echo <marker>` into the
+operator's real panes, one of which was running an agent, which executed it
+as a prompt. Nothing was damaged — the payload is deliberately
+non-destructive — but the only guard at the time was an opt-in environment
+variable, which is a prompt for a human, not isolation.
 
-Why the gate exists: on 2026-09-10 a suite run typed `echo <marker>` into the
-operator's real panes, one of which was running an agent, which executed it as
-a prompt. Nothing was damaged — the payload is deliberately non-destructive —
-but it should not have been possible without an explicit opt-in.
+`KANHRD_E2E_LIVE_HERDR` no longer gates anything. It is kept as the
+deliberate switch for pointing these specs at a herdr session you choose on
+purpose.
+
+### Two tiers of spec
+
+- **Mocked** (`viewport-matrix`, `capture`, `terminal-flicker`, and the
+  no-hosts half of `empty-state`) — `page.route`-backed, no herdr at all.
+  These MUST pass on a machine with no herdr installed and no opt-in.
+- **Live** (everything else) — needs the run's herdr session, and **skips**
+  with that reason when there is none. Each such file says so in its header.
+
+Verified 2026-09-11 with `herdr` shimmed off `PATH`:
+`28 passed, 64 skipped, 0 failed`.
 
 ## Prerequisites
 
-0. `KANHRD_E2E_LIVE_HERDR=1` in the environment (see above), and a herdr whose
-   panes you are willing to have typed into and closed.
-1. A local herdr server reachable at `~/.config/herdr/herdr.sock`, with at
-   least one open pane. The suite pre-flight-checks this in `beforeAll` and
-   skips with a clear message (not a hard fail) if herdr isn't running or has
-   no panes.
-2. Build the SPA and bridge (the suite does not build them for you):
+1. Build the SPA and bridge (the suite does not build them for you):
 
    ```bash
    pnpm --filter @kanhrd/web build
    pnpm --filter @kanhrd/bridge build
    ```
 
-   Playwright's `webServer` (see `playwright.config.ts`) spawns
-   `node ../bridge/dist/main.js` from `apps/web/`, which serves the built SPA
-   from `apps/web/dist/web/browser/` and proxies `/api` + `/ws` to herdr. If a
-   bridge is already running on `127.0.0.1:5173`, the config reuses it
-   (`reuseExistingServer: true`) instead of spawning a second one.
+   The launcher serves the built SPA from `apps/web/dist/web/browser/`.
+
+2. `herdr` on `PATH` if you want the live specs to run. Without it they
+   skip; the mocked ones still pass.
 
 3. First time only, install the Chromium browser Playwright drives:
 
    ```bash
    pnpm --filter @kanhrd/web test:e2e:install
    ```
+
+Note `reuseExistingServer: false`: if anything is already listening on
+`127.0.0.1:5273` the run fails outright rather than attaching to a server it
+did not start. Override the port with `KANHRD_E2E_PORT` if you need to.
 
 ## Running
 

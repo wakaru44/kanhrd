@@ -1,10 +1,19 @@
 import { spawn } from 'node:child_process';
+import { INT_HANDOFF_SCOPE } from './global-setup.js';
+import { readHandoff, type SeededWorld } from './herdr-session.js';
 
 /**
  * Thin wrapper around the local `herdr` CLI, used so integration tests can
  * drive/verify real herdr state independently of the bridge under test
  * (e.g. "did the bridge actually reach herdr", "did the pane really receive
  * this text", "did the tab really get created/renamed/closed").
+ *
+ * **Every call is scoped to the run's throwaway session.** `herdr()` prefixes
+ * `--session <name>` and throws if no session handoff exists, so there is no
+ * code path from this module to the operator's default socket at
+ * `~/.config/herdr/herdr.sock`. Session management itself lives in
+ * `herdr-session.ts`, which is the only module allowed to call `herdr`
+ * un-targeted.
  *
  * Deliberately mirrors `apps/web/e2e/fixtures/herdr.ts`'s surface (same
  * function names/shapes for the parts that overlap) rather than importing
@@ -19,9 +28,42 @@ export interface HerdrResult {
   code: number | null;
 }
 
+/**
+ * The run's session name, from the handoff written by `global-setup.ts`.
+ * Throws when there is none — the suite must never guess.
+ */
+export function testSessionName(): string {
+  const handoff = readHandoff(INT_HANDOFF_SCOPE);
+  if (!handoff.session) {
+    throw new Error(handoff.unavailable ?? 'no isolated herdr session for this run');
+  }
+  return handoff.session.name;
+}
+
+/** The socket the run's bridge must be pointed at. */
+export function testSessionSocket(): string {
+  const handoff = readHandoff(INT_HANDOFF_SCOPE);
+  if (!handoff.session) {
+    throw new Error(handoff.unavailable ?? 'no isolated herdr session for this run');
+  }
+  return handoff.session.socket;
+}
+
+/** The workspace/tab/panes `global-setup.ts` seeded into the run's session. */
+export function seededWorld(): SeededWorld {
+  const handoff = readHandoff(INT_HANDOFF_SCOPE);
+  if (!handoff.world) {
+    throw new Error(handoff.unavailable ?? "the run's herdr session was never seeded");
+  }
+  return handoff.world;
+}
+
 export function herdr(args: string[]): Promise<HerdrResult> {
+  const session = testSessionName();
   return new Promise((resolvePromise, reject) => {
-    const proc = spawn('herdr', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const proc = spawn('herdr', ['--session', session, ...args], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
     let stdout = '';
     let stderr = '';
     proc.stdout.on('data', (chunk: Buffer) => (stdout += chunk.toString('utf8')));
@@ -145,25 +187,24 @@ export async function herdrTabClose(tabId: string): Promise<void> {
 }
 
 /**
- * Pre-flight guard: confirms a local herdr server is actually reachable and
- * has at least one pane, so an environment without herdr running gets a
- * clear skip message instead of confusing connection-refused errors deep in
- * a test body. Call once (e.g. in a `beforeAll`) and `describe.skip`/
- * `test.skip` the whole file when `ok` is false.
+ * Pre-flight guard: reports whether this run has an isolated herdr session
+ * to work against. It deliberately does NOT ask whether the operator has
+ * panes open — the run seeds its own world (`seedSession()`), so "the
+ * operator left a pane open" stopped being a precondition when this suite
+ * stopped using the operator's herdr.
  */
 export async function herdrAvailable(): Promise<{ ok: true } | { ok: false; reason: string }> {
+  let session: string;
+  try {
+    session = testSessionName();
+  } catch (err) {
+    return { ok: false, reason: (err as Error).message };
+  }
   const { code, stderr } = await herdr(['pane', 'list']);
   if (code !== 0) {
     return {
       ok: false,
-      reason: `herdr CLI unavailable or server unreachable: ${stderr || `exit ${code}`}`,
-    };
-  }
-  const panes = await herdrPaneList();
-  if (panes.length === 0) {
-    return {
-      ok: false,
-      reason: 'herdr server reachable but has zero panes; open at least one pane to run this suite',
+      reason: `isolated herdr session "${session}" unreachable: ${stderr || `exit ${code}`}`,
     };
   }
   return { ok: true };

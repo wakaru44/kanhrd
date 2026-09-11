@@ -1,6 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startBridge, waitForHostConnected, type RunningBridge } from './fixtures/bridge.js';
-import { herdrPaneClose, herdrPaneList, herdrPaneSplit } from './fixtures/herdr-cli.js';
+import {
+  herdrPaneClose,
+  herdrPaneList,
+  herdrPaneSplit,
+  seededWorld,
+} from './fixtures/herdr-cli.js';
 import { requireHerdrOrSkipReason } from './fixtures/require-herdr.js';
 
 /**
@@ -81,9 +86,7 @@ describe('A. lifecycle + connectivity', () => {
     if (skipReason) return ctx.skip();
     await waitForHostConnected(bridge, 'local');
 
-    const panes = await herdrPaneList();
-    expect(panes.length).toBeGreaterThan(0);
-    const targetPaneId = panes[0].pane_id;
+    const targetPaneId = seededWorld().paneIds[0];
 
     let churning = true;
     const created: string[] = [];

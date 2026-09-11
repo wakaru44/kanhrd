@@ -1,11 +1,14 @@
 import { herdrAvailable } from './herdr-cli.js';
 
 /**
- * Shared skip-gracefully guard for every integration test file. Mirrors the
- * pattern `apps/web/e2e` uses (`herdrAvailable()` + `test.skip`) so a
- * machine without a live local herdr server (no `~/.config/herdr/herdr.sock`,
- * or zero panes open) gets one clear skip message per file instead of a wall
- * of connection-refused failures.
+ * Shared skip-gracefully guard for every integration test file.
+ *
+ * What it checks changed with `add-test-herdr-isolation`: the precondition
+ * is no longer "the operator has a herdr running with panes open", it is
+ * "this run has its own throwaway herdr session" (started and seeded by
+ * `fixtures/global-setup.ts`). A machine with no herdr installed gets one
+ * clear skip message per file; a machine with herdr gets a session of its
+ * own and never touches the operator's.
  *
  * Usage:
  * ```ts

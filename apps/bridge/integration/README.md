@@ -26,10 +26,29 @@ pnpm test:int                          # from repo root
 pnpm --filter @kanhrd/bridge test:int  # scoped
 ```
 
-Requires a reachable local herdr server (`~/.config/herdr/herdr.sock`) with
-at least one open pane. If herdr isn't running, every test file skips with a
-clear `[integration] skipping — ...` message rather than failing on
-connection-refused noise.
+### Isolation
+
+This suite never touches the operator's herdr. `vitest.integration.config.ts`
+runs `fixtures/global-setup.ts` once per run, which:
+
+1. sweeps any `kanhrd-test-*` herdr session a crashed run leaked;
+2. starts its own headless session, `kanhrd-test-int`, at
+   `~/.config/herdr/sessions/kanhrd-test-int/herdr.sock`;
+3. seeds it with one workspace and two bare shell panes, cwd'd into this
+   repository (the bridge derives `Pane.project` from a pane's own cwd);
+4. stops and deletes the session on teardown.
+
+`fixtures/bridge.ts` generates a config naming that socket and starts the
+bridge with `--config`; it never uses the bridge's built-in default, whose
+one host is `~/.config/herdr/herdr.sock`. `fixtures/herdr-cli.ts` prefixes
+every CLI call with `--session kanhrd-test-int` and throws if the run has no
+session, so there is no fallback path to the default socket — a suite that
+cannot isolate itself fails or skips rather than borrowing the operator's
+workspace.
+
+`herdr` on `PATH` is the only precondition. Having panes open is no longer
+one: the run seeds its own. Without herdr, every test file skips with a
+clear reason rather than failing on connection-refused noise.
 
 Test files run sequentially (`fileParallelism: false` in
 `vitest.integration.config.ts`), not in parallel — several files churn or
@@ -40,11 +59,13 @@ the identical call for the identical reason.
 
 ```text
 fixtures/
-  bridge.ts          spawns the real bridge (tsx src/main.ts --port 0), waits for
-                      "Server listening at http://127.0.0.1:<port>", tears down after
+  herdr-session.ts    throwaway herdr sessions: sweep, start, seed, dispose, handoff
+  global-setup.ts     vitest globalSetup — one session per run, disposed on teardown
+  bridge.ts           spawns the real bridge (tsx src/main.ts --port 0 --config <generated>),
+                      waits for "Server listening at http://127.0.0.1:<port>", tears down after
   ws-client.ts        IntegrationClient — ws-backed request/response + event waiter
   herdr-cli.ts        Node-friendly herdr CLI driver (mirrors apps/web/e2e/fixtures/herdr.ts)
-  require-herdr.ts    shared skip-gracefully guard
+  require-herdr.ts    shared skip-gracefully guard (asks "does this run have a session?")
 connectivity.test.ts  A. lifecycle + connectivity (HTTP)
 ws-methods.test.ts    B. WebSocket protocol methods
 ordering.test.ts      C. ordering guarantees (the two round-1 blocker bugs)
@@ -78,6 +99,11 @@ via the operation under test where that already removes it (e.g. D1's
 `tab.close`), or a `finally`/`afterAll` fallback otherwise. `afterAll` blocks
 log a `[integration] leftover ...` warning and best-effort clean up if a test
 crashed mid-way, so a crashed run doesn't strand state silently.
+
+The session itself is the outer backstop: whatever a crashed run leaves
+behind dies with `kanhrd-test-int`, and if the run dies before its teardown
+the next run's sweep disposes of the leaked session by name prefix before
+starting its own.
 
 ## Coverage → historical ad-hoc validation
 
