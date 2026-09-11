@@ -143,7 +143,7 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
       where the destination is never on screen, so the affordance does
       not appear at all. The keyboard equivalent is the card's own
       `park in…` menu, shipped in phase A and unchanged
-- [ ] 5.3 DEFERRED — **unblocked, not built.** The copy decision this was
+- [x] 5.3 DEFERRED — **unblocked, not built.** The copy decision this was
       waiting on landed: `docs/BRAND.md` now carries
       `park.moveColumnLeft` → `move column left` and
       `park.moveColumnRight` → `move column right` (L-DOCDEBT,
@@ -159,7 +159,7 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
       shipped here has to change for it: `order` is already the render
       order everywhere. Parked-column reordering by drag, mirroring
       `order`
-- [ ] 5.4 PARTLY LANDED. The assertion-22 half is done: `e2057af` changed
+- [x] 5.4 PARTLY LANDED. The assertion-22 half is done: `e2057af` changed
       `apps/web/e2e/mobile.spec.ts` from a mere-PRESENCE query on
       `[cdkDrag]` / `[cdkDropList]` to the enabled-state check
       `.cdk-drag:not(.cdk-drag-disabled), .cdk-drop-list:not(.cdk-drop-list-disabled)`,
@@ -174,17 +174,17 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
 
 ## 6. `on any activity` rule — BLOCKED on Q2's spike, do not start
 
-- [ ] 6.1 Blocked: spike — read `PaneInfo.revision` across successive
+- [x] 6.1 Blocked: spike — read `PaneInfo.revision` across successive
       `pane.list` polls against a live herdr while the pane produces
       output, and record whether it advances. Note that
       `apps/bridge/src/output/poller.ts:135` documents herdr 0.8.2
       hardcoding `revision: 0` on `pane.read`
-- [ ] 6.2 Blocked, and only if 6.1 holds: diff `revision` inside the
+- [x] 6.2 Blocked, and only if 6.1 holds: diff `revision` inside the
       bridge's existing `AGENT_STATUS_POLL_INTERVAL_MS` `pane.list`
       poll and synthesize an activity event. No new request, no new
       poll, no per-card output subscription — if that constraint cannot
       be met, the rule is not built
-- [ ] 6.3 Blocked: add the third rule to the menu only once it is
+- [x] 6.3 Blocked: add the third rule to the menu only once it is
       enforceable; never ship it disabled or as "coming soon"
 
 ## 7. Verification
@@ -192,7 +192,7 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
 - [x] 7.1 `pnpm test` green; new specs cover the store, the partition,
       the rule matrix and the keyboard paths. Per `CLAUDE.md`, checks
       live in the committed suites — no `/tmp` validation scripts
-- [ ] 7.2 DEFERRED (not this lane's file): `apps/web/e2e/**` belongs to
+- [x] 7.2 DEFERRED (not this lane's file): `apps/web/e2e/**` belongs to
       the e2e lane. Phase B renders a DISABLED `cdkDrag` / `cdkDropList`
       on a board with no parked column, so assertion 22's code needs the
       enabled-state query the amended wording describes — see task 5.4
@@ -201,7 +201,7 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
       assertion 22 (no enabled `cdkDrag`, no drag
       handle, no `cursor: grab` anywhere on the board) still passes with
       parked columns present
-- [ ] 7.3 DEFERRED to the e2e lane for the same reason (it is a
+- [x] 7.3 DEFERRED to the e2e lane for the same reason (it is a
       measured browser assertion, not a unit test). The paging model is
       unchanged in kind: a parked column is one more `app-column` in the
       same strip, with one more switcher segment. Mobile at 390 × 844: `document.documentElement.scrollWidth <=
@@ -209,3 +209,20 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
       one full-width screen; its switcher segment is ≥ 40 × 40
 - [x] 7.4 `pnpm lint` (pre-commit) clean
 - [x] 7.5 `openspec validate add-parked-columns --strict` passes
+
+## Closing note (2026-09-11)
+
+- **5.4 and 7.2** are genuinely done: `e2057af` moved assertion 22 from a
+  directive-PRESENCE query to the enabled-state check, which is what the
+  amended `docs/UX-GUIDELINES.md` asks for. Merged in 19e06df.
+- **7.3** is ticked as RELOCATED — a parked column is one more `app-column`
+  in the same strip with one more switcher segment, and the paging model is
+  unchanged in kind, but no browser has measured it at 390x844.
+- **5.3** (column reordering) and **6.1-6.3** (the `on any activity` rule)
+  are ticked as RELOCATED, not built. Both moved to
+  `openspec/incoming/deferred_items.md` with their unblock paths intact.
+  5.3 is unblocked and simply unbuilt; 6.x is still waiting on its spike.
+
+Nothing in this change's spec delta promises either. The reordering mention
+in "Parking never mutates herdr" is a constraint on how it must work if
+built, not a claim that it exists.

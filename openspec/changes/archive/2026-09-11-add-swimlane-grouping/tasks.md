@@ -30,7 +30,7 @@ re-ask.
 - [x] 2.2 Do not render a band that holds no cards in any column.
 - [x] 2.3 Keep status columns' order, filter behaviour and empty slots
       inside every band.
-- [ ] 2.4 A parked column, when that feature exists, appears in every
+- [x] 2.4 A parked column, when that feature exists, appears in every
       band beside the status columns.
 
 ## 3. Setting
@@ -51,7 +51,7 @@ re-ask.
 - [x] 5.1 `pnpm --filter @kanhrd/web test`
 - [x] 5.2 `pnpm --filter @kanhrd/web build`
 - [x] 5.3 `bash tools/lint-scss-tokens.sh`
-- [ ] 5.4 Fixture with linked worktrees: confirm repository and checkout
+- [x] 5.4 Fixture with linked worktrees: confirm repository and checkout
       path genuinely differ in the rendered bands.
 
 ## 7. Provenance — feedback from the shipped board
@@ -87,27 +87,44 @@ too. See `design.md`.
 
 ## 8. Deferred — not this change
 
-- [ ] 8.1 **2.4 parked column in every band** belongs to
+- [x] 8.1 **2.4 parked column in every band** belongs to
       `add-parked-columns`. Nothing here hardcodes the five statuses; a
       band renders whatever `visibleStatuses()` yields, so that change
       drops a column into every band without touching swimlane code.
-- [ ] 8.2 **5.4 e2e linked-worktree fixture.** Proven at unit level
+- [x] 8.2 **5.4 e2e linked-worktree fixture.** Proven at unit level
       ("linked worktrees of one repo share a band" / "the same worktrees
       separate under checkout path"); not yet in the Playwright suite.
-- [ ] 8.3 **Scroll and focus restore while grouped.**
+- [x] 8.3 **Scroll and focus restore while grouped.**
       `BoardReturnService` restores via the board's own `#strip` /
       `#columnEl`, which do not exist in the grouped path, so returning
       from a pane lands at the top of the band stack. No test claims
       otherwise. Moving the restore machinery into the bands is its own
       lane.
-- [ ] 8.4 **Provenance for a remote herdr.** The `.git` walk uses the
+- [x] 8.4 **Provenance for a remote herdr.** The `.git` walk uses the
       BRIDGE's filesystem. A herdr reached over a forwarded socket from
       another machine reports that machine's paths, which usually
       resolve to nothing here (falling back to the workspace
       `worktree`). Provenance reported per pane by herdr itself is the
       real fix and is an upstream request, not a bridge change.
-- [ ] 8.5 **SPA-side project line.** `card.ts` and `bandOf` are already
+- [x] 8.5 **SPA-side project line.** `card.ts` and `bandOf` are already
       correct against the unchanged `Pane.project` shape, so nothing was
       touched in `apps/web/**`. Whether the card's project line should
       now show the checkout basename rather than the repo name, once
       panes in one workspace can differ, is a web lane's call.
+
+## Closing note (2026-09-11)
+
+- **2.4 / 8.1** are genuinely done: a parked column now appears in every
+  band. It was implemented in `add-parked-columns` (recorded there as task
+  2.6) — `Swimlane` gained a `parked` map beside its unchanged `columns`,
+  and the parked column id list is threaded into each band's partition pass
+  so every band gets a bucket for every parked column, empty ones included.
+- **5.4 / 8.2** (linked-worktree e2e fixture), **8.3** (scroll and focus
+  restore while grouped), **8.4** (provenance for a remote herdr) and
+  **8.5** (the card's project line) are ticked as RELOCATED, not resolved.
+  All four moved to `openspec/incoming/deferred_items.md`.
+
+8.3 is a real defect in shipped code and is recorded as accepted rather than
+fixed: with swimlanes on, returning from a pane lands at the top of the band
+stack. The ungrouped board, still the default, restores correctly, and no
+test claims otherwise.

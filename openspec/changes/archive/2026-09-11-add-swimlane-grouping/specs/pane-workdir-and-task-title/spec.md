@@ -60,6 +60,16 @@ projected — nothing renders them.
 - **WHEN** a pane has no `cwd`, or its `cwd` resolves to no repository, and its owning workspace carries a `worktree`
 - **THEN** the projected `Pane.project` comes from that `worktree`
 
+#### Scenario: A pane in a git workspace
+
+- **WHEN** a pane's `cwd` resolves to no repository and its workspace has `worktree: { repo_name: "kanhrd", checkout_path: "/home/op/src/kanhrd", is_linked_worktree: false, ... }`
+- **THEN** the projected `Pane.project` is `{ repo_name: "kanhrd", checkout_path: "/home/op/src/kanhrd", is_linked_worktree: false }`
+
+#### Scenario: A pane in a non-git workspace
+
+- **WHEN** a pane's `cwd` resolves to no repository and the owning workspace has no `worktree`
+- **THEN** the projected `Pane` has no `project` property
+
 #### Scenario: The foreground directory is ignored
 
 - **WHEN** a pane reports a `foreground_cwd` in a different repository from its `cwd`

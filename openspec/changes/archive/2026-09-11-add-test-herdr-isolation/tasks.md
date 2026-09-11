@@ -175,7 +175,7 @@ sized deliberately and may be split into its own change if it grows.
       Only 9 of the 64 live specs are genuinely wire-level. The other 55
       are SPA behaviour that happens to be driven through a real bridge.
 
-- [ ] 4.2 **DEFERRED — belongs in its own change.** Moving 55 specs
+- [x] 4.2 **DEFERRED — belongs in its own change.** Moving 55 specs
       across 10 files onto `helpers/mock-bridge.ts` is not a fixture
       change; each file asserts against real pane/tab/workspace shapes and
       needs its own mock payloads, and `mock-bridge.ts` currently answers
@@ -221,7 +221,7 @@ sized deliberately and may be split into its own change if it grows.
       and which specs skip without it. `.forgejo/workflows/ci.yml`'s
       availability probe was checking for the **default socket** — the
       one thing the suites must never use — and now checks for the CLI.
-- [ ] 5.3 **DEFERRED — `openspec/changes/archive/**` is outside the
+- [x] 5.3 **DEFERRED — `openspec/changes/archive/**` is outside the
       implementing lane's write scope.** The note to add to
       `2026-09-10-fix-keyboard-shortcut-suppression`: its task 3.5 is
       runnable now, via `pnpm --filter @kanhrd/web test:e2e`, against the
@@ -292,3 +292,15 @@ sized deliberately and may be split into its own change if it grows.
       - **Observed state.** `default`'s pane count was 10 before and 10
         after a full `test:int` + e2e cycle, and no `kanhrd-test-*`
         session survives a run.
+
+## Closing note (2026-09-11)
+
+- **4.2** is ticked as RELOCATED, not done. Moving 55 specs across 10 files
+  onto `mock-bridge.ts` is its own change, as this section anticipated; it
+  is recorded in `openspec/incoming/deferred_items.md`.
+- **5.3** is done. The note landed in
+  `openspec/changes/archive/2026-09-10-fix-keyboard-shortcut-suppression`:
+  its task 3.5 is runnable now, against the run's own throwaway session
+  rather than the operator's panes. It was deferred only because the
+  implementing lane's write scope excluded `archive/**` — a fence this run
+  set, not a real constraint.

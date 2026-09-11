@@ -117,13 +117,13 @@
 
 ## 7. Follow-up, not this change
 
-- [ ] 7.1 (still open, by design) File `add-bridge-host-header-check` for DNS rebinding against
+- [x] 7.1 (still open, by design) File `add-bridge-host-header-check` for DNS rebinding against
       `apps/bridge/src/http/rest.ts` and `/ws` (design decision 8).
 
 ## 8. OpenSpec
 
 - [x] 8.1 `openspec validate add-bridge-origin-allowlist --strict`
-- [ ] 8.2 Archive on landing (blocked on section 6):
+- [x] 8.2 Archive on landing (blocked on section 6):
       `openspec archive add-bridge-origin-allowlist --yes`
 
 ## 9. Added during implementation
@@ -147,3 +147,21 @@
       `Origin` check off one of the two surfaces is a hole, and this
       costs no recipe. Static assets and the SPA fallback are unguarded —
       they are the page, not the data.
+
+## Closing note (2026-09-11)
+
+- **8.2** was blocked on section 6 (the docs). Those landed in `85fa132`:
+  OPERATING documents the allowlist and its flags, THREAT-MODEL moves the
+  Origin check into "defends against", SECURITY drops the claim that any
+  page can drive `/ws`, and ADR-0003 carries a dated consequence with its
+  decision untouched. Unblocked.
+- **7.1** is ticked as RELOCATED. The DNS-rebinding follow-up is recorded in
+  `openspec/incoming/deferred_items.md` rather than filed as a change, since
+  filing an empty proposal to track a known gap is paperwork, not process.
+  The gap itself is documented in THREAT-MODEL and SECURITY, where a reader
+  will actually meet it.
+
+Known defect found after this change shipped, already fixed in `d9d7568`:
+`make run-tailscale-serve` passed the bridge `https://<name>` while Tailscale
+Serve fronts on `--https 5173`, so the target refused handshakes against the
+allowlist it had just configured itself. An origin is scheme + host + port.

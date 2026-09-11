@@ -33,7 +33,15 @@
 - [x] 3.3 `pnpm --filter @kanhrd/web build`
 - [x] 3.4 `pnpm lint`
 - [ ] 3.5 `pnpm --filter @kanhrd/web test:e2e -- keyboard.spec.ts` —
-      **not run.** The bridge has no `HERDR_SOCKET_PATH` override yet
+      **not run then; runnable now.** `add-test-herdr-isolation` shipped
+      (39124df, 2026-09-11): every run starts and disposes its own
+      `kanhrd-test-*` herdr session, so this command no longer touches the
+      operator's panes and the reason below no longer holds. Left unticked
+      because this change is archived and its verification was completed by
+      other means; anyone re-running it should just run it.
+      Original note follows.
+
+      The bridge has no `HERDR_SOCKET_PATH` override yet
       (confirmed in `add-l-brand-neo-shepherd-redesign`'s L-DOCKER notes and
       by inspection here); `pnpm test:e2e`'s webServer always points at the
       operator's live default socket until L-TEST-ISOLATION ships. Per
