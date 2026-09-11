@@ -1,0 +1,29 @@
+openspec/changes/add-theme-panel/proposal.md
+  s_e465e30f266fa2::t_82cc5f76941444 1-123
+openspec/changes/add-theme-panel/tasks.md
+  s_e465e30f266fa2::t_4ea528a8075a38 1-85
+openspec/changes/add-theme-panel/specs/ux-theme-and-polish/spec.md
+  s_e465e30f266fa2::t_9545e5d037d537 1-95
+openspec/changes/add-theme-panel/.openspec.yaml
+  s_e465e30f266fa2::t_5cf4e3acd2c8c4 1-2
+openspec/changes/add-theme-panel/specs/l-ux2-empty-state-nav-feedback-density-terminal-themes/spec.md
+  s_e465e30f266fa2::t_a967c8013d136d 1-24
+openspec/changes/add-theme-panel/README.md
+  s_e465e30f266fa2::t_5cf4e3acd2c8c4 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fa6ced03e5890e0cb1fc7589ec7cc7025e725fde",
+  "prompts": {},
+  "sessions": {
+    "s_e465e30f266fa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2c5b23d5-95a9-4f8a-9e19-5ebcf3fb7297",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
