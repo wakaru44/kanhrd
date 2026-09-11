@@ -3,8 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Subject } from 'rxjs';
-import type { Pane, TabSummary, WorkspaceSummary, WsEvent } from '@kanhrd/schema';
-import { ParkedStore } from './parked.store';
+import type { AgentStatus, Pane, TabSummary, WorkspaceSummary, WsEvent } from '@kanhrd/schema';
+import { ParkedStore, PARKED_STORAGE_KEY, parkedColumnKey } from './parked.store';
 import {
   applyEvent,
   applyLifecycleEvent,
@@ -16,9 +16,12 @@ import {
   groupByStatus,
   groupIntoColumns,
   groupIntoSwimlanes,
+  loadFilters,
+  saveFilters,
   isWorkspaceGroupCloseRequiredError,
   PanesStore,
   paneKey,
+  STATUS_COLUMN_ORDER,
   type LifecycleState,
   type PaneMap,
 } from './panes.store';
@@ -167,7 +170,7 @@ describe('groupByStatus', () => {
     const panes = [pane({ id: 'a', host: 'laptop' }), pane({ id: 'b', host: 'desktop' })];
     const groups = groupByStatus(panes, {
       excludedHosts: new Set(['desktop']),
-      hiddenStatuses: new Set(),
+      hiddenColumns: new Set(),
     });
     expect(groups.idle.map((p) => p.id)).toEqual(['a']);
   });
@@ -176,7 +179,7 @@ describe('groupByStatus', () => {
     const panes = [pane({ id: 'a', agent_status: 'working' })];
     const groups = groupByStatus(panes, {
       excludedHosts: new Set(),
-      hiddenStatuses: new Set(['working']),
+      hiddenColumns: new Set(['working']),
     });
     expect(groups.working).toEqual([]);
   });
@@ -210,7 +213,7 @@ describe('groupIntoColumns: the parked partition', () => {
     expect(columns.parked.get('p1')).toEqual([]);
   });
 
-  it('filters parked columns exactly as status columns are filtered', () => {
+  it('filters a parked column by its host exclusion and by its own column key', () => {
     const panes = [
       pane({ id: 'a', host: 'desktop', agent_status: 'working' }),
       pane({ id: 'b', host: 'laptop', agent_status: 'done' }),
@@ -222,21 +225,31 @@ describe('groupIntoColumns: the parked partition', () => {
 
     const hostExcluded = groupIntoColumns(
       panes,
-      { excludedHosts: new Set(['desktop']), hiddenStatuses: new Set() },
+      { excludedHosts: new Set(['desktop']), hiddenColumns: new Set() },
       membership,
       ['p1']
     );
     expect(hostExcluded.parked.get('p1')!.map((p) => p.id)).toEqual(['b']);
 
+    // The visibility filter is keyed by COLUMN, so hiding a status leaves a
+    // parked card alone and hiding the parked column takes all of it.
     const statusHidden = groupIntoColumns(
       panes,
-      { excludedHosts: new Set(), hiddenStatuses: new Set(['done']) },
+      { excludedHosts: new Set(), hiddenColumns: new Set(['done']) },
       membership,
       ['p1']
     );
-    expect(statusHidden.parked.get('p1')!.map((p) => p.id))
+    expect(statusHidden.parked.get('p1')!.map((p) => p.id)).toEqual(['a', 'b']);
+
+    const columnHidden = groupIntoColumns(
+      panes,
+      { excludedHosts: new Set(), hiddenColumns: new Set([parkedColumnKey('p1')]) },
+      membership,
+      ['p1']
+    );
+    expect(columnHidden.parked.get('p1'))
       .withContext("counts reflect the filtered collection, so the chips don't lie")
-      .toEqual(['a']);
+      .toEqual([]);
   });
 
   it('leaves a card in its status column when its membership names an unknown column', () => {
@@ -504,7 +517,7 @@ describe('groupIntoSwimlanes', () => {
         pane({ id: 'a', host: 'laptop', agent_status: 'working' }),
         pane({ id: 'b', host: 'desktop', agent_status: 'working' }),
       ],
-      { excludedHosts: new Set(['desktop']), hiddenStatuses: new Set() },
+      { excludedHosts: new Set(['desktop']), hiddenColumns: new Set() },
       'host'
     );
     expect(keys(lanes)).toEqual(['laptop']);
@@ -516,7 +529,7 @@ describe('groupIntoSwimlanes', () => {
         pane({ id: 'a', host: 'laptop', agent_status: 'working' }),
         pane({ id: 'b', host: 'desktop', agent_status: 'blocked' }),
       ],
-      { excludedHosts: new Set(), hiddenStatuses: new Set(['blocked']) },
+      { excludedHosts: new Set(), hiddenColumns: new Set(['blocked']) },
       'host'
     );
     // desktop's only card sat in a hidden status column: the band goes too.
@@ -721,7 +734,194 @@ describe('PanesStore capabilities probing', () => {
   });
 });
 
-describe('PanesStore.statusCountsSignal', () => {
+/**
+ * The reported defect (openspec change `column-grain-board-filter`): the
+ * board displayed a card in one column and filtered it by another. The
+ * filter is keyed by COLUMN now, so attribution runs first.
+ */
+describe('the filter hides columns, not statuses', () => {
+  it('keeps a parked card on the board when the status it carries is hidden', () => {
+    // Three terminals, no agent, parked out of the way; the operator hides
+    // `unknown` precisely because unattended terminals are not the point.
+    const panes = [
+      pane({ id: 'a', agent_status: 'unknown' }),
+      pane({ id: 'b', agent_status: 'unknown' }),
+      pane({ id: 'c', agent_status: 'unknown' }),
+    ];
+    const membership = new Map([
+      [paneKey('laptop', 'a'), 'p1'],
+      [paneKey('laptop', 'b'), 'p1'],
+      [paneKey('laptop', 'c'), 'p1'],
+    ]);
+
+    const columns = groupIntoColumns(
+      panes,
+      { excludedHosts: new Set(), hiddenColumns: new Set(['unknown']) },
+      membership,
+      ['p1']
+    );
+
+    expect(columns.parked.get('p1')!.map((p) => p.id))
+      .withContext('a parked card is hidden by its own column, never by its status')
+      .toEqual(['a', 'b', 'c']);
+    expect(columns.status.unknown).toEqual([]);
+  });
+
+  it('hides exactly the cards of the parked column that is hidden', () => {
+    const panes = [
+      pane({ id: 'a', agent_status: 'working' }),
+      pane({ id: 'b', agent_status: 'idle' }),
+      pane({ id: 'c', agent_status: 'idle' }),
+    ];
+    const membership = new Map([
+      [paneKey('laptop', 'a'), 'p1'],
+      [paneKey('laptop', 'b'), 'p1'],
+      [paneKey('laptop', 'c'), 'p2'],
+    ]);
+
+    const columns = groupIntoColumns(
+      panes,
+      { excludedHosts: new Set(), hiddenColumns: new Set([parkedColumnKey('p1')]) },
+      membership,
+      ['p1', 'p2']
+    );
+
+    expect(columns.parked.get('p1')).toEqual([]);
+    expect(columns.parked.get('p2')!.map((p) => p.id)).toEqual(['c']);
+    expect(columns.status.working).withContext('no status column gains a card').toEqual([]);
+    expect(columns.status.idle).toEqual([]);
+  });
+
+  it('filters by status a card whose membership names a column the board does not have', () => {
+    const columns = groupIntoColumns(
+      [pane({ id: 'a', agent_status: 'idle' })],
+      { excludedHosts: new Set(), hiddenColumns: new Set(['idle']) },
+      new Map([[paneKey('laptop', 'a'), 'gone']]),
+      ['p1']
+    );
+    expect(columns.status.idle).toEqual([]);
+    expect(columns.parked.get('p1')).toEqual([]);
+  });
+
+  it('bands a parked card under its parked column even when its status is hidden', () => {
+    const lanes = groupIntoSwimlanes(
+      [
+        pane({ id: 'a', host: 'laptop', agent_status: 'unknown' }),
+        pane({ id: 'b', host: 'desktop', agent_status: 'working' }),
+      ],
+      { excludedHosts: new Set(), hiddenColumns: new Set(['unknown']) },
+      'host',
+      new Map([[paneKey('laptop', 'a'), 'p1']]),
+      ['p1']
+    );
+
+    expect(lanes.map((l) => l.key)).toEqual(['desktop', 'laptop']);
+    const laptop = lanes.find((l) => l.key === 'laptop')!;
+    expect(laptop.parked!.get('p1')!.map((p) => p.id)).toEqual(['a']);
+    expect(laptop.columns.unknown).toEqual([]);
+  });
+});
+
+describe('Filters persistence', () => {
+  const KEY = 'kanhrd.filters';
+
+  function storage(raw: string | null): Pick<Storage, 'getItem'> {
+    return { getItem: (key: string) => (key === KEY ? raw : null) };
+  }
+
+  it('loads a payload written before the filter was keyed by column', () => {
+    const filters = loadFilters(
+      storage(JSON.stringify({ excludedHosts: [], hiddenStatuses: ['unknown'] }))
+    );
+    expect([...filters.hiddenColumns]).toEqual(['unknown']);
+  });
+
+  it('loads a column-keyed payload, parked keys included', () => {
+    const filters = loadFilters(
+      storage(JSON.stringify({ excludedHosts: ['desktop'], hiddenColumns: ['done', 'parked:p1'] }))
+    );
+    expect([...filters.excludedHosts]).toEqual(['desktop']);
+    expect([...filters.hiddenColumns]).toEqual(['done', 'parked:p1']);
+  });
+
+  it('degrades to the default rather than throwing on nonsense', () => {
+    expect(loadFilters(storage('{not json'))).toEqual(defaultFilters());
+  });
+
+  it('writes the column-keyed shape and only that', () => {
+    let written = '';
+    saveFilters(
+      { excludedHosts: new Set(), hiddenColumns: new Set(['idle', 'parked:p1']) },
+      { setItem: (_key: string, value: string) => (written = value) }
+    );
+    expect(JSON.parse(written)).toEqual({
+      excludedHosts: [],
+      hiddenColumns: ['idle', 'parked:p1'],
+    });
+  });
+});
+
+describe('PanesStore prunes stranded hidden columns', () => {
+  function setUp(): PanesStore {
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: new FakeWsClient() },
+      ],
+    });
+    return TestBed.inject(PanesStore);
+  }
+
+  afterEach(() => {
+    // The store's `hostsResource` fires on construction; nothing in these
+    // tests needs a host, so the request is flushed rather than left open.
+    for (const req of TestBed.inject(HttpTestingController).match('/api/hosts')) {
+      if (!req.cancelled) {
+        req.flush({ hosts: [] });
+      }
+    }
+    TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true });
+    TestBed.inject(ParkedStore).clear();
+    localStorage.removeItem('kanhrd.filters');
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+  });
+
+  it('drops a removed parked column from the hidden set, keeping status keys', async () => {
+    const store = setUp();
+    const parked = TestBed.inject(ParkedStore);
+    const column = parked.createColumn('parking');
+    store.toggleColumn(parkedColumnKey(column.id));
+    store.toggleColumn('unknown');
+    await settle();
+
+    parked.removeColumn(column.id);
+    await settle();
+
+    expect([...store.filtersSignal().hiddenColumns])
+      .withContext('no stranded key: a column created later must not load hidden')
+      .toEqual(['unknown']);
+  });
+
+  it('drops every parked key when the operator clears parked columns', async () => {
+    const store = setUp();
+    const parked = TestBed.inject(ParkedStore);
+    const a = parked.createColumn('parking');
+    const b = parked.createColumn('later');
+    store.toggleColumn(parkedColumnKey(a.id));
+    store.toggleColumn(parkedColumnKey(b.id));
+    store.toggleColumn('done');
+    await settle();
+
+    parked.clear();
+    await settle();
+
+    expect([...store.filtersSignal().hiddenColumns]).toEqual(['done']);
+  });
+});
+
+describe('PanesStore.columnCountsSignal', () => {
   function setUp(): PanesStore {
     TestBed.configureTestingModule({
       providers: [
@@ -736,10 +936,24 @@ describe('PanesStore.statusCountsSignal', () => {
 
   afterEach(() => {
     TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true });
+    TestBed.inject(ParkedStore).clear();
     localStorage.removeItem('kanhrd.filters');
+    localStorage.removeItem(PARKED_STORAGE_KEY);
   });
 
-  it('counts panes per status, honouring host exclusion and scope but not hiddenStatuses', () => {
+  /** The five status columns as a record, for the assertions that predate parked columns. */
+  function countsOf(store: PanesStore): Record<AgentStatus, number> {
+    const map = store.columnCountsSignal();
+    return {
+      working: map.get('working') ?? 0,
+      blocked: map.get('blocked') ?? 0,
+      idle: map.get('idle') ?? 0,
+      done: map.get('done') ?? 0,
+      unknown: map.get('unknown') ?? 0,
+    };
+  }
+
+  it('counts panes per column, honouring host exclusion and scope but not hiddenColumns', () => {
     const store = setUp();
     const seed: PaneMap = new Map();
     let panes: PaneMap = seed;
@@ -753,9 +967,9 @@ describe('PanesStore.statusCountsSignal', () => {
     panes = applyPaneCreated(panes, pane({ id: 'e', host: 'desktop', agent_status: 'working' }));
     store.panesSignal.set(panes);
 
-    // hiddenStatuses must NOT affect the count — that's what the chip toggles.
-    store.filtersSignal.set({ excludedHosts: new Set(), hiddenStatuses: new Set(['working']) });
-    expect(store.statusCountsSignal()).toEqual({
+    // hiddenColumns must NOT affect the count — that's what the chip toggles.
+    store.filtersSignal.set({ excludedHosts: new Set(), hiddenColumns: new Set(['working']) });
+    expect(countsOf(store)).toEqual({
       working: 3,
       blocked: 1,
       idle: 1,
@@ -764,13 +978,13 @@ describe('PanesStore.statusCountsSignal', () => {
     });
 
     // excluded hosts DO drop out of the count.
-    store.filtersSignal.set({ excludedHosts: new Set(['desktop']), hiddenStatuses: new Set() });
-    expect(store.statusCountsSignal().working).toBe(2);
+    store.filtersSignal.set({ excludedHosts: new Set(['desktop']), hiddenColumns: new Set() });
+    expect(store.columnCountsSignal().get('working')).toBe(2);
 
     // Scope narrows counts to the current workspace/tab, same as columnsSignal.
-    store.filtersSignal.set({ excludedHosts: new Set(), hiddenStatuses: new Set() });
+    store.filtersSignal.set({ excludedHosts: new Set(), hiddenColumns: new Set() });
     store.setScope('laptop', 'w1', null);
-    expect(store.statusCountsSignal()).toEqual({
+    expect(countsOf(store)).toEqual({
       working: 2,
       blocked: 1,
       idle: 0,
@@ -779,15 +993,39 @@ describe('PanesStore.statusCountsSignal', () => {
     });
   });
 
-  it('reports 0 for every status when no panes match', () => {
+  it('reports 0 for every column when no panes match', () => {
     const store = setUp();
-    expect(store.statusCountsSignal()).toEqual({
+    expect(countsOf(store)).toEqual({
       working: 0,
       blocked: 0,
       idle: 0,
       done: 0,
       unknown: 0,
     });
+  });
+
+  it('counts a parked card toward its parked column and toward no status', () => {
+    const store = setUp();
+    const parked = TestBed.inject(ParkedStore);
+    const column = parked.createColumn('parking');
+    let panes: PaneMap = new Map();
+    panes = applyPaneCreated(panes, pane({ id: 'a', host: 'laptop', agent_status: 'unknown' }));
+    panes = applyPaneCreated(panes, pane({ id: 'b', host: 'laptop', agent_status: 'unknown' }));
+    store.panesSignal.set(panes);
+    parked.park(paneKey('laptop', 'b'), column.id);
+
+    // Independent source of truth for the expectation: two unknown panes,
+    // one of them parked, so the chips must read unknown 1 / parking 1.
+    expect(countsOf(store).unknown).toBe(1);
+    expect(store.columnCountsSignal().get(parkedColumnKey(column.id))).toBe(1);
+
+    // The whole key space is present, empty parked column included.
+    parked.createColumn('later');
+    expect([...store.columnCountsSignal().keys()]).toEqual([
+      ...STATUS_COLUMN_ORDER,
+      parkedColumnKey('p1'),
+      parkedColumnKey('p2'),
+    ]);
   });
 });
 
@@ -847,7 +1085,7 @@ describe('PanesStore.swimlanesSignal', () => {
     const store = setUp();
     seed(store);
     TestBed.inject(SettingsService).setSwimlaneDimension('host');
-    store.filtersSignal.set({ excludedHosts: new Set(['desktop']), hiddenStatuses: new Set() });
+    store.filtersSignal.set({ excludedHosts: new Set(['desktop']), hiddenColumns: new Set() });
 
     expect(store.swimlanesSignal().map((l) => l.key)).toEqual(['laptop']);
   });

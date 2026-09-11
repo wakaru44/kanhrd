@@ -750,16 +750,16 @@ describe('Board: filter interaction with the pager', () => {
   });
 
   it('hiding a status removes its page and leaves the order unchanged', async () => {
-    store.toggleStatus('idle');
+    store.toggleColumn('idle');
     await settle(fixture);
 
     expect(renderedStatuses()).toEqual(['working', 'blocked', 'done', 'unknown']);
   });
 
   it('un-hiding re-inserts the page at its STATUS_COLUMN_ORDER position', async () => {
-    store.toggleStatus('idle');
+    store.toggleColumn('idle');
     await settle(fixture);
-    store.toggleStatus('idle');
+    store.toggleColumn('idle');
     await settle(fixture);
 
     expect(renderedStatuses()).toEqual(['working', 'blocked', 'idle', 'done', 'unknown']);
@@ -767,7 +767,7 @@ describe('Board: filter interaction with the pager', () => {
 
   it('hiding every status shows the no-matches empty state with a clear action, not an empty pager', async () => {
     for (const status of STATUS_COLUMN_ORDER) {
-      store.toggleStatus(status);
+      store.toggleColumn(status);
     }
     await settle(fixture);
 
@@ -1432,7 +1432,7 @@ describe('Board: swimlanes', () => {
   it('hiding a status removes that column from EVERY band, order unchanged', async () => {
     settings.setSwimlaneDimension('host');
     await settle(fixture);
-    store.toggleStatus('idle');
+    store.toggleColumn('idle');
     await settle(fixture);
 
     for (const band of bands()) {

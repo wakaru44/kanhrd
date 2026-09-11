@@ -124,3 +124,14 @@
   color: var(--ink);
   font-weight: var(--fw-semi);
 }
+
+/*
+ * A parked column's chip. No status dot — the dot's five colours are
+ * herdr's statuses and a parked column has none — so the boundary carries
+ * the distinction instead: the same ochre line the group-by row uses for
+ * "the operator chose this". Never colour alone: the chip's label is the
+ * operator's own column name, which no status is ever called.
+ */
+.parked-chip {
+  border-color: var(--ochre-line);
+}

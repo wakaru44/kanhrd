@@ -19,7 +19,13 @@ import { handleMenuKeydown, menuItems } from '../shared/menu-keys';
 import { ConfirmModal } from '../shared/confirm-modal';
 import { RenameModal } from '../shared/rename-modal';
 import { paneKey } from '../state/panes.store';
-import { EXIT_RULES, ParkedStore, type ExitRule, type ParkedColumn } from '../state/parked.store';
+import {
+  EXIT_RULES,
+  ParkedStore,
+  parkedColumnKey,
+  type ExitRule,
+  type ParkedColumn,
+} from '../state/parked.store';
 import { Card } from './card';
 
 /** Ids for `aria-controls`, unique per column instance for the life of the page. */
@@ -42,9 +48,7 @@ export interface BoardColumnRef {
   parked: ParkedColumn | null;
 }
 
-export function parkedColumnKey(id: string): string {
-  return `parked:${id}`;
-}
+export { parkedColumnKey };
 
 export function boardColumnRefs(
   statuses: readonly AgentStatus[],

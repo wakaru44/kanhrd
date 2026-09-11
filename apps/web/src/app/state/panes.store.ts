@@ -15,7 +15,7 @@ import type {
 } from '@kanhrd/schema';
 import { WsClient } from './ws-client';
 import { SettingsService, type SwimlaneDimension } from './settings.service';
-import { ParkedStore } from './parked.store';
+import { PARKED_COLUMN_KEY_PREFIX, ParkedStore, parkedColumnKey } from './parked.store';
 
 /** What a bridge that never answers (or errors on) `bridge.capabilities` gets treated as: tier-1, no terminal. */
 export function fallbackCapabilities(): BridgeCapabilities {
@@ -52,19 +52,34 @@ export function paneKey(host: string, id: string): PaneKey {
 export interface Filters {
   /** Hosts the user has explicitly hidden. Empty = show every host. */
   excludedHosts: ReadonlySet<string>;
-  /** Status columns the user has explicitly hidden. Empty = show every column. */
-  hiddenStatuses: ReadonlySet<AgentStatus>;
+  /**
+   * Columns the user has explicitly hidden, keyed the way the board keys a
+   * column everywhere else (`BoardColumnRef.key`): the status name for a
+   * status column, `parked:<id>` for a parked one. Empty = show every
+   * column.
+   *
+   * It is keyed by COLUMN, not by status, because a card is displayed in one
+   * column and must be filtered by that same one — the board used to hide a
+   * parked card for the `agent_status` it happened to carry.
+   */
+  hiddenColumns: ReadonlySet<string>;
 }
 
 export function defaultFilters(): Filters {
-  return { excludedHosts: new Set(), hiddenStatuses: new Set() };
+  return { excludedHosts: new Set(), hiddenColumns: new Set() };
 }
 
 const FILTERS_STORAGE_KEY = 'kanhrd.filters';
 
 interface StoredFilters {
   excludedHosts: string[];
-  hiddenStatuses: AgentStatus[];
+  hiddenColumns?: string[];
+  /**
+   * Read-only legacy field: what this key held while the filter was keyed by
+   * status. Bare status names are already valid column keys, so the
+   * migration is a read rather than a data transform. Never written.
+   */
+  hiddenStatuses?: AgentStatus[];
 }
 
 export function loadFilters(storage: Pick<Storage, 'getItem'> = localStorage): Filters {
@@ -76,7 +91,7 @@ export function loadFilters(storage: Pick<Storage, 'getItem'> = localStorage): F
     const parsed = JSON.parse(raw) as StoredFilters;
     return {
       excludedHosts: new Set(parsed.excludedHosts ?? []),
-      hiddenStatuses: new Set(parsed.hiddenStatuses ?? []),
+      hiddenColumns: new Set<string>(parsed.hiddenColumns ?? parsed.hiddenStatuses ?? []),
     };
   } catch {
     return defaultFilters();
@@ -89,7 +104,7 @@ export function saveFilters(
 ): void {
   const stored: StoredFilters = {
     excludedHosts: [...filters.excludedHosts],
-    hiddenStatuses: [...filters.hiddenStatuses],
+    hiddenColumns: [...filters.hiddenColumns],
   };
   storage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(stored));
 }
@@ -410,12 +425,13 @@ export function applyLifecycleEvent(state: LifecycleState, evt: WsEvent): Lifecy
  * The board's columns after one partition pass: the five status columns,
  * plus one bucket per user-defined (parked) column.
  *
- * Both halves are filtered identically — an excluded host and a hidden
- * status remove a card from a parked column as surely as from a status
+ * A pane with a membership entry appears in its parked column and NOWHERE
+ * else: parking moves a card, it does not copy it. Its column is therefore
+ * resolved BEFORE the visibility filter runs, and it is that column — never
+ * the `agent_status` the card happens to carry — that the hidden set is
+ * tested against. An excluded host still removes a card from either kind of
  * column, so every count still "represents the complete filtered
- * collection" (docs/UX-GUIDELINES.md). A pane with a membership entry
- * appears in its parked column and NOWHERE else: parking moves a card, it
- * does not copy it.
+ * collection" (docs/UX-GUIDELINES.md).
  */
 export interface BoardColumns {
   status: Record<AgentStatus, Pane[]>;
@@ -424,6 +440,40 @@ export interface BoardColumns {
 }
 
 const NO_MEMBERSHIP: ReadonlyMap<PaneKey, string> = new Map();
+
+/**
+ * The key of the column a pane is actually rendered in — the board's one
+ * attribution rule, in one place, so the grouping pass and the chip counts
+ * can never disagree about which column a card is in.
+ *
+ * A membership entry naming a column the board does not have (`liveParked`
+ * is the live set) leaves the card in its status column, which is exactly
+ * what the grouping pass does with it; a card can therefore never be
+ * filtered by a key no chip can toggle.
+ */
+export function columnKeyOf(
+  pane: Pane,
+  membership: ReadonlyMap<PaneKey, string>,
+  liveParked: ReadonlySet<string>
+): string {
+  const columnId = membership.get(paneKey(pane.host, pane.id));
+  return columnId !== undefined && liveParked.has(columnId)
+    ? parkedColumnKey(columnId)
+    : pane.agent_status;
+}
+
+/** Attribution first, filter second — the single predicate both grouping passes use. */
+function isFilteredOut(
+  pane: Pane,
+  filters: Filters,
+  membership: ReadonlyMap<PaneKey, string>,
+  liveParked: ReadonlySet<string>
+): boolean {
+  return (
+    filters.excludedHosts.has(pane.host) ||
+    filters.hiddenColumns.has(columnKeyOf(pane, membership, liveParked))
+  );
+}
 
 export function groupIntoColumns(
   panes: Iterable<Pane>,
@@ -439,8 +489,9 @@ export function groupIntoColumns(
     unknown: [],
   };
   const parked = new Map<string, Pane[]>(parkedColumnIds.map((id) => [id, []]));
+  const liveParked = new Set(parkedColumnIds);
   for (const pane of panes) {
-    if (filters.excludedHosts.has(pane.host) || filters.hiddenStatuses.has(pane.agent_status)) {
+    if (isFilteredOut(pane, filters, membership, liveParked)) {
       continue;
     }
     const columnId = membership.get(paneKey(pane.host, pane.id));
@@ -533,8 +584,9 @@ export function groupIntoSwimlanes(
   // which is why `parkedColumnIds` is threaded all the way down here rather
   // than derived from whatever happened to land in the band.
   const bands = new Map<string, { label: string; members: Pane[] }>();
+  const liveParked = new Set(parkedColumnIds);
   for (const pane of panes) {
-    if (filters.excludedHosts.has(pane.host) || filters.hiddenStatuses.has(pane.agent_status)) {
+    if (isFilteredOut(pane, filters, membership, liveParked)) {
       continue;
     }
     const { key, label } = bandOf(pane, dimension);
@@ -660,29 +712,34 @@ export class PanesStore {
   readonly capabilitiesSignal = signal<ReadonlyMap<string, BridgeCapabilities>>(new Map());
 
   /**
-   * Per-status pane totals ignoring the filter bar's own status toggles but
-   * honouring host exclusion and the URL scope. Feeds the filter-bar status
-   * chips so a chip toggled off still reports how many panes WOULD sit in
-   * that column if it were unhidden — the whole point of the counts is to
-   * watch a status while its column is out of view.
+   * Per-COLUMN pane totals, keyed exactly as `Filters.hiddenColumns` is:
+   * one entry for every status column and every parked column, `0`
+   * included. Counted under the board's own attribution, so a parked card
+   * counts toward its parked column and toward no status column — chip
+   * counts that contradicted the board would be worse than no counts.
+   *
+   * It ignores the filter bar's own column toggles but honours host
+   * exclusion and the URL scope, so a chip toggled off still reports how
+   * many cards WOULD sit in that column if it were unhidden — the whole
+   * point of the counts is to watch a column while it is out of view.
    */
-  readonly statusCountsSignal = computed<Record<AgentStatus, number>>(() => {
+  readonly columnCountsSignal = computed<ReadonlyMap<string, number>>(() => {
     const scope = this.scopeSignal();
     const excludedHosts = this.filtersSignal().excludedHosts;
-    const counts: Record<AgentStatus, number> = {
-      idle: 0,
-      working: 0,
-      blocked: 0,
-      done: 0,
-      unknown: 0,
-    };
+    const membership = this.parked.membership();
+    const liveParked = new Set(this.parked.columns().map((column) => column.id));
+    const counts = new Map<string, number>([
+      ...STATUS_COLUMN_ORDER.map((status) => [status as string, 0] as const),
+      ...[...liveParked].map((id) => [parkedColumnKey(id), 0] as const),
+    ]);
     for (const pane of this.panesSignal().values()) {
       if (excludedHosts.has(pane.host)) continue;
       if (scope) {
         if (pane.host !== scope.host || pane.workspace.id !== scope.workspaceId) continue;
         if (scope.tabId !== null && pane.tab.id !== scope.tabId) continue;
       }
-      counts[pane.agent_status] += 1;
+      const key = columnKeyOf(pane, membership, liveParked);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
     }
     return counts;
   });
@@ -747,6 +804,32 @@ export class PanesStore {
   constructor() {
     effect(() => {
       saveFilters(this.filtersSignal());
+    });
+
+    // A hidden parked column that stops existing must not leave its key
+    // behind: a later column could be created under it and load hidden with
+    // nothing to say why. One rule here rather than one at each of the three
+    // ways a column goes away (`removeColumn`, Settings' `clear parked
+    // columns`, and `loadParked` dropping a malformed column at startup) —
+    // and `ParkedStore` stays innocent of the filter. Status keys are never
+    // pruned: `STATUS_COLUMN_ORDER` is fixed and a hidden status must
+    // survive a reload.
+    effect(() => {
+      const live = new Set(this.parked.columns().map((column) => parkedColumnKey(column.id)));
+      untracked(() => {
+        const hidden = this.filtersSignal().hiddenColumns;
+        const stranded = [...hidden].filter(
+          (key) => key.startsWith(PARKED_COLUMN_KEY_PREFIX) && !live.has(key)
+        );
+        if (stranded.length === 0) {
+          return;
+        }
+        const hiddenColumns = new Set(hidden);
+        for (const key of stranded) {
+          hiddenColumns.delete(key);
+        }
+        this.filtersSignal.update((filters) => ({ ...filters, hiddenColumns }));
+      });
     });
 
     effect(() => {
@@ -814,15 +897,16 @@ export class PanesStore {
     });
   }
 
-  toggleStatus(status: AgentStatus): void {
+  /** `key` is a `BoardColumnRef.key`: a status name, or `parked:<id>`. */
+  toggleColumn(key: string): void {
     this.filtersSignal.update((filters) => {
-      const hiddenStatuses = new Set(filters.hiddenStatuses);
-      if (hiddenStatuses.has(status)) {
-        hiddenStatuses.delete(status);
+      const hiddenColumns = new Set(filters.hiddenColumns);
+      if (hiddenColumns.has(key)) {
+        hiddenColumns.delete(key);
       } else {
-        hiddenStatuses.add(status);
+        hiddenColumns.add(key);
       }
-      return { ...filters, hiddenStatuses };
+      return { ...filters, hiddenColumns };
     });
   }
 

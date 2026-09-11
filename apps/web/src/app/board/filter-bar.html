@@ -19,19 +19,29 @@
     }
   </div>
 
+  <!--
+    One chip per COLUMN, in board order: the status columns, then the
+    operator's parked columns. The chip toggles the column it names — a
+    parked card is hidden by its own column's chip and never by the status
+    it happens to carry. A parked chip carries no status dot: the dot's five
+    colours are herdr's statuses, and a parked column has none.
+  -->
   <div class="chip-row">
-    @for (status of statusOrder; track status) {
+    @for (column of columns(); track column.key) {
       <button
         type="button"
         class="chip status-chip"
-        [attr.data-status]="status"
-        [class.excluded]="isStatusHidden(status)"
-        [attr.aria-pressed]="!isStatusHidden(status)"
-        (click)="toggleStatus(status)"
+        [class.parked-chip]="column.parked !== null"
+        [attr.data-status]="column.status"
+        [class.excluded]="isColumnHidden(column)"
+        [attr.aria-pressed]="!isColumnHidden(column)"
+        (click)="toggleColumn(column)"
       >
-        <span class="status-dot"></span>
-        <span class="chip-label">{{ statusLabel(status) }}</span>
-        <span class="chip-count" aria-hidden="true">{{ statusCount(status) }}</span>
+        @if (column.status !== null) {
+          <span class="status-dot"></span>
+        }
+        <span class="chip-label">{{ column.label }}</span>
+        <span class="chip-count" aria-hidden="true">{{ columnCount(column) }}</span>
       </button>
     }
   </div>

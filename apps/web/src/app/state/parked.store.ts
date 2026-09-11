@@ -62,6 +62,23 @@ export interface ParkedState {
 
 export const PARKED_STORAGE_KEY = 'kanhrd.parked-columns';
 
+/**
+ * The board's identity for one parked column, and the prefix that tells a
+ * parked column's key apart from a status column's (a status name never
+ * contains a colon).
+ *
+ * It lives here rather than beside `BoardColumnRef` in `board/column.ts`
+ * because `panes.store.ts` keys the board's hidden-column set by it, and
+ * `board/column.ts` is a component module — importing it into the state
+ * layer would drag the `Column` component and the CDK along with it.
+ * `board/column.ts` re-exports this so every existing importer is unchanged.
+ */
+export const PARKED_COLUMN_KEY_PREFIX = 'parked:';
+
+export function parkedColumnKey(id: string): string {
+  return `${PARKED_COLUMN_KEY_PREFIX}${id}`;
+}
+
 export function defaultParked(): ParkedState {
   return { version: 1, columns: [], membership: {} };
 }

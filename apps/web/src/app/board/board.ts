@@ -166,20 +166,31 @@ export class Board implements OnDestroy {
   private readonly strip = viewChild<ElementRef<HTMLElement>>('strip');
   private readonly columnEls = viewChildren('columnEl', { read: ElementRef });
 
-  /** Visible status columns, always in `STATUS_COLUMN_ORDER`. Paging never reorders. */
-  protected readonly visibleStatuses = computed<readonly AgentStatus[]>(() => {
-    const hidden = this.store.filtersSignal().hiddenStatuses;
-    return STATUS_COLUMN_ORDER.filter((status) => !hidden.has(status));
+  /**
+   * Every column the board draws, in order: the status columns in
+   * `STATUS_COLUMN_ORDER` first, then the operator's parked columns, minus
+   * whatever the filter bar has hidden. One list for the desktop grid, the
+   * mobile pager and the switcher, so a parked column is a page like any
+   * other — and one place that knows about hiding, keyed by
+   * `BoardColumnRef.key` so both kinds of column hide the same way.
+   */
+  protected readonly visibleColumns = computed<readonly BoardColumnRef[]>(() => {
+    const hidden = this.store.filtersSignal().hiddenColumns;
+    return boardColumnRefs(STATUS_COLUMN_ORDER, this.parkedColumns()).filter(
+      (column) => !hidden.has(column.key)
+    );
   });
 
   /**
-   * Every column the board draws, in order: the visible status columns
-   * first, then the operator's parked columns. One list for the desktop
-   * grid, the mobile pager and the switcher, so a parked column is a page
-   * like any other.
+   * The status half of `visibleColumns`, in `STATUS_COLUMN_ORDER`. Derived
+   * from the one visible-column list rather than filtered a second time, so
+   * the pager's nearest-column fallback and the scroll-top snapshot can
+   * never disagree with what is drawn.
    */
-  protected readonly visibleColumns = computed<readonly BoardColumnRef[]>(() =>
-    boardColumnRefs(this.visibleStatuses(), this.parkedColumns())
+  protected readonly visibleStatuses = computed<readonly AgentStatus[]>(() =>
+    this.visibleColumns()
+      .map((column) => column.status)
+      .filter((status): status is AgentStatus => status !== null)
   );
 
   /** Card count per visible column, index-aligned with `visibleColumns`. */
@@ -208,10 +219,6 @@ export class Board implements OnDestroy {
   protected readonly staleHosts = computed(() =>
     this.store.hostsSignal().filter((host) => !host.connected)
   );
-
-  protected isStatusHidden(status: AgentStatus): boolean {
-    return this.store.filtersSignal().hiddenStatuses.has(status);
-  }
 
   /** Tapping a segment pages the strip; `scroll-snap` does the settling. */
   protected selectStatus(index: number): void {

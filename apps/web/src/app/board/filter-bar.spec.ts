@@ -3,41 +3,50 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { AgentStatus } from '@kanhrd/schema';
 import { FilterBar } from './filter-bar';
 import { PanesStore, defaultFilters, type Filters } from '../state/panes.store';
+import { ParkedStore, PARKED_STORAGE_KEY, parkedColumnKey } from '../state/parked.store';
 import { SettingsService } from '../state/settings.service';
 import { COPY } from '../shared/copy';
 import { WsClient } from '../state/ws-client';
 
 /**
- * The status chips each carry a live pane count trailing the label — see
+ * The chips each carry a live card count trailing the label — see
  * `docs/UX-GUIDELINES.md` "Status chip counts". The count must survive a
  * chip being toggled off (only the label gets the strike-through), and it
  * has to reflect the store's own scope- and host-filtered totals, ignoring
- * the status-visibility filter it itself controls.
+ * the column-visibility filter it itself controls.
+ *
+ * Counts are keyed by COLUMN (`BoardColumnRef.key`), so a parked column's
+ * chip counts the cards parked into it and no status chip counts them.
  */
 
-type StatusCounts = Record<AgentStatus, number>;
+type ColumnCounts = Record<AgentStatus, number>;
+
+function counts(partial: Partial<Record<string, number>>): ReadonlyMap<string, number> {
+  return new Map(Object.entries(partial) as [string, number][]);
+}
 
 class FakePanesStore {
   readonly hostsSignal = signal<{ name: string; connected: boolean; last_error?: string | null }[]>(
     []
   );
   readonly filtersSignal: WritableSignal<Filters> = signal(defaultFilters());
-  readonly statusCountsSignal: WritableSignal<StatusCounts> = signal({
-    working: 0,
-    blocked: 0,
-    idle: 0,
-    done: 0,
-    unknown: 0,
-  });
+  readonly columnCountsSignal: WritableSignal<ReadonlyMap<string, number>> = signal(
+    new Map<string, number>()
+  );
   toggleHost = jasmine.createSpy('toggleHost');
-  toggleStatus = jasmine.createSpy('toggleStatus');
+  toggleColumn = jasmine.createSpy('toggleColumn');
+
+  setStatusCounts(values: ColumnCounts): void {
+    this.columnCountsSignal.set(counts(values));
+  }
 }
 
-describe('FilterBar status chip counts', () => {
+describe('FilterBar column chip counts', () => {
   let fixture: ComponentFixture<FilterBar>;
   let store: FakePanesStore;
 
   beforeEach(async () => {
+    localStorage.removeItem(PARKED_STORAGE_KEY);
     store = new FakePanesStore();
     await TestBed.configureTestingModule({
       imports: [FilterBar],
@@ -64,7 +73,7 @@ describe('FilterBar status chip counts', () => {
   }
 
   it('renders a live count next to each status chip label', () => {
-    store.statusCountsSignal.set({ working: 3, blocked: 1, idle: 7, done: 2, unknown: 0 });
+    store.setStatusCounts({ working: 3, blocked: 1, idle: 7, done: 2, unknown: 0 });
     fixture.detectChanges();
 
     expect(countText('working')).toBe('3');
@@ -76,10 +85,10 @@ describe('FilterBar status chip counts', () => {
   });
 
   it('keeps the count visible and unstruck when the chip is toggled off', () => {
-    store.statusCountsSignal.set({ working: 5, blocked: 0, idle: 0, done: 0, unknown: 0 });
+    store.setStatusCounts({ working: 5, blocked: 0, idle: 0, done: 0, unknown: 0 });
     store.filtersSignal.set({
       excludedHosts: new Set(),
-      hiddenStatuses: new Set<AgentStatus>(['working']),
+      hiddenColumns: new Set<string>(['working']),
     });
     fixture.detectChanges();
 
@@ -99,11 +108,11 @@ describe('FilterBar status chip counts', () => {
   });
 
   it("updates the count reactively as the store's totals change", () => {
-    store.statusCountsSignal.set({ working: 1, blocked: 0, idle: 0, done: 0, unknown: 0 });
+    store.setStatusCounts({ working: 1, blocked: 0, idle: 0, done: 0, unknown: 0 });
     fixture.detectChanges();
     expect(countText('working')).toBe('1');
 
-    store.statusCountsSignal.set({ working: 4, blocked: 0, idle: 0, done: 0, unknown: 0 });
+    store.setStatusCounts({ working: 4, blocked: 0, idle: 0, done: 0, unknown: 0 });
     fixture.detectChanges();
     expect(countText('working')).toBe('4');
   });
@@ -189,5 +198,94 @@ describe('FilterBar group-by row', () => {
     for (const chip of chips()) {
       expect(chip.classList).not.toContain('excluded');
     }
+  });
+});
+
+/**
+ * The redefinition (openspec change `column-grain-board-filter`): the chips
+ * are a chip per COLUMN, parked columns included, because what the operator
+ * is choosing to see is columns — a parked card must never be hidden by the
+ * status it happens to carry.
+ */
+describe('FilterBar parked-column chips', () => {
+  let fixture: ComponentFixture<FilterBar>;
+  let store: FakePanesStore;
+  let parked: ParkedStore;
+
+  beforeEach(async () => {
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+    store = new FakePanesStore();
+    await TestBed.configureTestingModule({
+      imports: [FilterBar],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: PanesStore, useValue: store },
+        { provide: WsClient, useValue: {} },
+      ],
+    }).compileComponents();
+    parked = TestBed.inject(ParkedStore);
+    fixture = TestBed.createComponent(FilterBar);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    parked.clear();
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+  });
+
+  function chips(): HTMLButtonElement[] {
+    return Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.status-chip')
+    );
+  }
+
+  it('renders one chip per column, statuses first then parked columns in their order', () => {
+    parked.createColumn('parking');
+    parked.createColumn('later');
+    fixture.detectChanges();
+
+    expect(chips().map((c) => c.querySelector('.chip-label')?.textContent?.trim())).toEqual([
+      COPY.status.working,
+      COPY.status.blocked,
+      COPY.status.idle,
+      COPY.status.done,
+      COPY.status.unknown,
+      'parking',
+      'later',
+    ]);
+  });
+
+  it("counts a parked column's own cards, and gives it no status dot", () => {
+    const column = parked.createColumn('parking');
+    store.columnCountsSignal.set(counts({ unknown: 0, [parkedColumnKey(column.id)]: 3 }));
+    fixture.detectChanges();
+
+    const chip = chips().at(-1)!;
+    expect(chip.classList).toContain('parked-chip');
+    expect(chip.querySelector('.status-dot')).toBeNull();
+    expect(chip.querySelector('.chip-count')?.textContent?.trim()).toBe('3');
+  });
+
+  it('toggles its own column key, never a status', () => {
+    const column = parked.createColumn('parking');
+    fixture.detectChanges();
+
+    chips().at(-1)!.click();
+    expect(store.toggleColumn).toHaveBeenCalledOnceWith(parkedColumnKey(column.id));
+  });
+
+  it('marks a hidden parked column struck through, keeping its count', () => {
+    const column = parked.createColumn('parking');
+    store.columnCountsSignal.set(counts({ [parkedColumnKey(column.id)]: 2 }));
+    store.filtersSignal.set({
+      excludedHosts: new Set(),
+      hiddenColumns: new Set([parkedColumnKey(column.id)]),
+    });
+    fixture.detectChanges();
+
+    const chip = chips().at(-1)!;
+    expect(chip.classList).toContain('excluded');
+    expect(chip.getAttribute('aria-pressed')).toBe('false');
+    expect(chip.querySelector('.chip-count')?.textContent?.trim()).toBe('2');
   });
 });
