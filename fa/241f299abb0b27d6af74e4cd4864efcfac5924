@@ -1,0 +1,56 @@
+apps/web/src/app/board/swimlane.html
+  s_7901944abeeaba::t_b68d2f99d4cb4a 6-9
+apps/web/src/app/board/board.html
+  s_7901944abeeaba::t_b68d2f99d4cb4a 124-132
+apps/web/src/app/board/board.spec.ts
+  s_7901944abeeaba::t_e0c598f5395045 788,790-797,799,801,1491,1496-1501
+  s_7901944abeeaba::t_ad4fc1d0e5f928 798
+  s_7901944abeeaba::t_fe2f439ff44e5a 1338-1360
+apps/web/src/app/shared/copy.ts
+  s_7901944abeeaba::t_ca2017eb3acdfa 79
+apps/web/src/app/board/column.ts
+  s_7901944abeeaba::t_ad4fc1d0e5f928 14
+  s_7901944abeeaba::t_a16459ccada3be 94-110,232-233
+  s_7901944abeeaba::t_ea6e5f24c01323 21,185-186,208-231,234-247
+  s_7901944abeeaba::t_bace3d5fa2656b 17,20,181-184,187-191,265,306-327
+  s_7901944abeeaba::t_f3d5d44b184744 328
+apps/web/src/app/board/board.ts
+  s_7901944abeeaba::t_b68d2f99d4cb4a 14,95
+apps/web/src/app/board/swimlane.ts
+  s_7901944abeeaba::t_b68d2f99d4cb4a 2,96
+openspec/changes/add-parked-columns/tasks.md
+  s_7901944abeeaba::t_74e931f241e6c3 88-99,128-175
+  s_7901944abeeaba::t_b0a68823998c62 198-203
+docs/BRAND.md
+  s_7901944abeeaba::t_ca2017eb3acdfa 119
+apps/web/src/app/board/column.spec.ts
+  s_7901944abeeaba::t_5baba252e0a112 7-14,410-424,426-449,451-548,550-561,563-565
+  s_7901944abeeaba::t_ad4fc1d0e5f928 425,450,549,562
+  s_7901944abeeaba::t_e0c598f5395045 321,343-344
+apps/web/src/app/board/column.scss
+  s_7901944abeeaba::t_0c77ad290d94ba 212-214,216
+  s_7901944abeeaba::t_e58cd1f1b515f8 196-211,215,217-228
+apps/web/src/app/board/swimlane.spec.ts
+  s_7901944abeeaba::t_e0c598f5395045 198-200,203-206
+apps/web/src/app/board/column.html
+  s_7901944abeeaba::t_9cee4982dc6162 123-132
+  s_7901944abeeaba::t_bace3d5fa2656b 49-51,133
+  s_7901944abeeaba::t_fecb1484979744 71-87,96-98,109-111
+  s_7901944abeeaba::t_70a1fca8990738 134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fa241f299abb0b27d6af74e4cd4864efcfac5924",
+  "prompts": {},
+  "sessions": {
+    "s_7901944abeeaba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdce5a89-318c-4864-b71b-909fa85af141",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
