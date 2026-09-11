@@ -493,9 +493,13 @@ The vertical grouping by `agent_status` is a **status column**, never a
   changed by a drag: a status column accepts no drop, carries no drop
   affordance, and `pane.move` targets a tab or workspace, not a status.
   A card may be a drag **source**, but only once at least one
-  user-defined column exists — with none, the board is byte-for-byte the
-  drag-free board this document described before. (Maintainer decision
-  Q1, 2026-09-10; see `openspec/changes/add-parked-columns`.)
+  user-defined column exists and the mobile pager is inactive. Otherwise,
+  drag and drop are disabled, with no drag handle or grab cursor. Disabled
+  drag and drop-list directives may remain attached; this is an interaction
+  and affordance contract, not byte-for-byte DOM identity. A status column
+  may remain a source list, but rejects incoming cards; releasing a card
+  over its original column leaves its membership unchanged. (Maintainer
+  decision Q1, 2026-09-10; see `openspec/changes/add-parked-columns`.)
 
 ### Host seal (hanko)
 
