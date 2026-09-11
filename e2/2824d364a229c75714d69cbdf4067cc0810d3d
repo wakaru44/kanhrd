@@ -1,0 +1,19 @@
+apps/web/e2e/mobile.spec.ts
+  s_e465e30f266fa2::t_dba31e2f2520ce 520-532
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e22824d364a229c75714d69cbdf4067cc0810d3d",
+  "prompts": {},
+  "sessions": {
+    "s_e465e30f266fa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2c5b23d5-95a9-4f8a-9e19-5ebcf3fb7297",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
