@@ -517,8 +517,19 @@ test('[22] the board exposes no drag affordance on a status column', async ({ ap
   await expect(allCards(app).first()).toBeVisible({ timeout: 10_000 });
   const offenders = await app.evaluate(() => {
     const found: string[] = [];
-    if (document.querySelector('[cdkDrag], [cdkdrag], .cdk-drag, [cdkDropList], [cdkdroplist]')) {
-      found.push('cdkDrag/cdkDropList');
+    // ENABLED state, not mere presence. Angular cannot drop a directive
+    // conditionally without duplicating the template, so a board with no
+    // user-defined column carries `cdkDrag`/`cdkDropList` inert
+    // (`.cdk-drag-disabled` / `.cdk-drop-list-disabled`: nothing pickable,
+    // nothing receivable, no grab cursor). Guideline 22 is written against
+    // `cdkDrag` ENABLED for exactly that reason; asserting presence would
+    // test the implementation rather than the affordance.
+    if (
+      document.querySelector(
+        '.cdk-drag:not(.cdk-drag-disabled), .cdk-drop-list:not(.cdk-drop-list-disabled)'
+      )
+    ) {
+      found.push('cdkDrag/cdkDropList enabled');
     }
     if (document.querySelector('[draggable="true"]')) {
       found.push('draggable="true"');
