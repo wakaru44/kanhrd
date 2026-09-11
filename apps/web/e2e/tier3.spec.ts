@@ -207,12 +207,16 @@ test('card split and close affordances are visible on first render, no hover', a
   await expect(actions.locator('.card-action.split-down')).toHaveCount(1);
   await expect(actions.locator('.card-action.close')).toHaveCount(1);
 
-  // The overflow trigger is rendered but `display: none` at comfortable
-  // density on a fine pointer — it is the compact/touch path, and the
-  // mobile project asserts it there (mobile.spec.ts, criteria 5 and 6).
-  // Here it only has to exist, so the two paths cannot drift apart.
+  // The overflow trigger is visible at every density, including comfortable
+  // on a fine pointer. It used to be the compact/touch path only, and this
+  // spec asserted `display: none` here — but that rule never shipped, and
+  // since f6763bf the menu carries `rename`, which has NO inline control
+  // (the always-visible row is split-right / split-down / close). Hiding the
+  // trigger on desktop would leave pane rename with no path at all, which
+  // docs/UX-GUIDELINES.md "Visible affordances" forbids. The mobile project
+  // still asserts the touch path (mobile.spec.ts, criteria 5 and 6).
   await expect(cardOverflowTrigger(card)).toHaveCount(1);
-  await expect(cardOverflowTrigger(card)).toBeHidden();
+  await expect(cardOverflowTrigger(card)).toBeVisible();
 });
 
 // --- tab CRUD lifecycle (throwaway tab) -------------------------------------
