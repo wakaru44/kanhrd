@@ -9,8 +9,7 @@ import { installMock, urlForState, type StateName } from './helpers/mock-bridge'
  *
  * Unlike `tier1.board.spec.ts`, this suite is FULLY MOCKED — every cell
  * intercepts `/api/hosts` and the `/ws` transport before `page.goto('/')`, so
- * it does not need `KANHRD_E2E_LIVE_HERDR` and does not risk typing into a
- * real pane. That is deliberate: 600 panes is not something a live herdr can
+ * it needs no herdr at all, not even the run's own session. That is deliberate: 600 panes is not something a live herdr can
  * be trusted to expose without side effects.
  *
  * Timings, contrast findings and keyboard findings are recorded per cell via

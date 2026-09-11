@@ -137,18 +137,6 @@ export async function herdrPaneSendKeys(paneId: string, keys: string[]): Promise
 }
 
 /**
- * Escape hatch, re-scoped by `add-test-herdr-isolation`.
- *
- * It used to mean "you may type into the operator's panes" — a prompt for a
- * human, standing in for isolation that did not exist. It no longer gates
- * anything, because the panes the live specs drive are now created and
- * destroyed by the run itself. It is kept as the deliberate opt-in for
- * running these specs against a herdr session you point at on purpose (see
- * `e2e/README.md`), and setting it is never a precondition for a normal run.
- */
-export const LIVE_HERDR_OPT_IN = 'KANHRD_E2E_LIVE_HERDR';
-
-/**
  * Pre-flight guard: confirms this run has its own isolated herdr session with
  * seeded panes, so a machine with no herdr gets a clear skip message instead
  * of confusing selector timeouts. Call from a `test.beforeAll` and

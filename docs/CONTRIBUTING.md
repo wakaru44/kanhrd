@@ -213,31 +213,36 @@ pnpm typecheck                    # across the workspace
 
 These are hermetic. Nothing below is.
 
-### The e2e suite drives a real herdr — read before running it
+### The e2e suite drives a real herdr — in a session of its own
 
-`pnpm test:e2e` runs Playwright specs against **whatever `herdr` server is
-running on your machine**. There are no mocks and no sandbox. The suite reads a
-pane out of `herdr pane list` and acts on it: the tier-2 specs type
-`echo <marker>` into a live pane, and the tier-3 specs exercise lifecycle,
-which **closes real tabs and real workspaces**.
+`pnpm test:e2e` runs Playwright specs against a real `herdr`, not a mock. The
+specs act on panes: the tier-2 specs type `echo <marker>` into one, and the
+tier-3 specs exercise lifecycle, which closes real tabs and real workspaces.
+Those panes belong to the run, never to you.
 
-That is not hypothetical. On 2026-09-10 a suite run typed its marker into the
+It was not always so. On 2026-09-10 a suite run typed its marker into the
 operator's own panes, and one of those panes was running an agent, which
 executed the text as a prompt. Nothing was damaged — the payload is
 deliberately harmless — but it happened without anyone opting in.
 
-So the suite is gated. Every spec skips with an explanatory message unless you
-set the variable:
+An opt-in variable was the guard at the time, which is a prompt for a human,
+not isolation. Both suites now own their panes instead:
 
 ```bash
-KANHRD_E2E_LIVE_HERDR=1 pnpm test:e2e
+pnpm test:e2e    # starts kanhrd-test-e2e, seeds it, disposes it
+pnpm test:int    # starts kanhrd-test-int, seeds it, disposes it
 ```
 
-Set it only when the herdr on that machine has panes you are willing to have
-typed into and closed. A reachable herdr is not consent. The bridge's
-integration suite (`pnpm test:int`) gates the same way on
-`KANHRD_INT_HERDR_SOCKET`.
+Each run starts its own headless `kanhrd-test-*` herdr session, seeds the
+workspace and panes it needs, points the bridge at that session's socket, and
+stops and deletes it on teardown. A session a crashed run left behind is swept
+by name prefix before the next one starts. The default socket is refused, not
+merely avoided: `assertIsolatedSocket()` throws on it and on any path outside a
+test session directory, and the herdr CLI wrappers throw rather than fall back
+when a run has no session of its own.
+
+So there is nothing to opt into. `herdr` on PATH is the only prerequisite, and
+without it the mocked specs still pass while the rest skip with a reason.
 
 Full prerequisites, coverage and conventions are in
-[`apps/web/e2e/README.md`](../apps/web/e2e/README.md) — read it before setting
-the variable, not after.
+[`apps/web/e2e/README.md`](../apps/web/e2e/README.md).
