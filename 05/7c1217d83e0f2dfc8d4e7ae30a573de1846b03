@@ -1,0 +1,49 @@
+openspec/specs/board-parked-columns/spec.md
+  s_7901944abeeaba::t_f216e0392c9cd4 1-265
+openspec/specs/keyboard-shortcuts/spec.md
+  s_7901944abeeaba::t_f216e0392c9cd4 26-58,63-84
+  s_7901944abeeaba::t_5780504fa38d9d 85
+openspec/specs/terminal-top-bar/spec.md
+  s_7901944abeeaba::t_f216e0392c9cd4 1-381
+openspec/specs/test-herdr-isolation/spec.md
+  s_7901944abeeaba::t_f216e0392c9cd4 1-80
+openspec/changes/archive/2026-09-11-add-swimlane-grouping/specs/pane-workdir-and-task-title/spec.md
+  s_7901944abeeaba::t_bb8a03efc7e7f3 1-125
+openspec/specs/board-swimlanes/spec.md
+  s_7901944abeeaba::t_bb8a03efc7e7f3 1-83
+openspec/specs/pane-workdir-and-task-title/spec.md
+  s_7901944abeeaba::t_bb8a03efc7e7f3 51-56,58-59,71-75,88-91,93-96,98-124,128-149,153,156-159
+  s_7901944abeeaba::t_f5408ed93854c7 160
+openspec/specs/bridge-security/spec.md
+  s_7901944abeeaba::t_f216e0392c9cd4 1-175
+openspec/incoming/deferred_items.md
+  s_7901944abeeaba::t_19df6ee1c066a8 1-117
+openspec/changes/archive/2026-09-10-fix-keyboard-shortcut-suppression/tasks.md
+  s_7901944abeeaba::t_cfe2fe35774f96 36-44
+openspec/changes/archive/2026-09-11-add-bridge-origin-allowlist/tasks.md
+  s_7901944abeeaba::t_70b1ef201fe259 120,126,150-167
+openspec/changes/archive/2026-09-11-add-parked-columns/tasks.md
+  s_7901944abeeaba::t_45373f81db4231 146,162,177,182,187,195,204,212-228
+openspec/changes/archive/2026-09-11-add-swimlane-grouping/tasks.md
+  s_7901944abeeaba::t_44cfce244e7580 33,54,90,94,97,103,109,114-130
+openspec/changes/archive/2026-09-11-add-terminal-top-bar/tasks.md
+  s_7901944abeeaba::t_ca386133a54c39 178,188,201,211-222
+openspec/changes/archive/2026-09-11-add-test-herdr-isolation/tasks.md
+  s_7901944abeeaba::t_9f0176cb8dbee4 178,224,295-306
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "057c1217d83e0f2dfc8d4e7ae30a573de1846b03",
+  "prompts": {},
+  "sessions": {
+    "s_7901944abeeaba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdce5a89-318c-4864-b71b-909fa85af141",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
