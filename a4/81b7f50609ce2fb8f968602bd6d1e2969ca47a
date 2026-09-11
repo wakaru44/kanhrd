@@ -1,0 +1,39 @@
+apps/bridge/src/herdr/project.test.ts
+  s_7901944abeeaba::t_8dac5493ce67f6 24-27,176-180,197-199
+  s_7901944abeeaba::t_bb5cb76f6268d7 1-4,8-23,28-32,160-175,181-196,200-253
+  s_7901944abeeaba::t_7ba5506a51177f 254
+openspec/changes/add-swimlane-grouping/specs/pane-workdir-and-task-title/spec.md
+  s_7901944abeeaba::t_ee7dd0574cfe5d 1-115
+apps/bridge/src/herdr/repo.ts
+  s_7901944abeeaba::t_2c3469d85547c9 1-85
+packages/schema/src/herdr.ts
+  s_7901944abeeaba::t_ebe9736c35e50c 95-114,270-294
+apps/bridge/src/herdr/names.ts
+  s_7901944abeeaba::t_a6b0b8896a1337 47-55
+apps/bridge/src/herdr/project.ts
+  s_7901944abeeaba::t_a6b0b8896a1337 10,48-72
+openspec/changes/add-swimlane-grouping/tasks.md
+  s_7901944abeeaba::t_a0df6730f64979 57,59-90,94,97,103-113
+openspec/changes/add-swimlane-grouping/proposal.md
+  s_7901944abeeaba::t_de5f443e3b0fbc 90-108,111-112,115-120,124-125
+apps/bridge/src/herdr/hosts.ts
+  s_7901944abeeaba::t_08d24a7984f7b6 35,556-559
+openspec/changes/add-swimlane-grouping/design.md
+  s_7901944abeeaba::t_1607d1f9019a54 1-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a481b7f50609ce2fb8f968602bd6d1e2969ca47a",
+  "prompts": {},
+  "sessions": {
+    "s_7901944abeeaba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdce5a89-318c-4864-b71b-909fa85af141",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
