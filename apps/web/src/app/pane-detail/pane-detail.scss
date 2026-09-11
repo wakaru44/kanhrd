@@ -52,8 +52,64 @@
     }
   }
 
-  .pane-title {
+  /*
+   * The one-press hop to the other card in this tab: the pointer
+   * affordance for `prefix + o`. Order 0 keeps it in the back control's
+   * group, after it — `.back` stays the first focusable element.
+   */
+  .next-card {
+    order: 0;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-1);
+    border: var(--elev-1);
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--ink);
+      border-color: var(--ochre-line);
+    }
+  }
+
+  /* workspace / tab. Truncates itself before it ever truncates the title. */
+  .breadcrumb {
     order: 1;
+    margin: 0;
+    flex: 0 1 auto;
+    min-width: 0;
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--sp-1);
+    font-size: var(--fs-caption);
+    line-height: var(--lh-caption);
+    color: var(--ink-mute);
+  }
+
+  .crumb {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .crumb-sep {
+    flex: none;
+  }
+
+  /* The switcher takes its own row beneath the title, above the meta strip. */
+  .switcher-slot {
+    order: 4;
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+
+  .pane-title {
+    order: 2;
     margin: 0;
     min-width: 0;
     flex: 1 1 auto;
@@ -69,7 +125,7 @@
 
   /* Host seal (hanko): hairline ochre outline, mono glyph, never filled. */
   .host-seal {
-    order: 2;
+    order: 3;
     flex: none;
     padding: 0 var(--sp-2);
     border: 1px solid var(--ochre-line);
@@ -83,7 +139,7 @@
 
   /* Metadata wraps beneath the title rather than truncating it. */
   .meta-strip {
-    order: 3;
+    order: 5;
     flex: 1 0 100%;
     display: flex;
     flex-wrap: wrap;
@@ -339,6 +395,7 @@
 /* Touch: every control in this view clears the 40x40 minimum. */
 @media (pointer: coarse) {
   .detail-header .back,
+  .detail-header .next-card,
   .retry,
   .state-back {
     min-height: var(--touch-target-min);
@@ -368,6 +425,17 @@
 
   .detail-header .pane-title {
     flex: 1 0 100%;
-    order: 1;
+    order: 2;
+  }
+
+  /*
+   * The breadcrumb collapses to the tab name alone, so the title keeps its
+   * row. The switcher still renders, at every width — it is a navigator
+   * between routes, one terminal at a time (maintainer decision D1). Its
+   * own `overflow-x` is on the strip, so the page never scrolls sideways.
+   */
+  .detail-header .crumb-workspace,
+  .detail-header .crumb-sep {
+    display: none;
   }
 }

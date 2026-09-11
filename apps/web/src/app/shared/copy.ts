@@ -166,6 +166,17 @@ export const COPY = {
     help: 'keyboard shortcuts',
     statusSwitcher: 'status columns',
     statusSwitcherItem: '{status} — {count} cards',
+    /**
+     * The pane-detail top bar's switcher over the cards sharing this tab,
+     * and the one-press hop beside it. Same `{}`-interpolation shape as
+     * `statusSwitcherItem` above; clinical, not a care verb — a navigator
+     * is neither a lifecycle nor an empty state (docs/BRAND.md voice rule
+     * 6). `nextCard` doubles as the keyboard overlay's description of
+     * `prefix + o`, the way `create.pane` does for `prefix + c`.
+     */
+    cardSwitcher: 'cards in this tab',
+    cardSwitcherItem: '{name} — {status}',
+    nextCard: 'next card in this tab',
     /** The shell's theme toggle, and the same control in Settings > appearance. */
     toWashi: 'switch to washi',
     toSumi: 'switch to sumi',

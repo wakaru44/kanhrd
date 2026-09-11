@@ -7,6 +7,7 @@ import { EmptyState } from '../board/empty-state';
 import { FilterBar } from '../board/filter-bar';
 import { StatusSwitcher } from '../board/status-switcher';
 import { NotFound } from '../not-found/not-found';
+import { CardSwitcher } from '../pane-detail/card-switcher';
 import { PaneDetail } from '../pane-detail/pane-detail';
 import { Rail } from '../rail/rail';
 import { Settings } from '../settings/settings';
@@ -103,6 +104,7 @@ const COMPONENTS: readonly Type<unknown>[] = [
   FilterBar,
   StatusSwitcher,
   NotFound,
+  CardSwitcher,
   PaneDetail,
   Rail,
   Settings,
@@ -138,7 +140,7 @@ function templateSource(component: Type<unknown>): string {
 
 describe('style lint: components carry no raw values', () => {
   it('covers every component that ships a template or a stylesheet', () => {
-    expect(COMPONENTS.length).toBe(15);
+    expect(COMPONENTS.length).toBe(16);
     for (const component of COMPONENTS) {
       expect(() => compiled(component))
         .withContext(component.name)

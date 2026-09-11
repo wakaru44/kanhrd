@@ -1,0 +1,119 @@
+/*
+ * Card switcher — tokens only (docs/DESIGN-SYSTEM.md). Selection is weight
+ * plus a 2px ochre underline, never a colour fill: the same treatment the
+ * mobile status switcher and the Settings density control already use.
+ *
+ * The strip owns the horizontal overflow so the page never does — at every
+ * width, phone included (maintainer decision D1).
+ */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.card-switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex: none;
+  stroke: currentColor;
+}
+
+.strip-marker {
+  color: var(--ink-mute);
+}
+
+.strip {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-2);
+  min-width: 0;
+  /* The strip scrolls, not the page. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.entry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+  padding: var(--sp-1) var(--sp-2);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-mute);
+  text-decoration: none;
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-regular);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ink);
+  }
+
+  &.current {
+    color: var(--ink);
+    font-weight: var(--fw-semi);
+    border-bottom-color: var(--ochre-line);
+  }
+}
+
+.entry-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-dot {
+  flex: none;
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: var(--radius-pill);
+  background: var(--status-unknown);
+
+  &.working {
+    background: var(--status-working);
+  }
+
+  &.blocked {
+    background: var(--status-blocked);
+  }
+
+  &.idle {
+    background: var(--status-idle);
+  }
+
+  &.done {
+    background: var(--status-done);
+  }
+}
+
+/* Focus is never suppressed; the strip is a keyboard-first surface. */
+.entry:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Touch: every entry clears the minimum, with --sp-2 between them. */
+@media (pointer: coarse) {
+  .strip {
+    gap: var(--sp-2);
+  }
+
+  .entry {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+    justify-content: center;
+  }
+}

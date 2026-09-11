@@ -106,6 +106,20 @@ describe('KeyboardHelpOverlay', () => {
     expect(label).not.toContain('? or');
   });
 
+  it('lists every card-switcher binding under navigation, so no stolen key is folklore', () => {
+    open();
+    const navigation = Array.from(el().querySelectorAll('.shortcut-group')).find(
+      (group) => group.querySelector('h3')?.textContent === COPY.help.categories.Navigation
+    );
+    const text = navigation?.textContent ?? '';
+
+    expect(text).toContain(COPY.nav.nextCard);
+    expect(text).toContain('Ctrl+B + o');
+    expect(text).toContain(COPY.nav.cardSwitcher);
+    // Both halves: the chord, and the one key the pane no longer receives.
+    expect(text).toContain('Ctrl+B + i or Ctrl+Alt+I');
+  });
+
   it('clicking the backdrop emits closed', () => {
     open();
     let closed = false;

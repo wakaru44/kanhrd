@@ -5,6 +5,7 @@ import type { TabSummary } from '@kanhrd/schema';
 import type { BridgeCapabilities } from '@kanhrd/schema';
 import {
   DEFAULT_PREFIX,
+  DIRECT_CHORDS,
   KeyboardService,
   formatBinding,
   isTextInputFocused,
@@ -211,7 +212,15 @@ describe('KeyboardService', () => {
   });
 
   it('sources every description from copy.ts, never a literal typed here', () => {
-    const approved = new Set<string>([COPY.create.pane, ...Object.values(COPY.help.shortcuts)]);
+    // `create.pane`, `nav.nextCard` and `nav.cardSwitcher` are reused
+    // deliberately: a chord must not describe an action in a second voice
+    // from the control that performs it.
+    const approved = new Set<string>([
+      COPY.create.pane,
+      COPY.nav.cardSwitcher,
+      COPY.nav.nextCard,
+      ...Object.values(COPY.help.shortcuts),
+    ]);
     for (const binding of TestBed.inject(KeyboardService).shortcuts().values()) {
       expect(approved.has(binding.description))
         .withContext(`${binding.action}: "${binding.description}" is not in copy.ts`)
@@ -250,9 +259,134 @@ describe('KeyboardService', () => {
       'toggle-theme',
       'focus-search',
       'close-overlay',
+      'focus-card-switcher',
+      'next-sibling-card',
     ] as const) {
       expect(shortcuts.get(action)?.description).withContext(action).toBeTruthy();
     }
+  });
+
+  // --- the card switcher: one stolen chord, and herdr's own "other pane" key.
+
+  describe('card switcher bindings', () => {
+    let handle: {
+      available: jasmine.Spy;
+      focus: jasmine.Spy;
+      nextCard: jasmine.Spy;
+    };
+
+    beforeEach(() => {
+      handle = {
+        available: jasmine.createSpy('available').and.returnValue(true),
+        focus: jasmine.createSpy('focus'),
+        nextCard: jasmine.createSpy('nextCard'),
+      };
+      service.registerCardSwitcher(handle);
+    });
+
+    function ctrlAltI(): KeyboardEvent {
+      return new KeyboardEvent('keydown', {
+        key: 'i',
+        ctrlKey: true,
+        altKey: true,
+        cancelable: true,
+      });
+    }
+
+    it('holds exactly one direct chord, and it is the switcher', () => {
+      expect(DIRECT_CHORDS).toEqual([{ chord: 'Ctrl+Alt+I', action: 'focus-card-switcher' }]);
+    });
+
+    it('recognizes Ctrl+Alt+I from inside a focused terminal and stops it reaching the pane', () => {
+      const textarea = document.createElement('textarea');
+      const event = ctrlAltI();
+
+      service.handleKeydown(event, textarea);
+
+      expect(handle.focus).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBeTrue();
+      expect(event.cancelBubble).toBeTrue();
+    });
+
+    it('passes an unlisted Ctrl+Alt chord through to the terminal untouched', () => {
+      const textarea = document.createElement('textarea');
+      const event = new KeyboardEvent('keydown', {
+        key: 'k',
+        ctrlKey: true,
+        altKey: true,
+        cancelable: true,
+      });
+
+      service.handleKeydown(event, textarea);
+
+      expect(handle.focus).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBeFalse();
+      expect(event.cancelBubble).toBeFalse();
+    });
+
+    it('passes Ctrl+Alt+I through untouched when there is no switcher to focus', () => {
+      handle.available.and.returnValue(false);
+      const event = ctrlAltI();
+
+      service.handleKeydown(event, document.createElement('textarea'));
+
+      expect(handle.focus).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBeFalse();
+      expect(event.cancelBubble).toBeFalse();
+    });
+
+    it('lets a prefix of Ctrl+Alt+I arm the chord instead of focusing the switcher', () => {
+      service.setPrefix('Ctrl+Alt+I');
+      const event = ctrlAltI();
+
+      service.handleKeydown(event, document.body);
+
+      expect(handle.focus).not.toHaveBeenCalled();
+      expect(service.chordActive()).toBeTrue();
+    });
+
+    it('focuses the switcher on prefix + i', () => {
+      service.handleKeydown(keyEvent('b', { ctrlKey: true }), document.body);
+      service.handleKeydown(keyEvent('i'), document.body);
+
+      expect(handle.focus).toHaveBeenCalled();
+    });
+
+    it('hops to the next card on prefix + o, without opening the switcher', () => {
+      service.handleKeydown(keyEvent('b', { ctrlKey: true }), document.body);
+      service.handleKeydown(keyEvent('o'), document.body);
+
+      expect(handle.nextCard).toHaveBeenCalled();
+      expect(handle.focus).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op on prefix + o in a tab of one', () => {
+      handle.available.and.returnValue(false);
+      service.handleKeydown(keyEvent('b', { ctrlKey: true }), document.body);
+      service.handleKeydown(keyEvent('o'), document.body);
+
+      expect(handle.nextCard).not.toHaveBeenCalled();
+    });
+
+    it('does nothing at all once pane detail has unregistered', () => {
+      service.registerCardSwitcher(null);
+      const event = ctrlAltI();
+
+      service.handleKeydown(event, document.createElement('textarea'));
+
+      expect(event.defaultPrevented).toBeFalse();
+    });
+
+    it('advertises both of the switcher bindings, and o as a chord only', () => {
+      const switcher = service.shortcuts().get('focus-card-switcher');
+      expect(formatBinding(switcher!, 'Ctrl+B')).toBe('Ctrl+B + i or Ctrl+Alt+I');
+
+      const hop = service.shortcuts().get('next-sibling-card');
+      expect(hop?.direct).toBeUndefined();
+      expect(formatBinding(hop!, 'Ctrl+B')).toBe('Ctrl+B + o');
+      expect(hop?.category).toBe('Navigation');
+      expect(switcher?.category).toBe('Navigation');
+    });
   });
 
   describe('prefix chord detection', () => {

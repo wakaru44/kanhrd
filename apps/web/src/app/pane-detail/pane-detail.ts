@@ -9,10 +9,12 @@ import {
   inject,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
+import type { Pane } from '@kanhrd/schema';
 import { PanesStore, paneKey } from '../state/panes.store';
 import { WsClient } from '../state/ws-client';
 import { TerminalThemeService } from '../state/terminal-theme.service';
@@ -22,14 +24,17 @@ import { ClockTick, formatElapsed } from '../util/clock';
 import { COPY, fill } from '../shared/copy';
 import { RenameModal } from '../shared/rename-modal';
 import { paneTitle } from '../util/pane-title';
+import { KeyboardService } from '../state/keyboard.service';
 import {
   LucideArrowLeft,
   LucidePencil,
+  LucideSquareSplitHorizontal,
   LucideRefreshCw,
   LucideTriangleAlert,
   LucideUnplug,
 } from '../shared/icons';
 import { BoardReturnService } from '../state/board-return.service';
+import { CardSwitcher } from './card-switcher';
 import { PaneTerminal } from './pane-terminal';
 
 /**
@@ -43,6 +48,26 @@ import { PaneTerminal } from './pane-terminal';
  * not.
  */
 export type PaneViewState = 'loading' | 'failed' | 'unavailable' | 'stale' | 'empty' | 'live';
+
+/**
+ * The next card in the tab after `currentId`, wrapping past the last —
+ * the single answer to "which card is next", shared by the bar's
+ * next-card button and by `prefix + o` through
+ * `KeyboardService.registerCardSwitcher`. `null` in a tab of one, and for
+ * a pane the list does not hold.
+ *
+ * Order is the store's own iteration order, which is herdr's layout order
+ * for every pane present at the last `pane.list` and appends anything
+ * created since — see `design.md` Finding 1 for why that ceiling is
+ * deliberate.
+ */
+export function nextSiblingCard(siblings: readonly Pane[], currentId: string): Pane | null {
+  if (siblings.length < 2) {
+    return null;
+  }
+  const index = siblings.findIndex((pane) => pane.id === currentId);
+  return index < 0 ? null : siblings[(index + 1) % siblings.length];
+}
 
 /**
  * Tier-2 terminal detail view: header, meta strip, rename flow, and the box
@@ -63,8 +88,10 @@ export type PaneViewState = 'loading' | 'failed' | 'unavailable' | 'stale' | 'em
   imports: [
     RouterLink,
     RenameModal,
+    CardSwitcher,
     LucideArrowLeft,
     LucidePencil,
+    LucideSquareSplitHorizontal,
     LucideRefreshCw,
     LucideTriangleAlert,
     LucideUnplug,
@@ -79,6 +106,8 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   private readonly toast = inject(ToastService);
   protected readonly clock = inject(ClockTick);
   private readonly boardReturn = inject(BoardReturnService);
+  private readonly router = inject(Router);
+  private readonly keyboard = inject(KeyboardService);
 
   /**
    * The terminal, and everything that hangs off it. Constructed here rather
@@ -112,6 +141,8 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   @ViewChild('terminalContainer', { static: true })
   private readonly containerRef!: ElementRef<HTMLDivElement>;
 
+  private readonly switcher = viewChild(CardSwitcher);
+
   protected readonly host = toSignal(
     this.route.paramMap.pipe(map((params) => params.get('host') ?? '')),
     { initialValue: '' }
@@ -136,6 +167,25 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     return pane ? paneTitle(pane) : this.id();
   });
 
+  /**
+   * Every card in this tab, the current one included: same host, same
+   * `tab.id`, in `panesSignal` iteration order. Derived from data already
+   * resident — no wire method, no schema field, no extra request.
+   */
+  protected readonly siblings = computed<readonly Pane[]>(() => {
+    const pane = this.pane();
+    if (!pane) {
+      return [];
+    }
+    const host = this.host();
+    return [...this.store.panesSignal().values()].filter(
+      (candidate) => candidate.host === host && candidate.tab.id === pane.tab.id
+    );
+  });
+
+  /** The switcher, the next-card button and both card chords all hang off this one condition. */
+  protected readonly sharesTab = computed(() => this.siblings().length > 1);
+
   /** herdr's git provenance for this pane's workspace — the FULL path here, never the card's truncated form. */
   protected readonly project = computed(() => this.pane()?.project ?? null);
 
@@ -143,6 +193,10 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   protected readonly paneRenameAvailable = computed(
     () => this.store.capabilitiesSignal().get(this.host())?.paneRename === true
   );
+
+  /** `workspace / tab`, from the pane already in the store. The host is the hanko seal's and is never repeated here. */
+  protected readonly workspaceName = computed(() => this.pane()?.workspace.name ?? '');
+  protected readonly tabName = computed(() => this.pane()?.tab.name ?? '');
 
   protected readonly showRename = signal(false);
   protected readonly statusKey = computed(() => this.pane()?.agent_status ?? 'unknown');
@@ -201,6 +255,14 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   );
 
   constructor() {
+    // One handler for "which card is next", shared with `prefix + o` and
+    // `Ctrl+Alt+I` — never a second implementation living in the service.
+    this.keyboard.registerCardSwitcher({
+      available: () => this.sharesTab(),
+      focus: () => this.switcher()?.focusCurrent(),
+      nextCard: () => this.goToNextCard(),
+    });
+
     // Fetch (and refetch) this pane's content whenever the route resolves to
     // a different pane or the socket (re)connects — driven off signals
     // (Angular 20 way) rather than a one-shot `ngOnInit`/`ngAfterViewInit`
@@ -232,7 +294,26 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.keyboard.registerCardSwitcher(null);
     this.terminal.dispose();
+  }
+
+  /** The next-card button and `prefix + o`. A no-op in a tab of one. */
+  protected goToNextCard(): void {
+    const next = nextSiblingCard(this.siblings(), this.id());
+    if (next) {
+      void this.router.navigate(['/pane', next.host, next.id]);
+    }
+  }
+
+  /**
+   * `Escape` on the switcher hands the keyboard back to the pane. xterm's
+   * helper element is a real `<textarea>` inside the container, so
+   * focusing it is the whole of "give the terminal its keys back" — and it
+   * touches neither `PaneTerminal` nor the repaint path.
+   */
+  protected focusTerminal(): void {
+    this.containerRef.nativeElement.querySelector('textarea')?.focus();
   }
 
   protected async onRenameSaved(label: string | null): Promise<void> {

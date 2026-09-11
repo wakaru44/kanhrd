@@ -3,9 +3,9 @@ import { KANHRD_ICONS } from './icons';
 import * as icons from './icons';
 
 describe('shared/icons', () => {
-  it('exports exactly the eighteen icons the design system pins', () => {
-    expect(KANHRD_ICONS.length).toBe(18);
-    expect(new Set(KANHRD_ICONS).size).toBe(18);
+  it('exports exactly the twenty icons the design system pins', () => {
+    expect(KANHRD_ICONS.length).toBe(20);
+    expect(new Set(KANHRD_ICONS).size).toBe(20);
   });
 
   it('resolves every export to a real @lucide/angular icon component', () => {
@@ -19,7 +19,7 @@ describe('shared/icons', () => {
 
   it('re-exports each icon under a name that exists in the installed package', () => {
     const named = Object.entries(icons).filter(([key]) => key.startsWith('Lucide'));
-    expect(named.length).toBe(18);
+    expect(named.length).toBe(20);
     for (const [key, value] of named) {
       expect(isLucideIconComponent(value)).withContext(`${key} does not resolve`).toBe(true);
     }
