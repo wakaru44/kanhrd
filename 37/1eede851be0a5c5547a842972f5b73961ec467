@@ -1,0 +1,50 @@
+apps/bridge/src/http/origin.ts
+  s_7901944abeeaba::t_6f4285f0504da3 1
+  s_7901944abeeaba::t_77012fc7277cf8 2-28,32-88
+  s_7901944abeeaba::t_1c1b93c3b78ab4 29-31
+openspec/changes/add-bridge-origin-allowlist/tasks.md
+  s_7901944abeeaba::t_27ffba3373b17d 3,8,11,15,19,24,31,35,41,46,50,55,60,64,68,71,77,81,85,90-95,112,117-118,120-141
+apps/bridge/src/config.ts
+  s_7901944abeeaba::t_c09f9dd8023686 123-179,191-198,207-235
+  s_7901944abeeaba::t_d27ceb31b5ecd2 16-42,52-56,66-74,83-88,100-101,118-119
+  s_7901944abeeaba::t_2e240f585180e6 236
+apps/bridge/src/ws/server.ts
+  s_7901944abeeaba::t_2f07af582d56de 5-6,24-28,30-34,39-42
+  s_7901944abeeaba::t_d19d61151dd9dc 43-44,46-48,50-59,61-62,64-71,73-93,95-107
+Dockerfile
+  s_7901944abeeaba::t_fb4bf2e3d88342 46-50,52-54
+docker-compose.yaml
+  s_7901944abeeaba::t_fb4bf2e3d88342 8-10
+Makefile
+  s_7901944abeeaba::t_638c82330ccffd 53,84-85
+  s_7901944abeeaba::t_968443c36f5b50 80-81
+  s_7901944abeeaba::t_fb4bf2e3d88342 52,72-73
+apps/bridge/src/config.test.ts
+  s_7901944abeeaba::t_2eb368e72bf80e 1-2,5-13
+  s_7901944abeeaba::t_75caaa3f22ff50 71-188,191-205,207-214
+  s_7901944abeeaba::t_b53afe44d0fe53 62-63,66-70
+apps/bridge/src/main.ts
+  s_7901944abeeaba::t_e47010954e0bb7 7,37-47,62-65,69,71
+apps/bridge/src/http/rest.ts
+  s_7901944abeeaba::t_e47010954e0bb7 6,8,24-34,38-39,41-43,49
+apps/bridge/src/ws/server.test.ts
+  s_7901944abeeaba::t_bf41c44bf95804 59-61,63-69,95-109
+  s_7901944abeeaba::t_1fe4b18f264cf1 1-58,62,70-94,115-141
+  s_7901944abeeaba::t_b53afe44d0fe53 110-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "371eede851be0a5c5547a842972f5b73961ec467",
+  "prompts": {},
+  "sessions": {
+    "s_7901944abeeaba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdce5a89-318c-4864-b71b-909fa85af141",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
