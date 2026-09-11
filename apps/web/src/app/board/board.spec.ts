@@ -785,10 +785,20 @@ describe('Board: filter interaction with the pager', () => {
     expect(renderedStatuses()).toEqual(['working', 'blocked', 'idle', 'done', 'unknown']);
   });
 
-  it('exposes no drag affordance on a status column', async () => {
+  it('exposes no drag affordance on a board with no user-defined column', async () => {
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('[cdkDrag], .cdk-drag, .cdk-drop-list, [cdkDropList]')).toBeNull();
+    // The amended rule (docs/UX-GUIDELINES.md assertion 22, Q1): with no
+    // parked column nothing is ENABLED — every card's drag and every list
+    // is off, so no card can be picked up and no column can receive one.
+    for (const card of Array.from(el.querySelectorAll('app-card.cdk-drag'))) {
+      expect(card.classList.contains('cdk-drag-disabled')).withContext('drag off').toBeTrue();
+      expect(getComputedStyle(card).cursor).not.toBe('grab');
+    }
+    for (const list of Array.from(el.querySelectorAll('.cdk-drop-list'))) {
+      expect(list.classList.contains('cdk-drop-list-disabled')).withContext('list off').toBeTrue();
+    }
     expect(el.querySelector('.drag-handle')).toBeNull();
+    expect(el.querySelector("[draggable='true']")).toBeNull();
   });
 });
 
@@ -1325,6 +1335,29 @@ describe('Board: swimlanes', () => {
       expect(bands()[1].querySelector(`.column[data-parked="${column.id}"] app-card`)).toBeNull();
     });
 
+    it('connects every column in a strip into one drop group, bands included', async () => {
+      parked.createColumn('archived', 'never');
+      await settle(fixture);
+      const el = fixture.nativeElement as HTMLElement;
+
+      // One group per strip: a card can be dragged from a status column
+      // into a parked one without the board hand-wiring list ids, and a
+      // card can never be dragged out of the band it belongs to.
+      expect(el.querySelector('.board-strip[cdkDropListGroup]')).not.toBeNull();
+      const lists = Array.from(el.querySelectorAll('.column-body'));
+      expect(lists.length).toBe(6);
+      for (const list of lists) {
+        expect(list.classList.contains('cdk-drop-list')).toBeTrue();
+      }
+
+      settings.setSwimlaneDimension('host');
+      await settle(fixture);
+      for (const band of bands()) {
+        expect(band.querySelector('.swimlane-strip[cdkDropListGroup]')).not.toBeNull();
+        expect(band.querySelectorAll('.column-body.cdk-drop-list').length).toBe(6);
+      }
+    });
+
     it('survives a reload of the page-level state: the store re-reads localStorage', async () => {
       const column = parked.createColumn('archived', 'never');
       parked.park('local:p1', column.id);
@@ -1455,12 +1488,17 @@ describe('Board: swimlanes', () => {
     expect(bandLabelsRendered()).toEqual(['local / main', 'remote / main']);
   });
 
-  it('exposes no drag affordance anywhere on a band', async () => {
+  it('exposes no ENABLED drag affordance on a band with no user-defined column', async () => {
     settings.setSwimlaneDimension('host');
     await settle(fixture);
 
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('[cdkDrag], .cdk-drag, .cdk-drop-list, [cdkDropList]')).toBeNull();
+    for (const card of Array.from(el.querySelectorAll('app-card.cdk-drag'))) {
+      expect(card.classList.contains('cdk-drag-disabled')).toBeTrue();
+    }
+    for (const list of Array.from(el.querySelectorAll('.cdk-drop-list'))) {
+      expect(list.classList.contains('cdk-drop-list-disabled')).toBeTrue();
+    }
     expect(el.querySelector('.drag-handle')).toBeNull();
     for (const band of bands()) {
       expect(band.getAttribute('draggable')).toBeNull();

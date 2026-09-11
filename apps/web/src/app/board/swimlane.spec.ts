@@ -195,9 +195,14 @@ describe('Swimlane component', () => {
     expect(el().querySelector('.swimlane-count')?.textContent?.trim()).toBe('2');
   });
 
-  it('exposes no drag handle, no drop target and nothing draggable', () => {
+  it('exposes no drag handle, no enabled drop list and nothing draggable', () => {
+    // The band itself is never draggable and never a drop target; with no
+    // parked column its columns' lists are all disabled (Q1's amended rule).
     expect(el().querySelector("[draggable='true']")).toBeNull();
-    expect(el().querySelector('[cdkDrag], [cdkDropList], .cdk-drag, .cdk-drop-list')).toBeNull();
     expect(el().querySelector('.drag-handle')).toBeNull();
+    expect(el().querySelector('.swimlane.cdk-drag, .swimlane.cdk-drop-list')).toBeNull();
+    for (const list of Array.from(el().querySelectorAll('.cdk-drop-list'))) {
+      expect(list.classList.contains('cdk-drop-list-disabled')).toBeTrue();
+    }
   });
 });

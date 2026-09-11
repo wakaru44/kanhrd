@@ -85,19 +85,18 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
       header variant: name, mono count, exit rule as visible
       `--ink-mute` text, `LucideMoreHorizontal` trigger. The status
       header and its drag-free guarantees are untouched
-- [x] 4.2 The header `role="menu"`: exit rules as `role="menuitemradio"`
-      and remove column, with the keyboard contract lifted out of
-      `card.ts` into `shared/menu-keys.ts` (`aria-haspopup`, arrow /
-      Home / End navigation, Escape, focus return) rather than written
-      twice. **`rename column` is DEFERRED**: `docs/BRAND.md`'s
-      approved-copy table has no row for it (it landed
-      `park.removeColumn` and the seven other `park.*` rows, but no
-      rename string), and this change does not invent copy. A column
-      therefore takes `park.defaultName` at creation and keeps it. The
-      unblock is one row — `park.renameColumn` — added by a maintainer;
-      `ParkedStore.renameColumn` and `RenameModal`'s `title` /
-      `fieldLabel` inputs are already in place, so the menu item is a
-      few lines once the word exists
+- [x] 4.2 The header `role="menu"`: `rename column`, the exit rules as
+      `role="menuitemradio"`, and `remove column`, with the keyboard
+      contract lifted out of `card.ts` into `shared/menu-keys.ts`
+      (`aria-haspopup`, arrow / Home / End navigation, Escape, focus
+      return) rather than written twice. Rename reuses the shipped
+      `RenameModal` (its `title` / `fieldLabel` inputs) and
+      `ParkedStore.renameColumn`. The blocking copy row
+      `park.renameColumn` = `rename column` was authorised by the
+      maintainer and added to `docs/BRAND.md` beside the other `park.*`
+      rows; it is the only string this change adds to that table. A
+      column always has a name, so the dialog's clear action resets to
+      `park.defaultName` rather than leaving one nameless
 - [x] 4.3 `apps/web/src/app/board/card.{ts,html}` — `park in…`
       (parked columns + `new column…`) and `unpark` menu items inside
       the existing `<div class="overflow-menu">`. Expect the only
@@ -126,12 +125,54 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
       is never a **drop target** and status membership is never changed
       by drag; drop targets are user-defined columns only; assertion 22
       scopes to drop targets and to boards with no user-defined columns
-- [ ] 5.2 `cdkDrag` on cards as a drag **source**, parked
-      columns as `cdkDropList` drop targets; status columns stay
-      non-drop-targets and their membership is never changed by a drag
-- [ ] 5.3 Parked-column reordering by drag, mirroring `order`
-- [ ] 5.4 e2e — drop parks; a drop on a status column is
-      refused; the affordance is absent when no parked column exists
+- [x] 5.2 `cdkDrag` on cards as a drag **source**, parked columns as
+      `cdkDropList` drop targets; status columns stay non-drop-targets
+      and their membership is never changed by a drag. Every column body
+      is a drop LIST (a card has to be dragged out of somewhere) but only
+      a parked column is a drop TARGET: a status column's
+      `cdkDropListEnterPredicate` refuses every foreign item, so nothing
+      can be dropped into it, it never gets the CDK's
+      `cdk-drop-list-receiving` affordance, and a card released over its
+      own column simply goes home. Sorting is disabled in both kinds — no
+      column persists a per-card order and a sort animation would promise
+      one. Each strip (the board's own, and every band's) is a
+      `cdkDropListGroup`, so a drag works inside a band and never crosses
+      between bands. Two gates, both in the pure `canDrag(hasParked,
+      mobile)`: no parked column means no drag source anywhere, and below
+      `--breakpoint-mobile` the board is a one-column-per-screen pager
+      where the destination is never on screen, so the affordance does
+      not appear at all. The keyboard equivalent is the card's own
+      `park in…` menu, shipped in phase A and unchanged
+- [ ] 5.3 DEFERRED — **reorder by drag needs one more copy decision.**
+      `docs/UX-GUIDELINES.md` § "Keyboard-first" requires every mouse
+      action to have a keyboard equivalent, and the approved-copy table
+      has no words for moving a column (`park.moveLeft` /
+      `park.moveRight`, or a single reorder item). Shipping the drag half
+      alone would be the pointer-only affordance § "drag-drop must work
+      or not appear" rejects, so nothing was built rather than half of
+      it. The unblock is two rows in `docs/BRAND.md`, then
+      `ParkedStore.moveColumn(id, delta)` over the existing `order`
+      field, two header-menu items, and a horizontal `cdkDropList` over
+      the strip with the column header as the `cdkDragHandle`. Nothing
+      shipped here has to change for it: `order` is already the render
+      order everywhere. Parked-column reordering by drag, mirroring
+      `order`
+- [ ] 5.4 DEFERRED to the e2e lane, which owns `apps/web/e2e/**`. NOTE
+      FOR THAT LANE: assertion 22's code
+      (`apps/web/e2e/mobile.spec.ts:520`) still fails on the mere
+      PRESENCE of `[cdkDrag]` / `[cdkDropList]`, while the amended
+      assertion in `docs/UX-GUIDELINES.md` reads "no element carries
+      `cdkDrag` **enabled**, a drag handle, or `cursor: grab`". Phase B
+      renders a disabled `cdkDrag` / `cdkDropList` on a board with no
+      parked column (Angular cannot add or remove a directive
+      conditionally without duplicating the template), so that query
+      needs to become an enabled-state check —
+      `.cdk-drag:not(.cdk-drag-disabled)` and
+      `.cdk-drop-list:not(.cdk-drop-list-disabled)` — which is what the
+      unit twins in `column.spec.ts` / `board.spec.ts` /
+      `swimlane.spec.ts` now assert. e2e — drop parks; a drop on a status
+      column is refused; the affordance is absent when no parked column
+      exists
 
 ## 6. `on any activity` rule — BLOCKED on Q2's spike, do not start
 
@@ -154,9 +195,12 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
       the rule matrix and the keyboard paths. Per `CLAUDE.md`, checks
       live in the committed suites — no `/tmp` validation scripts
 - [ ] 7.2 DEFERRED (not this lane's file): `apps/web/e2e/**` belongs to
-      the e2e lane. Nothing in phase A adds a `cdkDrag`, a drag handle or
-      a `cursor: grab`, so assertion 22 is expected to hold — unverified
-      here. Existing e2e assertion 22 (no enabled `cdkDrag`, no drag
+      the e2e lane. Phase B renders a DISABLED `cdkDrag` / `cdkDropList`
+      on a board with no parked column, so assertion 22's code needs the
+      enabled-state query the amended wording describes — see task 5.4
+      for the exact change. No drag handle and no `cursor: grab` appear
+      on such a board, which the unit twins assert. Existing e2e
+      assertion 22 (no enabled `cdkDrag`, no drag
       handle, no `cursor: grab` anywhere on the board) still passes with
       parked columns present
 - [ ] 7.3 DEFERRED to the e2e lane for the same reason (it is a

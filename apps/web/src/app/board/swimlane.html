@@ -3,7 +3,10 @@
     <h2 class="swimlane-title" [attr.title]="title()">{{ label() }}</h2>
     <span class="swimlane-count">{{ count() }}</span>
   </header>
-  <div class="swimlane-strip" #strip (scroll)="onStripScroll()">
+  <!-- Each band connects its OWN columns: a drag inside a band works, and a
+       card never jumps between bands, which would mean changing the fact the
+       band groups by. -->
+  <div class="swimlane-strip" cdkDropListGroup #strip (scroll)="onStripScroll()">
     @for (column of columns(); track column.key) {
       <!-- No tabpanel role here: with bands there are many columns per
            status, so a single switcher tab cannot control one panel. The

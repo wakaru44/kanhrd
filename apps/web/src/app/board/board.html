@@ -121,7 +121,15 @@
               }
             </div>
           } @else {
-            <div class="board-grid board-strip" #strip (scroll)="onStripScroll()">
+            <!-- `cdkDropListGroup` connects every column in this strip, so a
+                 card can be dragged from a status column into a parked one
+                 without the board hand-wiring list ids. -->
+            <div
+              class="board-grid board-strip"
+              cdkDropListGroup
+              #strip
+              (scroll)="onStripScroll()"
+            >
               <!-- Status columns in STATUS_COLUMN_ORDER, then the operator's
                    parked columns after `unknown`, in their own order. -->
               @for (column of visibleColumns(); track column.key) {

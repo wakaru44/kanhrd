@@ -4,7 +4,14 @@ import { By } from '@angular/platform-browser';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { provideRouter } from '@angular/router';
 import type { AgentStatus, BridgeCapabilities, Pane } from '@kanhrd/schema';
-import { COMPACT_THRESHOLD, Column, VIRTUALIZE_THRESHOLD, VIRTUAL_ITEM_SIZE } from './column';
+import type { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
+import {
+  COMPACT_THRESHOLD,
+  Column,
+  VIRTUALIZE_THRESHOLD,
+  VIRTUAL_ITEM_SIZE,
+  canDrag,
+} from './column';
 import { PanesStore } from '../state/panes.store';
 import { PARKED_STORAGE_KEY, ParkedStore, type ParkedColumn } from '../state/parked.store';
 import { COPY } from '../shared/copy';
@@ -311,6 +318,7 @@ describe('Column', () => {
       menu.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"], [role="menuitem"]')
     );
     expect(items.map((i) => i.textContent?.trim())).toEqual([
+      COPY.park.renameColumn,
       COPY.park.rule.never,
       COPY.park.rule.agentActivity,
       COPY.park.removeColumn,
@@ -332,7 +340,8 @@ describe('Column', () => {
     const menu = menuOf(fixture)!;
 
     // Focus lands on the first item; arrows walk the radios like any item.
-    expect(document.activeElement).toBe(menu.querySelector('[role="menuitemradio"]'));
+    expect(document.activeElement).toBe(menu.querySelector('[role="menuitem"]'));
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     (document.activeElement as HTMLButtonElement).click();
     fixture.detectChanges();
@@ -397,5 +406,161 @@ describe('Column', () => {
     expect(root.querySelector('.column-header')).toBeTruthy();
     expect(root.querySelector('.count')?.textContent?.trim()).toBe('0');
     expect(root.querySelectorAll('app-card').length).toBe(0);
+  });
+
+  // --- rename (task 4.2) --------------------------------------------------
+
+  it('renames a column from its header menu, seeded with the current name', async () => {
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+    const parked = TestBed.inject(ParkedStore);
+    const column = parked.createColumn('archived', 'never');
+    const fixture = await renderParked({ ...archived(), id: column.id });
+
+    el(fixture).querySelector<HTMLButtonElement>('.column-menu-trigger')!.click();
+    fixture.detectChanges();
+    menuOf(fixture)!.querySelector<HTMLButtonElement>('.rename')!.click();
+    fixture.detectChanges();
+
+    const modal = el(fixture).querySelector('app-rename-modal')!;
+    expect(modal.querySelector('.modal-title')?.textContent?.trim()).toBe(COPY.park.renameColumn);
+    const field = modal.querySelector<HTMLInputElement>('.field')!;
+    expect(field.value).withContext('seeded with the name it has').toBe('archived');
+
+    field.value = 'cold storage';
+    field.dispatchEvent(new Event('input'));
+    modal.querySelector<HTMLButtonElement>('.btn.primary')!.click();
+    fixture.detectChanges();
+
+    expect(parked.columns()[0].name).toBe('cold storage');
+    expect(el(fixture).querySelector('app-rename-modal')).toBeFalsy();
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+  });
+
+  it('falls back to the default name rather than leaving a nameless column', async () => {
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+    const parked = TestBed.inject(ParkedStore);
+    const column = parked.createColumn('archived', 'never');
+    const fixture = await renderParked({ ...archived(), id: column.id });
+
+    el(fixture).querySelector<HTMLButtonElement>('.column-menu-trigger')!.click();
+    fixture.detectChanges();
+    menuOf(fixture)!.querySelector<HTMLButtonElement>('.rename')!.click();
+    fixture.detectChanges();
+    // `clear name` on a column is not a clear: a column always has a name.
+    el(fixture).querySelectorAll<HTMLButtonElement>('app-rename-modal .btn')[1].click();
+    fixture.detectChanges();
+
+    expect(parked.columns()[0].name).toBe(COPY.park.defaultName);
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+  });
+
+  // --- drag and drop (task 5.2) -------------------------------------------
+  //
+  // The enabled half is arithmetic: karma's viewport is permanently below
+  // `--breakpoint-mobile` (asserted at the top of this file), where drag
+  // deliberately does not appear at all. What the DOM here can prove is the
+  // other half — that the board with no parked column, and every board on a
+  // phone, is inert — plus the two decisions that are this component's own:
+  // who may receive a card, and what a drop does.
+
+  interface ColumnInternals {
+    enterPredicate(drag: CdkDrag, drop: CdkDropList): boolean;
+    onCardDropped(event: CdkDragDrop<unknown>): void;
+  }
+
+  function internals(fixture: ComponentFixture<Column>): ColumnInternals {
+    return fixture.componentInstance as unknown as ColumnInternals;
+  }
+
+  it('makes a card a drag source only with a parked column, and never on a phone', () => {
+    expect(canDrag(false, false)).withContext('nothing to drag into').toBeFalse();
+    expect(canDrag(true, true)).withContext('the pager owns the phone').toBeFalse();
+    expect(canDrag(false, true)).toBeFalse();
+    expect(canDrag(true, false)).toBeTrue();
+  });
+
+  it('leaves every list and every card inert where drag does not apply', async () => {
+    const root = el(await render(3));
+    const body = root.querySelector('.column-body')!;
+
+    expect(body.classList.contains('cdk-drop-list')).withContext('a source list').toBeTrue();
+    expect(body.classList.contains('cdk-drop-list-disabled')).toBeTrue();
+    for (const card of Array.from(root.querySelectorAll('app-card'))) {
+      expect(card.classList.contains('cdk-drag-disabled')).toBeTrue();
+      expect(getComputedStyle(card).cursor).not.toBe('grab');
+    }
+  });
+
+  it('refuses every foreign card on a status column, and only lets its own go home', async () => {
+    const fixture = await render(1);
+    const own = { dropContainer: {} } as unknown as CdkDrag;
+    const home = own.dropContainer as unknown as CdkDropList;
+    const foreign = { dropContainer: {} } as unknown as CdkDrag;
+
+    expect(internals(fixture).enterPredicate(foreign, home))
+      .withContext('a status column is never a drop target')
+      .toBeFalse();
+    expect(internals(fixture).enterPredicate(own, home))
+      .withContext('a card released over its own column just goes home')
+      .toBeTrue();
+  });
+
+  it('accepts any card on a parked column', async () => {
+    const fixture = await renderParked();
+    const foreign = { dropContainer: {} } as unknown as CdkDrag;
+    const elsewhereList = {} as unknown as CdkDropList;
+
+    expect(internals(fixture).enterPredicate(foreign, elsewhereList)).toBeTrue();
+  });
+
+  it('parks the dropped card, without touching anything on the host', async () => {
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+    const parked = TestBed.inject(ParkedStore);
+    const column = parked.createColumn('archived', 'never');
+    const fixture = await renderParked({ ...archived(), id: column.id });
+
+    internals(fixture).onCardDropped({
+      previousContainer: {},
+      container: {},
+      item: { data: panes(1)[0] },
+    } as unknown as CdkDragDrop<unknown>);
+
+    expect(parked.columnOf('laptop:pane-0')).toBe(column.id);
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+  });
+
+  it('does nothing when a card is dropped back into the list it came from', async () => {
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+    const parked = TestBed.inject(ParkedStore);
+    const column = parked.createColumn('archived', 'never');
+    const fixture = await renderParked({ ...archived(), id: column.id });
+    const same = {};
+
+    internals(fixture).onCardDropped({
+      previousContainer: same,
+      container: same,
+      item: { data: panes(1)[0] },
+    } as unknown as CdkDragDrop<unknown>);
+
+    expect(parked.columnOf('laptop:pane-0')).toBeNull();
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+  });
+
+  it("never parks from a status column's own drop handler", async () => {
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+    const parked = TestBed.inject(ParkedStore);
+    parked.createColumn('archived', 'never');
+    const fixture = await render(1);
+
+    internals(fixture).onCardDropped({
+      previousContainer: {},
+      container: {},
+      item: { data: panes(1)[0] },
+    } as unknown as CdkDragDrop<unknown>);
+
+    expect(parked.columnOf('laptop:pane-0'))
+      .withContext("no drag ever changes a card's status")
+      .toBeNull();
+    localStorage.removeItem(PARKED_STORAGE_KEY);
   });
 });

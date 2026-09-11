@@ -193,3 +193,36 @@
     color: transparent;
   }
 }
+
+/*
+ * Drag and drop (Q1). The affordance exists only when it works: a card
+ * carries a grab cursor only while its `cdkDrag` is enabled, which is only
+ * on a board that has at least one parked column, above the mobile
+ * breakpoint. `cdk-drag-disabled` is the CDK's own marker for the other
+ * case, so there is one source of truth for "is this draggable".
+ */
+.column-body app-card.cdk-drag:not(.cdk-drag-disabled) {
+  cursor: grab;
+
+  &.cdk-drag-dragging {
+    cursor: grabbing;
+  }
+}
+
+/* The card left behind while its copy is under the pointer. Opacity is a
+ * state, not a colour decision, so it is a bare number here — the same
+ * form `empty-state.scss` uses for its resting glyph. */
+.cdk-drag-placeholder {
+  opacity: 0.35;
+}
+
+/*
+ * The drop affordance, on the target column only. `cdk-drop-list-receiving`
+ * is set by the CDK exclusively on lists whose `enterPredicate` accepts the
+ * card being dragged — a status column refuses every foreign card, so it
+ * never lights up and never looks droppable.
+ */
+.column-body.cdk-drop-list-receiving {
+  border: 1px dashed var(--ochre-line);
+  border-radius: var(--radius-md);
+}

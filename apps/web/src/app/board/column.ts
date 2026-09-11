@@ -11,11 +11,14 @@ import {
 } from '@angular/core';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { OverlayModule, type ConnectedPosition } from '@angular/cdk/overlay';
+import { CdkDrag, CdkDropList, type CdkDragDrop } from '@angular/cdk/drag-drop';
 import type { AgentStatus, BridgeCapabilities, Pane } from '@kanhrd/schema';
 import { COPY } from '../shared/copy';
-import { LucideMoreHorizontal } from '../shared/icons';
+import { LucideMoreHorizontal, LucidePencil } from '../shared/icons';
 import { handleMenuKeydown, menuItems } from '../shared/menu-keys';
 import { ConfirmModal } from '../shared/confirm-modal';
+import { RenameModal } from '../shared/rename-modal';
+import { paneKey } from '../state/panes.store';
 import { EXIT_RULES, ParkedStore, type ExitRule, type ParkedColumn } from '../state/parked.store';
 import { Card } from './card';
 
@@ -88,6 +91,23 @@ export function isVirtualized(count: number): boolean {
   return count > VIRTUALIZE_THRESHOLD;
 }
 
+/**
+ * Whether cards on this board are drag sources at all. Pure, because the
+ * karma viewport is permanently below `--breakpoint-mobile` (see this
+ * file's `mobileViewportSignal` note and `column.spec.ts`'s header), so the
+ * enabled half of the rule can only be proven as arithmetic — the same
+ * split `isCompact` already lives under.
+ *
+ * - No user-defined column: nothing to drag INTO, so nothing is a drag
+ *   source (docs/UX-GUIDELINES.md, "Status columns are read-only").
+ * - Below the mobile breakpoint: the board is a one-column-per-screen
+ *   pager, so the destination is never on screen and a horizontal drag
+ *   fights the pager. "Drag-drop must work or not appear."
+ */
+export function canDrag(hasParkedColumns: boolean, mobile: boolean): boolean {
+  return hasParkedColumns && !mobile;
+}
+
 const MOBILE_QUERY = '(max-width: 900px)';
 let mobileViewport: Signal<boolean> | null = null;
 
@@ -158,7 +178,17 @@ export function focusCard(
  */
 @Component({
   selector: 'app-column',
-  imports: [Card, ScrollingModule, OverlayModule, LucideMoreHorizontal, ConfirmModal],
+  imports: [
+    Card,
+    ScrollingModule,
+    OverlayModule,
+    CdkDrag,
+    CdkDropList,
+    LucideMoreHorizontal,
+    LucidePencil,
+    ConfirmModal,
+    RenameModal,
+  ],
   templateUrl: './column.html',
   styleUrl: './column.scss',
 })
@@ -175,6 +205,46 @@ export class Column {
 
   protected readonly copy = COPY;
   protected readonly itemSize = VIRTUAL_ITEM_SIZE;
+
+  // --- drag and drop (Q1 granted; docs/UX-GUIDELINES.md, "Status columns
+  // are read-only") ------------------------------------------------------
+  //
+  // Three rules, and the code below is only these three:
+  //
+  // 1. Drop targets are user-defined columns ONLY. A status column is a
+  //    drag SOURCE — a card has to start somewhere — but its
+  //    `enterPredicate` refuses every foreign item, so nothing can be
+  //    dropped into it and no drag ever changes a card's status. A card
+  //    dragged out and released over its own column simply goes home.
+  // 2. A card is a drag source only once at least one parked column
+  //    exists. With none the board is the drag-free board it always was:
+  //    every `cdkDrag` is disabled, every list is disabled, and no card
+  //    carries a grab cursor.
+  // 3. Not below `--breakpoint-mobile`. The board is a one-column-per-
+  //    screen pager there, so the destination is never on screen and a
+  //    horizontal drag fights the pager's own scroll. "Drag-drop must work
+  //    or not appear": on a phone it cannot work, so it does not appear.
+  //
+  // Sorting is disabled in every list: neither a status column nor a
+  // parked column persists a per-card order, and a sort animation would
+  // promise one.
+
+  protected readonly dragEnabled = computed(() =>
+    canDrag(this.parkedStore.hasColumns(), this.mobile())
+  );
+
+  /** A parked column receives cards; a status column never does. */
+  protected readonly enterPredicate = (drag: CdkDrag, drop: CdkDropList): boolean =>
+    this.parked() !== null || drag.dropContainer === drop;
+
+  protected onCardDropped(event: CdkDragDrop<unknown>): void {
+    const parked = this.parked();
+    const pane = event.item.data as Pane | undefined;
+    if (!parked || !pane || event.previousContainer === event.container) {
+      return;
+    }
+    this.parkedStore.park(paneKey(pane.host, pane.id), parked.id);
+  }
   protected readonly label = computed(() => {
     const parked = this.parked();
     const status = this.status();
@@ -192,6 +262,7 @@ export class Column {
 
   protected readonly menuOpen = signal(false);
   protected readonly showRemoveConfirm = signal(false);
+  protected readonly showRename = signal(false);
   protected readonly menuId = `column-menu-${nextColumnMenuId++}`;
 
   /** Below the trigger, right edges aligned; above it when the viewport has no room. */
@@ -230,6 +301,29 @@ export class Column {
       this.parkedStore.setExitRule(parked.id, rule);
     }
     this.closeMenu();
+  }
+
+  /**
+   * Closing the menu WITH refocus first hands the modal's focus trap the
+   * trigger to return focus to — the same reason the card's rename does it
+   * that way.
+   */
+  protected onRenameClick(): void {
+    this.closeMenu();
+    this.showRename.set(true);
+  }
+
+  /**
+   * A column always has a name, so there is nothing to clear: the dialog's
+   * clear action (an empty value) resets it to the default name rather than
+   * leaving a nameless column on the board.
+   */
+  protected onRenameSaved(name: string | null): void {
+    const parked = this.parked();
+    this.showRename.set(false);
+    if (parked) {
+      this.parkedStore.renameColumn(parked.id, name ?? COPY.park.defaultName);
+    }
   }
 
   protected onRemoveClick(): void {

@@ -46,6 +46,9 @@
             (keydown)="onMenuKeydown($event)"
             [attr.aria-label]="copy.nav.moreActions + ' — ' + column.name"
           >
+            <button type="button" role="menuitem" class="rename" (click)="onRenameClick()">
+              <svg lucidePencil class="icon"></svg>{{ copy.park.renameColumn }}
+            </button>
             @for (rule of exitRules; track rule) {
               <button
                 type="button"
@@ -65,7 +68,23 @@
       </div>
     }
   </header>
-  <div class="column-body" [class.is-empty]="panes().length === 0">
+  <!--
+    Every column is a drop LIST, because a card has to be dragged out of
+    somewhere; only a parked column is a drop TARGET. `enterPredicate`
+    refuses every foreign item on a status column, and both kinds disable
+    sorting (no column persists a per-card order). With no parked column
+    on the board — or below the mobile breakpoint — the whole thing is
+    disabled and the board is the drag-free board it always was.
+  -->
+  <div
+    class="column-body"
+    cdkDropList
+    [class.is-empty]="panes().length === 0"
+    [cdkDropListDisabled]="!dragEnabled()"
+    [cdkDropListSortingDisabled]="true"
+    [cdkDropListEnterPredicate]="enterPredicate"
+    (cdkDropListDropped)="onCardDropped($event)"
+  >
     @if (virtualized()) {
       <cdk-virtual-scroll-viewport
         [itemSize]="itemSize"
@@ -74,6 +93,9 @@
       >
         <app-card
           *cdkVirtualFor="let pane of panes(); trackBy: trackPane; let i = index"
+          cdkDrag
+          [cdkDragData]="pane"
+          [cdkDragDisabled]="!dragEnabled()"
           [attr.data-pane]="trackPane(0, pane)"
           [pane]="pane"
           [capabilities]="capabilities()"
@@ -84,6 +106,9 @@
     } @else {
       @for (pane of panes(); track trackPane($index, pane)) {
         <app-card
+          cdkDrag
+          [cdkDragData]="pane"
+          [cdkDragDisabled]="!dragEnabled()"
           [attr.data-pane]="trackPane($index, pane)"
           [pane]="pane"
           [capabilities]="capabilities()"
@@ -94,6 +119,18 @@
     }
   </div>
 </section>
+
+@if (showRename()) {
+  @if (parked(); as column) {
+    <app-rename-modal
+      [initialValue]="column.name"
+      [title]="copy.park.renameColumn"
+      [fieldLabel]="copy.park.renameColumn"
+      (saved)="onRenameSaved($event)"
+      (cancelled)="showRename.set(false)"
+    />
+  }
+}
 
 @if (showRemoveConfirm()) {
   <app-confirm-modal

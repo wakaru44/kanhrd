@@ -76,6 +76,7 @@ export const COPY = {
       never: 'never',
       agentActivity: 'on agent activity',
     },
+    renameColumn: 'rename column',
     removeColumn: 'remove column',
     removeColumnBody: 'the cards go back to their status columns. nothing on the host changes.',
   },

@@ -11,6 +11,7 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
+import { CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
@@ -91,6 +92,7 @@ export function nearestVisibleStatus(
   selector: 'app-board',
   imports: [
     Column,
+    CdkDropListGroup,
     Swimlane,
     FilterBar,
     Rail,

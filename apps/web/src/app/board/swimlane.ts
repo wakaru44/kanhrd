@@ -1,4 +1,5 @@
 import { Component, ElementRef, computed, effect, input, output, viewChild } from '@angular/core';
+import { CdkDropListGroup } from '@angular/cdk/drag-drop';
 import type { AgentStatus, BridgeCapabilities, Pane } from '@kanhrd/schema';
 import { COPY } from '../shared/copy';
 import type { Swimlane as SwimlaneBand } from '../state/panes.store';
@@ -92,7 +93,7 @@ export function bandLabels(
  */
 @Component({
   selector: 'app-swimlane',
-  imports: [Column],
+  imports: [Column, CdkDropListGroup],
   templateUrl: './swimlane.html',
   styleUrl: './swimlane.scss',
 })
