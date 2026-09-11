@@ -31,6 +31,20 @@ same event, rather than each running an independent poll against herdr.
 subscribed `source`/`format`, never a delta. Clients render it with
 `term.reset(); term.write(content)` per event.
 
+> **Amendment, 2026-09-11.** That last sentence shipped a strobe and is
+> superseded. `Terminal.reset()` blanks the rendered screen synchronously
+> while the replacement content is still in xterm's asynchronous write
+> queue, so the browser composites one fully blank frame per event — at the
+> 150 ms poll cadence, a whole-screen flash at ~6.7 Hz, inside the 3-30 Hz
+> band WCAG 2.3.1 treats as a seizure risk. Measured at the compositor via
+> CDP screencast: 26 output frames produced 26 blank frames before the fix
+> and 0 after. The decision in this ADR — full snapshots delivered by
+> bridge-side polling — is unchanged; only the prescribed client rendering
+> is. Deliver the reset inside the write, `term.write('\x1bc' + content)`
+> (RIS, ECMA-48 full reset), so the clear and the new content parse in one
+> pass. Appending snapshots write only the new suffix and reset nothing;
+> see the `terminal-scrollback` capability and `PaneTerminal.paint()`.
+
 ## Alternatives considered
 
 - **A. Wait for herdr to add a public push subscription** — rejected: an

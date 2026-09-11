@@ -55,8 +55,20 @@ own terminal-grid state (parsed via libghostty-vt), not a raw byte tap on
 the PTY, and there is no public per-pane push event for output changes — see
 `docs/adr/0004-full-snapshot-terminal-output-via-polling.md`. The bridge
 polls `pane.read` per subscribed `(host, pane)`, dedupes on herdr's
-`revision` counter, and pushes `pane.output` events; a minimal correct
-browser handler is `term.reset(); term.write(content)` per event.
+`revision` counter, and pushes `pane.output` events.
+
+A correct browser handler is **not** `term.reset(); term.write(content)`
+per event, though that reads as the obvious one. `Terminal.reset()` blanks
+the rendered screen synchronously while the replacement content is still in
+xterm's asynchronous write queue, so the browser composites a blank frame
+between the two — one per event, which at the default cadence is a
+whole-screen flash at roughly 6.7 Hz, inside the 3-30 Hz band WCAG 2.3.1
+treats as a seizure risk. Deliver the reset **inside** the write instead:
+`term.write('\x1bc' + content)`, where `\x1bc` is RIS, the ECMA-48 full
+reset. xterm routes it to the same `fullReset()`, but parses the reset and
+the new content in one pass and refreshes once. Appending snapshots skip
+the reset entirely and write only the new suffix — see the
+`terminal-scrollback` capability.
 
 Input splits by kind: printable text goes through `pane.send_text`; control
 keys (Ctrl+C, arrows, function keys) go through `pane.send_keys`, which
