@@ -1,0 +1,21 @@
+apps/web/src/app/pane-detail/pane-detail.html
+  s_7901944abeeaba::t_5f89e02b9c8f27 39-46,48-67
+apps/web/src/app/pane-detail/pane-detail.scss
+  s_7901944abeeaba::t_20e9624ffa9d1d 111-112,114-116,119-148,432,460
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ac273680ca242b6dadb55cb989fc1233b2358282",
+  "prompts": {},
+  "sessions": {
+    "s_7901944abeeaba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdce5a89-318c-4864-b71b-909fa85af141",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
