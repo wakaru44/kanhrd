@@ -1,0 +1,20 @@
+docs/DESIGN-SYSTEM.md
+  s_26967ebf1662f1::t_529d0274d025c3 496-500
+  s_26967ebf1662f1::t_d32eaa4de78f90 501-502
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "af95c628ff053998451e81338bb4d3bf6ff1b9c9",
+  "prompts": {},
+  "sessions": {
+    "s_26967ebf1662f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0889d-b5d7-74f3-9c51-027870ede854",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
