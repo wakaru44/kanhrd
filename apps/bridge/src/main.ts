@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
 import { loadConfig, type CliOverrides } from './config.js';
 import { HostRegistry } from './herdr/hosts.js';
+import { originPolicySummary } from './http/origin.js';
 import { registerRest } from './http/rest.js';
 import { registerWebSocket } from './ws/server.js';
 
@@ -33,6 +34,17 @@ function parseArgs(argv: string[]): CliOverrides {
         if (value !== undefined) overrides.spaDir = value;
         break;
       }
+      case '--allowed-origin': {
+        const value = argv[++i];
+        if (value !== undefined) (overrides.allowedOrigins ??= []).push(value);
+        break;
+      }
+      case '--require-origin':
+        overrides.requireOrigin = true;
+        break;
+      case '--allow-any-origin':
+        overrides.allowAnyOrigin = true;
+        break;
       case '--i-know-what-im-doing':
         overrides.allowNonLoopback = true;
         break;
@@ -47,12 +59,16 @@ async function main(): Promise<void> {
   const config = loadConfig(parseArgs(process.argv.slice(2)));
 
   const app = Fastify({ logger: true });
+  const summary = originPolicySummary(config.origins, config.bind, config.port);
+  if (config.origins.allowAny) app.log.warn(summary);
+  else app.log.info(summary);
+
   const hosts = new HostRegistry(config.hosts);
   hosts.startAll();
 
-  await registerWebSocket(app, hosts);
+  await registerWebSocket(app, hosts, config.origins);
   const spaDir = isAbsolute(config.spaDir) ? config.spaDir : resolve(MODULE_DIR, config.spaDir);
-  await registerRest(app, hosts, spaDir);
+  await registerRest(app, hosts, spaDir, config.origins);
 
   await app.listen({ host: config.bind, port: config.port });
 }

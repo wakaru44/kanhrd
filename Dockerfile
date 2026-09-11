@@ -43,5 +43,12 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # reachable from the host; container-side loopback is invisible to the port
 # mapping. The safety flag is warranted here because host-side `-p
 # 127.0.0.1:5173:5173` enforces the loopback-only bind at the Docker layer.
+#
+# A wildcard bind derives no browser origin, so the `/ws` allowlist has to be
+# stated: with the loopback port mapping above, the origin the operator's
+# browser actually uses is host-side loopback. Change the published port and
+# these two origins have to change with it.
 ENTRYPOINT ["node", "/app/apps/bridge/dist/main.js"]
-CMD ["--bind", "0.0.0.0", "--i-know-what-im-doing"]
+CMD ["--bind", "0.0.0.0", "--i-know-what-im-doing", \
+     "--allowed-origin", "http://127.0.0.1:5173", \
+     "--allowed-origin", "http://localhost:5173"]

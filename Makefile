@@ -49,7 +49,8 @@ run: build-web build-bridge ## Build then run the bridge locally on 127.0.0.1:51
 
 .PHONY: run-exposed
 run-exposed: build-web build-bridge ## Bind 0.0.0.0 for LAN / dev-through-Tailscale (exposes on EVERY interface including untrusted Wi-Fi — prefer run-tailscale on a laptop).
-	node apps/bridge/dist/main.js --bind 0.0.0.0 --i-know-what-im-doing
+	node apps/bridge/dist/main.js --bind 0.0.0.0 --i-know-what-im-doing \
+	  --allowed-origin "http://$$(hostname -I 2>/dev/null | awk '{print $$1}' | grep . || ipconfig getifaddr en0):5173"
 
 .PHONY: _require-tailscale
 _require-tailscale: ## (internal) fail with a clear message if tailscale isn't installed.
@@ -68,16 +69,20 @@ run-tailscale: _require-tailscale build-web build-bridge ## Bind ONLY to the Tai
 run-tailscale-serve: _require-tailscale build-web build-bridge ## Bridge stays loopback; `tailscale serve` fronts it with HTTPS via Tailscale certs. Ctrl+C to stop; `make tailoff` to remove.
 	@echo "Starting bridge on loopback (5173) + Tailscale Serve fronting on https://$$($(TAILSCALE) status --self=true --json | jq -r '.Self.DNSName' | sed 's/\.$$//')" ; \
 	 $(TAILSCALE) serve --https 5173 --set-path=/ http://127.0.0.1:5173 & \
-	 node apps/bridge/dist/main.js
+	 node apps/bridge/dist/main.js \
+	   --allowed-origin "https://$$($(TAILSCALE) status --self=true --json | jq -r '.Self.DNSName' | sed 's/\.$$//')"
 
 ## Dev (watch mode, hot reload)
 .PHONY: dev-web
 dev-web: ## Angular dev server for the SPA with HMR (proxies /api and /ws to :5173 — pair with `dev-bridge`).
 	pnpm --filter @kanhrd/web start
 
+# The Angular dev server proxies /api and /ws but does not rewrite Origin, so
+# the browser's origin at the bridge is the dev server's, not 5173's.
 .PHONY: dev-bridge
 dev-bridge: ## Bridge in watch mode (tsx watch — restarts on source change).
-	pnpm --filter @kanhrd/bridge dev
+	pnpm --filter @kanhrd/bridge dev -- \
+	  --allowed-origin http://localhost:4200 --allowed-origin http://127.0.0.1:4200
 
 ## Build
 .PHONY: build
