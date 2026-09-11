@@ -1,0 +1,21 @@
+apps/web/e2e/mobile.spec.ts
+  s_7901944abeeaba::t_4f7c641b24cfa9 520-532,686-691,693-699
+apps/web/e2e/tier3.spec.ts
+  s_7901944abeeaba::t_ca18bf30902c09 210-217,219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "19e06dfb778f82266c69df18ff7ef8e6bb3f40ad",
+  "prompts": {},
+  "sessions": {
+    "s_7901944abeeaba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdce5a89-318c-4864-b71b-909fa85af141",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
