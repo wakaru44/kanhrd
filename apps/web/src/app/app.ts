@@ -1,13 +1,13 @@
 import { Component, DestroyRef, computed, inject } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
-import { LucideMenu, LucideMoon, LucideSettings, LucideSun } from './shared/icons';
+import { LucideMenu, LucideSettings } from './shared/icons';
 import { COPY } from './shared/copy';
-import { ThemeService } from './state/theme.service';
 import { LayoutService } from './state/layout.service';
 import { KeyboardService } from './state/keyboard.service';
 import { ToastService } from './state/toast.service';
 import { HostNoticeService } from './state/host-notices.service';
 import { KeyboardHelpOverlay } from './shared/keyboard-help-overlay';
+import { ThemePanel } from './shared/theme-panel';
 import { ToastHost } from './shared/toast-host';
 
 /** True for a bare key press: no modifier, so it is exactly what a TUI inside a card expects to receive. */
@@ -22,16 +22,14 @@ function isUnmodified(event: KeyboardEvent, key: string): boolean {
     RouterLink,
     KeyboardHelpOverlay,
     ToastHost,
+    ThemePanel,
     LucideMenu,
-    LucideSun,
-    LucideMoon,
     LucideSettings,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
 export class App {
-  protected readonly themeService = inject(ThemeService);
   protected readonly layout = inject(LayoutService);
   protected readonly keyboard = inject(KeyboardService);
   private readonly toasts = inject(ToastService);
@@ -50,16 +48,9 @@ export class App {
       this.keyboard.helpOpen() ||
       this.layout.railOpen() ||
       this.layout.plusMenuOpen() ||
+      this.layout.themePanelOpen() ||
       this.toasts.toasts().length > 0
   );
-
-  protected themeLabel(): string {
-    return this.themeService.theme() === 'dark' ? COPY.nav.toWashi : COPY.nav.toSumi;
-  }
-
-  protected toggleTheme(): void {
-    this.themeService.toggle();
-  }
 
   protected toggleRail(): void {
     this.layout.toggleRail();

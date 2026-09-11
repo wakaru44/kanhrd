@@ -79,12 +79,14 @@ describe('shared/copy', () => {
 
   it('says each of the shared labels exactly once', () => {
     // `switch to washi` was in both the shell and Settings; `more actions`
-    // was in both a card and a rail row. Duplicates drift.
+    // was in both a card and a rail row. Duplicates drift. The washi/sumi
+    // pair now labels one shared control (`shared/theme-choice`) rendered by
+    // both surfaces, so the words have one home for the same reason.
     const counts = new Map<string, number>();
     for (const [, value] of strings(COPY)) {
       counts.set(value, (counts.get(value) ?? 0) + 1);
     }
-    for (const shared of [COPY.nav.toWashi, COPY.nav.toSumi, COPY.nav.moreActions]) {
+    for (const shared of [COPY.theme.washi, COPY.theme.sumi, COPY.nav.moreActions]) {
       expect(counts.get(shared)).withContext(shared).toBe(1);
     }
   });
@@ -94,7 +96,7 @@ describe('shared/copy', () => {
       expect(Object.keys(group).length).toBeGreaterThan(0);
     }
     expect(COPY.toast.dismiss).toBeTruthy();
-    expect(COPY.nav.toWashi).toBeTruthy();
+    expect(COPY.theme.washi).toBeTruthy();
   });
 
   // --- the keyboard help surface ----------------------------------------

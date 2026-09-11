@@ -1,14 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PanesStore } from '../state/panes.store';
-import { ThemeService } from '../state/theme.service';
 import { SettingsService, type Density } from '../state/settings.service';
 import { ParkedStore } from '../state/parked.store';
-import {
-  TERMINAL_THEME_OPTIONS,
-  TerminalThemeService,
-  type TerminalThemeName,
-} from '../state/terminal-theme.service';
 import { TERMINAL_FONT_SIZES, TerminalFontSizeService } from '../state/terminal-font-size.service';
 import {
   DEFAULT_PREFIX,
@@ -18,6 +12,8 @@ import {
 } from '../state/keyboard.service';
 import { ConfirmModal, type ConfirmPreviewItem } from '../shared/confirm-modal';
 import { LucideArrowLeft } from '../shared/icons';
+import { ThemeChoice } from '../shared/theme-choice';
+import { TerminalThemeChoice } from '../shared/terminal-theme-choice';
 import { COPY } from '../shared/copy';
 
 /**
@@ -32,23 +28,20 @@ import { COPY } from '../shared/copy';
  */
 @Component({
   selector: 'app-settings',
-  imports: [RouterLink, ConfirmModal, LucideArrowLeft],
+  imports: [RouterLink, ConfirmModal, LucideArrowLeft, ThemeChoice, TerminalThemeChoice],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
 export class Settings {
   protected readonly store = inject(PanesStore);
-  protected readonly themeService = inject(ThemeService);
   protected readonly settingsService = inject(SettingsService);
   private readonly parked = inject(ParkedStore);
   protected readonly keyboardService = inject(KeyboardService);
-  protected readonly terminalThemeService = inject(TerminalThemeService);
-  protected readonly terminalThemeOptions = TERMINAL_THEME_OPTIONS;
   protected readonly terminalFontSizeService = inject(TerminalFontSizeService);
   protected readonly terminalFontSizes = TERMINAL_FONT_SIZES;
 
   protected readonly copy = COPY;
-  /** The screen's copy. `themeLabel()` reaches past it for the two shell-shared labels. */
+  /** The screen's copy. */
   protected readonly text = COPY.settings;
 
   protected readonly hosts = this.store.hostsSignal;
@@ -58,21 +51,8 @@ export class Settings {
     () => this.settingsService.settings().requestedOutputPollIntervalMs
   );
 
-  /** Same control, same words, as the shell's theme toggle — one pair of keys, not two. */
-  protected themeLabel(): string {
-    return this.themeService.theme() === 'dark' ? COPY.nav.toWashi : COPY.nav.toSumi;
-  }
-
-  protected toggleTheme(): void {
-    this.themeService.toggle();
-  }
-
   protected setDensity(density: Density): void {
     this.settingsService.setDensity(density);
-  }
-
-  protected onTerminalThemeChange(value: string): void {
-    this.terminalThemeService.set(value as TerminalThemeName);
   }
 
   protected setTerminalFontSize(size: number): void {

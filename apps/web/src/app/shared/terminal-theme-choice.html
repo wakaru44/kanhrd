@@ -1,0 +1,11 @@
+<label class="setting-label" [attr.for]="selectId()">{{ label() }}</label>
+<select
+  class="text-input"
+  [id]="selectId()"
+  [value]="service.name()"
+  (change)="onChange($any($event.target).value)"
+>
+  @for (option of options; track option.value) {
+    <option [value]="option.value">{{ option.label }}</option>
+  }
+</select>

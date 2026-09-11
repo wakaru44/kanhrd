@@ -1,3 +1,5 @@
+@use './shared/icon-button';
+
 :host {
   /*
    * Published to the whole shell so the mobile toast stack can sit *below*
@@ -76,27 +78,6 @@ main {
 
 .header-spacer {
   flex: 1;
-}
-
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--touch-target-min);
-  height: var(--touch-target-min);
-  border-radius: var(--radius-md);
-  border: 0;
-  background: transparent;
-  color: var(--ink-mute);
-  text-decoration: none;
-  line-height: 1;
-  cursor: pointer;
-  transition: color var(--motion-fast) var(--ease-out);
-
-  &:hover,
-  &:focus-visible {
-    color: var(--ink-soft);
-  }
 }
 
 .hamburger {

@@ -14,6 +14,9 @@ import { Settings } from '../settings/settings';
 import { ConfirmModal } from './confirm-modal';
 import { KeyboardHelpOverlay } from './keyboard-help-overlay';
 import { RenameModal } from './rename-modal';
+import { ThemeChoice } from './theme-choice';
+import { ThemePanel } from './theme-panel';
+import { TerminalThemeChoice } from './terminal-theme-choice';
 import { ToastHost } from './toast-host';
 
 /**
@@ -112,6 +115,9 @@ const COMPONENTS: readonly Type<unknown>[] = [
   RenameModal,
   KeyboardHelpOverlay,
   ToastHost,
+  ThemePanel,
+  ThemeChoice,
+  TerminalThemeChoice,
 ];
 
 function compiled(component: Type<unknown>): CompiledComponent {
@@ -140,7 +146,7 @@ function templateSource(component: Type<unknown>): string {
 
 describe('style lint: components carry no raw values', () => {
   it('covers every component that ships a template or a stylesheet', () => {
-    expect(COMPONENTS.length).toBe(16);
+    expect(COMPONENTS.length).toBe(19);
     for (const component of COMPONENTS) {
       expect(() => compiled(component))
         .withContext(component.name)

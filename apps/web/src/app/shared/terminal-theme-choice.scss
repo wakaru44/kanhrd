@@ -1,0 +1,17 @@
+@use 'controls';
+
+/* The host element IS the row — see the note in theme-choice.scss. */
+:host {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+@media (max-width: 900px) {
+  :host {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-2);
+  }
+}

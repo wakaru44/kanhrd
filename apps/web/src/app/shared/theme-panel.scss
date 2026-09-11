@@ -1,0 +1,25 @@
+@use 'controls';
+@use 'icon-button';
+
+:host {
+  display: contents;
+}
+
+/*
+ * A popover, so `--paper-raised` and `--radius-lg`, the same surface the
+ * card overflow menu uses. Hairline, never a shadow (docs/BRAND.md,
+ * "Motifs"). The width floor keeps the two rows from collapsing onto each
+ * other; the cap is what keeps the panel inside a phone viewport once the
+ * CDK has pushed it back from the edge.
+ */
+.theme-panel {
+  margin: var(--sp-1) 0;
+  display: flex;
+  flex-direction: column;
+  min-width: calc(var(--column-min-width) - var(--sp-8));
+  max-width: calc(100vw - var(--sp-8));
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-lg);
+  background: var(--paper-raised);
+  border: var(--elev-1);
+}

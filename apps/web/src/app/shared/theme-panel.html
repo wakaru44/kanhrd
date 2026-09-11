@@ -1,0 +1,41 @@
+<button
+  type="button"
+  class="icon-btn theme-toggle"
+  #trigger
+  cdkOverlayOrigin
+  #origin="cdkOverlayOrigin"
+  aria-haspopup="dialog"
+  [attr.aria-expanded]="layout.themePanelOpen()"
+  [attr.aria-controls]="layout.themePanelOpen() ? panelId : null"
+  [attr.data-theme-shown]="themeService.theme()"
+  [title]="text.panel"
+  [attr.aria-label]="text.panel"
+  (click)="toggle()"
+  (keydown)="onKeydown($event)"
+>
+  @if (themeService.theme() === 'dark') {
+    <svg lucideMoon class="icon"></svg>
+  } @else {
+    <svg lucideSun class="icon"></svg>
+  }
+</button>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="origin"
+  [cdkConnectedOverlayOpen]="layout.themePanelOpen()"
+  [cdkConnectedOverlayPositions]="positions"
+  [cdkConnectedOverlayPush]="true"
+>
+  <div
+    class="theme-panel"
+    role="dialog"
+    #panel
+    [id]="panelId"
+    [attr.aria-label]="text.panel"
+    (keydown)="onKeydown($event)"
+  >
+    <app-theme-choice class="setting-row" [label]="text.board" />
+    <app-terminal-theme-choice class="setting-row" [label]="text.terminal" />
+  </div>
+</ng-template>

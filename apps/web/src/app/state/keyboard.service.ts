@@ -609,6 +609,12 @@ export class KeyboardService {
       this.layout.closePlusMenu();
       return;
     }
+    // Same rung as the `+` menu: both are header/board popovers, and
+    // inserting here leaves every pre-existing pair's precedence untouched.
+    if (this.layout.themePanelOpen()) {
+      this.layout.closeThemePanel();
+      return;
+    }
     if (this.layout.railOpen()) {
       this.layout.closeRail();
       return;

@@ -12,6 +12,13 @@ export class LayoutService {
   readonly railOpen = signal(false);
   /** Board's header `+` menu open state — lives here (not on `Board`) so `KeyboardService`'s `Escape` handling can close it without a component reference. */
   readonly plusMenuOpen = signal(false);
+  /**
+   * The header theme panel's open state — here, not on `ThemePanel`, for the
+   * same reason `plusMenuOpen` is: `KeyboardService`'s Escape ladder closes
+   * it, and `App.chromeOpen` has to know it is open to let an unmodified
+   * Escape through at all. Neither has a component reference.
+   */
+  readonly themePanelOpen = signal(false);
 
   toggleRail(): void {
     this.railOpen.update((open) => !open);
@@ -31,5 +38,13 @@ export class LayoutService {
 
   closePlusMenu(): void {
     this.plusMenuOpen.set(false);
+  }
+
+  toggleThemePanel(): void {
+    this.themePanelOpen.update((open) => !open);
+  }
+
+  closeThemePanel(): void {
+    this.themePanelOpen.set(false);
   }
 }

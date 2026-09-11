@@ -1,3 +1,5 @@
+@use '../shared/controls';
+
 :host {
   display: block;
 }
@@ -89,25 +91,6 @@
   }
 }
 
-.setting-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  padding: var(--sp-2) 0;
-
-  &:not(:last-child) {
-    border-block-end: 1px solid var(--rule);
-  }
-}
-
-.setting-label {
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
-  color: var(--ink);
-  overflow-wrap: anywhere;
-}
-
 .host-name,
 .setting-value {
   font-family: var(--font-mono);
@@ -117,67 +100,6 @@
 
 .setting-value {
   color: var(--ink-mute);
-}
-
-.segmented {
-  display: flex;
-  gap: var(--sp-1);
-  flex: none;
-}
-
-/* Selection is weight plus an ochre underline — never a colour fill alone. */
-.segment {
-  min-height: var(--touch-target-min);
-  padding: 0 var(--sp-3);
-  border: 0;
-  border-block-end: 2px solid transparent;
-  background: transparent;
-  color: var(--ink-mute);
-  font: inherit;
-  font-size: var(--fs-small);
-  cursor: pointer;
-  transition: color var(--motion-fast) var(--ease-out);
-
-  &.active {
-    color: var(--ink);
-    font-weight: var(--fw-semi);
-    border-block-end-color: var(--ochre-line);
-  }
-
-  &:hover:not(.active) {
-    color: var(--ink-soft);
-  }
-}
-
-/*
- * Segments whose label is a number rather than a word — the terminal text
- * size ramp. Mono with tabular numerals so the five steps sit on a fixed
- * grid and the row does not shimmer as the selection moves (see
- * docs/DESIGN-SYSTEM.md, "Numerals").
- */
-.segment-numeric {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-
-  /*
-   * A two-digit mono label plus --sp-3 padding lands just under 40px on a
-   * wide viewport, so the coarse-pointer floor is stated rather than left
-   * to the text metrics (docs/UX-GUIDELINES.md, "Touch targets").
-   */
-  min-width: var(--touch-target-min);
-}
-
-.text-input {
-  min-height: var(--touch-target-min);
-  min-width: 0;
-  max-width: 100%;
-  padding: 0 var(--sp-3);
-  border-radius: var(--radius-md);
-  border: var(--elev-3);
-  background: var(--paper);
-  color: var(--ink);
-  font: inherit;
-  font-size: var(--fs-body);
 }
 
 .btn {
@@ -304,24 +226,8 @@
   }
 }
 
-/* Below --breakpoint-mobile every row stacks label over full-width control. */
+/* Below --breakpoint-mobile every row stacks label over full-width control — the rows and their controls in shared/_controls.scss, the screen's own buttons here. */
 @media (max-width: 900px) {
-  .setting-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--sp-2);
-  }
-
-  .segmented,
-  .text-input {
-    width: 100%;
-  }
-
-  .segment {
-    flex: 1 1 0;
-    min-width: var(--touch-target-min);
-  }
-
   .btn {
     align-self: flex-start;
   }

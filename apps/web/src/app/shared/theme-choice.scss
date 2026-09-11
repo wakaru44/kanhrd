@@ -1,0 +1,21 @@
+@use 'controls';
+
+/*
+ * The host element IS the row: a surface adds `.setting-row` to it for the
+ * padding and separator its own list wants, and the flex layout is stated
+ * here so the control is never left as an inline box if a surface forgets.
+ */
+:host {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+@media (max-width: 900px) {
+  :host {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-2);
+  }
+}

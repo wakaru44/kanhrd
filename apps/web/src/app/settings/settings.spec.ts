@@ -120,12 +120,17 @@ describe('Settings', () => {
     expect(el().querySelector('.back')?.textContent?.includes('←')).toBeFalse();
   });
 
-  it('renders the appearance section with a theme toggle and density segments', () => {
+  it('renders the appearance section with a theme choice and density segments', () => {
     const sections = Array.from(el().querySelectorAll('.settings-section h2')).map(
       (h) => h.textContent
     );
     expect(sections).toContain('appearance');
-    expect(section('appearance').querySelectorAll('.segment').length).toBe(2);
+    // Two controls, two options each: the shared washi/sumi radio group
+    // (`app-theme-choice`, also rendered by the header panel) and density.
+    expect(section('appearance').querySelectorAll('.segment').length).toBe(4);
+    expect(section('appearance').querySelectorAll('app-theme-choice [role="radio"]').length).toBe(
+      2
+    );
   });
 
   it('renders the runtime section with per-host advertised poll intervals', () => {
@@ -186,10 +191,12 @@ describe('Settings', () => {
     expect(settingsService.settings().density).toBe('compact');
   });
 
-  it('clicking the theme button toggles ThemeService', () => {
+  it('picking the other theme in the shared choice writes ThemeService', () => {
     const before = themeService.theme();
-    const themeButton = el().querySelector<HTMLButtonElement>('.setting-row .btn');
-    themeButton?.click();
+    const options = Array.from(
+      el().querySelectorAll<HTMLButtonElement>('app-theme-choice [role="radio"]')
+    );
+    options.find((b) => b.getAttribute('aria-checked') !== 'true')!.click();
     fixture.detectChanges();
     expect(themeService.theme()).not.toBe(before);
   });

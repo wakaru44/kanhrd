@@ -1,0 +1,29 @@
+/*
+ * The header's square icon buttons.
+ *
+ * Shared because the header's controls are no longer all in one template:
+ * the theme control is its own component (`shared/theme-panel`), and
+ * Angular's emulated encapsulation stops `app.scss` from reaching into it.
+ *
+ * `@use`d by `app.scss` and `shared/theme-panel.scss`.
+ */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  border-radius: var(--radius-md);
+  border: 0;
+  background: transparent;
+  color: var(--ink-mute);
+  text-decoration: none;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--motion-fast) var(--ease-out);
+
+  &:hover,
+  &:focus-visible {
+    color: var(--ink-soft);
+  }
+}

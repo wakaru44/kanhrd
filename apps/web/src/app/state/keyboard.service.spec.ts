@@ -479,11 +479,27 @@ describe('KeyboardService', () => {
     });
   });
 
-  it("prefix+t (non-chord 't') toggles the theme", () => {
+  it('escape closes the theme panel, and only after the chrome above it', () => {
+    const layout = TestBed.inject(LayoutService);
+    layout.themePanelOpen.set(true);
+    layout.plusMenuOpen.set(true);
+
+    service.handleKeydown(keyEvent('Escape'), document.body);
+    expect(layout.plusMenuOpen()).toBeFalse();
+    expect(layout.themePanelOpen()).toBeTrue();
+
+    service.handleKeydown(keyEvent('Escape'), document.body);
+    expect(layout.themePanelOpen()).toBeFalse();
+  });
+
+  it("prefix+t (non-chord 't') toggles the theme directly, opening nothing", () => {
     const themeService = TestBed.inject(ThemeService);
+    const layout = TestBed.inject(LayoutService);
     const before = themeService.theme();
     service.handleKeydown(keyEvent('t'), document.body);
     expect(themeService.theme()).not.toBe(before);
+    // The header control opens a panel now; the shortcut deliberately does not.
+    expect(layout.themePanelOpen()).toBeFalse();
   });
 
   describe('propagation (fix-keyboard-shortcut-suppression)', () => {

@@ -177,11 +177,29 @@ export const COPY = {
     cardSwitcher: 'cards in this tab',
     cardSwitcherItem: '{name} — {status}',
     nextCard: 'next card in this tab',
-    /** The shell's theme toggle, and the same control in Settings > appearance. */
-    toWashi: 'switch to washi',
-    toSumi: 'switch to sumi',
     /** Every overflow trigger: a card's and a rail row's are the same control. */
     moreActions: 'more actions',
+  },
+  /**
+   * The header theme panel, and the two controls it shares with Settings.
+   *
+   * `washi` and `sumi` are the product's own names for the two palettes
+   * (docs/BRAND.md § Palette) — the same two words `help.shortcuts.
+   * toggleTheme` already uses. They are labels on a control, not care copy.
+   *
+   * `board` and `terminal` name the two themed surfaces. Settings labels the
+   * same two controls `theme` and `colour theme`, because there each sits
+   * inside a section that has already said which surface it is about; in the
+   * panel the two rows sit together and the surface is the distinction.
+   *
+   * Only the words that are new live here: the panel's own name is
+   * `settings.theme` and its terminal row is `settings.terminal` — the same
+   * two words, so they keep their one home rather than gaining a second.
+   */
+  theme: {
+    board: 'board',
+    washi: 'washi',
+    sumi: 'sumi',
   },
   /**
    * The board's create menu. The verb is not a new one: the approved-copy

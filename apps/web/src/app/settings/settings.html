@@ -10,10 +10,7 @@
   <section class="settings-section">
     <h2>{{ text.appearance }}</h2>
 
-    <div class="setting-row">
-      <span class="setting-label">{{ text.theme }}</span>
-      <button type="button" class="btn" (click)="toggleTheme()">{{ themeLabel() }}</button>
-    </div>
+    <app-theme-choice class="setting-row" [label]="text.theme" />
 
     <div class="setting-row">
       <span class="setting-label">{{ text.density }}</span>
@@ -41,19 +38,11 @@
   <section class="settings-section">
     <h2>{{ text.terminal }}</h2>
     <p class="section-note">{{ text.terminalNote }}</p>
-    <div class="setting-row">
-      <label class="setting-label" for="terminal-theme">{{ text.terminalTheme }}</label>
-      <select
-        id="terminal-theme"
-        class="text-input"
-        [value]="terminalThemeService.name()"
-        (change)="onTerminalThemeChange($any($event.target).value)"
-      >
-        @for (option of terminalThemeOptions; track option.value) {
-          <option [value]="option.value">{{ option.label }}</option>
-        }
-      </select>
-    </div>
+    <app-terminal-theme-choice
+      class="setting-row"
+      selectId="terminal-theme"
+      [label]="text.terminalTheme"
+    />
 
     <div class="setting-row">
       <span class="setting-label" id="terminal-font-size-label">{{ text.terminalFontSize }}</span>

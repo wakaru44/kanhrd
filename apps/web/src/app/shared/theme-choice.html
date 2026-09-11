@@ -1,0 +1,21 @@
+<span class="setting-label" [id]="labelId">{{ label() }}</span>
+<div class="segmented" role="radiogroup" [attr.aria-labelledby]="labelId" #group (keydown)="onKeydown($event)">
+  @for (option of themes; track option.value) {
+    <button
+      type="button"
+      class="segment"
+      role="radio"
+      [class.active]="theme() === option.value"
+      [attr.aria-checked]="theme() === option.value"
+      [attr.tabindex]="theme() === option.value ? 0 : -1"
+      (click)="select(option.value)"
+    >
+      @if (option.value === 'light') {
+        <svg lucideSun class="icon"></svg>
+      } @else {
+        <svg lucideMoon class="icon"></svg>
+      }
+      <span>{{ option.label }}</span>
+    </button>
+  }
+</div>

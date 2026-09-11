@@ -14,10 +14,11 @@ import { test, expect } from './fixtures/kanhrd';
 import { herdrAvailable } from './fixtures/herdr';
 
 /**
- * Dark/light theme toggle (L-UX polish pass). The header exposes a
- * `.theme-toggle` icon button that flips `data-theme` on `<html>` and
- * persists the choice to `localStorage['kanhrd.theme']` — see
- * `src/app/state/theme.service.ts`.
+ * The board's washi/sumi choice. The header's `.theme-toggle` no longer
+ * flips it in one click — it opens the theme panel (`shared/theme-panel`),
+ * which carries a row for the board and a row for the terminal palette. The
+ * board row writes `data-theme` on `<html>` and persists the choice to
+ * `localStorage['kanhrd.theme']` — see `src/app/state/theme.service.ts`.
  */
 
 let preflightReason: string | undefined;
@@ -33,7 +34,7 @@ test.beforeEach(() => {
   test.skip(!!preflightReason, `herdr pre-flight failed: ${preflightReason}`);
 });
 
-test('clicking the header theme toggle switches data-theme and persists across reload', async ({
+test('picking the other theme in the header panel switches data-theme and persists across reload', async ({
   app,
 }) => {
   const html = app.locator('html');
@@ -42,6 +43,9 @@ test('clicking the header theme toggle switches data-theme and persists across r
   const expectedToggled = initial === 'dark' ? 'light' : 'dark';
 
   await app.locator('.theme-toggle').click();
+  const panel = app.locator('.theme-panel');
+  await expect(panel).toBeVisible();
+  await panel.locator('[role="radio"][aria-checked="false"]').click();
 
   // ThemeService applies `data-theme` via an `effect()`, which flushes
   // asynchronously (Angular's zoneless scheduler) — poll rather than
@@ -53,13 +57,23 @@ test('clicking the header theme toggle switches data-theme and persists across r
   await expect(html).toHaveAttribute('data-theme', expectedToggled, { timeout: 3_000 });
 });
 
-test('theme toggle button icon reflects the opposite theme (what clicking it switches to)', async ({
+test('the header control opens the panel instead of toggling, and shows the current theme', async ({
   app,
 }) => {
-  // The glyph became a lucide-angular <svg> icon (L-UX2 icon pass) —
-  // `data-theme-target` on the button carries the same "what clicking this
-  // switches to" fact for assertions, now that there's no text to read.
+  // The glyph is a lucide-angular <svg>, so `data-theme-shown` carries the
+  // fact for assertions. It is the CURRENT theme now, not the target: the
+  // button opens a panel, it does not switch anything.
   const theme = await app.locator('html').getAttribute('data-theme');
-  const expectedTarget = theme === 'dark' ? 'light' : 'dark';
-  await expect(app.locator('.theme-toggle')).toHaveAttribute('data-theme-target', expectedTarget);
+  const trigger = app.locator('.theme-toggle');
+  await expect(trigger).toHaveAttribute('data-theme-shown', theme!);
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+  await trigger.click();
+
+  await expect(app.locator('.theme-panel')).toBeVisible();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(app.locator('html')).toHaveAttribute('data-theme', theme!);
+
+  await app.keyboard.press('Escape');
+  await expect(app.locator('.theme-panel')).toHaveCount(0);
 });

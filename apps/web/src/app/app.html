@@ -10,20 +10,7 @@
   </button>
   <a routerLink="/" class="brand">ka<span class="crook-letter">n</span>hrd</a>
   <span class="header-spacer"></span>
-  <button
-    type="button"
-    class="icon-btn theme-toggle"
-    [attr.data-theme-target]="themeService.theme() === 'dark' ? 'light' : 'dark'"
-    [title]="themeLabel()"
-    [attr.aria-label]="themeLabel()"
-    (click)="toggleTheme()"
-  >
-    @if (themeService.theme() === 'dark') {
-      <svg lucideSun class="icon"></svg>
-    } @else {
-      <svg lucideMoon class="icon"></svg>
-    }
-  </button>
+  <app-theme-panel />
   <a
     routerLink="/settings"
     class="icon-btn"
