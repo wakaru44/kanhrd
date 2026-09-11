@@ -1,0 +1,24 @@
+docs/UX-GUIDELINES.md
+  s_7901944abeeaba::t_99ebd106a3a970 450-455
+  s_7901944abeeaba::t_e444bbdcdb3300 121-130
+  s_7901944abeeaba::t_91a08ab024212b 131-133,447-449
+docs/BRAND.md
+  s_7901944abeeaba::t_fc080367072b6e 113-120,218
+  s_7901944abeeaba::t_ad93ed0e4722af 302,305-309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "56b99a5c846dce72212a6705fd3ab9d0980616a9",
+  "prompts": {},
+  "sessions": {
+    "s_7901944abeeaba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdce5a89-318c-4864-b71b-909fa85af141",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
