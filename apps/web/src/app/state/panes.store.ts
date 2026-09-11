@@ -15,6 +15,7 @@ import type {
 } from '@kanhrd/schema';
 import { WsClient } from './ws-client';
 import { SettingsService, type SwimlaneDimension } from './settings.service';
+import { ParkedStore } from './parked.store';
 
 /** What a bridge that never answers (or errors on) `bridge.capabilities` gets treated as: tier-1, no terminal. */
 export function fallbackCapabilities(): BridgeCapabilities {
@@ -405,24 +406,60 @@ export function applyLifecycleEvent(state: LifecycleState, evt: WsEvent): Lifecy
   }
 }
 
-export function groupByStatus(
+/**
+ * The board's columns after one partition pass: the five status columns,
+ * plus one bucket per user-defined (parked) column.
+ *
+ * Both halves are filtered identically — an excluded host and a hidden
+ * status remove a card from a parked column as surely as from a status
+ * column, so every count still "represents the complete filtered
+ * collection" (docs/UX-GUIDELINES.md). A pane with a membership entry
+ * appears in its parked column and NOWHERE else: parking moves a card, it
+ * does not copy it.
+ */
+export interface BoardColumns {
+  status: Record<AgentStatus, Pane[]>;
+  /** Column id → its cards. A column with no cards keeps its (empty) entry. */
+  parked: ReadonlyMap<string, Pane[]>;
+}
+
+const NO_MEMBERSHIP: ReadonlyMap<PaneKey, string> = new Map();
+
+export function groupIntoColumns(
   panes: Iterable<Pane>,
-  filters: Filters
-): Record<AgentStatus, Pane[]> {
-  const groups: Record<AgentStatus, Pane[]> = {
+  filters: Filters,
+  membership: ReadonlyMap<PaneKey, string> = NO_MEMBERSHIP,
+  parkedColumnIds: readonly string[] = []
+): BoardColumns {
+  const status: Record<AgentStatus, Pane[]> = {
     idle: [],
     working: [],
     blocked: [],
     done: [],
     unknown: [],
   };
+  const parked = new Map<string, Pane[]>(parkedColumnIds.map((id) => [id, []]));
   for (const pane of panes) {
     if (filters.excludedHosts.has(pane.host) || filters.hiddenStatuses.has(pane.agent_status)) {
       continue;
     }
-    groups[pane.agent_status].push(pane);
+    const columnId = membership.get(paneKey(pane.host, pane.id));
+    const bucket = columnId === undefined ? undefined : parked.get(columnId);
+    if (bucket) {
+      bucket.push(pane);
+    } else {
+      status[pane.agent_status].push(pane);
+    }
   }
-  return groups;
+  return { status, parked };
+}
+
+/** The five status columns alone — the board's partition with no parked columns in play. */
+export function groupByStatus(
+  panes: Iterable<Pane>,
+  filters: Filters
+): Record<AgentStatus, Pane[]> {
+  return groupIntoColumns(panes, filters).status;
 }
 
 /** Band key/label for the no-`project` fallback. Rendered last, labelled by `copy.swimlane.ungrouped`. */
@@ -442,6 +479,14 @@ export interface Swimlane {
   /** Band heading as rendered. Empty string for `"all"` and for `"ungrouped"` (the view supplies that one's copy). */
   label: string;
   columns: Record<AgentStatus, Pane[]>;
+  /**
+   * This band's cards per parked column. Every band carries an entry for
+   * EVERY parked column, empty ones included: a parked column is board
+   * furniture, not a property of the cards in a band, so it appears in every
+   * band the way each status column does. Absent only on a band built before
+   * parked columns existed (the store always populates it).
+   */
+  parked?: ReadonlyMap<string, Pane[]>;
 }
 
 function bandOf(
@@ -474,11 +519,19 @@ function bandOf(
 export function groupIntoSwimlanes(
   panes: Iterable<Pane>,
   filters: Filters,
-  dimension: SwimlaneDimension
+  dimension: SwimlaneDimension,
+  membership: ReadonlyMap<PaneKey, string> = NO_MEMBERSHIP,
+  parkedColumnIds: readonly string[] = []
 ): readonly Swimlane[] {
   if (dimension === 'none') {
-    return [{ key: 'all', label: '', columns: groupByStatus(panes, filters) }];
+    const columns = groupIntoColumns(panes, filters, membership, parkedColumnIds);
+    return [{ key: 'all', label: '', columns: columns.status, parked: columns.parked }];
   }
+  // A band is a grouping of CARDS; a parked column is board furniture. So a
+  // parked card bands by its own dimension exactly like any other card, and
+  // every band renders the full parked-column set — empty buckets included,
+  // which is why `parkedColumnIds` is threaded all the way down here rather
+  // than derived from whatever happened to land in the band.
   const bands = new Map<string, { label: string; members: Pane[] }>();
   for (const pane of panes) {
     if (filters.excludedHosts.has(pane.host) || filters.hiddenStatuses.has(pane.agent_status)) {
@@ -495,11 +548,10 @@ export function groupIntoSwimlanes(
   // Every band here holds at least one pane that survived the filter, so the
   // "empty band is not rendered" rule needs no extra pass.
   return [...bands]
-    .map(([key, band]) => ({
-      key,
-      label: band.label,
-      columns: groupByStatus(band.members, filters),
-    }))
+    .map(([key, band]) => {
+      const columns = groupIntoColumns(band.members, filters, membership, parkedColumnIds);
+      return { key, label: band.label, columns: columns.status, parked: columns.parked };
+    })
     .sort((a, b) => {
       if (a.key === UNGROUPED_BAND_KEY) return b.key === UNGROUPED_BAND_KEY ? 0 : 1;
       if (b.key === UNGROUPED_BAND_KEY) return -1;
@@ -539,6 +591,7 @@ const ALL_EVENT_KINDS = [
 export class PanesStore {
   private readonly ws = inject(WsClient);
   private readonly settings = inject(SettingsService);
+  private readonly parked = inject(ParkedStore);
 
   /** Bumped on every successful (re)connect to retrigger the hosts fetch. */
   private readonly connectTick = signal(0);
@@ -653,9 +706,26 @@ export class PanesStore {
     });
   });
 
-  readonly columnsSignal = computed(() =>
-    groupByStatus(this.scopedPanesSignal(), this.filtersSignal())
+  /**
+   * The board's one partition pass: status columns plus the operator's
+   * parked columns, from the same scoped, filtered collection. Parking is a
+   * board arrangement, so it applies on top of the URL scope and the filter
+   * chips rather than beside them — a parked card of an excluded host is as
+   * absent as any other card of that host.
+   */
+  readonly boardColumnsSignal = computed<BoardColumns>(() =>
+    groupIntoColumns(
+      this.scopedPanesSignal(),
+      this.filtersSignal(),
+      this.parked.membership(),
+      this.parked.columns().map((column) => column.id)
+    )
   );
+
+  readonly columnsSignal = computed(() => this.boardColumnsSignal().status);
+
+  /** Cards per parked column id, filtered and scoped like every other column. */
+  readonly parkedPanesSignal = computed(() => this.boardColumnsSignal().parked);
 
   /**
    * The board's bands under the persisted `swimlaneDimension`. With the
@@ -666,7 +736,9 @@ export class PanesStore {
     groupIntoSwimlanes(
       this.scopedPanesSignal(),
       this.filtersSignal(),
-      this.settings.settings().swimlaneDimension
+      this.settings.settings().swimlaneDimension,
+      this.parked.membership(),
+      this.parked.columns().map((column) => column.id)
     )
   );
 
@@ -701,8 +773,22 @@ export class PanesStore {
         workspaces: this.workspacesSignal(),
         tabs: this.tabsSignal(),
       };
+      // The exit rule runs BEFORE the event is applied: it needs the status
+      // the pane is leaving, which only the pre-event map still has. No new
+      // subscription and no extra request — this is the same
+      // `pane.agent_status_changed` frame the board already receives for
+      // every card on every connected host.
+      if (evt.event === 'pane.agent_status_changed') {
+        const payload = evt.payload as BridgeEventPayload['pane.agent_status_changed'];
+        const key = paneKey(payload.host, payload.id);
+        const previous = current.panes.get(key)?.agent_status;
+        if (previous !== undefined) {
+          this.parked.applyAgentStatusChanged(key, previous, payload.agent_status);
+        }
+      }
       const next = applyLifecycleEvent(current, evt);
       if (next.panes !== current.panes) {
+        this.releaseDroppedPanes(current.panes, next.panes);
         this.panesSignal.set(next.panes);
       }
       if (next.workspaces !== current.workspaces) {
@@ -842,8 +928,45 @@ export class PanesStore {
 
   async closePane(host: string, paneId: string) {
     const result = await this.ws.request(host, 'pane.close', { pane_id: paneId });
-    this.panesSignal.update((panes) => applyPaneClosed(panes, { id: paneId, host }));
+    this.purgePanes((panes) => applyPaneClosed(panes, { id: paneId, host }));
     return result;
+  }
+
+  /**
+   * Parked membership belongs to a pane that exists. Every local REMOVAL of
+   * panes — the `pane.closed` event, the cascade purge after a
+   * `tab.closed` / `workspace.closed`, and the optimistic purge each close
+   * action does itself — releases the entries for exactly the keys it
+   * dropped, taken from the map it just computed rather than re-derived
+   * from the tree.
+   *
+   * Nothing releases on a host disconnect, on a pane's absence from a
+   * `pane.list` snapshot, or on any last-seen heuristic: none of those drop
+   * a pane from this map, so a parked card of an unreachable host keeps its
+   * slot, is marked stale like any other card, and returns parked when the
+   * host comes back (design.md, "Pane lifecycle and host disconnect").
+   */
+  private releaseDroppedPanes(current: PaneMap, next: PaneMap): void {
+    if (next.size >= current.size) {
+      return;
+    }
+    const dropped: PaneKey[] = [];
+    for (const key of current.keys()) {
+      if (!next.has(key)) {
+        dropped.push(key);
+      }
+    }
+    this.parked.releasePanes(dropped);
+  }
+
+  private purgePanes(update: (panes: PaneMap) => PaneMap): void {
+    const current = this.panesSignal();
+    const next = update(current);
+    if (next === current) {
+      return;
+    }
+    this.releaseDroppedPanes(current, next);
+    this.panesSignal.set(next);
   }
 
   /**
@@ -894,9 +1017,7 @@ export class PanesStore {
   async closeTab(host: string, tabId: string) {
     const result = await this.ws.request(host, 'tab.close', { tab_id: tabId });
     this.tabsSignal.update((tabs) => removeByKey(tabs, paneKey(host, tabId)));
-    this.panesSignal.update((panes) =>
-      purgeWhere(panes, (p) => p.host === host && p.tab.id === tabId)
-    );
+    this.purgePanes((panes) => purgeWhere(panes, (p) => p.host === host && p.tab.id === tabId));
     return result;
   }
 
@@ -947,7 +1068,7 @@ export class PanesStore {
     this.tabsSignal.update((tabs) =>
       purgeWhere(tabs, (t) => t.host === host && t.workspace.id === workspaceId)
     );
-    this.panesSignal.update((panes) =>
+    this.purgePanes((panes) =>
       purgeWhere(panes, (p) => p.host === host && p.workspace.id === workspaceId)
     );
     return result;

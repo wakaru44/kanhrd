@@ -92,6 +92,26 @@ export interface HerdrPaneInfo {
   display_agent?: string;
   agent_status: AgentStatus;
   revision: number;
+  /**
+   * The pane's own working directory, as herdr reported it. Source:
+   * src/api/schema/panes.rs (`PaneInfo`); observed on every pane of a live
+   * `pane.list`. Optional because it is not in herdr's `required` list and a
+   * herdr build may omit it — the bridge must never assume it is present.
+   *
+   * This is the pane's stable home, not wherever a foreground process has
+   * since `cd`'d; see {@link HerdrPaneInfo.foreground_cwd}.
+   */
+  cwd?: string;
+  /**
+   * The working directory of whatever process currently holds the pane's
+   * foreground, which moves with every `cd` the operator or agent runs.
+   * Same source and same optionality as {@link HerdrPaneInfo.cwd}.
+   *
+   * Declared so the type does not silently drop a field herdr sends. The
+   * bridge deliberately does NOT derive provenance from it: a card grouped
+   * on it would hop bands mid-command.
+   */
+  foreground_cwd?: string;
 }
 
 /**
@@ -247,10 +267,31 @@ export interface Pane {
   title?: string;
   agent?: { name: string };
   /**
-   * Git provenance of the pane's OWNING WORKSPACE, joined by the bridge from
-   * `HerdrWorkspaceDetail.worktree`. Absent when the workspace resolves
-   * outside any repository. `repo_key`/`repo_root` are deliberately not
-   * projected — nothing renders them.
+   * Git provenance of THIS PANE, derived by the bridge from the pane's own
+   * `HerdrPaneInfo.cwd` by walking up to the nearest `.git`. `repo_name` and
+   * `checkout_path` name the directory that holds that `.git`;
+   * `is_linked_worktree` is true when the `.git` is a file (a linked
+   * worktree) rather than a directory. `repo_key`/`repo_root` are
+   * deliberately not projected — nothing renders them.
+   *
+   * The grain is the PANE, not its workspace. One herdr workspace routinely
+   * holds panes in several repositories, and workspace-grain provenance
+   * cannot tell those apart — which is why grouping the board by repository
+   * used to put every card in one band.
+   *
+   * What it does NOT mean:
+   *   - Not the foreground process's directory. It is the pane's `cwd`,
+   *     which does not move when a command `cd`s (`foreground_cwd` does).
+   *   - Not a claim about the branch, remote or repository identity. Only a
+   *     path on the filesystem the bridge can see, and its basename.
+   *   - Not a resolution herdr made. The bridge stats the filesystem itself,
+   *     so a host whose filesystem the bridge does not share resolves
+   *     nothing (or, worse, resolves against its own paths).
+   *
+   * Absent means "the bridge could not vouch for a repository": no `cwd`
+   * from herdr, no `.git` above it, and no `worktree` on the owning
+   * workspace to fall back to. Consumers group such panes as ungrouped and
+   * render no project line rather than guessing.
    */
   project?: {
     repo_name: string;

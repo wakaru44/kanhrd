@@ -5,6 +5,8 @@ import type { AgentStatus, Pane } from '@kanhrd/schema';
 import { COPY } from '../shared/copy';
 import type { Swimlane as SwimlaneBand } from '../state/panes.store';
 import { PanesStore } from '../state/panes.store';
+import { boardColumnRefs } from './column';
+import type { ParkedColumn } from '../state/parked.store';
 import { CHECKOUT_LABEL_MAX, Swimlane, bandLabels, pageIndex } from './swimlane';
 
 /** The cards inside the band's columns reach for the store; nothing here calls it. */
@@ -33,7 +35,8 @@ function paneAt(status: AgentStatus, id: string): Pane {
 function band(
   key: string,
   label: string,
-  panes: Partial<Record<AgentStatus, Pane[]>> = {}
+  panes: Partial<Record<AgentStatus, Pane[]>> = {},
+  parked: ReadonlyMap<string, Pane[]> = new Map()
 ): SwimlaneBand {
   return {
     key,
@@ -46,6 +49,7 @@ function band(
       unknown: [],
       ...panes,
     },
+    parked,
   };
 }
 
@@ -126,7 +130,7 @@ describe('Swimlane component', () => {
       })
     );
     fixture.componentRef.setInput('label', 'local');
-    fixture.componentRef.setInput('statuses', STATUSES);
+    fixture.componentRef.setInput('columns', boardColumnRefs(STATUSES, []));
     fixture.componentRef.setInput('capabilities', new Map());
     fixture.detectChanges();
   });
@@ -138,7 +142,7 @@ describe('Swimlane component', () => {
   it('renders one column per visible status — whatever set it is handed', () => {
     expect(el().querySelectorAll('app-column').length).toBe(5);
 
-    fixture.componentRef.setInput('statuses', ['working', 'blocked']);
+    fixture.componentRef.setInput('columns', boardColumnRefs(['working', 'blocked'], []));
     fixture.detectChanges();
     expect(el().querySelectorAll('app-column').length)
       .withContext('nothing here assumes five status columns')
@@ -157,9 +161,48 @@ describe('Swimlane component', () => {
     );
   });
 
-  it('exposes no drag handle, no drop target and nothing draggable', () => {
+  it('renders every parked column in the band, empty ones included', () => {
+    const archived: ParkedColumn = { id: 'p1', name: 'archived', exitRule: 'never', order: 0 };
+    const parking: ParkedColumn = {
+      id: 'p2',
+      name: 'parking',
+      exitRule: 'agent-activity',
+      order: 1,
+    };
+    fixture.componentRef.setInput(
+      'lane',
+      band(
+        'local',
+        'local',
+        { working: [paneAt('working', 'p1')] },
+        new Map([
+          ['p1', [paneAt('idle', 'p9')]],
+          ['p2', []],
+        ])
+      )
+    );
+    fixture.componentRef.setInput('columns', boardColumnRefs(STATUSES, [archived, parking]));
+    fixture.detectChanges();
+
+    const columns = Array.from(el().querySelectorAll('.column'));
+    expect(columns.length).toBe(7);
+    // Parked columns come after `unknown`, in the operator's order, and the
+    // empty one keeps its slot.
+    expect(columns.slice(5).map((c) => c.getAttribute('data-parked'))).toEqual(['p1', 'p2']);
+    expect(columns[5].querySelector('.column-title')?.textContent?.trim()).toBe('archived');
+    expect(columns[6].querySelector('.count')?.textContent?.trim()).toBe('0');
+    // The band counts its parked cards too — one working card plus one parked.
+    expect(el().querySelector('.swimlane-count')?.textContent?.trim()).toBe('2');
+  });
+
+  it('exposes no drag handle, no enabled drop list and nothing draggable', () => {
+    // The band itself is never draggable and never a drop target; with no
+    // parked column its columns' lists are all disabled (Q1's amended rule).
     expect(el().querySelector("[draggable='true']")).toBeNull();
-    expect(el().querySelector('[cdkDrag], [cdkDropList], .cdk-drag, .cdk-drop-list')).toBeNull();
     expect(el().querySelector('.drag-handle')).toBeNull();
+    expect(el().querySelector('.swimlane.cdk-drag, .swimlane.cdk-drop-list')).toBeNull();
+    for (const list of Array.from(el().querySelectorAll('.cdk-drop-list'))) {
+      expect(list.classList.contains('cdk-drop-list-disabled')).toBeTrue();
+    }
   });
 });

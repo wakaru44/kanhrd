@@ -2,7 +2,13 @@ import { defineConfig } from 'vitest/config';
 
 /**
  * Integration-test config (`pnpm test:int`). Spawns the real bridge as a
- * subprocess against a live local herdr socket — see `integration/README.md`.
+ * subprocess against a **throwaway** herdr session — never the operator's
+ * default socket. See `integration/README.md`.
+ *
+ * `globalSetup`: sweeps leaked `kanhrd-test-*` sessions, starts and seeds
+ * this run's own headless session, and disposes of it on teardown. Without
+ * it the fixtures have no session handoff and refuse to run at all, which is
+ * the point — there is no silent fallback to `~/.config/herdr/herdr.sock`.
  *
  * `fileParallelism: false`: every test file shares the same live herdr
  * server and, in several cases, the same workspace/panes. Running files
@@ -13,6 +19,7 @@ import { defineConfig } from 'vitest/config';
  */
 export default defineConfig({
   test: {
+    globalSetup: ['./integration/fixtures/global-setup.ts'],
     include: ['integration/**/*.test.ts'],
     exclude: ['node_modules/**', 'dist/**'],
     fileParallelism: false,

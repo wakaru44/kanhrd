@@ -157,14 +157,16 @@ jobs:
     name: bridge integration tests
     needs: build
     runs-on: self-hosted
-    # Generic self-hosted runners don't have herdr installed/running. The
-    # suite itself skips gracefully per-file via
+    # Generic self-hosted runners don't have herdr installed. The suite
+    # skips gracefully per-file via
     # apps/bridge/integration/fixtures/require-herdr.ts, so this job stays
     # green ("0 skipped, not 0 failed") rather than red on generic hardware.
     #
-    # If/when a runner with a live herdr server + socket is labeled (e.g.
-    # `kanhrd-herdr-available`), pin this job to it instead so it actually
-    # exercises the suite:
+    # The precondition is the `herdr` CLI, not a running server: the suite
+    # starts and seeds its own throwaway session (see integration/README.md),
+    # so a runner with herdr merely installed exercises it for real. If/when
+    # such a runner is labeled (e.g. `kanhrd-herdr-available`), pin this job
+    # to it:
     #   runs-on: [self-hosted, kanhrd-herdr-available]
     steps:
       - uses: actions/checkout@v4
@@ -189,10 +191,10 @@ jobs:
       - name: check herdr availability
         id: herdr
         run: |
-          if [ -S "$HOME/.config/herdr/herdr.sock" ] && command -v herdr >/dev/null 2>&1; then
-            echo "::notice::herdr socket found — integration suite should run for real"
+          if command -v herdr >/dev/null 2>&1; then
+            echo "::notice::herdr CLI found — the suite will start its own throwaway session and run for real"
           else
-            echo "::warning::herdr not reachable on this runner ($HOME/.config/herdr/herdr.sock missing, or herdr CLI not on PATH) — every integration test file will skip itself. This is expected on generic runners; see job description."
+            echo "::warning::herdr CLI not on PATH — every integration test file will skip itself. This is expected on generic runners; see job description."
           fi
 
       - name: bridge integration tests
@@ -234,10 +236,10 @@ jobs:
 
       - name: check herdr availability
         run: |
-          if [ -S "$HOME/.config/herdr/herdr.sock" ] && command -v herdr >/dev/null 2>&1; then
-            echo "::notice::herdr socket found — e2e suite should run for real"
+          if command -v herdr >/dev/null 2>&1; then
+            echo "::notice::herdr CLI found — the e2e webServer launcher will start its own throwaway session, so the live specs run for real"
           else
-            echo "::warning::herdr not reachable on this runner — apps/web/e2e/fixtures/herdr.ts causes every spec to test.skip() itself. This is expected on generic runners; see job description."
+            echo "::warning::herdr CLI not on PATH — the live specs skip themselves; the mocked specs still run and must pass. This is expected on generic runners; see job description."
           fi
 
       - name: playwright e2e tests

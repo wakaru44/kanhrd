@@ -1,8 +1,70 @@
-import { Component, ElementRef, Signal, computed, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Signal,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { ScrollingModule } from '@angular/cdk/scrolling';
+import { OverlayModule, type ConnectedPosition } from '@angular/cdk/overlay';
+import { CdkDrag, CdkDropList, type CdkDragDrop } from '@angular/cdk/drag-drop';
 import type { AgentStatus, BridgeCapabilities, Pane } from '@kanhrd/schema';
 import { COPY } from '../shared/copy';
+import { LucideMoreHorizontal, LucidePencil } from '../shared/icons';
+import { handleMenuKeydown, menuItems } from '../shared/menu-keys';
+import { ConfirmModal } from '../shared/confirm-modal';
+import { RenameModal } from '../shared/rename-modal';
+import { paneKey } from '../state/panes.store';
+import { EXIT_RULES, ParkedStore, type ExitRule, type ParkedColumn } from '../state/parked.store';
 import { Card } from './card';
+
+/** Ids for `aria-controls`, unique per column instance for the life of the page. */
+let nextColumnMenuId = 0;
+
+/**
+ * One column slot on the board, in either kind. The board and every
+ * swimlane band render the same ordered list of these: the five (visible)
+ * status columns in `STATUS_COLUMN_ORDER`, then the operator's parked
+ * columns in their own order, after `unknown`.
+ *
+ * `key` is the identity the mobile pager, the switcher segment and the
+ * `tabpanel` ids are all built from, so one board page is one column
+ * whichever kind it is.
+ */
+export interface BoardColumnRef {
+  key: string;
+  label: string;
+  status: AgentStatus | null;
+  parked: ParkedColumn | null;
+}
+
+export function parkedColumnKey(id: string): string {
+  return `parked:${id}`;
+}
+
+export function boardColumnRefs(
+  statuses: readonly AgentStatus[],
+  parked: readonly ParkedColumn[]
+): readonly BoardColumnRef[] {
+  return [
+    ...statuses.map((status) => ({
+      key: status as string,
+      label: COPY.status[status],
+      status,
+      parked: null,
+    })),
+    ...parked.map((column) => ({
+      key: parkedColumnKey(column.id),
+      label: column.name,
+      status: null,
+      parked: column,
+    })),
+  ];
+}
 
 /**
  * The two density thresholds are DISTINCT (docs/UX-GUIDELINES.md, "Density
@@ -27,6 +89,23 @@ export function isCompact(count: number, mobile: boolean): boolean {
 
 export function isVirtualized(count: number): boolean {
   return count > VIRTUALIZE_THRESHOLD;
+}
+
+/**
+ * Whether cards on this board are drag sources at all. Pure, because the
+ * karma viewport is permanently below `--breakpoint-mobile` (see this
+ * file's `mobileViewportSignal` note and `column.spec.ts`'s header), so the
+ * enabled half of the rule can only be proven as arithmetic — the same
+ * split `isCompact` already lives under.
+ *
+ * - No user-defined column: nothing to drag INTO, so nothing is a drag
+ *   source (docs/UX-GUIDELINES.md, "Status columns are read-only").
+ * - Below the mobile breakpoint: the board is a one-column-per-screen
+ *   pager, so the destination is never on screen and a horizontal drag
+ *   fights the pager. "Drag-drop must work or not appear."
+ */
+export function canDrag(hasParkedColumns: boolean, mobile: boolean): boolean {
+  return hasParkedColumns && !mobile;
 }
 
 const MOBILE_QUERY = '(max-width: 900px)';
@@ -83,30 +162,194 @@ export function focusCard(
 }
 
 /**
- * One status column.
+ * One board column, in either of the board's two kinds.
  *
- * Status membership is herdr's fact, not the user's: the column exposes no
- * drag handle, no grab cursor and no drop target, and never calls
- * `pane.move` (docs/DESIGN-SYSTEM.md, "Status column"; docs/UX-GUIDELINES.md,
- * "Status columns are read-only"). The former disabled `cdkDropList`/`cdkDrag`
- * scaffold is gone with the "park column" idea it was reserved for — the
- * docs now forbid the affordance outright.
+ * **Status column** (`status` set): membership is herdr's fact, not the
+ * user's. It exposes no drag handle, no grab cursor and no drop target,
+ * carries no header action, and never calls `pane.move`
+ * (docs/DESIGN-SYSTEM.md, "Status column"; docs/UX-GUIDELINES.md, "Status
+ * columns are read-only").
+ *
+ * **Parked column** (`parked` set): membership is the operator's. Its
+ * header adds the exit rule as visible text — legible without opening,
+ * hovering or focusing anything — and a `LucideMoreHorizontal` menu,
+ * visible on first render, carrying the rules as `role="menuitemradio"`
+ * and `remove column`. Nothing about the status header changes.
  */
 @Component({
   selector: 'app-column',
-  imports: [Card, ScrollingModule],
+  imports: [
+    Card,
+    ScrollingModule,
+    OverlayModule,
+    CdkDrag,
+    CdkDropList,
+    LucideMoreHorizontal,
+    LucidePencil,
+    ConfirmModal,
+    RenameModal,
+  ],
   templateUrl: './column.html',
   styleUrl: './column.scss',
 })
 export class Column {
-  readonly status = input.required<AgentStatus>();
+  /** The status this column groups by, or `null` when this is a parked column. */
+  readonly status = input<AgentStatus | null>(null);
+  /** The operator's column, or `null` when this is a status column. */
+  readonly parked = input<ParkedColumn | null>(null);
   readonly panes = input.required<Pane[]>();
   readonly capabilities = input.required<ReadonlyMap<string, BridgeCapabilities>>();
 
   private readonly mobile = mobileViewportSignal();
+  private readonly parkedStore = inject(ParkedStore);
 
+  protected readonly copy = COPY;
   protected readonly itemSize = VIRTUAL_ITEM_SIZE;
-  protected readonly label = computed(() => COPY.status[this.status()]);
+
+  // --- drag and drop (Q1 granted; docs/UX-GUIDELINES.md, "Status columns
+  // are read-only") ------------------------------------------------------
+  //
+  // Three rules, and the code below is only these three:
+  //
+  // 1. Drop targets are user-defined columns ONLY. A status column is a
+  //    drag SOURCE — a card has to start somewhere — but its
+  //    `enterPredicate` refuses every foreign item, so nothing can be
+  //    dropped into it and no drag ever changes a card's status. A card
+  //    dragged out and released over its own column simply goes home.
+  // 2. A card is a drag source only once at least one parked column
+  //    exists. With none the board is the drag-free board it always was:
+  //    every `cdkDrag` is disabled, every list is disabled, and no card
+  //    carries a grab cursor.
+  // 3. Not below `--breakpoint-mobile`. The board is a one-column-per-
+  //    screen pager there, so the destination is never on screen and a
+  //    horizontal drag fights the pager's own scroll. "Drag-drop must work
+  //    or not appear": on a phone it cannot work, so it does not appear.
+  //
+  // Sorting is disabled in every list: neither a status column nor a
+  // parked column persists a per-card order, and a sort animation would
+  // promise one.
+
+  protected readonly dragEnabled = computed(() =>
+    canDrag(this.parkedStore.hasColumns(), this.mobile())
+  );
+
+  /** A parked column receives cards; a status column never does. */
+  protected readonly enterPredicate = (drag: CdkDrag, drop: CdkDropList): boolean =>
+    this.parked() !== null || drag.dropContainer === drop;
+
+  protected onCardDropped(event: CdkDragDrop<unknown>): void {
+    const parked = this.parked();
+    const pane = event.item.data as Pane | undefined;
+    if (!parked || !pane || event.previousContainer === event.container) {
+      return;
+    }
+    this.parkedStore.park(paneKey(pane.host, pane.id), parked.id);
+  }
+  protected readonly label = computed(() => {
+    const parked = this.parked();
+    const status = this.status();
+    return parked ? parked.name : status ? COPY.status[status] : '';
+  });
+
+  // --- parked header ------------------------------------------------------
+
+  protected readonly exitRules = EXIT_RULES;
+
+  /** The rule as a word, rendered in `--ink-mute` beside the name — never colour or an icon alone. */
+  protected ruleLabel(rule: ExitRule): string {
+    return rule === 'never' ? COPY.park.rule.never : COPY.park.rule.agentActivity;
+  }
+
+  protected readonly menuOpen = signal(false);
+  protected readonly showRemoveConfirm = signal(false);
+  protected readonly showRename = signal(false);
+  protected readonly menuId = `column-menu-${nextColumnMenuId++}`;
+
+  /** Below the trigger, right edges aligned; above it when the viewport has no room. */
+  protected readonly menuPositions: ConnectedPosition[] = [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top' },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom' },
+  ];
+
+  private readonly menuEl = viewChild<ElementRef<HTMLElement>>('menu');
+  private readonly menuTrigger = viewChild<ElementRef<HTMLButtonElement>>('menuTrigger');
+
+  protected toggleMenu(): void {
+    this.menuOpen.update((open) => !open);
+  }
+
+  protected closeMenu(refocus = true): void {
+    if (!this.menuOpen()) {
+      return;
+    }
+    this.menuOpen.set(false);
+    if (refocus) {
+      this.menuTrigger()?.nativeElement.focus();
+    }
+  }
+
+  /** The same contract the card's menu has, lifted rather than rewritten (shared/menu-keys.ts). */
+  protected onMenuKeydown(event: KeyboardEvent): void {
+    handleMenuKeydown(event, this.menuEl()?.nativeElement ?? null, () => this.closeMenu());
+  }
+
+  protected chooseRule(rule: ExitRule): void {
+    const parked = this.parked();
+    if (parked) {
+      // From the next event onward: changing the rule never reaches back
+      // over statuses that already happened, so nothing unparks retroactively.
+      this.parkedStore.setExitRule(parked.id, rule);
+    }
+    this.closeMenu();
+  }
+
+  /**
+   * Closing the menu WITH refocus first hands the modal's focus trap the
+   * trigger to return focus to — the same reason the card's rename does it
+   * that way.
+   */
+  protected onRenameClick(): void {
+    this.closeMenu();
+    this.showRename.set(true);
+  }
+
+  /**
+   * A column always has a name, so there is nothing to clear: the dialog's
+   * clear action (an empty value) resets it to the default name rather than
+   * leaving a nameless column on the board.
+   */
+  protected onRenameSaved(name: string | null): void {
+    const parked = this.parked();
+    this.showRename.set(false);
+    if (parked) {
+      this.parkedStore.renameColumn(parked.id, name ?? COPY.park.defaultName);
+    }
+  }
+
+  protected onRemoveClick(): void {
+    this.closeMenu(false);
+    this.showRemoveConfirm.set(true);
+  }
+
+  protected confirmRemove(): void {
+    const parked = this.parked();
+    this.showRemoveConfirm.set(false);
+    if (parked) {
+      this.parkedStore.removeColumn(parked.id);
+    }
+  }
+
+  constructor() {
+    // Opening the menu moves focus into it, the way the card's does; it is
+    // an overlay over the board, so focusing must not scroll the column
+    // under it.
+    effect(() => {
+      const menu = this.menuEl()?.nativeElement;
+      if (this.menuOpen() && menu) {
+        menuItems(menu)[0]?.focus({ preventScroll: true });
+      }
+    });
+  }
   protected readonly compact = computed(() => isCompact(this.panes().length, this.mobile()));
   protected readonly virtualized = computed(() => isVirtualized(this.panes().length));
 

@@ -13,6 +13,29 @@
       <span>{{ copy.nav.backToBoard }}</span>
     </a>
 
+    @if (sharesTab()) {
+      <!--
+        The pointer affordance for `prefix + o`, on the same shared handler.
+        It hops; it never opens or focuses the strip below.
+      -->
+      <button
+        type="button"
+        class="next-card"
+        [attr.aria-label]="copy.nav.nextCard"
+        [title]="copy.nav.nextCard"
+        (click)="goToNextCard()"
+      >
+        <svg lucideSquareSplitHorizontal class="icon" aria-hidden="true"></svg>
+      </button>
+    }
+
+    <!-- workspace / tab. The host is the hanko seal's job, not the breadcrumb's. -->
+    <p class="breadcrumb">
+      <span class="crumb crumb-workspace">{{ workspaceName() }}</span>
+      <span class="crumb-sep" aria-hidden="true">/</span>
+      <span class="crumb crumb-tab">{{ tabName() }}</span>
+    </p>
+
     <h1 class="pane-title" [title]="title()">{{ title() }}</h1>
 
     @if (paneRenameAvailable()) {
@@ -35,6 +58,15 @@
     }
 
     <span class="host-seal">{{ host() }}</span>
+
+    @if (sharesTab()) {
+      <app-card-switcher
+        class="switcher-slot"
+        [siblings]="siblings()"
+        [currentId]="id()"
+        (escaped)="focusTerminal()"
+      />
+    }
 
     <div class="meta-strip">
       <span class="status" [class]="statusKey()">

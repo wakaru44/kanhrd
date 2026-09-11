@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { PanesStore } from '../state/panes.store';
 import { ThemeService } from '../state/theme.service';
 import { SettingsService, type Density } from '../state/settings.service';
+import { ParkedStore } from '../state/parked.store';
 import {
   TERMINAL_THEME_OPTIONS,
   TerminalThemeService,
@@ -39,6 +40,7 @@ export class Settings {
   protected readonly store = inject(PanesStore);
   protected readonly themeService = inject(ThemeService);
   protected readonly settingsService = inject(SettingsService);
+  private readonly parked = inject(ParkedStore);
   protected readonly keyboardService = inject(KeyboardService);
   protected readonly terminalThemeService = inject(TerminalThemeService);
   protected readonly terminalThemeOptions = TERMINAL_THEME_OPTIONS;
@@ -130,7 +132,27 @@ export class Settings {
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminal },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminalFontSize },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearKeyboard },
+    { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearParked },
   ];
+
+  // --- clear parked columns -----------------------------------------------
+  //
+  // The board's user-defined columns live in this browser only (the section
+  // note above says so for everything in here), so this is where they are
+  // cleared. Removing them is the same fact `remove column` states, applied
+  // to all of them at once: the cards go back to their status columns and
+  // nothing on the host changes.
+
+  protected readonly showClearParkedConfirm = signal(false);
+
+  protected requestClearParked(): void {
+    this.showClearParkedConfirm.set(true);
+  }
+
+  protected confirmClearParked(): void {
+    this.showClearParkedConfirm.set(false);
+    this.parked.clear();
+  }
 
   protected requestClearData(): void {
     this.showClearConfirm.set(true);

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startBridge, waitForHostConnected, type RunningBridge } from './fixtures/bridge.js';
 import { IntegrationClient } from './fixtures/ws-client.js';
-import { herdrPaneList, herdrPaneSendText } from './fixtures/herdr-cli.js';
+import { herdrPaneSendText, seededWorld } from './fixtures/herdr-cli.js';
 import { requireHerdrOrSkipReason } from './fixtures/require-herdr.js';
 
 /**
@@ -34,10 +34,10 @@ describe('C. ordering guarantees', () => {
     bridge = await startBridge();
     await waitForHostConnected(bridge, 'local');
     client = await IntegrationClient.connect(bridge.wsUrl);
-    const panes = await herdrPaneList();
     // Use a distinct pane from the ws-methods suite where possible to avoid
     // cross-file content interference; falls back to the only pane if just one exists.
-    panePid = panes[1]?.pane_id ?? panes[0].pane_id;
+    const { paneIds } = seededWorld();
+    panePid = paneIds[1] ?? paneIds[0];
   });
 
   afterAll(async () => {

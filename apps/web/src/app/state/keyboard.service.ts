@@ -21,7 +21,9 @@ export type ShortcutAction =
   | 'help'
   | 'toggle-theme'
   | 'focus-search'
-  | 'close-overlay';
+  | 'close-overlay'
+  | 'focus-card-switcher'
+  | 'next-sibling-card';
 
 export interface ShortcutBinding {
   readonly action: ShortcutAction;
@@ -31,7 +33,45 @@ export interface ShortcutBinding {
   readonly category: ShortcutCategory;
   /** True when this binding requires the prefix chord first. */
   readonly chord: boolean;
+  /**
+   * A second, prefix-free chord for the same action, e.g. `"Ctrl+Alt+I"`.
+   * Only set on actions that must be reachable from inside a live
+   * terminal — see {@link DIRECT_CHORDS}.
+   */
+  readonly direct?: string;
 }
+
+/**
+ * The seam pane detail hands `KeyboardService` so that "which card is
+ * next" has exactly one implementation — the same one the bar's next-card
+ * button presses. `null` whenever pane detail is not mounted.
+ */
+export interface CardSwitcherHandle {
+  /** True when the route's pane shares its tab with at least one other card. */
+  readonly available: () => boolean;
+  /** Move focus to the switcher's current entry. */
+  readonly focus: () => void;
+  /** Navigate to the next sibling card, wrapping past the last. */
+  readonly nextCard: () => void;
+}
+
+/**
+ * Every chord kanhrd recognizes DESPITE a focused input — including
+ * xterm.js's helper textarea. Each entry is a key the program running
+ * inside a pane can no longer receive, so this list is deliberately one
+ * place, readable and removable in one edit.
+ *
+ * `Ctrl+Alt` is the one modifier family herdr's own keyboard
+ * documentation found free across every terminal and desktop it surveyed;
+ * `Ctrl+Alt+I` is on none of its published exceptions (`ctrl+alt+s` is,
+ * which is why the switcher is not on `s`).
+ *
+ * The effective prefix always outranks this list — see `tryDirectChord`.
+ */
+export const DIRECT_CHORDS: readonly {
+  readonly chord: string;
+  readonly action: ShortcutAction;
+}[] = [{ chord: 'Ctrl+Alt+I', action: 'focus-card-switcher' }];
 
 export const DEFAULT_PREFIX = 'Ctrl+B';
 const CHORD_TIMEOUT_MS = 2000;
@@ -72,6 +112,24 @@ const SHORTCUT_LIST: readonly ShortcutBinding[] = [
     action: 'last-tab',
     keys: 'l',
     description: COPY.help.shortcuts.lastTab,
+    category: 'Navigation',
+    chord: true,
+  },
+  {
+    // herdr's and tmux's own meaning for the key: "other pane". It sits
+    // beside the tab movement above because it is its pane-level
+    // counterpart. Chord-only, so it takes no key from the pane.
+    action: 'next-sibling-card',
+    keys: 'o',
+    description: COPY.nav.nextCard,
+    category: 'Navigation',
+    chord: true,
+  },
+  {
+    action: 'focus-card-switcher',
+    keys: 'i',
+    direct: 'Ctrl+Alt+I',
+    description: COPY.nav.cardSwitcher,
     category: 'Navigation',
     chord: true,
   },
@@ -149,7 +207,8 @@ export function formatBinding(binding: ShortcutBinding, prefix: string): string 
   if (binding.action === 'help') {
     return `? or ${prefix} + ?`;
   }
-  return binding.chord ? `${prefix} + ${binding.keys}` : binding.keys;
+  const chord = binding.chord ? `${prefix} + ${binding.keys}` : binding.keys;
+  return binding.direct ? `${chord} or ${binding.direct}` : chord;
 }
 
 /** Pure read, unit-testable without DI — mirrors `loadTheme` in theme.service.ts. */
@@ -220,6 +279,19 @@ export function parsePrefix(prefix: string): ParsedPrefix {
     alt: mods.includes('alt'),
     key,
   };
+}
+
+/** True when two chord strings name the same keystroke, whatever their casing or modifier order. */
+export function sameChord(a: string, b: string): boolean {
+  const x = parsePrefix(a);
+  const y = parsePrefix(b);
+  return (
+    x.key === y.key &&
+    x.ctrl === y.ctrl &&
+    x.meta === y.meta &&
+    x.shift === y.shift &&
+    x.alt === y.alt
+  );
 }
 
 export function matchesPrefix(prefix: string, event: KeyboardEvent): boolean {
@@ -295,8 +367,16 @@ export class KeyboardService {
   /** The tab shown before the current `tabFilterSignal`, for `prefix+l` ("last tab"). Only tracks keyboard-driven switches. */
   private previousTab: { host: string; tabId: string } | null = null;
 
+  /** Set while pane detail is mounted; `null` otherwise. See {@link CardSwitcherHandle}. */
+  private cardSwitcher: CardSwitcherHandle | null = null;
+
   shortcuts(): ReadonlyMap<ShortcutAction, ShortcutBinding> {
     return SHORTCUT_MAP;
+  }
+
+  /** Pane detail registers on mount and passes `null` on destroy. */
+  registerCardSwitcher(handle: CardSwitcherHandle | null): void {
+    this.cardSwitcher = handle;
   }
 
   setPrefix(prefix: string): void {
@@ -323,6 +403,14 @@ export class KeyboardService {
    * itself stays a one-line wire-up.
    */
   handleKeydown(event: KeyboardEvent, activeElement: Element | null): void {
+    // Checked BEFORE the suppression below: a direct chord's whole purpose
+    // is to work from inside a live terminal. An unavailable action falls
+    // straight through untouched — no preventDefault, no stopPropagation.
+    if (this.tryDirectChord(event)) {
+      event.stopPropagation();
+      return;
+    }
+
     if (isTextInputFocused(activeElement)) {
       // The user is typing — including into xterm.js's hidden textarea, so
       // Ctrl+B reaches the terminal instead of arming the prefix chord.
@@ -349,6 +437,49 @@ export class KeyboardService {
     // unrecognized key must reach the page/terminal/extension untouched.
     if (event.defaultPrevented) {
       event.stopPropagation();
+    }
+  }
+
+  /**
+   * The one exception to `isTextInputFocused` suppression. The effective
+   * prefix is never shadowed: a chord equal to it is skipped so the
+   * keystroke arms the prefix instead.
+   */
+  private tryDirectChord(event: KeyboardEvent): boolean {
+    for (const { chord, action } of DIRECT_CHORDS) {
+      if (sameChord(chord, this.prefix()) || !matchesPrefix(chord, event)) {
+        continue;
+      }
+      if (!this.actionAvailable(action)) {
+        return false;
+      }
+      event.preventDefault();
+      this.dispatchAction(action);
+      return true;
+    }
+    return false;
+  }
+
+  /** Whether an action can do anything in the current view. Today only the card-switcher pair is conditional. */
+  private actionAvailable(action: ShortcutAction): boolean {
+    switch (action) {
+      case 'focus-card-switcher':
+      case 'next-sibling-card':
+        return this.cardSwitcher?.available() === true;
+      default:
+        return true;
+    }
+  }
+
+  /** The card-switcher actions, from whichever binding reached them. */
+  private dispatchAction(action: ShortcutAction): void {
+    if (!this.actionAvailable(action)) {
+      return;
+    }
+    if (action === 'focus-card-switcher') {
+      this.cardSwitcher?.focus();
+    } else if (action === 'next-sibling-card') {
+      this.cardSwitcher?.nextCard();
     }
   }
 
@@ -395,6 +526,14 @@ export class KeyboardService {
       case 'w':
         event.preventDefault();
         this.openRailFocused();
+        return;
+      case 'i':
+        event.preventDefault();
+        this.dispatchAction('focus-card-switcher');
+        return;
+      case 'o':
+        event.preventDefault();
+        this.dispatchAction('next-sibling-card');
         return;
       case '&':
         event.preventDefault();

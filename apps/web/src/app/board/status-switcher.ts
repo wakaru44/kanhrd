@@ -1,6 +1,6 @@
 import { Component, ElementRef, computed, input, output, viewChildren } from '@angular/core';
-import type { AgentStatus } from '@kanhrd/schema';
 import { COPY, fill } from '../shared/copy';
+import type { BoardColumnRef } from './column';
 
 /**
  * The mobile status switcher: a persistent segmented control between the
@@ -20,9 +20,13 @@ import { COPY, fill } from '../shared/copy';
   styleUrl: './status-switcher.scss',
 })
 export class StatusSwitcher {
-  /** The visible statuses, already ordered by `STATUS_COLUMN_ORDER`. */
-  readonly statuses = input.required<readonly AgentStatus[]>();
-  /** Card count per visible status, index-aligned with `statuses`. */
+  /**
+   * The visible columns, in board order: status columns first, then the
+   * operator's parked columns. One segment per COLUMN, not per status
+   * (maintainer decision Q6) — a parked column pages like any other.
+   */
+  readonly columns = input.required<readonly BoardColumnRef[]>();
+  /** Card count per visible column, index-aligned with `columns`. */
   readonly counts = input.required<readonly number[]>();
   /** Index into `statuses` of the column the strip is currently resting on. */
   readonly selectedIndex = input.required<number>();
@@ -43,14 +47,10 @@ export class StatusSwitcher {
 
   protected readonly selected = computed(() => this.selectedIndex());
 
-  protected label(status: AgentStatus): string {
-    return COPY.status[status];
-  }
-
   /** `{status} — {count} cards`: the accessible name carries the count for every segment, even though only the selected one shows it. */
-  protected itemLabel(status: AgentStatus, index: number): string {
+  protected itemLabel(column: BoardColumnRef, index: number): string {
     return fill(COPY.nav.statusSwitcherItem, {
-      status: COPY.status[status],
+      status: column.label,
       count: String(this.counts()[index] ?? 0),
     });
   }
@@ -65,7 +65,7 @@ export class StatusSwitcher {
     if (delta === 0) {
       return;
     }
-    const count = this.statuses().length;
+    const count = this.columns().length;
     if (count === 0) {
       return;
     }

@@ -8,7 +8,8 @@ import type { AgentStatus, WsEvent } from '@kanhrd/schema';
 import { Board, SCOPE_RESOLVE_GRACE_MS, nearestVisibleStatus, pageIndex } from './board';
 import { BoardReturnService } from '../state/board-return.service';
 import { COPY } from '../shared/copy';
-import { VIRTUAL_ITEM_SIZE, isCompact, isVirtualized } from './column';
+import { VIRTUAL_ITEM_SIZE, focusCard, isCompact, isVirtualized } from './column';
+import { ParkedStore, loadParked } from '../state/parked.store';
 import { ClockTick } from '../util/clock';
 import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from '../state/panes.store';
 import { WsClient } from '../state/ws-client';
@@ -784,10 +785,20 @@ describe('Board: filter interaction with the pager', () => {
     expect(renderedStatuses()).toEqual(['working', 'blocked', 'idle', 'done', 'unknown']);
   });
 
-  it('exposes no drag affordance on a status column', async () => {
+  it('exposes no drag affordance on a board with no user-defined column', async () => {
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('[cdkDrag], .cdk-drag, .cdk-drop-list, [cdkDropList]')).toBeNull();
+    // The amended rule (docs/UX-GUIDELINES.md assertion 22, Q1): with no
+    // parked column nothing is ENABLED — every card's drag and every list
+    // is off, so no card can be picked up and no column can receive one.
+    for (const card of Array.from(el.querySelectorAll('app-card.cdk-drag'))) {
+      expect(card.classList.contains('cdk-drag-disabled')).withContext('drag off').toBeTrue();
+      expect(getComputedStyle(card).cursor).not.toBe('grab');
+    }
+    for (const list of Array.from(el.querySelectorAll('.cdk-drop-list'))) {
+      expect(list.classList.contains('cdk-drop-list-disabled')).withContext('list off').toBeTrue();
+    }
     expect(el.querySelector('.drag-handle')).toBeNull();
+    expect(el.querySelector("[draggable='true']")).toBeNull();
   });
 });
 
@@ -1233,6 +1244,131 @@ describe('Board: swimlanes', () => {
     expect((fixture.nativeElement as HTMLElement).querySelectorAll('app-card').length).toBe(4);
   });
 
+  // --- parked columns (openspec add-parked-columns) -----------------------
+
+  describe('parked columns', () => {
+    let parked: ParkedStore;
+
+    beforeEach(() => {
+      parked = TestBed.inject(ParkedStore);
+      parked.clear();
+    });
+
+    afterEach(() => {
+      parked.clear();
+      localStorage.removeItem('kanhrd.parked-columns');
+    });
+
+    function columnKinds(root: ParentNode): string[] {
+      return Array.from(root.querySelectorAll('app-column .column')).map(
+        (column) =>
+          column.getAttribute('data-status') ?? `parked:${column.getAttribute('data-parked')}`
+      );
+    }
+
+    it("renders parked columns after `unknown`, in the operator's order", async () => {
+      const archived = parked.createColumn('archived', 'never');
+      const parking = parked.createColumn('parking');
+      await settle(fixture);
+
+      expect(columnKinds(fixture.nativeElement as HTMLElement)).toEqual([
+        'working',
+        'blocked',
+        'idle',
+        'done',
+        'unknown',
+        `parked:${archived.id}`,
+        `parked:${parking.id}`,
+      ]);
+    });
+
+    it('moves a parked card out of its status column, keeping it on the board once', async () => {
+      const column = parked.createColumn('archived', 'never');
+      parked.park('local:p1', column.id);
+      await settle(fixture);
+
+      const el = fixture.nativeElement as HTMLElement;
+      const parkedColumn = el.querySelector(`.column[data-parked="${column.id}"]`)!;
+      expect(parkedColumn.querySelectorAll('app-card').length).toBe(1);
+      expect(el.querySelectorAll('app-card[data-pane="local:p1"]').length).toBe(1);
+      expect(
+        el.querySelector('.column[data-status="working"]')!.querySelectorAll('app-card').length
+      ).toBe(0);
+      // The card is still found by its stable pane identity, wherever it sits.
+      expect(focusCard(el, 'local:p1')).toBeTrue();
+    });
+
+    it('gives the mobile switcher one segment per column, parked included', async () => {
+      const column = parked.createColumn('archived', 'never');
+      await settle(fixture);
+
+      const segments = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.switcher [role="tab"]')
+      );
+      expect(segments.length).toBe(6);
+      expect(segments[5].querySelector('.segment-label')?.textContent?.trim()).toBe('archived');
+      expect(segments[5].id).toBe(`switcher-tab-parked:${column.id}`);
+    });
+
+    it('draws every parked column in every band when grouping is on', async () => {
+      const column = parked.createColumn('archived', 'never');
+      parked.park('local:p1', column.id);
+      settings.setSwimlaneDimension('host');
+      await settle(fixture);
+
+      expect(bands().length).toBe(2);
+      for (const band of bands()) {
+        expect(columnKinds(band)).toEqual([
+          'working',
+          'blocked',
+          'idle',
+          'done',
+          'unknown',
+          `parked:${column.id}`,
+        ]);
+      }
+      // The parked card bands by its own host, like every other card; the
+      // other band shows the same column, empty.
+      expect(
+        bands()[0].querySelector(`.column[data-parked="${column.id}"] app-card`)
+      ).not.toBeNull();
+      expect(bands()[1].querySelector(`.column[data-parked="${column.id}"] app-card`)).toBeNull();
+    });
+
+    it('connects every column in a strip into one drop group, bands included', async () => {
+      parked.createColumn('archived', 'never');
+      await settle(fixture);
+      const el = fixture.nativeElement as HTMLElement;
+
+      // One group per strip: a card can be dragged from a status column
+      // into a parked one without the board hand-wiring list ids, and a
+      // card can never be dragged out of the band it belongs to.
+      expect(el.querySelector('.board-strip[cdkDropListGroup]')).not.toBeNull();
+      const lists = Array.from(el.querySelectorAll('.column-body'));
+      expect(lists.length).toBe(6);
+      for (const list of lists) {
+        expect(list.classList.contains('cdk-drop-list')).toBeTrue();
+      }
+
+      settings.setSwimlaneDimension('host');
+      await settle(fixture);
+      for (const band of bands()) {
+        expect(band.querySelector('.swimlane-strip[cdkDropListGroup]')).not.toBeNull();
+        expect(band.querySelectorAll('.column-body.cdk-drop-list').length).toBe(6);
+      }
+    });
+
+    it('survives a reload of the page-level state: the store re-reads localStorage', async () => {
+      const column = parked.createColumn('archived', 'never');
+      parked.park('local:p1', column.id);
+      TestBed.tick();
+
+      const reloaded = loadParked();
+      expect(reloaded.columns.map((c) => c.name)).toEqual(['archived']);
+      expect(reloaded.membership['local:p1']).toBe(column.id);
+    });
+  });
+
   // --- grouping off: the board is exactly the board ----------------------
 
   it('renders NO band chrome and the single strip when grouping is none', () => {
@@ -1352,12 +1488,17 @@ describe('Board: swimlanes', () => {
     expect(bandLabelsRendered()).toEqual(['local / main', 'remote / main']);
   });
 
-  it('exposes no drag affordance anywhere on a band', async () => {
+  it('exposes no ENABLED drag affordance on a band with no user-defined column', async () => {
     settings.setSwimlaneDimension('host');
     await settle(fixture);
 
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('[cdkDrag], .cdk-drag, .cdk-drop-list, [cdkDropList]')).toBeNull();
+    for (const card of Array.from(el.querySelectorAll('app-card.cdk-drag'))) {
+      expect(card.classList.contains('cdk-drag-disabled')).toBeTrue();
+    }
+    for (const list of Array.from(el.querySelectorAll('.cdk-drop-list'))) {
+      expect(list.classList.contains('cdk-drop-list-disabled')).toBeTrue();
+    }
     expect(el.querySelector('.drag-handle')).toBeNull();
     for (const band of bands()) {
       expect(band.getAttribute('draggable')).toBeNull();

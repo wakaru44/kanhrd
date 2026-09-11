@@ -44,10 +44,15 @@ export class WorkspaceTabNameCache {
 
   async refresh(client: HerdrClient): Promise<void> {
     const [workspaceResult, tabResult] = await Promise.all([
-      // Typed as the RICH `HerdrWorkspaceDetail` — herdr's `workspace.list`
-      // has always returned whole `WorkspaceInfo` objects (`worktree` and
-      // `tokens` included); the trim to `HerdrWorkspaceInfo` was ours, at
-      // the type and at this Map's value. No new request is made.
+      // Typed as the RICH `HerdrWorkspaceDetail` — the trim to
+      // `HerdrWorkspaceInfo` was ours, at the type and at this Map's value.
+      // No new request is made.
+      //
+      // `worktree` is OPTIONAL and, on the herdr builds seen so far, simply
+      // absent: `workspace.list` and `workspace.get` both return workspaces
+      // with no `worktree` field at all. So this is a fallback path, not the
+      // provenance source — panes carry their own `cwd` and `projectPane`
+      // resolves the repository from that (see `repo.ts`).
       client.request<{ workspaces: HerdrWorkspaceDetail[] }>('workspace.list'),
       client.request<{ tabs: HerdrTabInfo[] }>('tab.list'),
     ]);

@@ -110,6 +110,15 @@ product copy and stay in the template.
 | `emptyState.notFoundAction`           | `back to the board`                                                                                                                           |
 | `emptyState.scopeUnavailable`         | `that workspace is no longer here.`                                                                                                           |
 | `column.empty`                        | `0`                                                                                                                                           |
+| `card.park`                           | `park in…`                                                                                                                                    |
+| `card.unpark`                         | `unpark`                                                                                                                                      |
+| `park.newColumn`                      | `new column…`                                                                                                                                 |
+| `park.defaultName`                    | `parked`                                                                                                                                      |
+| `park.rule.never`                     | `never`                                                                                                                                       |
+| `park.rule.agentActivity`             | `on agent activity`                                                                                                                           |
+| `park.renameColumn`                   | `rename column`                                                                                                                               |
+| `park.removeColumn`                   | `remove column`                                                                                                                               |
+| `park.removeColumnBody`               | `the cards go back to their status columns. nothing on the host changes.`                                                                     |
 | `confirm.closePane`                   | `let this one rest?`                                                                                                                          |
 | `confirm.closePaneBody`               | `closing ends this session. the terminal and anything running in it stop. this cannot be undone.`                                             |
 | `confirm.closePaneAction`             | `rest`                                                                                                                                        |
@@ -207,6 +216,7 @@ product copy and stay in the template.
 | `settings.data`                       | `data`                                                                                                                                        |
 | `settings.dataNote`                   | `everything kanhrd keeps in this browser. no host and no bridge is touched.`                                                                  |
 | `settings.clearData`                  | `clear local data`                                                                                                                            |
+| `settings.clearParked`                | `clear parked columns`                                                                                                                        |
 | `settings.clearTitle`                 | `clear what this browser remembers?`                                                                                                          |
 | `settings.clearBody`                  | `this removes kanhrd's saved settings from this browser and reloads the page. no host, session or bridge is affected. this cannot be undone.` |
 | `settings.clearAction`                | `clear`                                                                                                                                       |
@@ -290,10 +300,14 @@ names, and in any error text that quotes a wire response.
 | **card** (on the board)   | pane          | the board's representation of a pane              |
 | **pane** (in detail view) | pane          | the technical view keeps the engineering register |
 | **status column**         | agent status  | a board grouping derived from `agent_status`      |
+| **parked column**         | —             | a column the operator makes and drags cards into  |
 | **swimlane** (**lane**)   | —             | a horizontal band grouping cards by a dimension   |
 
-A card is a pane. The last two rows name things herdr has no concept of;
-they are the board's own furniture and take kanban's words.
+A card is a pane. The last three rows name things herdr has no concept
+of; they are the board's own furniture and take kanban's words. A status
+column is agent-defined — membership follows `agent_status`; a parked
+column is user-defined — membership is the operator's, and a card leaves
+only under the column's exit rule.
 
 ### "lane" means one thing
 

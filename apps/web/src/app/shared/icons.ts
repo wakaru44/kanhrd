@@ -5,6 +5,7 @@ import {
   LucideCheck,
   LucideChevronRight,
   LucideCopy,
+  LucideGalleryHorizontal,
   LucideInfo,
   LucideMenu,
   LucideMoon,
@@ -13,6 +14,7 @@ import {
   LucidePlus,
   LucideRefreshCw,
   LucideSettings,
+  LucideSquareSplitHorizontal,
   LucideSun,
   LucideTriangleAlert,
   LucideUnplug,
@@ -20,7 +22,7 @@ import {
 } from '@lucide/angular';
 
 /**
- * The app's icon set: the eighteen `@lucide/angular` components pinned by
+ * The app's icon set: the twenty `@lucide/angular` components pinned by
  * the icon list in `docs/DESIGN-SYSTEM.md`. Components import from here,
  * never from `@lucide/angular` directly, so the sanctioned set is one
  * import away and one grep wide.
@@ -69,6 +71,10 @@ export {
   LucideRefreshCw,
   /** disconnected host, stale marker — `svg[lucideUnplug]` */
   LucideUnplug,
+  /** card switcher on the terminal bar — `svg[lucideGalleryHorizontal]` */
+  LucideGalleryHorizontal,
+  /** next card in this tab — `svg[lucideSquareSplitHorizontal]` */
+  LucideSquareSplitHorizontal,
 };
 
 /**
@@ -95,12 +101,14 @@ export const KANHRD_ICONS = [
   LucideCopy,
   LucideRefreshCw,
   LucideUnplug,
+  LucideGalleryHorizontal,
+  LucideSquareSplitHorizontal,
 ] as const;
 
 /**
- * The set is eighteen icons. A nineteenth is a change to
+ * The set is twenty icons. A twenty-first is a change to
  * `docs/DESIGN-SYSTEM.md` first — this line breaks the build until the
  * count here is deliberately updated to match.
  */
-const ICON_COUNT: 18 = KANHRD_ICONS.length;
+const ICON_COUNT: 20 = KANHRD_ICONS.length;
 void ICON_COUNT;

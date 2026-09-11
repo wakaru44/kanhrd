@@ -1,6 +1,7 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { AgentStatus } from '@kanhrd/schema';
+import { boardColumnRefs } from './column';
 import { StatusSwitcher } from './status-switcher';
 
 /**
@@ -14,7 +15,9 @@ describe('StatusSwitcher', () => {
   let fixture: ComponentFixture<StatusSwitcher>;
 
   function render(statuses: AgentStatus[], counts: number[], selectedIndex: number): void {
-    fixture.componentRef.setInput('statuses', statuses);
+    // One segment per COLUMN, and a status column's key is its status, so
+    // every assertion below reads exactly as it did before parked columns.
+    fixture.componentRef.setInput('columns', boardColumnRefs(statuses, []));
     fixture.componentRef.setInput('counts', counts);
     fixture.componentRef.setInput('selectedIndex', selectedIndex);
     fixture.detectChanges();
@@ -107,6 +110,28 @@ describe('StatusSwitcher', () => {
     render(['working', 'blocked', 'done'], [3, 1, 0], 2);
     list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(emitted[emitted.length - 1]).toBe(0);
+  });
+
+  it('carries a parked column as a segment of its own, after the statuses', () => {
+    fixture.componentRef.setInput(
+      'columns',
+      boardColumnRefs(
+        ['working', 'done'],
+        [{ id: 'p1', name: 'archived', exitRule: 'never', order: 0 }]
+      )
+    );
+    fixture.componentRef.setInput('counts', [2, 0, 5]);
+    fixture.componentRef.setInput('selectedIndex', 2);
+    fixture.detectChanges();
+
+    expect(tabs().map((t) => t.querySelector('.segment-label')?.textContent?.trim())).toEqual([
+      'working',
+      'done',
+      'archived',
+    ]);
+    expect(tabs()[2].id).toBe('switcher-tab-parked:p1');
+    expect(tabs()[2].getAttribute('aria-controls')).toBe('column-panel-parked:p1');
+    expect(tabs()[2].getAttribute('aria-label')).toBe('archived — 5 cards');
   });
 
   it('ignores keys that are not left/right', () => {

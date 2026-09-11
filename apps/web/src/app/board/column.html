@@ -3,13 +3,88 @@
   (focusin)="onFocusIn($event)"
   (focusout)="onFocusOut($event)"
   [attr.data-status]="status()"
+  [attr.data-parked]="parked()?.id ?? null"
   [class.compact]="compact()"
 >
   <header class="column-header">
     <h2 class="column-title">{{ label() }}</h2>
     <span class="count">{{ panes().length }}</span>
+    @if (parked(); as column) {
+      <!--
+        The exit rule is readable without opening anything: a word in
+        `--ink-mute`, beside the count. The menu below changes it; it is
+        never the only way to know what it is.
+      -->
+      <span class="exit-rule">{{ ruleLabel(column.exitRule) }}</span>
+      <div class="column-menu" (keydown)="onMenuKeydown($event)">
+        <button
+          type="button"
+          class="column-menu-trigger"
+          #menuTrigger
+          cdkOverlayOrigin
+          #menuOrigin="cdkOverlayOrigin"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="menuOpen()"
+          [attr.aria-controls]="menuOpen() ? menuId : null"
+          [attr.aria-label]="copy.nav.moreActions + ' — ' + column.name"
+          (click)="toggleMenu()"
+        >
+          <svg lucideMoreHorizontal class="icon"></svg>
+        </button>
+        <ng-template
+          cdkConnectedOverlay
+          [cdkConnectedOverlayOrigin]="menuOrigin"
+          [cdkConnectedOverlayOpen]="menuOpen()"
+          [cdkConnectedOverlayPositions]="menuPositions"
+          [cdkConnectedOverlayPush]="true"
+        >
+          <div
+            class="column-overflow-menu"
+            role="menu"
+            #menu
+            [id]="menuId"
+            (keydown)="onMenuKeydown($event)"
+            [attr.aria-label]="copy.nav.moreActions + ' — ' + column.name"
+          >
+            <button type="button" role="menuitem" class="rename" (click)="onRenameClick()">
+              <svg lucidePencil class="icon"></svg>{{ copy.park.renameColumn }}
+            </button>
+            @for (rule of exitRules; track rule) {
+              <button
+                type="button"
+                role="menuitemradio"
+                class="exit-rule-item"
+                [attr.aria-checked]="rule === column.exitRule"
+                (click)="chooseRule(rule)"
+              >
+                {{ ruleLabel(rule) }}
+              </button>
+            }
+            <button type="button" role="menuitem" class="remove" (click)="onRemoveClick()">
+              {{ copy.park.removeColumn }}
+            </button>
+          </div>
+        </ng-template>
+      </div>
+    }
   </header>
-  <div class="column-body" [class.is-empty]="panes().length === 0">
+  <!--
+    Every column is a drop LIST, because a card has to be dragged out of
+    somewhere; only a parked column is a drop TARGET. `enterPredicate`
+    refuses every foreign item on a status column, and both kinds disable
+    sorting (no column persists a per-card order). With no parked column
+    on the board — or below the mobile breakpoint — the whole thing is
+    disabled and the board is the drag-free board it always was.
+  -->
+  <div
+    class="column-body"
+    cdkDropList
+    [class.is-empty]="panes().length === 0"
+    [cdkDropListDisabled]="!dragEnabled()"
+    [cdkDropListSortingDisabled]="true"
+    [cdkDropListEnterPredicate]="enterPredicate"
+    (cdkDropListDropped)="onCardDropped($event)"
+  >
     @if (virtualized()) {
       <cdk-virtual-scroll-viewport
         [itemSize]="itemSize"
@@ -18,6 +93,9 @@
       >
         <app-card
           *cdkVirtualFor="let pane of panes(); trackBy: trackPane; let i = index"
+          cdkDrag
+          [cdkDragData]="pane"
+          [cdkDragDisabled]="!dragEnabled()"
           [attr.data-pane]="trackPane(0, pane)"
           [pane]="pane"
           [capabilities]="capabilities()"
@@ -28,6 +106,9 @@
     } @else {
       @for (pane of panes(); track trackPane($index, pane)) {
         <app-card
+          cdkDrag
+          [cdkDragData]="pane"
+          [cdkDragDisabled]="!dragEnabled()"
           [attr.data-pane]="trackPane($index, pane)"
           [pane]="pane"
           [capabilities]="capabilities()"
@@ -38,3 +119,26 @@
     }
   </div>
 </section>
+
+@if (showRename()) {
+  @if (parked(); as column) {
+    <app-rename-modal
+      [initialValue]="column.name"
+      [title]="copy.park.renameColumn"
+      [fieldLabel]="copy.park.renameColumn"
+      (saved)="onRenameSaved($event)"
+      (cancelled)="showRename.set(false)"
+    />
+  }
+}
+
+@if (showRemoveConfirm()) {
+  <app-confirm-modal
+    [title]="copy.park.removeColumn"
+    [body]="copy.park.removeColumnBody"
+    [confirmLabel]="copy.park.removeColumn"
+    [cancelLabel]="copy.confirm.cancel"
+    (confirmed)="confirmRemove()"
+    (cancelled)="showRemoveConfirm.set(false)"
+  />
+}

@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, Subject, of } from 'rxjs';
 import type { HostSummary, Pane, WsEvent } from '@kanhrd/schema';
-import { PaneDetail } from './pane-detail';
+import { PaneDetail, nextSiblingCard } from './pane-detail';
 import { BoardReturnService } from '../state/board-return.service';
 import { COPY } from '../shared/copy';
 import { PanesStore } from '../state/panes.store';
@@ -118,6 +118,190 @@ describe('PaneDetail metadata strip — project provenance', () => {
     const el = await renderWith({ label: 'fix the backlog storm', agent: { name: 'claude' } });
 
     expect(el.querySelector('.pane-title')?.textContent?.trim()).toBe('fix the backlog storm');
+  });
+});
+
+/**
+ * The top bar: the workspace / tab breadcrumb, the sibling-card switcher and
+ * the next-card button. All three are derived from panes already in
+ * `PanesStore` — the assertions below include the one that says so (no
+ * request beyond the existing `pane.read` / `pane.subscribe_output` pair).
+ *
+ * karma's viewport sits permanently below `--breakpoint-mobile`, so every
+ * render here IS the phone case: a switcher that failed maintainer decision
+ * D1 by hiding at phone width would fail these tests, not pass them.
+ */
+describe('PaneDetail top bar', () => {
+  let ws: FakeWsClient;
+  let fixture: ComponentFixture<PaneDetail>;
+  let panes: Map<string, Pane>;
+
+  function pane(id: string, over: Partial<Pane> = {}): Pane {
+    return {
+      id,
+      host: 'laptop',
+      workspace: { id: 'w1', name: 'kanhrd' },
+      tab: { id: 't1', name: 'build' },
+      agent_status: 'idle',
+      ...over,
+    };
+  }
+
+  async function render(list: Pane[], currentId = 'pane-1'): Promise<HTMLElement> {
+    ws = new FakeWsClient();
+    panes = new Map(list.map((p) => [`${p.host}:${p.id}`, p]));
+
+    await TestBed.configureTestingModule({
+      imports: [PaneDetail],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WsClient, useValue: ws },
+        {
+          provide: PanesStore,
+          useValue: {
+            panesSignal: () => panes,
+            capabilitiesSignal: () => new Map(),
+            hostsSignal: () => [{ name: 'laptop', connected: true }],
+            tabsSignal: () => new Map(),
+            tabFilterSignal: () => null,
+            scopeSignal: () => null,
+            primaryHostKeybinds: () => null,
+          },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { paramMap: of(convertToParamMap({ host: 'laptop', id: currentId })) },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PaneDetail);
+    const root = fixture.nativeElement as HTMLElement;
+    root.style.display = 'block';
+    root.style.height = '400px';
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+    return root;
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  // --- breadcrumb --------------------------------------------------------
+
+  it('shows workspace / tab, and leaves the host to the seal', async () => {
+    const el = await render([pane('pane-1')]);
+
+    expect(el.querySelector('.breadcrumb .crumb-workspace')?.textContent?.trim()).toBe('kanhrd');
+    expect(el.querySelector('.breadcrumb .crumb-tab')?.textContent?.trim()).toBe('build');
+    expect(el.querySelector('.breadcrumb')?.textContent).not.toContain('laptop');
+    expect(el.querySelector('.host-seal')?.textContent?.trim()).toBe('laptop');
+  });
+
+  it('collapses the breadcrumb to the tab name below the mobile breakpoint', async () => {
+    const el = await render([pane('pane-1')]);
+
+    // karma's viewport is below `--breakpoint-mobile`, so this IS the phone case.
+    expect(window.innerWidth).toBeLessThan(900);
+    expect(getComputedStyle(el.querySelector('.crumb-workspace') as Element).display).toBe('none');
+    expect(getComputedStyle(el.querySelector('.crumb-sep') as Element).display).toBe('none');
+    expect(getComputedStyle(el.querySelector('.crumb-tab') as Element).display).not.toBe('none');
+  });
+
+  // --- sibling derivation ------------------------------------------------
+
+  it('derives siblings from the store alone, with no request beyond the pane it is showing', async () => {
+    const el = await render([pane('pane-1'), pane('pane-2')]);
+
+    expect(el.querySelectorAll('app-card-switcher a.entry').length).toBe(2);
+    const methods = new Set(ws.request.calls.allArgs().map(([, method]) => method as string));
+    expect(methods).toEqual(new Set(['pane.read', 'pane.subscribe_output']));
+  });
+
+  it('excludes a pane in another tab and a pane on another host', async () => {
+    const el = await render([
+      pane('pane-1'),
+      pane('pane-2'),
+      pane('elsewhere', { tab: { id: 't2', name: 'other' } }),
+      pane('remote', { host: 'server' }),
+    ]);
+
+    const hrefs = Array.from(
+      el.querySelectorAll<HTMLAnchorElement>('app-card-switcher a.entry')
+    ).map((a) => a.getAttribute('href'));
+    expect(hrefs).toEqual(['/pane/laptop/pane-1', '/pane/laptop/pane-2']);
+  });
+
+  it('renders no switcher and no next-card button for a tab of one', async () => {
+    const el = await render([pane('pane-1')]);
+
+    expect(el.querySelector('app-card-switcher')).toBeNull();
+    expect(el.querySelector('.next-card')).toBeNull();
+  });
+
+  // --- the switcher on the bar -------------------------------------------
+
+  it('renders the switcher at phone width, with the back control still first and visible', async () => {
+    const el = await render([pane('pane-1'), pane('pane-2'), pane('pane-3')]);
+
+    expect(el.querySelector('app-card-switcher')).not.toBeNull();
+    const focusable = el.querySelectorAll('header a, header button');
+    expect(focusable[0]).toBe(el.querySelector('header .back') as Element);
+    // The strip scrolls, not the page.
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth
+    );
+  });
+
+  it('leaves the terminal a non-zero box once the header has grown a switcher row', async () => {
+    const withSwitcher = await render([pane('pane-1'), pane('pane-2')]);
+    const container = withSwitcher.querySelector('.terminal-container') as HTMLElement;
+
+    expect(withSwitcher.querySelector('header')?.getBoundingClientRect().height).toBeGreaterThan(0);
+    expect(container.getBoundingClientRect().height).toBeGreaterThan(0);
+  });
+
+  // --- the next-card button ----------------------------------------------
+
+  it('hops to the other card in a tab of two, and says so in words', async () => {
+    const el = await render([pane('pane-1'), pane('pane-2')]);
+    const navigate = spyOn(TestBed.inject(Router), 'navigate');
+    const button = el.querySelector('.next-card') as HTMLButtonElement;
+
+    expect(button.getAttribute('aria-label')).toBe(COPY.nav.nextCard);
+    expect(button.querySelector('svg')).not.toBeNull();
+
+    button.click();
+
+    expect(navigate).toHaveBeenCalledWith(['/pane', 'laptop', 'pane-2']);
+  });
+
+  it('lands two presses where two prefix+o presses land, and wraps past the last', async () => {
+    const three = [pane('pane-1'), pane('pane-2'), pane('pane-3')];
+
+    expect(nextSiblingCard(three, 'pane-1')?.id).toBe('pane-2');
+    expect(nextSiblingCard(three, 'pane-2')?.id).toBe('pane-3');
+    expect(nextSiblingCard(three, 'pane-3')?.id).toBe('pane-1');
+    expect(nextSiblingCard([three[0]], 'pane-1')).toBeNull();
+
+    // And the button is wired to that same function, not to a second answer.
+    const el = await render(three, 'pane-3');
+    const navigate = spyOn(TestBed.inject(Router), 'navigate');
+    (el.querySelector('.next-card') as HTMLButtonElement).click();
+    expect(navigate).toHaveBeenCalledWith(['/pane', 'laptop', 'pane-1']);
+  });
+
+  it('keeps the next-card button at the touch minimum under a coarse pointer', async () => {
+    // headless Chrome reports a fine pointer; the Playwright `mobile` project
+    // measures the real box. The rule's presence is what is asserted here.
+    await render([pane('pane-1'), pane('pane-2')]);
+    const styles = (
+      (PaneDetail as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles ?? []
+    ).join('');
+
+    expect(styles).toContain('.next-card');
+    expect(styles).toMatch(/pointer: ?coarse/);
+    expect(styles).toContain('var(--touch-target-min)');
   });
 });
 

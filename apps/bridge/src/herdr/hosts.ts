@@ -32,6 +32,7 @@ import {
 import { WorkspaceTabNameCache } from './names.js';
 import { herdrConfigDir, resolveHostKeybinds, type HostKeybinds } from './keybinds.js';
 import { projectPane, projectTab, projectWorkspace } from './project.js';
+import { clearRepoCache } from './repo.js';
 import { HostMutationQueue, PaneWriteQueue } from './write-queue.js';
 
 const MIN_BACKOFF_MS = 1000;
@@ -552,6 +553,10 @@ export class HostRuntime extends EventEmitter {
    */
   private async connectOnce(): Promise<void> {
     try {
+      // A reconnect re-resolves repository provenance from scratch: a
+      // checkout may have moved, vanished or become a linked worktree while
+      // the bridge was away.
+      clearRepoCache();
       await this.names.refresh(this.client);
       const paneList = await this.client.request<{ panes: HerdrPaneInfo[] }>('pane.list');
       // `seeding: true` — every pane in this first list was already holding

@@ -11,10 +11,11 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
+import { CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
-import type { AgentStatus } from '@kanhrd/schema';
+import type { AgentStatus, Pane } from '@kanhrd/schema';
 import {
   LucidePlus,
   LucideRefreshCw,
@@ -25,7 +26,14 @@ import {
 import { COPY } from '../shared/copy';
 import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from '../state/panes.store';
 import { SettingsService } from '../state/settings.service';
-import { Column, focusCard, mobileViewportSignal } from './column';
+import {
+  Column,
+  boardColumnRefs,
+  focusCard,
+  mobileViewportSignal,
+  type BoardColumnRef,
+} from './column';
+import { ParkedStore } from '../state/parked.store';
 import { Swimlane, bandLabels, pageIndex } from './swimlane';
 import { FilterBar } from './filter-bar';
 import { StatusSwitcher } from './status-switcher';
@@ -84,6 +92,7 @@ export function nearestVisibleStatus(
   selector: 'app-board',
   imports: [
     Column,
+    CdkDropListGroup,
     Swimlane,
     FilterBar,
     Rail,
@@ -112,6 +121,10 @@ export class Board implements OnDestroy {
   protected readonly skeletonRows = SKELETON_ROWS;
   protected readonly statusOrder = STATUS_COLUMN_ORDER;
   protected readonly columns = this.store.columnsSignal;
+  private readonly parked = inject(ParkedStore);
+  /** The operator's columns, left to right. Rendered after `unknown`, never before it. */
+  protected readonly parkedColumns = this.parked.columns;
+  protected readonly parkedPanes = this.store.parkedPanesSignal;
   /**
    * The bands. Under dimension `none` this is a single `"all"` band the
    * board deliberately does NOT render through `app-swimlane`: grouping off
@@ -147,7 +160,7 @@ export class Board implements OnDestroy {
   // Below `--breakpoint-mobile` the board is a one-column-per-screen pager
   // (docs/UX-GUIDELINES.md, "Board paging model"). The strip's scroll
   // position and the switcher's selection are the same state: a swipe writes
-  // `currentStatus` from `Math.round(scrollLeft / clientWidth)`, a tap writes
+  // `currentKey` from `Math.round(scrollLeft / clientWidth)`, a tap writes
   // it directly and scrolls the strip to match.
 
   private readonly strip = viewChild<ElementRef<HTMLElement>>('strip');
@@ -159,20 +172,37 @@ export class Board implements OnDestroy {
     return STATUS_COLUMN_ORDER.filter((status) => !hidden.has(status));
   });
 
-  /** Card count per visible status, index-aligned with `visibleStatuses`. */
-  protected readonly visibleCounts = computed(() =>
-    this.visibleStatuses().map((status) => this.columns()[status].length)
+  /**
+   * Every column the board draws, in order: the visible status columns
+   * first, then the operator's parked columns. One list for the desktop
+   * grid, the mobile pager and the switcher, so a parked column is a page
+   * like any other.
+   */
+  protected readonly visibleColumns = computed<readonly BoardColumnRef[]>(() =>
+    boardColumnRefs(this.visibleStatuses(), this.parkedColumns())
   );
 
-  private readonly currentStatus = signal<AgentStatus>(STATUS_COLUMN_ORDER[0]);
+  /** Card count per visible column, index-aligned with `visibleColumns`. */
+  protected readonly visibleCounts = computed(() =>
+    this.visibleColumns().map((column) => this.panesFor(column).length)
+  );
+
+  protected panesFor(column: BoardColumnRef): Pane[] {
+    return column.parked
+      ? (this.parkedPanes().get(column.parked.id) ?? [])
+      : (this.columns()[column.status!] ?? []);
+  }
+
+  /** The column the pager rests on, by `BoardColumnRef.key`. */
+  private readonly currentKey = signal<string>(STATUS_COLUMN_ORDER[0]);
 
   protected readonly currentIndex = computed(() => {
-    const index = this.visibleStatuses().indexOf(this.currentStatus());
+    const index = this.visibleColumns().findIndex((column) => column.key === this.currentKey());
     return index < 0 ? 0 : index;
   });
 
-  /** Every status hidden: the pager is replaced by the no-matches empty state, not left blank. */
-  protected readonly noMatches = computed(() => this.visibleStatuses().length === 0);
+  /** Nothing to page through at all: the no-matches empty state, not a blank page. */
+  protected readonly noMatches = computed(() => this.visibleColumns().length === 0);
 
   /** Hosts that are configured but currently unreachable — content stays, marked stale. */
   protected readonly staleHosts = computed(() =>
@@ -185,11 +215,11 @@ export class Board implements OnDestroy {
 
   /** Tapping a segment pages the strip; `scroll-snap` does the settling. */
   protected selectStatus(index: number): void {
-    const status = this.visibleStatuses()[index];
-    if (!status) {
+    const column = this.visibleColumns()[index];
+    if (!column) {
       return;
     }
-    this.currentStatus.set(status);
+    this.currentKey.set(column.key);
     this.scrollToIndex(index);
   }
 
@@ -218,9 +248,9 @@ export class Board implements OnDestroy {
       return;
     }
     const index = pageIndex(element.scrollLeft, element.clientWidth);
-    const status = this.visibleStatuses()[index];
-    if (status && status !== this.currentStatus()) {
-      this.currentStatus.set(status);
+    const column = this.visibleColumns()[index];
+    if (column && column.key !== this.currentKey()) {
+      this.currentKey.set(column.key);
     }
   }
 
@@ -332,12 +362,23 @@ export class Board implements OnDestroy {
     // Keep the pager on a column that exists: hiding the shown status pages
     // to the nearest visible column to its left, never to a hidden or blank
     // page. Un-hiding re-inserts a column without moving the current page,
-    // because `currentStatus` is untouched when it is still visible.
+    // because `currentKey` is untouched when its column is still visible.
     effect(() => {
-      const visible = this.visibleStatuses();
-      const next = nearestVisibleStatus(this.currentStatus(), visible);
-      if (next && next !== this.currentStatus()) {
-        this.currentStatus.set(next);
+      const columns = this.visibleColumns();
+      const current = this.currentKey();
+      if (columns.some((column) => column.key === current)) {
+        return;
+      }
+      // A status column that was hidden pages to the nearest visible status
+      // to its left, as it always has. A parked column that was removed has
+      // no such gradient to walk, so the pager falls back to the first
+      // column on the board.
+      const status = STATUS_COLUMN_ORDER.includes(current as AgentStatus)
+        ? nearestVisibleStatus(current as AgentStatus, this.visibleStatuses())
+        : null;
+      const next = status ?? columns[0]?.key ?? null;
+      if (next) {
+        this.currentKey.set(next);
       }
     });
 
@@ -401,9 +442,9 @@ export class Board implements OnDestroy {
         return;
       }
       element.scrollLeft = scrollLeft;
-      const status = this.visibleStatuses()[pageIndex(scrollLeft, element.clientWidth)];
-      if (status) {
-        this.currentStatus.set(status);
+      const column = this.visibleColumns()[pageIndex(scrollLeft, element.clientWidth)];
+      if (column) {
+        this.currentKey.set(column.key);
       }
     },
     restoreColumnScroll: (status, scrollTop) => {

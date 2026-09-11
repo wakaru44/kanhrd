@@ -54,18 +54,60 @@ re-ask.
 - [ ] 5.4 Fixture with linked worktrees: confirm repository and checkout
       path genuinely differ in the rendered bands.
 
-## 6. Deferred — not this change
+## 7. Provenance — feedback from the shipped board
 
-- [ ] 6.1 **2.4 parked column in every band** belongs to
+Grouping by repository split nothing: every card landed in one band.
+`bandOf` was right; `Pane.project` was empty, and its grain was wrong
+too. See `design.md`.
+
+- [x] 7.1 Declare `cwd` and `foreground_cwd` on `HerdrPaneInfo` (both
+      optional — a herdr may omit them), with the same "Source: ..."
+      rigour the neighbouring types use.
+- [x] 7.2 Correct the false comment in `names.ts` claiming
+      `workspace.list` has always returned `worktree`. This herdr sends
+      no `worktree` at all.
+- [x] 7.3 Resolve a pane's repository from its OWN `cwd` by walking up
+      for a `.git` (`apps/bridge/src/herdr/repo.ts`): `.git` directory →
+      normal checkout, `.git` file → linked worktree, nothing found →
+      no `project`. No `git` subprocess.
+- [x] 7.4 Use `cwd`, never `foreground_cwd` — a card must not hop bands
+      mid-command.
+- [x] 7.5 Cache resolutions per directory, bounded, cleared on host
+      connect/reconnect, negatives cached too. No per-poll stat storm.
+- [x] 7.6 Keep the workspace `worktree` as a fallback for a herdr that
+      does send it; `HerdrWorkspaceWorktreeInfo` and
+      `workspaceWorktree()` stay.
+- [x] 7.7 Re-document `Pane.project`'s grain as the pane's own working
+      directory, stating plainly what it does not mean.
+- [x] 7.8 Bridge unit tests: two panes in one workspace projecting two
+      repo names; a cwd outside any repo projecting no `project`; a
+      linked worktree; a normal checkout; the workspace fallback.
+- [x] 7.9 `pnpm --filter @kanhrd/bridge test`, `pnpm -w typecheck`,
+      `pre-commit run --all-files`.
+
+## 8. Deferred — not this change
+
+- [ ] 8.1 **2.4 parked column in every band** belongs to
       `add-parked-columns`. Nothing here hardcodes the five statuses; a
       band renders whatever `visibleStatuses()` yields, so that change
       drops a column into every band without touching swimlane code.
-- [ ] 6.2 **5.4 e2e linked-worktree fixture.** Proven at unit level
+- [ ] 8.2 **5.4 e2e linked-worktree fixture.** Proven at unit level
       ("linked worktrees of one repo share a band" / "the same worktrees
       separate under checkout path"); not yet in the Playwright suite.
-- [ ] 6.3 **Scroll and focus restore while grouped.**
+- [ ] 8.3 **Scroll and focus restore while grouped.**
       `BoardReturnService` restores via the board's own `#strip` /
       `#columnEl`, which do not exist in the grouped path, so returning
       from a pane lands at the top of the band stack. No test claims
       otherwise. Moving the restore machinery into the bands is its own
       lane.
+- [ ] 8.4 **Provenance for a remote herdr.** The `.git` walk uses the
+      BRIDGE's filesystem. A herdr reached over a forwarded socket from
+      another machine reports that machine's paths, which usually
+      resolve to nothing here (falling back to the workspace
+      `worktree`). Provenance reported per pane by herdr itself is the
+      real fix and is an upstream request, not a bridge change.
+- [ ] 8.5 **SPA-side project line.** `card.ts` and `bandOf` are already
+      correct against the unchanged `Pane.project` shape, so nothing was
+      touched in `apps/web/**`. Whether the card's project line should
+      now show the checkout basename rather than the repo name, once
+      panes in one workspace can differ, is a web lane's call.

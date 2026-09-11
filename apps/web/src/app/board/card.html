@@ -61,8 +61,13 @@
     }
   </span>
 
-  @if (hasActions()) {
-    <div class="card-actions" #actions>
+  <!--
+    Always rendered: park and unpark are client-local and need no
+    capability, so the overflow trigger is present on every card, on every
+    tier. The inline row still follows the capabilities.
+  -->
+  <div class="card-actions" #actions>
+    @if (hasPaneActions()) {
       <!-- Standard density: visible on first render, never a hover reveal. -->
       <div class="actions-inline">
         @if (paneSplitAvailable()) {
@@ -94,6 +99,7 @@
           </button>
         }
       </div>
+    }
 
       <!--
         Compact / touch: the same actions behind one visible trigger.
@@ -155,11 +161,43 @@
                 <svg lucideX class="icon"></svg>{{ action.close }}
               </button>
             }
+            <!--
+              Parking: client-local, always offered. `park in…` expands its
+              destinations inside this same menu rather than opening a
+              second one, so there is one keyboard contract (arrows, Home,
+              End, Escape) over every item a card offers.
+            -->
+            @if (parkedIn()) {
+              <button type="button" role="menuitem" class="unpark" (click)="unpark()">
+                {{ action.unpark }}
+              </button>
+            } @else {
+              <button
+                type="button"
+                role="menuitem"
+                class="park"
+                [attr.aria-expanded]="parkListOpen()"
+                (click)="toggleParkList()"
+              >
+                {{ action.park }}
+              </button>
+              @if (parkListOpen()) {
+                <div class="park-destinations" role="group" [attr.aria-label]="action.park">
+                  @for (column of parkedColumns(); track column.id) {
+                    <button type="button" role="menuitem" (click)="parkIn(column.id)">
+                      {{ column.name }}
+                    </button>
+                  }
+                  <button type="button" role="menuitem" class="new-column" (click)="parkInNewColumn()">
+                    {{ action.newColumn }}
+                  </button>
+                </div>
+              }
+            }
           </div>
         </ng-template>
       </div>
-    </div>
-  }
+  </div>
 </div>
 
 @if (showRename()) {

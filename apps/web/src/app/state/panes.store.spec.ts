@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Subject } from 'rxjs';
 import type { Pane, TabSummary, WorkspaceSummary, WsEvent } from '@kanhrd/schema';
+import { ParkedStore } from './parked.store';
 import {
   applyEvent,
   applyLifecycleEvent,
@@ -13,6 +14,7 @@ import {
   defaultFilters,
   fallbackCapabilities,
   groupByStatus,
+  groupIntoColumns,
   groupIntoSwimlanes,
   isWorkspaceGroupCloseRequiredError,
   PanesStore,
@@ -177,6 +179,227 @@ describe('groupByStatus', () => {
       hiddenStatuses: new Set(['working']),
     });
     expect(groups.working).toEqual([]);
+  });
+});
+
+describe('groupIntoColumns: the parked partition', () => {
+  const noFilters = defaultFilters();
+
+  it('puts a parked pane in its column and nowhere else', () => {
+    const panes = [
+      pane({ id: 'a', agent_status: 'working' }),
+      pane({ id: 'b', agent_status: 'working' }),
+    ];
+    const columns = groupIntoColumns(panes, noFilters, new Map([[paneKey('laptop', 'b'), 'p1']]), [
+      'p1',
+    ]);
+
+    expect(columns.status.working.map((p) => p.id)).toEqual(['a']);
+    expect(columns.parked.get('p1')!.map((p) => p.id)).toEqual(['b']);
+    const everywhere = [
+      ...Object.values(columns.status).flat(),
+      ...[...columns.parked.values()].flat(),
+    ];
+    expect(everywhere.filter((p) => p.id === 'b').length)
+      .withContext('parking moves a card, it does not copy it')
+      .toBe(1);
+  });
+
+  it('keeps an empty entry for a column with no cards', () => {
+    const columns = groupIntoColumns([pane({ id: 'a' })], noFilters, new Map(), ['p1']);
+    expect(columns.parked.get('p1')).toEqual([]);
+  });
+
+  it('filters parked columns exactly as status columns are filtered', () => {
+    const panes = [
+      pane({ id: 'a', host: 'desktop', agent_status: 'working' }),
+      pane({ id: 'b', host: 'laptop', agent_status: 'done' }),
+    ];
+    const membership = new Map([
+      [paneKey('desktop', 'a'), 'p1'],
+      [paneKey('laptop', 'b'), 'p1'],
+    ]);
+
+    const hostExcluded = groupIntoColumns(
+      panes,
+      { excludedHosts: new Set(['desktop']), hiddenStatuses: new Set() },
+      membership,
+      ['p1']
+    );
+    expect(hostExcluded.parked.get('p1')!.map((p) => p.id)).toEqual(['b']);
+
+    const statusHidden = groupIntoColumns(
+      panes,
+      { excludedHosts: new Set(), hiddenStatuses: new Set(['done']) },
+      membership,
+      ['p1']
+    );
+    expect(statusHidden.parked.get('p1')!.map((p) => p.id))
+      .withContext("counts reflect the filtered collection, so the chips don't lie")
+      .toEqual(['a']);
+  });
+
+  it('leaves a card in its status column when its membership names an unknown column', () => {
+    const columns = groupIntoColumns(
+      [pane({ id: 'a', agent_status: 'idle' })],
+      noFilters,
+      new Map([[paneKey('laptop', 'a'), 'gone']]),
+      ['p1']
+    );
+    expect(columns.status.idle.map((p) => p.id)).toEqual(['a']);
+  });
+
+  it('gives every band the whole parked column set, empty buckets included', () => {
+    const panes = [
+      pane({ id: 'a', host: 'laptop', agent_status: 'working' }),
+      pane({ id: 'b', host: 'desktop', agent_status: 'idle' }),
+    ];
+    const lanes = groupIntoSwimlanes(
+      panes,
+      noFilters,
+      'host',
+      new Map([[paneKey('desktop', 'b'), 'p1']]),
+      ['p1', 'p2']
+    );
+
+    expect(lanes.map((l) => l.key)).toEqual(['desktop', 'laptop']);
+    for (const lane of lanes) {
+      expect([...lane.parked!.keys()])
+        .withContext(`band ${lane.key} draws every parked column`)
+        .toEqual(['p1', 'p2']);
+    }
+    expect(lanes[0].parked!.get('p1')!.map((p) => p.id)).toEqual(['b']);
+    expect(lanes[0].columns.idle).withContext('parked, so not in idle').toEqual([]);
+    expect(lanes[1].parked!.get('p1')).withContext("laptop's band has none").toEqual([]);
+    expect(lanes[1].columns.working.map((p) => p.id)).toEqual(['a']);
+  });
+});
+
+describe('PanesStore parking', () => {
+  let ws: FakeWsClient;
+
+  function setUp(): { store: PanesStore; parked: ParkedStore } {
+    localStorage.removeItem('kanhrd.parked-columns');
+    ws = new FakeWsClient();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: ws },
+      ],
+    });
+    return { store: TestBed.inject(PanesStore), parked: TestBed.inject(ParkedStore) };
+  }
+
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true });
+    localStorage.removeItem('kanhrd.parked-columns');
+    localStorage.removeItem('kanhrd.filters');
+  });
+
+  function seed(store: PanesStore): void {
+    let panes: PaneMap = new Map();
+    panes = applyPaneCreated(panes, pane({ id: 'a', agent_status: 'idle' }));
+    panes = applyPaneCreated(panes, pane({ id: 'b', agent_status: 'idle' }));
+    store.panesSignal.set(panes);
+  }
+
+  it('moves a parked pane out of its status column and into its parked column', () => {
+    const { store, parked } = setUp();
+    seed(store);
+    const column = parked.createColumn('archived', 'never');
+    parked.park(paneKey('laptop', 'b'), column.id);
+
+    expect(store.columnsSignal().idle.map((p) => p.id)).toEqual(['a']);
+    expect(
+      store
+        .parkedPanesSignal()
+        .get(column.id)!
+        .map((p) => p.id)
+    ).toEqual(['b']);
+  });
+
+  it('releases membership when the pane closes', () => {
+    const { store, parked } = setUp();
+    seed(store);
+    const column = parked.createColumn('archived', 'never');
+    parked.park(paneKey('laptop', 'b'), column.id);
+
+    ws.events$.next({
+      event: 'pane.closed',
+      host: 'laptop',
+      payload: { id: 'b', host: 'laptop' },
+    } as unknown as WsEvent);
+
+    expect(parked.columnOf(paneKey('laptop', 'b'))).toBeNull();
+    expect(parked.columns().length)
+      .withContext("the column is the operator's, not the pane's")
+      .toBe(1);
+  });
+
+  it('releases membership for children purged by a cascading tab close', () => {
+    const { store, parked } = setUp();
+    seed(store);
+    const column = parked.createColumn('archived', 'never');
+    parked.park(paneKey('laptop', 'a'), column.id);
+    parked.park(paneKey('laptop', 'b'), column.id);
+
+    // tier-3 emits no `pane.closed` for panes inside a closed tab; the store
+    // purges them locally and the park store follows that same purge.
+    ws.events$.next({
+      event: 'tab.closed',
+      host: 'laptop',
+      payload: { id: 't1', host: 'laptop' },
+    } as unknown as WsEvent);
+
+    expect(store.panesSignal().size).toBe(0);
+    expect(parked.columnOf(paneKey('laptop', 'a'))).toBeNull();
+    expect(parked.columnOf(paneKey('laptop', 'b'))).toBeNull();
+  });
+
+  it("keeps membership across a disconnect and reconnect of the pane's host", () => {
+    const { store, parked } = setUp();
+    seed(store);
+    const column = parked.createColumn('archived', 'never');
+    parked.park(paneKey('laptop', 'b'), column.id);
+
+    // A disconnect drops no pane from the map — content stays, marked stale.
+    ws.connected.set(false);
+    ws.connected.set(true);
+    // Reconnect re-delivers the pane, unchanged.
+    store.panesSignal.update((panes) => applyPaneCreated(panes, pane({ id: 'b' })));
+
+    expect(parked.columnOf(paneKey('laptop', 'b')))
+      .withContext('no last-seen heuristic prunes a parking')
+      .toBe(column.id);
+    expect(
+      store
+        .parkedPanesSignal()
+        .get(column.id)!
+        .map((p) => p.id)
+    ).toEqual(['b']);
+  });
+
+  it('unparks on agent activity, and only under that rule', () => {
+    const { store, parked } = setUp();
+    seed(store);
+    const archived = parked.createColumn('archived', 'never');
+    const parking = parked.createColumn('parking', 'agent-activity');
+    parked.park(paneKey('laptop', 'a'), archived.id);
+    parked.park(paneKey('laptop', 'b'), parking.id);
+
+    for (const id of ['a', 'b']) {
+      ws.events$.next({
+        event: 'pane.agent_status_changed',
+        host: 'laptop',
+        payload: { id, host: 'laptop', agent_status: 'working' },
+      } as unknown as WsEvent);
+    }
+
+    expect(parked.columnOf(paneKey('laptop', 'a'))).toBe(archived.id);
+    expect(parked.columnOf(paneKey('laptop', 'b'))).toBeNull();
+    expect(store.columnsSignal().working.map((p) => p.id)).toEqual(['b']);
   });
 });
 

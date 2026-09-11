@@ -1,7 +1,11 @@
 import { spawn, type ChildProcessByStdio } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import type { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { testSessionSocket } from './herdr-cli.js';
+import { assertIsolatedSocket } from './herdr-session.js';
 
 const FIXTURES_DIR = dirname(fileURLToPath(import.meta.url));
 const BRIDGE_DIR = resolve(FIXTURES_DIR, '../..'); // apps/bridge
@@ -34,15 +38,33 @@ export interface RunningBridge {
  * `tsx` is already a devDependency used by the bridge's own `dev` script for
  * the same reason.
  *
- * Uses the bridge's built-in default config (no `--config` flag): one host
- * named `local` at `~/.config/herdr/herdr.sock` — the same default a fresh
- * checkout gets, and the thing this whole suite is meant to exercise against
- * a real local herdr install.
+ * Never uses the bridge's built-in default config. That default names one
+ * host at `~/.config/herdr/herdr.sock` — the operator's live session — so
+ * this fixture always generates a config naming the run's own throwaway
+ * session socket and passes it with `--config`. `writeIsolatedConfig()`
+ * refuses to write anything else, and `testSessionSocket()` throws when the
+ * run has no session, so there is no path from here to the default socket.
  */
+/**
+ * Generates the bridge config for this run: a single host `local` pointing
+ * at the throwaway session's socket. `assertIsolatedSocket()` is the guard —
+ * a socket outside a `kanhrd-test-*` session directory throws here rather
+ * than being handed to a bridge that would happily connect to it.
+ */
+export function writeIsolatedConfig(): string {
+  const socket = assertIsolatedSocket(testSessionSocket());
+  const dir = join(tmpdir(), 'kanhrd-test-herdr');
+  mkdirSync(dir, { recursive: true });
+  const path = join(dir, 'int-bridge.config.yaml');
+  writeFileSync(path, `hosts:\n  - name: local\n    socket: ${socket}\n`);
+  return path;
+}
+
 export async function startBridge(extraArgs: string[] = []): Promise<RunningBridge> {
+  const configPath = writeIsolatedConfig();
   const proc: ChildProcessByStdio<null, Readable, Readable> = spawn(
     'node',
-    ['--import', 'tsx', 'src/main.ts', '--port', '0', ...extraArgs],
+    ['--import', 'tsx', 'src/main.ts', '--port', '0', '--config', configPath, ...extraArgs],
     { cwd: BRIDGE_DIR, stdio: ['ignore', 'pipe', 'pipe'] }
   );
 

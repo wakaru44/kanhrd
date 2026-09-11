@@ -395,3 +395,17 @@ a.card-open::after {
     padding-block: 0;
   }
 }
+
+/*
+ * `park in…`'s destinations, expanded inside the overflow menu. Indented
+ * one step so the list reads as belonging to the item above it; no border,
+ * no fill — the menu already has its own edge.
+ */
+.park-destinations {
+  display: flex;
+  flex-direction: column;
+
+  > button {
+    padding-left: var(--sp-5);
+  }
+}

@@ -1,0 +1,20 @@
+<div class="card-switcher" role="group" [attr.aria-label]="switcherLabel" (keydown)="onKeydown($event)">
+  <svg lucideGalleryHorizontal class="icon strip-marker" aria-hidden="true"></svg>
+
+  <div class="strip">
+    @for (pane of siblings(); track pane.id; let i = $index) {
+      <a
+        #entry
+        class="entry"
+        [class.current]="i === currentIndex()"
+        [routerLink]="['/pane', pane.host, pane.id]"
+        [attr.aria-current]="i === currentIndex() ? 'page' : null"
+        [attr.tabindex]="i === rovingIndex() ? 0 : -1"
+        [attr.aria-label]="itemLabel(pane)"
+      >
+        <span class="status-dot" [class]="pane.agent_status" aria-hidden="true"></span>
+        <span class="entry-name">{{ name(pane) }}</span>
+      </a>
+    }
+  </div>
+</div>

@@ -1,3 +1,15 @@
+/**
+ * LIVE-ONLY FOR NOW — this file needs a real herdr session and skips
+ * without one, but its assertions are about SPA behaviour, not about
+ * herdr's wire. Moving it onto the `page.route` mock fixture
+ * (`helpers/mock-bridge.ts`) so it runs on any machine is task 4.2 of the
+ * `add-test-herdr-isolation` change; until then its coverage is only real
+ * on a machine with herdr installed.
+ *
+ * The session it drives is the run's own throwaway one
+ * (`kanhrd-test-e2e`), started, seeded and disposed of by
+ * `fixtures/isolated-bridge.mjs` — never the operator's.
+ */
 import { test, expect } from './fixtures/kanhrd';
 import { herdrAvailable, herdrPaneList } from './fixtures/herdr';
 import { COPY } from '../src/app/shared/copy';

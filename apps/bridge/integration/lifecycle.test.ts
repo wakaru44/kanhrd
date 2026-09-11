@@ -6,6 +6,7 @@ import {
   herdrTabClose,
   herdrTabList,
   herdrWorkspaceList,
+  seededWorld,
 } from './fixtures/herdr-cli.js';
 import { requireHerdrOrSkipReason } from './fixtures/require-herdr.js';
 
@@ -59,8 +60,7 @@ describe('D. tier-3 lifecycle', () => {
     bridge = await startBridge();
     await waitForHostConnected(bridge, 'local');
     client = await IntegrationClient.connect(bridge.wsUrl);
-    const panes = await herdrPaneList();
-    workspaceId = panes[0].workspace_id;
+    workspaceId = seededWorld().workspaceId;
   });
 
   afterAll(async () => {

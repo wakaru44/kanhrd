@@ -5,6 +5,9 @@ services:
     ports:
       # Loopback-only, per ADR-0003. Change to 0.0.0.0:5173:5173 only if you
       # understand the exposure and pass --i-know-what-im-doing to the bridge.
+      # Changing the host-side port also changes the origin the browser
+      # sends, so the image's `--allowed-origin` values (see Dockerfile CMD)
+      # must change with it or every handshake is refused with 403.
       - '127.0.0.1:5173:5173'
     volumes:
       # Local host, default install: mount the herdr socket dir read-only so
