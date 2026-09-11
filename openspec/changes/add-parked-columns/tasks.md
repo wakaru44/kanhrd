@@ -143,36 +143,34 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
       where the destination is never on screen, so the affordance does
       not appear at all. The keyboard equivalent is the card's own
       `park in…` menu, shipped in phase A and unchanged
-- [ ] 5.3 DEFERRED — **reorder by drag needs one more copy decision.**
-      `docs/UX-GUIDELINES.md` § "Keyboard-first" requires every mouse
-      action to have a keyboard equivalent, and the approved-copy table
-      has no words for moving a column (`park.moveLeft` /
-      `park.moveRight`, or a single reorder item). Shipping the drag half
-      alone would be the pointer-only affordance § "drag-drop must work
-      or not appear" rejects, so nothing was built rather than half of
-      it. The unblock is two rows in `docs/BRAND.md`, then
+- [ ] 5.3 DEFERRED — **unblocked, not built.** The copy decision this was
+      waiting on landed: `docs/BRAND.md` now carries
+      `park.moveColumnLeft` → `move column left` and
+      `park.moveColumnRight` → `move column right` (L-DOCDEBT,
+      2026-09-11), named for the neighbouring `park.renameColumn` /
+      `park.removeColumn` rather than the `park.moveLeft` sketched here.
+      So `docs/UX-GUIDELINES.md` § "Keyboard-first" has its keyboard
+      equivalent and the drag half is no longer the pointer-only
+      affordance § "drag-drop must work or not appear" rejects. What is
+      left is the build:
       `ParkedStore.moveColumn(id, delta)` over the existing `order`
       field, two header-menu items, and a horizontal `cdkDropList` over
       the strip with the column header as the `cdkDragHandle`. Nothing
       shipped here has to change for it: `order` is already the render
       order everywhere. Parked-column reordering by drag, mirroring
       `order`
-- [ ] 5.4 DEFERRED to the e2e lane, which owns `apps/web/e2e/**`. NOTE
-      FOR THAT LANE: assertion 22's code
-      (`apps/web/e2e/mobile.spec.ts:520`) still fails on the mere
-      PRESENCE of `[cdkDrag]` / `[cdkDropList]`, while the amended
-      assertion in `docs/UX-GUIDELINES.md` reads "no element carries
-      `cdkDrag` **enabled**, a drag handle, or `cursor: grab`". Phase B
-      renders a disabled `cdkDrag` / `cdkDropList` on a board with no
-      parked column (Angular cannot add or remove a directive
-      conditionally without duplicating the template), so that query
-      needs to become an enabled-state check —
-      `.cdk-drag:not(.cdk-drag-disabled)` and
-      `.cdk-drop-list:not(.cdk-drop-list-disabled)` — which is what the
-      unit twins in `column.spec.ts` / `board.spec.ts` /
-      `swimlane.spec.ts` now assert. e2e — drop parks; a drop on a status
-      column is refused; the affordance is absent when no parked column
-      exists
+- [ ] 5.4 PARTLY LANDED. The assertion-22 half is done: `e2057af` changed
+      `apps/web/e2e/mobile.spec.ts` from a mere-PRESENCE query on
+      `[cdkDrag]` / `[cdkDropList]` to the enabled-state check
+      `.cdk-drag:not(.cdk-drag-disabled), .cdk-drop-list:not(.cdk-drop-list-disabled)`,
+      matching `docs/UX-GUIDELINES.md` assertion 22 and the unit twins in
+      `column.spec.ts` / `board.spec.ts` / `swimlane.spec.ts`.
+      `docs/DESIGN-SYSTEM.md` § "Status column" was corrected to match
+      (L-DOCDEBT, 2026-09-11): it had claimed a board with no parked
+      column was byte-for-byte drag-free, which the disabled directives
+      make false. Still owed to the e2e lane, which owns
+      `apps/web/e2e/**` — drop parks; a drop on a status column is
+      refused; the affordance is absent when no parked column exists
 
 ## 6. `on any activity` rule — BLOCKED on Q2's spike, do not start
 

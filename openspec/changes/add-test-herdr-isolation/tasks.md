@@ -203,15 +203,18 @@ sized deliberately and may be split into its own change if it grows.
 
 ## 5. Docs
 
-- [ ] 5.1 **DEFERRED — maintainer's file, outside the implementing lane's
-      write scope.** The text needs to change from "tests spawn a private
-      herdr subprocess with `HERDR_SOCKET_PATH=/tmp/...`" (which was never
-      how it worked, and is not how it works now) to: suites start a
-      headless `kanhrd-test-*` herdr session, seed it, point the bridge at
-      it with `--config`, and stop+delete it on teardown; a leaked session
-      is swept by the next run; a suite with no session skips rather than
-      falling back. The L-TEST-ISOLATION "in progress" credit should be
-      replaced by a pointer to `integration/README.md` and `e2e/README.md`.
+- [x] 5.1 `CLAUDE.md` § "Tests must not touch the operator's live herdr"
+      rewritten by L-DOCDEBT (2026-09-11). The rule is unchanged and the
+      mechanism is now described as shipped in `39124df`: a per-run
+      headless `kanhrd-test-<scope>` session, seeded because a fresh one
+      has zero workspaces/tabs/panes; a generated `--config` pointing the
+      bridge at its socket; stop+delete on teardown with a prefix sweep as
+      the backstop; `assertIsolatedSocket()` and the throwing CLI wrappers
+      as the no-fallback guarantee; Playwright on 5273 with
+      `reuseExistingServer: false`. It points at both fixtures and both
+      READMEs instead of crediting L-TEST-ISOLATION. `docs/THREAT-MODEL.md`
+      and `SECURITY.md` were corrected in the same pass: both still said
+      the suites were gated only by an opt-in environment variable.
 - [x] 5.2 Both READMEs rewritten. The "reachable local herdr with panes
       open" precondition is gone from each; the precondition is now the
       `herdr` CLI alone, and each README describes the session lifecycle

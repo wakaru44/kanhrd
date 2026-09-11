@@ -13,6 +13,9 @@ which records why the design is shaped this way. Deployment recipes live in
 Verified against the tree at the time of writing: `apps/bridge/src`
 (`main.ts`, `config.ts`, `http/rest.ts`, `ws/server.ts`, `ws/dispatch.ts`),
 the `Makefile` run targets, `Dockerfile`, and `docker-compose.yaml`.
+Re-verified 2026-09-11 against `apps/bridge/src/http/origin.ts` and the
+test fixtures under `apps/bridge/integration/fixtures/` and
+`apps/web/e2e/fixtures/`.
 
 ## System in one paragraph
 
@@ -48,8 +51,12 @@ The browser never talks to herdr directly.
 
 The only boundary that faces a network. The bridge applies no
 authentication and no authorisation here: every HTTP route and every
-WebSocket verb is served to whoever connects. This boundary is expected to
-be enforced _outside_ the bridge, by a reverse proxy or by the bind address.
+WebSocket verb is served to whoever connects. The one check it does apply
+is the `Origin` allowlist, which constrains which _web page_ may connect,
+not which _person_ — a client that sends no `Origin` at all is a
+non-browser client and is allowed through unless `--require-origin` says
+otherwise. Identity on this boundary is expected to be enforced _outside_
+the bridge, by a reverse proxy or by the bind address.
 
 ### Bridge to herdr socket
 
@@ -80,9 +87,23 @@ Stated narrowly, because the list is short.
   port as `127.0.0.1:5173:5173`, so the loopback restriction is enforced at
   the Docker layer even though the process inside the container binds
   `0.0.0.0`.
-- **Accidental writes to a live herdr from the test suites.** The e2e suite
-  and the bridge integration suite both refuse to run without an explicit
-  opt-in environment variable.
+- **A web page in your browser driving the bridge.** `/ws` and `GET /api/*`
+  both run the `Origin` allowlist in `http/origin.ts` before the handler:
+  an upgrade or a request naming an origin outside the allowlist gets a
+  bare `403 origin not allowed`, and the reason goes to the operator's log
+  instead of the caller. The allowlist is derived from the bind address and
+  port, so a loopback bridge covers its own origins with no configuration,
+  and a wildcard bind with an empty `allowed_origins:` refuses to start
+  rather than serving `/ws` to an origin it cannot name. This is an
+  `Origin` check only; see the `Host` header below for what it does not
+  cover.
+- **Accidental writes to a live herdr from the test suites.** Neither suite
+  can address `~/.config/herdr/herdr.sock`. Each run starts its own
+  headless `kanhrd-test-*` herdr session, seeds it, points the bridge at it
+  with a generated `--config`, and deletes it on teardown;
+  `assertIsolatedSocket()` throws on the default socket and on any path
+  outside a test session directory, and a suite with no session of its own
+  skips rather than falling back.
 - **Silent destruction of sessions from the UI.** Lifecycle verbs are
   confirmed in the client and state what will be destroyed (see
   [`adr/0005-client-side-cascade-purge-and-destructive-op-confirmations.md`](adr/0005-client-side-cascade-purge-and-destructive-op-confirmations.md)).
@@ -110,13 +131,17 @@ That is the whole list. Everything else is the operator's responsibility.
   logger. WebSocket verbs — every keystroke sent, every pane read, every
   close — are not recorded. After an incident there is no record of what was
   typed, by whom, or into which pane.
-- **No rate limiting, no CSRF token, no Origin check.** `/ws` accepts any
-  WebSocket handshake regardless of the `Origin` header, and the bridge does
-  not validate the `Host` header. A loopback bind stops other machines; it
-  does not stop a web page the operator visits in the same browser from
-  opening a WebSocket to `127.0.0.1:5173` and issuing verbs, nor a DNS
-  rebinding attack against that port. Treat loopback as protection against
-  the network, not against the browser.
+- **No rate limiting and no CSRF token.** Nothing throttles a caller that
+  passes the origin check, and there is no per-request token: the allowlist
+  is the whole of the browser-side guard.
+- **No `Host` check, so DNS rebinding is still open.** The bridge validates
+  `Origin`, not `Host`. A name the attacker controls that resolves to
+  `127.0.0.1` carries its own origin, so a page served from it is
+  same-origin with the bridge as far as the browser is concerned and the
+  allowlist has nothing to reject. Closing that needs a `Host` allowlist
+  alongside the origin one; a follow-up `add-bridge-host-header-check` is
+  contemplated and not yet filed. Treat loopback as protection against the
+  network, not against the browser.
 - **No transport security of its own.** The bridge speaks plain HTTP. TLS is
   the proxy's job.
 - **No confinement of what an agent does.** kanhrd relays keystrokes. What
@@ -176,19 +201,21 @@ that arrives. Whatever sits in front must require an authenticated user and
 enforce an allowlist — oauth2-proxy's `--email-domain` or allowlist, a
 Cloudflare Access policy, or equivalent.
 
-### `KANHRD_E2E_LIVE_HERDR=1` against a herdr you care about
+### Pointing a test suite at a herdr session you care about
 
-The e2e suite is not sandboxed. It calls the `herdr` CLI against whatever
-server is running on the machine, picks panes out of `herdr pane list`, and
-acts on them: the tier-2 specs type into a pane, and the tier-3 specs close
-real tabs and workspaces. On a developer machine those are live sessions.
-This is not hypothetical — a run on 2026-09-10 typed into the operator's real
+The suites are sandboxed by construction: they drive panes they created in
+their own `kanhrd-test-*` session and delete the session afterwards. This
+was not always true — a run on 2026-09-10 typed into the operator's real
 panes, including one running an agent, which executed the text as a prompt.
+The guard at the time was an opt-in environment variable, which is a prompt
+for a human, not isolation.
 
-Set the variable only against a herdr whose panes you are willing to have
-typed into and closed. The same applies to `KANHRD_INT_HERDR_SOCKET` for the
-bridge's integration suite. Details in
-[`../apps/web/e2e/README.md`](../apps/web/e2e/README.md).
+What remains dangerous is aiming a suite somewhere on purpose. The tier-2
+specs type into a pane and the tier-3 specs close real tabs and workspaces,
+so any session you hand them is a session you are willing to have typed
+into and closed. Details in
+[`../apps/web/e2e/README.md`](../apps/web/e2e/README.md) and
+[`../apps/bridge/integration/README.md`](../apps/bridge/integration/README.md).
 
 ## Safe recipes
 

@@ -87,25 +87,33 @@
 
 ## 6. Docs (owned by this change, written after the code is green)
 
-> **Section 6 deferred — not written by this lane.** The implementing lane
-> (L-ORIGIN) is scoped out of `docs/**`: a maintainer extends the docs. The
-> code is green and the deployment files ship correct, but the four doc
-> edits below are still outstanding and the change should not be archived
-> until a maintainer lands them.
+> **Section 6 landed by L-DOCDEBT** (2026-09-11), with the
+> maintainer-extends-the-docs rule suspended for these files for this
+> purpose. Every claim below was verified against `apps/bridge/src/config.ts`,
+> `http/origin.ts`, `http/rest.ts`, `ws/server.ts` and `main.ts`.
 
-- [ ] 6.1 `docs/OPERATING.md`: add the `allowed_origins` line to recipes 2
-      and 3, and fix the pre-existing wrong invocation
-      `--bind 127.0.0.1:8080` → `--bind 127.0.0.1 --port 8080` (design
-      decision 2).
-- [ ] 6.2 `docs/THREAT-MODEL.md`: move "no Origin check" out of "does not
-      defend against" into "defends against", stating the derived default,
-      the missing-`Origin` policy, and that the `Host` check is still
-      outstanding.
-- [ ] 6.3 `SECURITY.md`: the known-by-design list no longer implies that
-      any browser page can drive `/ws`.
-- [ ] 6.4 `docs/adr/0003-*.md`: append a consequence noting that loopback
-      binding is now paired with an origin allowlist. Do not rewrite the
-      decision.
+- [x] 6.1 `docs/OPERATING.md`: the origin allowlist is described in the
+      preamble (derived from bind+port, `allowed_origins:` /
+      `--allowed-origin`, `--require-origin`, `--allow-any-origin`, the
+      wildcard-bind refusal), and recipes 2 and 3 both name the proxy's
+      public origin. The pre-existing wrong invocation
+      `--bind 127.0.0.1:8080` is now `--bind 127.0.0.1 --port 8080`.
+      Two further doc-vs-code errors fixed in passing: the recipe claimed
+      `--i-know-what-im-doing` was needed for a loopback bind (it guards
+      the bind address only), and the host-list examples used a
+      `socket_path` key that `config.ts` does not read — it is `socket`.
+- [x] 6.2 `docs/THREAT-MODEL.md`: the origin check moved into "defends
+      against" with the derived default and the missing-`Origin` policy;
+      the old bullet is split into "no rate limiting and no CSRF token"
+      and a "no `Host` check, so DNS rebinding is still open" bullet
+      pointing at the contemplated `add-bridge-host-header-check`. The
+      browser-to-bridge trust boundary now says the allowlist bounds which
+      page may connect, never which person.
+- [x] 6.3 `SECURITY.md`: the "anyone who reaches the bridge gets
+      everything" bullet now carries the web-page exception and its two
+      limits (not identity, not `Host`).
+- [x] 6.4 `docs/adr/0003-*.md`: a dated consequence appended, decision and
+      alternatives untouched.
 
 ## 7. Follow-up, not this change
 

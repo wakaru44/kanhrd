@@ -493,9 +493,16 @@ The vertical grouping by `agent_status` is a **status column**, never a
   changed by a drag: a status column accepts no drop, carries no drop
   affordance, and `pane.move` targets a tab or workspace, not a status.
   A card may be a drag **source**, but only once at least one
-  user-defined column exists — with none, the board is byte-for-byte the
-  drag-free board this document described before. (Maintainer decision
-  Q1, 2026-09-10; see `openspec/changes/add-parked-columns`.)
+  user-defined column exists. With none, the affordance is absent and the
+  directives are inert: Angular cannot drop a directive conditionally
+  without duplicating the template, so every card still carries `cdkDrag`
+  and every column still carries `cdkDropList`, both disabled
+  (`.cdk-drag-disabled`, `.cdk-drop-list-disabled` — nothing pickable,
+  nothing receivable, no `cursor: grab`). Read the state, never the
+  presence: `UX-GUIDELINES.md` assertion 22 and its e2e spec both assert
+  no `cdkDrag` **enabled**, and an assertion against mere presence would
+  test the template rather than the affordance. (Maintainer decision Q1,
+  2026-09-10; see `openspec/changes/add-parked-columns`.)
 
 ### Host seal (hanko)
 

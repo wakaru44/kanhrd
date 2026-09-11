@@ -11,6 +11,21 @@ The bridge binds `127.0.0.1` by default. Binding on any other interface
 requires an explicit `--i-know-what-im-doing` flag — that flag is your
 signal that you've read this page and put a proxy in front.
 
+It also checks the browser's `Origin`, on the `/ws` upgrade and on
+`GET /api/*`. The allowlist is derived from the bind address and the port,
+so a plain loopback bridge needs no configuration: `http(s)://127.0.0.1`,
+`localhost` and `[::1]` on its own port are already on it. A proxy needs
+configuration, because the browser sends the proxy's public name, not the
+bridge's — add it with `allowed_origins:` in `kanhrd.config.yaml` or with
+`--allowed-origin <origin>`, which repeats. Two more flags:
+`--require-origin` refuses `/ws` handshakes that carry no `Origin` header
+at all (that is every non-browser client — `curl`, `wscat` — and it is
+deliberately not applied to `/api`, whose same-origin `GET`s the browser
+sends without the header), and `--allow-any-origin` turns the check off
+entirely, which hands the bridge to any page you happen to visit. A
+wildcard bind (`0.0.0.0`, `::`) with an empty allowlist refuses to start:
+no browser origin can be derived from a wildcard.
+
 ## 1. Laptop-only
 
 The simple case: bridge and herdr both run on your own machine, nothing is
@@ -47,14 +62,22 @@ your laptop is closed. Because the bridge is now potentially reachable from
 outside the VM, it needs a proxy in front handling authentication before
 any request reaches it.
 
-Bridge config: point the host list (`{name, socket_path}`) at whatever
-sockets are reachable on the VM — see recipe 3 for how a laptop's socket
-gets there via reverse tunnel. Start the bridge bound to loopback, with the
-explicit flag required to run non-default:
+Bridge config: point the host list (`hosts:`, each entry `{name, socket}`)
+at whatever sockets are reachable on the VM — see recipe 3 for how a
+laptop's socket gets there via reverse tunnel. Start the bridge on
+loopback, and name the proxy's public origin, because that is the `Origin`
+the browser will send:
 
 ```bash
-kanhrd-bridge --bind 127.0.0.1:8080 --i-know-what-im-doing
+kanhrd-bridge --bind 127.0.0.1 --port 8080 \
+  --allowed-origin https://kanhrd.example.com
 ```
+
+`--i-know-what-im-doing` is not needed here: it guards the bind address,
+not the port, and this bridge stays on loopback. Without the
+`--allowed-origin` line every board request from `kanhrd.example.com` is
+refused with `403 origin not allowed`, and the bridge's log names the
+origin it rejected and the allowlist it compared against.
 
 `oauth2-proxy` sits in front, handling SSO (Google/GitHub/etc.) and setting
 a trusted identity header:
@@ -89,6 +112,13 @@ server {
     }
 }
 ```
+
+The origin the browser sends is `https://kanhrd.example.com` — nginx's
+`server_name`, not `127.0.0.1:8080` — which is why the allowlist the bridge
+derives from its own bind is not enough here. If you terminate TLS on a
+different name, or serve the board on a non-default port, that exact
+origin — scheme, host, and the port if it is not the scheme's default — is
+what goes in `--allowed-origin`.
 
 Both the bridge and oauth2-proxy stay bound to loopback on the VM; only
 nginx is internet-facing. A Tailscale Funnel or Cloudflare Access setup
@@ -148,8 +178,19 @@ systemctl --user enable --now kanhrd-tunnel.service
 
 On the cloud host, add the forwarded path to the bridge's host list:
 
-```json
-{ "name": "laptop", "socket_path": "/home/kanhrd/sockets/laptop.sock" }
+```yaml
+hosts:
+  - name: laptop
+    socket: /home/kanhrd/sockets/laptop.sock
+```
+
+This bridge is the one from recipe 2, so it carries recipe 2's origin
+allowlist too — the tunnel adds a host, not an origin, and the browser
+still arrives through the proxy's public name:
+
+```yaml
+allowed_origins:
+  - https://kanhrd.example.com
 ```
 
 The bridge never knows this socket arrived over a tunnel rather than being
