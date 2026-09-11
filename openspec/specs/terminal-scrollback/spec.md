@@ -48,6 +48,10 @@ output.
 - **WHEN** the reader is scrolled up and a redraw snapshot arrives
 - **THEN** the terminal is repainted and the viewport is returned to the offset it held before the repaint
 
+#### Scenario: A redraw never blanks the screen
+- **WHEN** a redraw snapshot arrives
+- **THEN** the clear is delivered inside the write (RIS, `\x1bc`) rather than by `Terminal.reset()`, so no composited frame shows an empty terminal
+
 #### Scenario: A reader at the tail follows the tail
 - **WHEN** the reader is at the tail and any snapshot arrives
 - **THEN** the viewport shows the newest content, without a scroll restore
