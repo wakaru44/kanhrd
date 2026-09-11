@@ -142,6 +142,8 @@ class PaneTerminal {
   readonly state: Signal<PaneTerminalState>;
 
   attach(el: HTMLElement): void;
+  applyTheme(theme: ITheme): void;
+  applyFontSize(px: number): void;
   load(host: string, id: string): Promise<void>;
   retry(): void;
   send(data: string): void;
@@ -156,6 +158,10 @@ Two details the implementation settled, both narrower than the sketch:
   services by `PaneDetail`; the narrowing is what lets a test pass a plain
   `{ theme }` object without standing up `TerminalThemeService` (which
   itself injects `ThemeService` and writes `localStorage`).
+- **The settings services stay in the deps.** They outlived the watches
+  that first justified them: `attach()` reads `theme()` and `size()` once,
+  for the `Terminal` constructor's initial values, before any component
+  effect has had a chance to run.
 - **`retry()` re-runs the pane it is already pointed at.** It has no
   arguments because `load()` records the pane, and that record is also what
   the stale-route guards compare in-flight responses against — the same
@@ -163,28 +169,50 @@ Two details the implementation settled, both narrower than the sketch:
 
 ## Risks / Trade-offs
 
-**A settings reaction without `effect()`.** `PaneTerminal` must react to
-the terminal theme and font-size signals, and `effect()` requires an
-injection context this class deliberately does not have. It uses
-`createWatch` from `@angular/core/primitives/signals` — the primitive
-`effect()` is itself built on — scheduled on a microtask, with `destroy()`
-called from `dispose()`.
+**A settings reaction without `effect()` — and the fallback, taken.**
+`PaneTerminal` has to react to the terminal theme and font-size settings,
+and `effect()` requires an injection context this class deliberately does
+not have. The first implementation used `createWatch` from
+`@angular/core/primitives/signals` — the primitive `effect()` is itself
+built on — scheduled on a microtask and destroyed from `dispose()`. This
+section recorded the fallback if that entry point ever went away: a
+two-line `applyTheme`/`applyFontSize` pair called from component effects.
 
-That entry point is published and typed but aimed at framework authors, so
-it is a real dependency risk on a future Angular version. The alternatives
-were worse: keeping the two effects in `PaneDetail` would put terminal
-knowledge back in the component and make the theme and font-size
-reapplication untestable without a fixture again, and passing an `Injector`
-in would reintroduce the DI the whole design removes. If the primitive ever
-goes away, the fallback is a two-line `applyTheme`/`applyFontSize` pair
-called from component effects.
+**What shipped is the fallback.** Not because the primitive broke, but
+because the trade it was buying is not worth its price. `primitives/signals`
+is a framework-author entry point: published and typed, but with no
+stability promise and no deprecation cycle, and `PaneTerminal` is otherwise
+ordinary application code. What it bought was two lines of tidiness — the
+reaction living beside the terminal it acts on. What it cost was a standing
+dependency on Angular internals in a file nobody has reason to re-examine
+until a major upgrade breaks it. A private-API dependency is not worth two
+lines.
 
-The reaction is now scheduled rather than synchronous, which is what
-Angular enforces (`Schedulers cannot synchronously execute watches while
-scheduling`). A microtask is at least as prompt as the `effect()` it
-replaces, and the assign-then-fit order inside the reaction — the option
-first, so xterm has re-measured the cell before `fit()` divides the box by
-it — is unchanged and separately asserted.
+So:
+
+- `PaneTerminal` exposes `applyTheme(theme)` and `applyFontSize(px)`. Both
+  are no-ops with no terminal attached, as the watch bodies were, so a
+  settings change either side of the terminal's lifetime is harmless.
+- `PaneDetail` drives them from two ordinary `effect()`s. It is the
+  component, so the injection context is already there and nothing had to
+  be passed in to create one.
+- Nothing under `apps/web/src` imports `@angular/core/primitives/*`.
+
+The earlier objection to putting the reaction in the component — that it
+would make the reapplication untestable without a fixture — does not hold
+against the split that actually landed. *What* to do on a settings change
+is `PaneTerminal`'s, tested directly and without a fixture by calling the
+two methods: the assign-then-fit order and the inverse cols/rows scaling
+are asserted exactly as before, and more simply, since there is no
+scheduler to flush. *When* to do it is one line of component wiring, and
+`pane-detail.spec.ts` covers that seam by moving a settings signal and
+watching the live terminal follow.
+
+The assign-then-fit order inside `applyFontSize` — the option first, so
+xterm has re-measured the cell before `fit()` divides the box by it — is
+unchanged from the original component effect, through the watch, to here.
+The reaction is also synchronous again rather than microtask-scheduled,
+which is what it was before `PaneTerminal` existed.
 
 **A larger public-ish surface than a component's.** Five methods and four
 signals is more than `PaneDetail` exposed. It is also the whole of it: the

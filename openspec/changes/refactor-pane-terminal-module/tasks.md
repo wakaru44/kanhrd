@@ -18,7 +18,9 @@
       as `onData`. Leave `key-mapping.ts` exactly as it is.
 - [x] 1.6 React to the terminal theme and font-size signals without an
       injection context (`createWatch`, microtask-scheduled, destroyed in
-      `dispose()`), keeping the assign-then-fit order.
+      `dispose()`), keeping the assign-then-fit order. **Superseded by
+      section 5** — the reaction moved to `PaneDetail`; `PaneTerminal`
+      keeps only the assign-then-fit order, in `applyFontSize`.
 
 ## 2. Thin the component
 
@@ -54,3 +56,26 @@
 - [x] 4.3 `pnpm --filter @kanhrd/web build`
 - [x] 4.4 `pre-commit run --files <touched>`
 - [x] 4.5 `openspec validate refactor-pane-terminal-module --strict`
+
+## 5. Take the fallback: no framework-internal primitive
+
+- [x] 5.1 Replace the two watches with plain `applyTheme(theme)` /
+      `applyFontSize(px)` methods on `PaneTerminal`, both no-ops before
+      `attach()` and after `dispose()`, `applyFontSize` keeping the
+      assign-then-fit order and the `ResizeObserver`-cannot-cover-this
+      reasoning.
+- [x] 5.2 Delete the `watch()` helper, the `createWatch`/`Watch` imports
+      and the two watch fields with their `dispose()` teardown. Nothing
+      under `apps/web/src` imports `@angular/core/primitives/*`.
+- [x] 5.3 Drive both from ordinary `effect()`s in `PaneDetail`, which has
+      the injection context. `terminalTheme`/`terminalFontSize` stay in
+      `PaneTerminalDeps`: `attach()` reads them for the `Terminal`
+      constructor's initial values.
+- [x] 5.4 Rewrite the class doc block so it documents the shape that
+      exists — DI-free lifecycle owner, settings reaction owned by the
+      component.
+- [x] 5.5 Tests: theme/font-size cases call the methods directly (order
+      and inverse cols/rows scaling assertions kept, plus a no-op case
+      either side of the terminal's lifetime); `pane-detail.spec.ts`
+      covers that a settings change still reaches the terminal through
+      the component's effects.

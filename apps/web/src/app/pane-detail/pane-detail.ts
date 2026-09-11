@@ -114,10 +114,13 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
    * than injected: it is this view's own object, one per mounted view, and
    * it takes no DI of its own.
    */
+  private readonly terminalTheme = inject(TerminalThemeService);
+  private readonly terminalFontSize = inject(TerminalFontSizeService);
+
   private readonly terminal = new PaneTerminal({
     ws: this.ws,
-    terminalTheme: inject(TerminalThemeService),
-    terminalFontSize: inject(TerminalFontSizeService),
+    terminalTheme: this.terminalTheme,
+    terminalFontSize: this.terminalFontSize,
     toast: this.toast,
   });
 
@@ -285,6 +288,25 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       untracked(() => {
         void this.terminal.load(host, id);
       });
+    });
+
+    // The terminal's appearance follows the app's settings, driven from
+    // here rather than from inside `PaneTerminal`: reacting to a signal
+    // wants `effect()`, `effect()` wants an injection context, and this
+    // component is where one exists. `PaneTerminal` takes no DI, so it
+    // offers `applyTheme`/`applyFontSize` and lets its owner decide when
+    // to call them. Both are no-ops before `attach()`, which reads the
+    // same two settings for the `Terminal` constructor.
+    effect(() => {
+      const theme = this.terminalTheme.theme();
+      untracked(() => this.terminal.applyTheme(theme));
+    });
+
+    // Kept separate from the theme effect so a colour change never pays
+    // for a refit: `applyFontSize` re-fits, `applyTheme` does not.
+    effect(() => {
+      const size = this.terminalFontSize.size();
+      untracked(() => this.terminal.applyFontSize(size));
     });
   }
 

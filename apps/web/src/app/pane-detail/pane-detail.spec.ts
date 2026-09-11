@@ -3,7 +3,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, Subject, of } from 'rxjs';
 import type { HostSummary, Pane, WsEvent } from '@kanhrd/schema';
+import { Terminal } from '@xterm/xterm';
+import type { ITheme } from '@xterm/xterm';
 import { PaneDetail, nextSiblingCard } from './pane-detail';
+import { TerminalThemeService } from '../state/terminal-theme.service';
+import { TerminalFontSizeService } from '../state/terminal-font-size.service';
 import { BoardReturnService } from '../state/board-return.service';
 import { COPY } from '../shared/copy';
 import { PanesStore } from '../state/panes.store';
@@ -691,5 +695,84 @@ describe('PaneDetail', () => {
     // on-screen keyboard are unaffected.
     expect(style.touchAction).toContain('pinch-zoom');
     expect(style.overscrollBehaviorY).toBe('contain');
+  });
+});
+
+/**
+ * The seam the terminal's settings reaction now runs through: `PaneTerminal`
+ * takes no DI and so cannot watch a signal itself — the component reads the
+ * settings signals in an `effect()` and calls `applyTheme`/`applyFontSize`.
+ * `pane-terminal.spec.ts` covers what those two methods do; this covers that
+ * a settings change still reaches them at all.
+ *
+ * Both services are stubbed: the real ones persist to `localStorage`, and a
+ * plain writable signal is the whole of what the component reads.
+ */
+describe('PaneDetail terminal settings', () => {
+  const THEME_B: ITheme = { background: '#101010', foreground: '#fefefe' };
+
+  let theme: WritableSignal<ITheme>;
+  let fontSize: WritableSignal<number>;
+
+  beforeEach(async () => {
+    theme = signal<ITheme>({ background: '#f4ede0', foreground: '#2b2b2b' });
+    fontSize = signal(13);
+
+    await TestBed.configureTestingModule({
+      imports: [PaneDetail],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WsClient, useValue: new FakeWsClient() },
+        {
+          provide: PanesStore,
+          useValue: {
+            panesSignal: () => new Map(),
+            capabilitiesSignal: () => new Map(),
+            hostsSignal: () => [{ name: 'laptop', connected: true }],
+          },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { paramMap: of(convertToParamMap({ host: 'laptop', id: 'pane-1' })) },
+        },
+        { provide: TerminalThemeService, useValue: { theme } },
+        { provide: TerminalFontSizeService, useValue: { size: fontSize } },
+      ],
+    }).compileComponents();
+  });
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  /** Mounts the view in a real box and hands back the xterm instance it built. */
+  async function mountedTerminal(): Promise<Terminal> {
+    const openSpy = spyOn(Terminal.prototype, 'open').and.callThrough();
+    const fixture = TestBed.createComponent(PaneDetail);
+    const root = fixture.nativeElement as HTMLElement;
+    root.style.display = 'block';
+    root.style.width = '600px';
+    root.style.height = '400px';
+    document.body.appendChild(root);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+    return openSpy.calls.mostRecent().object as Terminal;
+  }
+
+  it('carries a theme change through to the live terminal', async () => {
+    const live = await mountedTerminal();
+
+    theme.set(THEME_B);
+    TestBed.tick();
+
+    expect(live.options.theme).toEqual(THEME_B);
+  });
+
+  it('carries a font-size change through to the live terminal', async () => {
+    const live = await mountedTerminal();
+
+    fontSize.set(20);
+    TestBed.tick();
+
+    expect(live.options.fontSize).toBe(20);
   });
 });

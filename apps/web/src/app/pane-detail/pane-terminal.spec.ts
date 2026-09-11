@@ -574,14 +574,29 @@ describe('PaneTerminal', () => {
     expect(fit.calls.count()).toBeGreaterThan(1);
   });
 
-  it("swaps the live terminal's palette when the terminal theme setting changes", async () => {
-    await mounted();
+  it("swaps the live terminal's palette when a new theme is applied", async () => {
+    const t = await mounted();
     expect(liveTerm().options.theme).toEqual(THEME_A);
 
-    theme.set(THEME_B);
-    await flushMicrotasks();
+    t.applyTheme(THEME_B);
 
     expect(liveTerm().options.theme).toEqual(THEME_B);
+  });
+
+  it('applies nothing before attach, and nothing after dispose', () => {
+    const t = build();
+
+    // No terminal yet: both are no-ops rather than a crash — the component's
+    // effects run on the app's settings, which can change either side of the
+    // terminal's lifetime.
+    expect(() => t.applyTheme(THEME_B)).not.toThrow();
+    expect(() => t.applyFontSize(20)).not.toThrow();
+
+    t.attach(el);
+    t.dispose();
+
+    expect(() => t.applyTheme(THEME_B)).not.toThrow();
+    expect(() => t.applyFontSize(20)).not.toThrow();
   });
 
   it('constructs the terminal at the stored font size, not a hard-coded default', async () => {
@@ -592,7 +607,7 @@ describe('PaneTerminal', () => {
   });
 
   it('assigns the new font size before refitting, so cols and rows use the new cell', async () => {
-    await mounted();
+    const t = await mounted();
     const sizeAtFit: Array<number | undefined> = [];
     spyOn(FitAddon.prototype, 'fit').and.callFake(function (this: FitAddon) {
       // The addon keeps the terminal it was loaded into; reading the option
@@ -601,8 +616,7 @@ describe('PaneTerminal', () => {
       sizeAtFit.push(owner?.options.fontSize);
     });
 
-    fontSize.set(20);
-    await flushMicrotasks();
+    t.applyFontSize(20);
 
     expect(liveTerm().options.fontSize).toBe(20);
     expect(sizeAtFit.length).toBeGreaterThan(0);
@@ -611,15 +625,13 @@ describe('PaneTerminal', () => {
   });
 
   it('recomputes cols and rows for the new cell, and comes back', async () => {
-    await mounted();
+    const t = await mounted();
     const live = liveTerm();
 
-    fontSize.set(12);
-    await flushMicrotasks();
+    t.applyFontSize(12);
     const small = { cols: live.cols, rows: live.rows };
 
-    fontSize.set(20);
-    await flushMicrotasks();
+    t.applyFontSize(20);
     const large = { cols: live.cols, rows: live.rows };
 
     // The container's pixel box never changed, so a bigger cell is strictly
@@ -635,31 +647,27 @@ describe('PaneTerminal', () => {
     expect(small.cols / large.cols).toBeGreaterThan(expected - 0.4);
     expect(small.cols / large.cols).toBeLessThan(expected + 0.4);
 
-    fontSize.set(12);
-    await flushMicrotasks();
+    t.applyFontSize(12);
     expect(live.cols).toBe(small.cols);
     expect(live.rows).toBe(small.rows);
   });
 
   it('keeps the palette and the size independent on the live terminal', async () => {
-    await mounted();
+    const t = await mounted();
     const live = liveTerm();
 
-    fontSize.set(20);
-    await flushMicrotasks();
+    t.applyFontSize(20);
     expect(live.options.theme).toEqual(THEME_A);
 
-    theme.set(THEME_B);
-    await flushMicrotasks();
+    t.applyTheme(THEME_B);
     expect(live.options.fontSize).toBe(20);
   });
 
   it('sends no wire request when the font size changes', async () => {
-    await mounted();
+    const t = await mounted();
     ws.request.calls.reset();
 
-    fontSize.set(20);
-    await flushMicrotasks();
+    t.applyFontSize(20);
 
     // CONTRACT-TIER2.md section 6: resizing is client-side only.
     expect(ws.request).not.toHaveBeenCalled();

@@ -1,8 +1,7 @@
-import { Signal, computed, signal, untracked } from '@angular/core';
-import { createWatch } from '@angular/core/primitives/signals';
-import type { Watch } from '@angular/core/primitives/signals';
+import { Signal, computed, signal } from '@angular/core';
 import { Subscription, filter } from 'rxjs';
 import { Terminal } from '@xterm/xterm';
+import type { ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import type { BridgeEventPayload, WsEvent } from '@kanhrd/schema';
 import { WsClient } from '../state/ws-client';
@@ -64,10 +63,18 @@ export interface PaneTerminalDeps {
  * a fake `WsClient` and a detached `<div>` — no TestBed, no fixture. It does
  * hold Angular signals, which work fine outside an injection context.
  *
- * The surface is small (`attach` / `load` / `retry` / `send` / `dispose`
- * plus four readonly signals) and everything else — the fit convergence
- * loop, the touch scroll engine, snapshot painting, the send queue, the
- * subscription lifecycle — is private to it.
+ * It owns the terminal's whole lifecycle but does not *watch* the app's
+ * settings: reacting to a signal wants `effect()`, `effect()` wants an
+ * injection context, and this class deliberately has none. So the reaction
+ * lives one level up, in `PaneDetail`, where the injection context is — the
+ * component reads the settings signals and calls `applyTheme` /
+ * `applyFontSize`. Initial values are still read here, once, in `attach()`:
+ * the `Terminal` constructor needs them before any effect has run.
+ *
+ * The surface is small (`attach` / `load` / `retry` / `send` / `dispose` /
+ * `applyTheme` / `applyFontSize` plus four readonly signals) and everything
+ * else — the fit convergence loop, the touch scroll engine, snapshot
+ * painting, the send queue, the subscription lifecycle — is private to it.
  */
 export class PaneTerminal {
   private readonly ws: PaneTerminalDeps['ws'];
@@ -130,8 +137,6 @@ export class PaneTerminal {
   private term: Terminal | null = null;
   private fitAddon: FitAddon | null = null;
   private outputEventsSub: Subscription | null = null;
-  private themeWatch: Watch | null = null;
-  private fontSizeWatch: Watch | null = null;
 
   private subscriptionId: string | null = null;
   private subscriptionHost: string | null = null;
@@ -180,54 +185,39 @@ export class PaneTerminal {
     this.outputEventsSub = this.ws.events$
       .pipe(filter((evt): evt is WsEvent<'pane.output'> => evt.event === 'pane.output'))
       .subscribe((evt) => this.handleOutputEvent(evt));
-
-    // Swaps the live terminal's colors immediately when the terminal theme
-    // setting changes (Settings > Terminal) — xterm.js takes its own theme
-    // object and does not read CSS custom properties.
-    this.themeWatch = this.watch(() => {
-      const theme = this.terminalTheme.theme();
-      untracked(() => {
-        if (this.term) {
-          this.term.options.theme = theme;
-        }
-      });
-    });
-
-    // The theme watch's sibling, with one extra obligation: a colour change
-    // leaves cell geometry alone, a size change does not. The same pixel box
-    // now holds a different number of cells, so without a refit `cols`/`rows`
-    // keep their old values and the terminal either renders into a fraction
-    // of its box or overflows a container that is `overflow: hidden` — with
-    // the prompt clipped out of reach. The `ResizeObserver` cannot cover
-    // this: it watches the *container*, whose box does not change when only
-    // the cell inside it does, so no callback fires. Order matters — the
-    // option is assigned first so xterm has re-measured the cell before
-    // `fit()` divides the box by it.
-    this.fontSizeWatch = this.watch(() => {
-      const fontSize = this.terminalFontSize.size();
-      untracked(() => {
-        if (this.term) {
-          this.term.options.fontSize = fontSize;
-          this.fitToContainer();
-        }
-      });
-    });
   }
 
   /**
-   * A signal reaction without an injection context.
-   *
-   * `effect()` is unavailable here by design: this class takes no DI, so
-   * there is no `Injector` to schedule against. `createWatch` is the same
-   * primitive `effect()` is built on, scheduled on a microtask — Angular
-   * refuses a watch run from inside the notification itself, and a
-   * microtask keeps the reaction as prompt as the framework's own effects
-   * without needing one.
+   * Swaps the live terminal's colors. Called by `PaneDetail` whenever the
+   * terminal theme setting changes (Settings > Terminal) — xterm.js takes
+   * its own theme object and does not read CSS custom properties, so a CSS
+   * variable change reaches nothing here.
    */
-  private watch(fn: () => void): Watch {
-    const watcher = createWatch(fn, (w) => queueMicrotask(() => w.run()), false);
-    watcher.run(); // first pass, outside any notification
-    return watcher;
+  applyTheme(theme: ITheme): void {
+    if (!this.term) {
+      return;
+    }
+    this.term.options.theme = theme;
+  }
+
+  /**
+   * `applyTheme`'s sibling, with one extra obligation: a colour change
+   * leaves cell geometry alone, a size change does not. The same pixel box
+   * now holds a different number of cells, so without a refit `cols`/`rows`
+   * keep their old values and the terminal either renders into a fraction
+   * of its box or overflows a container that is `overflow: hidden` — with
+   * the prompt clipped out of reach. The `ResizeObserver` cannot cover
+   * this: it watches the *container*, whose box does not change when only
+   * the cell inside it does, so no callback fires. Order matters — the
+   * option is assigned first so xterm has re-measured the cell before
+   * `fit()` divides the box by it.
+   */
+  applyFontSize(px: number): void {
+    if (!this.term) {
+      return;
+    }
+    this.term.options.fontSize = px;
+    this.fitToContainer();
   }
 
   /**
@@ -330,7 +320,7 @@ export class PaneTerminal {
     this.handleInput(data);
   }
 
-  /** Releases the terminal, the DOM listeners, the watches and the subscription. */
+  /** Releases the terminal, the DOM listeners and the subscription. */
   dispose(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
@@ -340,10 +330,6 @@ export class PaneTerminal {
     this.el?.removeEventListener('touchcancel', this.onTouchEnd);
     this.outputEventsSub?.unsubscribe();
     this.outputEventsSub = null;
-    this.themeWatch?.destroy();
-    this.themeWatch = null;
-    this.fontSizeWatch?.destroy();
-    this.fontSizeWatch = null;
     this.teardownSubscription();
     this.term?.dispose();
     this.term = null;
