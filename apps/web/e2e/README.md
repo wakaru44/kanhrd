@@ -31,9 +31,9 @@ as a prompt. Nothing was damaged — the payload is deliberately
 non-destructive — but the only guard at the time was an opt-in environment
 variable, which is a prompt for a human, not isolation.
 
-`KANHRD_E2E_LIVE_HERDR` no longer gates anything. It is kept as the
-deliberate switch for pointing these specs at a herdr session you choose on
-purpose.
+`KANHRD_E2E_LIVE_HERDR` is gone. It gated nothing once the run owned its own
+session, and a variable that reads like a safety switch but controls nothing
+is worse than no variable at all.
 
 ### Two tiers of spec
 

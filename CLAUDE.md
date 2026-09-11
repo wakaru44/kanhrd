@@ -114,32 +114,29 @@ See [feedback: no-adhoc-validation] in the maintainer's private memory.
 **Never** the default socket at `~/.config/herdr/herdr.sock` — that's the
 operator's live workspace, with other lanes working in its panes.
 
-**Nothing enforces this today. Read the next paragraph before running any
-suite.** An earlier version of this file claimed lane L-TEST-ISOLATION
-enforced it "in progress"; that lane was never proposed, scheduled or
-built, and at least one archived change deferred its own live
-verification into it. Believing that claim is how a session ends up
-pointed at the live socket.
+This is enforced, not aspired to; `add-test-herdr-isolation` shipped it in
+`39124df`. Every herdr-touching suite runs against a session it made
+itself:
 
-What is actually true right now:
+- each run starts its own headless session — `herdr --session
+kanhrd-test-<scope> server` — and seeds it, because a fresh named
+  session has **zero** workspaces, tabs and panes;
+- the bridge is started with a generated `--config` naming that session's
+  socket, never the built-in default;
+- teardown stops and deletes the session, and the next run sweeps any
+  `kanhrd-test-*` session a crashed run left behind;
+- `assertIsolatedSocket()` throws on the default socket and on any path
+  outside a `kanhrd-test-*` session directory, and the herdr CLI wrappers
+  throw rather than run when the run handed them no session — there is no
+  fallback path to the operator's socket;
+- Playwright runs on port 5273 with `reuseExistingServer: false`, so a run
+  can never attach to the bridge the operator already has on 5173.
 
-- `pnpm test:int` (`apps/bridge/integration/**`) runs against the live
-  default socket. It subscribes and lists; it does not type into panes,
-  but it is the operator's real instance.
-- `apps/web/e2e`'s live specs **type into real panes** and are gated
-  behind `KANHRD_E2E_LIVE_HERDR=1`, which is the only real guard in the
-  repo. Do not set it without the operator's explicit say-so for that
-  run. Playwright's `webServer` starts the bridge with no `--config`, so
-  it too resolves to the default socket.
-- The bridge needs no new code to be isolated: `main.ts` takes
-  `--config <path>` and `config.ts` reads `hosts: [{ name, socket }]`
-  from it. `herdr --session <name>` gives a server its own socket
-  (`herdr session list` shows the path per session). The missing pieces
-  are the test fixtures and the Playwright `webServer` command.
-
-`add-test-herdr-isolation` is the change that closes this. Until it
-ships, treat any suite that reaches herdr as touching production and ask
-first.
+Without `herdr` on `PATH` the live specs skip with the reason; the mocked
+ones run. The fixtures are
+`apps/bridge/integration/fixtures/herdr-session.ts` and
+`apps/web/e2e/fixtures/isolated-bridge.mjs`; both READMEs describe the
+lifecycle.
 
 ### Dispatched agents do the work, they do NOT re-dispatch
 

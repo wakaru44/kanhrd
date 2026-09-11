@@ -56,3 +56,13 @@ afterthought (see `docs/OPERATING.md`).
   audit trails have to come from the proxy's own logs, not the bridge.
   Loopback loses its safety net once the bind is opened without a proxy
   in front — `--i-know-what-im-doing` is the only guard.
+- **Added 2026-09-11 (commit `371eede`), decision unchanged.** Loopback
+  binding is now paired with an `Origin` allowlist on `/ws` and
+  `GET /api/*`: the default bind derives its own origins, so nothing needs
+  configuring on a laptop, while a proxy deployment names the proxy's
+  public origin in `allowed_origins:`. This narrows one gap loopback never
+  covered — a page the operator merely visits opening a socket to the
+  bridge — and narrows nothing else. It is not authentication, it does not
+  read the proxy's identity header, and it checks `Origin` rather than
+  `Host`, so the delegation this ADR decided is exactly as load-bearing as
+  it was.

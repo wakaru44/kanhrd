@@ -15,10 +15,10 @@ env:
 
 # Never run `pnpm test:e2e` or `pnpm test:int` here. Both drive a real herdr
 # daemon (unix socket + CLI on PATH), which a hosted GitHub runner does not
-# and must not have. The e2e suite is additionally gated behind
-# KANHRD_E2E_LIVE_HERDR=1 — do not set that variable in this workflow, in a
-# repository/environment secret, or in a new job. Those suites belong on a
-# self-hosted runner with herdr available (see .forgejo/workflows/ci.yml).
+# and must not have. Each suite now starts and disposes its own throwaway
+# `kanhrd-test-*` herdr session, so it needs the herdr binary, not an opt-in
+# variable. Those suites belong on a self-hosted runner with herdr available
+# (see .forgejo/workflows/ci.yml).
 
 jobs:
   lint-and-typecheck:

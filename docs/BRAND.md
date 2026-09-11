@@ -117,6 +117,8 @@ product copy and stay in the template.
 | `park.rule.never`                     | `never`                                                                                                                                       |
 | `park.rule.agentActivity`             | `on agent activity`                                                                                                                           |
 | `park.renameColumn`                   | `rename column`                                                                                                                               |
+| `park.moveColumnLeft`                 | `move column left`                                                                                                                            |
+| `park.moveColumnRight`                | `move column right`                                                                                                                           |
 | `park.removeColumn`                   | `remove column`                                                                                                                               |
 | `park.removeColumnBody`               | `the cards go back to their status columns. nothing on the host changes.`                                                                     |
 | `confirm.closePane`                   | `let this one rest?`                                                                                                                          |

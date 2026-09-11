@@ -25,8 +25,8 @@ import { COPY } from '../src/app/shared/copy';
  * - Opening a scoped URL (`/workspace/:workspaceId/tab/:tabId`) renders the
  *   `.scope-pill` with a `clear scope` control. This half needs a real
  *   herdr session because the pill only paints once `resolvedWorkspace()`
- *   is non-null; it is gated on the same `KANHRD_E2E_LIVE_HERDR` opt-in the
- *   rest of the live-herdr suite uses (see `fixtures/herdr.ts`).
+ *   is non-null, so it runs against the run's own herdr session and skips
+ *   when there is none (see `fixtures/herdr.ts`).
  *
  * See `docs/UX-GUIDELINES.md` — "Empty state" and "URL scope" — and
  * `apps/web/src/app/board/empty-state.html` / `board.html`.

@@ -529,8 +529,19 @@ test('[22] the board exposes no drag affordance on a status column', async ({ ap
   await expect(allCards(app).first()).toBeVisible({ timeout: 10_000 });
   const offenders = await app.evaluate(() => {
     const found: string[] = [];
-    if (document.querySelector('[cdkDrag], [cdkdrag], .cdk-drag, [cdkDropList], [cdkdroplist]')) {
-      found.push('cdkDrag/cdkDropList');
+    // ENABLED state, not mere presence. Angular cannot drop a directive
+    // conditionally without duplicating the template, so a board with no
+    // user-defined column carries `cdkDrag`/`cdkDropList` inert
+    // (`.cdk-drag-disabled` / `.cdk-drop-list-disabled`: nothing pickable,
+    // nothing receivable, no grab cursor). Guideline 22 is written against
+    // `cdkDrag` ENABLED for exactly that reason; asserting presence would
+    // test the implementation rather than the affordance.
+    if (
+      document.querySelector(
+        '.cdk-drag:not(.cdk-drag-disabled), .cdk-drop-list:not(.cdk-drop-list-disabled)'
+      )
+    ) {
+      found.push('cdkDrag/cdkDropList enabled');
     }
     if (document.querySelector('[draggable="true"]')) {
       found.push('draggable="true"');
@@ -684,10 +695,20 @@ test('[29][30][31] the settings screen stacks, fits and stays tappable', async (
   // [31] the controls the criteria name.
   await expectTouchTarget(app.locator('#terminal-theme'), 'terminal-theme select');
   await expectTouchTarget(app.locator('#requested-poll-ms'), 'poll override input');
+  // Density is the FIRST segmented group; the terminal font-size row added a
+  // second one with five segments. Criterion 31 is about every segment being
+  // tappable at 390px, not about how many exist, so assert the shape of the
+  // density group and then hold every segment on the screen to the target.
+  const densitySegments = app.locator('.segmented').first().locator('.segment');
+  await expect(densitySegments).toHaveCount(2);
   const segments = app.locator('.segmented .segment');
-  await expect(segments).toHaveCount(2);
-  await expectTouchTarget(segments.nth(0), 'density segment 1');
-  await expectTouchTarget(segments.nth(1), 'density segment 2');
+  const segmentCount = await segments.count();
+  expect(segmentCount, 'settings should expose at least the density pair').toBeGreaterThanOrEqual(
+    2
+  );
+  for (let i = 0; i < segmentCount; i += 1) {
+    await expectTouchTarget(segments.nth(i), `segmented control segment ${i + 1}`);
+  }
   await expectTouchTarget(app.locator('.settings-section .btn').first(), 'theme button');
 });
 

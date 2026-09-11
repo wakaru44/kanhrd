@@ -80,13 +80,19 @@ and detailed in [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md):
 - The bridge has no authentication or authorisation of its own. Identity is
   delegated to a reverse proxy placed in front of it.
 - Anyone who reaches the bridge gets everything: every configured host,
-  every terminal, keystroke injection, and session destruction.
+  every terminal, keystroke injection, and session destruction. The one
+  exception is a web page: `/ws` and `GET /api/*` refuse an `Origin`
+  outside the bridge's allowlist, which is derived from its bind and port
+  and extended with `allowed_origins:`. That check bounds which page may
+  drive the bridge, never which person — and it does not cover `Host`, so
+  DNS rebinding remains out of scope.
 - Binding a non-loopback address is possible with an explicit
   `--i-know-what-im-doing` flag. Doing so without a proxy in front is an
   unauthenticated shell on the network, and the flag is the only warning you
   get.
-- The test suites drive a real herdr and type into live panes. They are
-  gated behind explicit opt-in environment variables.
+- The test suites drive a real herdr and type into live panes — their own.
+  Each run creates, seeds and deletes a throwaway `kanhrd-test-*` herdr
+  session, and refuses the operator's default socket outright.
 
 What is in scope: any way to reach the bridge or a herdr socket that
 bypasses a correctly configured reverse proxy, any way to escape the
