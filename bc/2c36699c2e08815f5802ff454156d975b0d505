@@ -1,0 +1,92 @@
+apps/web/src/app/shared/_icon-button.scss
+  s_e465e30f266fa2::t_133a64d948bd0f 1-29
+apps/web/src/app/state/keyboard.service.spec.ts
+  s_e465e30f266fa2::t_cf80937b312a2e 487,491,501-502
+  s_e465e30f266fa2::t_88bdc3af631cac 482-486,488-490,492-495,497
+apps/web/src/app/shared/theme-choice.html
+  s_e465e30f266fa2::t_02fae77defe0c5 1-21
+apps/web/src/app/shared/theme-panel.spec.ts
+  s_e465e30f266fa2::t_328d95479c882d 327-331
+  s_e465e30f266fa2::t_9291916d111b9d 1-326,332-349,353-357
+  s_7901944abeeaba::t_ba8ce81736323b 350-352
+apps/web/e2e/theme.spec.ts
+  s_e465e30f266fa2::t_2d3e9c5a0d867f 17-21,37,46-48,60,63-65,67-78
+apps/web/src/app/shared/theme-choice.ts
+  s_e465e30f266fa2::t_6b047d5dd5651a 1-96
+apps/web/src/app/shared/terminal-theme-choice.html
+  s_e465e30f266fa2::t_7490b23bc7846f 1-11
+apps/web/src/app/state/keyboard.service.ts
+  s_e465e30f266fa2::t_becb91c891f94f 612-617
+apps/web/src/app/settings/settings.scss
+  s_e465e30f266fa2::t_5295e3688b3d0c 1-2,229
+apps/web/src/app/settings/settings.html
+  s_e465e30f266fa2::t_a8c9a6cdf695a4 13,41-45
+apps/web/src/app/shared/terminal-theme-choice.ts
+  s_e465e30f266fa2::t_4556a3bd9a4d1c 1-43
+apps/web/src/app/app.ts
+  s_e465e30f266fa2::t_1b0e16126a1058 3,10,25,51
+openspec/changes/add-theme-panel/tasks.md
+  s_e465e30f266fa2::t_182b39f67238f8 5,8,11,16,19,21,25,29,34,36,41,43,46,49,55,59,65,69,71,76,81-85
+  s_e465e30f266fa2::t_3e2bb8928e6153 74
+apps/web/src/app/settings/settings.ts
+  s_e465e30f266fa2::t_6fd043b5eab2c4 15-16,31,44
+apps/web/src/app/app.html
+  s_e465e30f266fa2::t_a347e64c24bf86 13
+apps/web/src/app/state/layout.service.ts
+  s_e465e30f266fa2::t_b3efa4534e116c 42-49
+  s_e465e30f266fa2::t_7a562aeac96692 15-21
+apps/web/src/app/settings/settings.spec.ts
+  s_7901944abeeaba::t_295f12137f38cc 131-133,198
+  s_7901944abeeaba::t_babee2ea8d779d 123,128-130,194,196-197,199
+apps/web/src/app/shared/theme-panel.ts
+  s_e465e30f266fa2::t_0cb5eff4d1af5c 37-39
+  s_e465e30f266fa2::t_5b276e2f969217 1-36,40-130
+apps/web/src/app/shared/_controls.scss
+  s_e465e30f266fa2::t_ef84b58343c3cd 1-117
+apps/web/src/app/shared/theme-panel.html
+  s_e465e30f266fa2::t_590886150a66a5 10
+  s_e465e30f266fa2::t_2a1f2fe7588afe 1-9,11-41
+apps/web/src/app/shared/theme-panel.scss
+  s_e465e30f266fa2::t_590886150a66a5 1,3-25
+  s_e465e30f266fa2::t_133a64d948bd0f 2
+apps/web/src/app/shared/copy.spec.ts
+  s_e465e30f266fa2::t_b7064f5620fdb8 82-84,89,99
+apps/web/src/app/app.scss
+  s_e465e30f266fa2::t_92a29c99e8a8c0 2
+  s_7901944abeeaba::t_373cdb9a2c8ece 1
+apps/web/src/app/shared/terminal-theme-choice.scss
+  s_e465e30f266fa2::t_7490b23bc7846f 1-17
+apps/web/src/app/shared/copy.ts
+  s_e465e30f266fa2::t_028a9f80bda38a 194-195
+  s_e465e30f266fa2::t_7255c7d02ae488 196-198
+  s_e465e30f266fa2::t_e426ce0ad71ec2 183-193,199-202
+  s_7901944abeeaba::t_e1ed672aa3b03c 203
+apps/web/src/app/shared/theme-choice.scss
+  s_e465e30f266fa2::t_61b7e59d913309 1-21
+apps/web/src/app/shared/style-lint.spec.ts
+  s_e465e30f266fa2::t_88bdc3af631cac 17-19,118-120,149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bc2c36699c2e08815f5802ff454156d975b0d505",
+  "prompts": {},
+  "sessions": {
+    "s_7901944abeeaba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdce5a89-318c-4864-b71b-909fa85af141",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    },
+    "s_e465e30f266fa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2c5b23d5-95a9-4f8a-9e19-5ebcf3fb7297",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
