@@ -4,21 +4,21 @@
   [attr.aria-label]="switcherLabel"
   (keydown)="onKeydown($event)"
 >
-  @for (status of statuses(); track status; let i = $index) {
+  @for (column of columns(); track column.key; let i = $index) {
     <button
       #segment
       type="button"
       role="tab"
       class="segment"
       [class.selected]="i === selected()"
-      [id]="'switcher-tab-' + status"
-      [attr.aria-controls]="controlsPanels() ? 'column-panel-' + status : null"
+      [id]="'switcher-tab-' + column.key"
+      [attr.aria-controls]="controlsPanels() ? 'column-panel-' + column.key : null"
       [attr.aria-selected]="i === selected()"
       [attr.tabindex]="i === selected() ? 0 : -1"
-      [attr.aria-label]="itemLabel(status, i)"
+      [attr.aria-label]="itemLabel(column, i)"
       (click)="choose(i)"
     >
-      <span class="segment-label">{{ label(status) }}</span>
+      <span class="segment-label">{{ column.label }}</span>
       @if (i === selected()) {
         <span class="segment-count">{{ counts()[i] }}</span>
       }

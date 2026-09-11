@@ -4,11 +4,20 @@
     <span class="swimlane-count">{{ count() }}</span>
   </header>
   <div class="swimlane-strip" #strip (scroll)="onStripScroll()">
-    @for (status of statuses(); track status) {
+    @for (column of columns(); track column.key) {
       <!-- No tabpanel role here: with bands there are many columns per
            status, so a single switcher tab cannot control one panel. The
-           switcher drops its `aria-controls` while grouping is on. -->
-      <app-column [status]="status" [panes]="panesFor(status)" [capabilities]="capabilities()" />
+           switcher drops its `aria-controls` while grouping is on.
+
+           A parked column is board furniture, not a property of the cards
+           in a band, so every band renders the whole column set — parked
+           columns included, empty ones kept. -->
+      <app-column
+        [status]="column.status"
+        [parked]="column.parked"
+        [panes]="panesFor(column)"
+        [capabilities]="capabilities()"
+      />
     }
   </div>
 </section>

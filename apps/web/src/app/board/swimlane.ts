@@ -1,9 +1,9 @@
 import { Component, ElementRef, computed, effect, input, output, viewChild } from '@angular/core';
-import type { AgentStatus, BridgeCapabilities } from '@kanhrd/schema';
+import type { AgentStatus, BridgeCapabilities, Pane } from '@kanhrd/schema';
 import { COPY } from '../shared/copy';
 import type { Swimlane as SwimlaneBand } from '../state/panes.store';
 import type { SwimlaneDimension } from '../state/settings.service';
-import { Column, mobileViewportSignal } from './column';
+import { Column, mobileViewportSignal, type BoardColumnRef } from './column';
 
 /**
  * The resting page index of a paging strip. Deterministic by construction:
@@ -102,8 +102,13 @@ export class Swimlane {
   readonly label = input.required<string>();
   /** Full value behind an elided heading, or `null` when the heading is complete. */
   readonly title = input<string | null>(null);
-  /** Visible status columns, already in `STATUS_COLUMN_ORDER`. Whatever the board yields, the band renders. */
-  readonly statuses = input.required<readonly AgentStatus[]>();
+  /**
+   * Every column the board draws — visible status columns in
+   * `STATUS_COLUMN_ORDER`, then the parked columns. Whatever the board
+   * yields, the band renders: a parked column appears in every band, the
+   * same way each status column does.
+   */
+  readonly columns = input.required<readonly BoardColumnRef[]>();
   readonly capabilities = input.required<ReadonlyMap<string, BridgeCapabilities>>();
   /**
    * Index into `statuses` of the column the mobile pager rests on. The
@@ -121,16 +126,19 @@ export class Swimlane {
 
   /** Cards in this band across every visible column — the band's own count, not the board's. */
   protected readonly count = computed(() => {
-    const columns = this.lane().columns;
     let total = 0;
-    for (const status of this.statuses()) {
-      total += columns[status]?.length ?? 0;
+    for (const column of this.columns()) {
+      total += this.panesFor(column).length;
     }
     return total;
   });
 
-  protected panesFor(status: AgentStatus) {
-    return this.lane().columns[status] ?? [];
+  protected panesFor(column: BoardColumnRef): Pane[] {
+    const lane = this.lane();
+    if (column.parked) {
+      return lane.parked?.get(column.parked.id) ?? [];
+    }
+    return lane.columns[column.status as AgentStatus] ?? [];
   }
 
   constructor() {
@@ -154,7 +162,7 @@ export class Swimlane {
       return;
     }
     const index = pageIndex(element.scrollLeft, element.clientWidth);
-    if (index !== this.selectedIndex() && index < this.statuses().length) {
+    if (index !== this.selectedIndex() && index < this.columns().length) {
       this.page.emit(index);
     }
   }

@@ -11,7 +11,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { OverlayModule, type ConnectedPosition } from '@angular/cdk/overlay';
 import type { BridgeCapabilities, Pane, SplitDirection } from '@kanhrd/schema';
-import { PanesStore } from '../state/panes.store';
+import { PanesStore, paneKey } from '../state/panes.store';
 import { ConfirmModal } from '../shared/confirm-modal';
 import { RenameModal } from '../shared/rename-modal';
 import { ClockTick, formatElapsed } from '../util/clock';
@@ -20,6 +20,8 @@ import { pathTail } from '../util/path-tail';
 import { ToastService } from '../state/toast.service';
 import { BoardReturnService } from '../state/board-return.service';
 import { COPY, fill } from '../shared/copy';
+import { handleMenuKeydown, menuItems } from '../shared/menu-keys';
+import { ParkedStore } from '../state/parked.store';
 import {
   LucideArrowDown,
   LucideArrowRight,
@@ -43,6 +45,9 @@ export const CARD_COPY = {
   close: COPY.confirm.closePaneAction,
   moreActions: COPY.nav.moreActions,
   rename: COPY.card.renameAction,
+  park: COPY.card.park,
+  unpark: COPY.card.unpark,
+  newColumn: COPY.park.newColumn,
 } as const;
 
 /** Ids for `aria-controls`, unique per card instance for the life of the page. */
@@ -148,9 +153,50 @@ export class Card {
     () => this.capabilities().get(this.pane().host)?.paneRename === true
   );
 
-  protected readonly hasActions = computed(
+  /**
+   * Whether any herdr-side action is offered at all. The action row itself
+   * is NOT gated on this: park and unpark are client-local, need no
+   * capability and no host, so a tier-1 board still carries the overflow
+   * menu — which is also the only keyboard path to parking.
+   */
+  protected readonly hasPaneActions = computed(
     () => this.paneSplitAvailable() || this.paneCloseAvailable() || this.paneRenameAvailable()
   );
+
+  // --- parking (client-local; see state/parked.store.ts) ------------------
+
+  private readonly parked = inject(ParkedStore);
+
+  protected readonly parkedColumns = this.parked.columns;
+
+  private readonly key = computed(() => paneKey(this.pane().host, this.pane().id));
+
+  /** The parked column this card sits in, or `null` when it sits in its status column. */
+  protected readonly parkedIn = computed(() => this.parked.membership().get(this.key()) ?? null);
+
+  /** `park in…` expands its destinations in place, so one menu carries one keyboard contract. */
+  protected readonly parkListOpen = signal(false);
+
+  protected toggleParkList(): void {
+    this.parkListOpen.update((open) => !open);
+  }
+
+  protected parkIn(columnId: string): void {
+    this.parked.park(this.key(), columnId);
+    this.closeMenu(false);
+  }
+
+  /** `new column…` — the column is created with the default name and this card goes straight into it. */
+  protected parkInNewColumn(): void {
+    const column = this.parked.createColumn(COPY.park.defaultName);
+    this.parked.park(this.key(), column.id);
+    this.closeMenu(false);
+  }
+
+  protected unpark(): void {
+    this.parked.unpark(this.key());
+    this.closeMenu(false);
+  }
 
   protected readonly showCloseConfirm = signal(false);
   /** The value a failed rename kept, so reopening the dialog seeds it instead of the stored name. */
@@ -217,7 +263,7 @@ export class Card {
     effect(() => {
       const menu = this.menuEl()?.nativeElement;
       if (this.menuOpen() && menu) {
-        this.menuItems(menu)[0]?.focus({ preventScroll: true });
+        menuItems(menu)[0]?.focus({ preventScroll: true });
       }
     });
 
@@ -254,10 +300,6 @@ export class Card {
     return `${label} — ${this.displayName()}`;
   }
 
-  private menuItems(root: HTMLElement): HTMLButtonElement[] {
-    return Array.from(root.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
-  }
-
   protected toggleMenu(): void {
     this.menuOpen.update((open) => !open);
   }
@@ -267,6 +309,7 @@ export class Card {
       return;
     }
     this.menuOpen.set(false);
+    this.parkListOpen.set(false);
     if (refocus) {
       this.menuTrigger()?.nativeElement.focus();
     }
@@ -274,35 +317,7 @@ export class Card {
 
   /** Arrow / Home / End move within the menu; Escape dismisses without opening the card. */
   protected onMenuKeydown(event: KeyboardEvent): void {
-    const menu = this.menuEl()?.nativeElement;
-    if (!menu) {
-      return;
-    }
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      this.closeMenu();
-      return;
-    }
-    const items = this.menuItems(menu);
-    if (items.length === 0) {
-      return;
-    }
-    const current = items.indexOf(document.activeElement as HTMLButtonElement);
-    let next: number | null = null;
-    if (event.key === 'ArrowDown') {
-      next = (current + 1) % items.length;
-    } else if (event.key === 'ArrowUp') {
-      next = (current <= 0 ? items.length : current) - 1;
-    } else if (event.key === 'Home') {
-      next = 0;
-    } else if (event.key === 'End') {
-      next = items.length - 1;
-    }
-    if (next !== null) {
-      event.preventDefault();
-      items[next].focus();
-    }
+    handleMenuKeydown(event, this.menuEl()?.nativeElement ?? null, () => this.closeMenu());
   }
 
   /**

@@ -205,8 +205,10 @@ describe('Settings', () => {
       COPY.confirm.previewHeading
     );
     // One row per kanhrd-owned setting the sweep clears — board grouping
-    // rides the same `kanhrd.settings` key, so it is listed too.
-    expect(modal?.querySelectorAll('.preview-row').length).toBe(6);
+    // rides the same `kanhrd.settings` key, so it is listed too, and the
+    // parked columns are a `kanhrd.*` key of their own.
+    expect(modal?.querySelectorAll('.preview-row').length).toBe(7);
+    expect(modal?.textContent).toContain(COPY.settings.clearParked);
     expect(modal?.textContent).toContain(COPY.settings.clearSwimlane);
     expect(modal?.querySelector('.modal-body')?.textContent).toContain('cannot be undone');
     expect(clearSpy).not.toHaveBeenCalled();

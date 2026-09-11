@@ -94,7 +94,7 @@
         } @else {
           @if (mobile()) {
             <app-status-switcher
-              [statuses]="visibleStatuses()"
+              [columns]="visibleColumns()"
               [counts]="visibleCounts()"
               [selectedIndex]="currentIndex()"
               [controlsPanels]="!grouped()"
@@ -113,7 +113,7 @@
                   [lane]="band.lane"
                   [label]="band.label"
                   [title]="band.title"
-                  [statuses]="visibleStatuses()"
+                  [columns]="visibleColumns()"
                   [capabilities]="capabilities()"
                   [selectedIndex]="currentIndex()"
                   (page)="selectStatus($event)"
@@ -122,14 +122,17 @@
             </div>
           } @else {
             <div class="board-grid board-strip" #strip (scroll)="onStripScroll()">
-              @for (status of visibleStatuses(); track status) {
+              <!-- Status columns in STATUS_COLUMN_ORDER, then the operator's
+                   parked columns after `unknown`, in their own order. -->
+              @for (column of visibleColumns(); track column.key) {
                 <app-column
                   #columnEl
                   role="tabpanel"
-                  [attr.id]="'column-panel-' + status"
-                  [attr.aria-labelledby]="'switcher-tab-' + status"
-                  [status]="status"
-                  [panes]="columns()[status]"
+                  [attr.id]="'column-panel-' + column.key"
+                  [attr.aria-labelledby]="'switcher-tab-' + column.key"
+                  [status]="column.status"
+                  [parked]="column.parked"
+                  [panes]="panesFor(column)"
                   [capabilities]="capabilities()"
                 />
               }

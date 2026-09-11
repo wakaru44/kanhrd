@@ -25,77 +25,94 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
 
 ## 1. Park store
 
-- [ ] 1.1 `apps/web/src/app/state/parked.store.ts` — types
+- [x] 1.1 `apps/web/src/app/state/parked.store.ts` — types
       `ParkedColumn { id, name, exitRule: "never" | "agent-activity",
       order }`, `ParkedState { version: 1, columns, membership }`;
       `loadParked` / `saveParked` taking a
       `Pick<Storage, "getItem" | "setItem">` seam, mirroring
       `loadFilters` / `saveFilters` in `panes.store.ts`
-- [ ] 1.2 Defensive load: absent key, unparsable JSON, unknown
+- [x] 1.2 Defensive load: absent key, unparsable JSON, unknown
       `version`, unknown `exitRule`, membership naming an unknown column
       → empty default or dropped entry, never a throw
-- [ ] 1.3 Signals + mutations: `createColumn`, `renameColumn`,
+- [x] 1.3 Signals + mutations: `createColumn`, `renameColumn`,
       `setExitRule`, `removeColumn` (returns cards to status columns),
       `park(paneKey, columnId)`, `unpark(paneKey)`,
       `releasePanes(paneKeys)`; an `effect` persisting on every change
-- [ ] 1.4 `parked.store.spec.ts` — round-trip, every defensive-load case,
+- [x] 1.4 `parked.store.spec.ts` — round-trip, every defensive-load case,
       `removeColumn` releasing membership, membership keyed by `PaneKey`
 
 ## 2. Board partition
 
-- [ ] 2.1 `apps/web/src/app/state/panes.store.ts` — `columnsSignal`
+- [x] 2.1 `apps/web/src/app/state/panes.store.ts` — `columnsSignal`
       partitions panes with a membership entry out of `groupByStatus`
       into a parked map; status grouping is otherwise unchanged
-- [ ] 2.2 Parked columns honour `Filters` (excluded hosts, hidden
+- [x] 2.2 Parked columns honour `Filters` (excluded hosts, hidden
       statuses) and the URL scope identically to status columns; counts
       reflect the filtered collection
-- [ ] 2.3 Release membership on `pane.closed`, and on the local purge of
+- [x] 2.3 Release membership on `pane.closed`, and on the local purge of
       cascaded children after `tab.closed` / `workspace.closed` — reuse
       the pane keys the existing purge already computes, do not
       re-derive the tree
-- [ ] 2.4 **Do not** release on host disconnect, on a pane's absence from
+- [x] 2.4 **Do not** release on host disconnect, on a pane's absence from
       a `pane.list` snapshot, or on any last-seen heuristic
-- [ ] 2.5 `panes.store.spec.ts` — a parked pane appears exactly once;
+- [x] 2.5 `panes.store.spec.ts` — a parked pane appears exactly once;
       counts; cascade purge; a disconnect/reconnect cycle leaves
       membership intact
+- [x] 2.6 The swimlane seam (`add-swimlane-grouping` × this change): a
+      parked column appears in EVERY band. `Swimlane.parked` sits beside
+      `columns` and carries a bucket per parked column, empty ones
+      included — `groupIntoSwimlanes` threads the column id list down to
+      each band's own `groupIntoColumns` pass rather than deriving it
+      from what landed in the band. A parked card still bands by its own
+      dimension, so the band a parked card shows up in is the same band
+      it would sit in unparked
 
 ## 3. Exit rules
 
-- [ ] 3.1 Pure `shouldExit(rule, previous, next): boolean` in
+- [x] 3.1 Pure `shouldExit(rule, previous, next): boolean` in
       `parked.store.ts` — `never` always false; `agent-activity` true
       only on a transition **into** `working` or `blocked`
-- [ ] 3.2 Wire it to the existing `pane.agent_status_changed` handling.
+- [x] 3.2 Wire it to the existing `pane.agent_status_changed` handling.
       No new subscription, no `pane.read`, no `pane.subscribe_output`
-- [ ] 3.3 A rule change applies from the next event onward; it never
+- [x] 3.3 A rule change applies from the next event onward; it never
       retroactively unparks
-- [ ] 3.4 `parked.store.spec.ts` — the transition matrix over all five
+- [x] 3.4 `parked.store.spec.ts` — the transition matrix over all five
       statuses for both rules, including `working → done` staying parked
 
 ## 4. UI
 
-- [ ] 4.1 `apps/web/src/app/board/column.{ts,html,scss}` — a parked
+- [x] 4.1 `apps/web/src/app/board/column.{ts,html,scss}` — a parked
       header variant: name, mono count, exit rule as visible
       `--ink-mute` text, `LucideMoreHorizontal` trigger. The status
       header and its drag-free guarantees are untouched
-- [ ] 4.2 The header `role="menu"`: rename, exit rules as
-      `role="menuitemradio"`, remove column. Lift the keyboard contract
-      from `card.ts` (`aria-haspopup`, arrow navigation, Escape,
-      focus return) rather than writing a second one
-- [ ] 4.3 `apps/web/src/app/board/card.{ts,html}` — `park in…`
+- [x] 4.2 The header `role="menu"`: exit rules as `role="menuitemradio"`
+      and remove column, with the keyboard contract lifted out of
+      `card.ts` into `shared/menu-keys.ts` (`aria-haspopup`, arrow /
+      Home / End navigation, Escape, focus return) rather than written
+      twice. **`rename column` is DEFERRED**: `docs/BRAND.md`'s
+      approved-copy table has no row for it (it landed
+      `park.removeColumn` and the seven other `park.*` rows, but no
+      rename string), and this change does not invent copy. A column
+      therefore takes `park.defaultName` at creation and keeps it. The
+      unblock is one row — `park.renameColumn` — added by a maintainer;
+      `ParkedStore.renameColumn` and `RenameModal`'s `title` /
+      `fieldLabel` inputs are already in place, so the menu item is a
+      few lines once the word exists
+- [x] 4.3 `apps/web/src/app/board/card.{ts,html}` — `park in…`
       (parked columns + `new column…`) and `unpark` menu items inside
       the existing `<div class="overflow-menu">`. Expect the only
       merge conflict with `add-pane-workdir-and-task-title` here
-- [ ] 4.4 `apps/web/src/app/board/board.{ts,html,scss}` — render parked
+- [x] 4.4 `apps/web/src/app/board/board.{ts,html,scss}` — render parked
       columns after `unknown`, in `order`; include them in the mobile
       paging strip and the status switcher (per 0.2)
-- [ ] 4.5 Empty parked column: slot kept, header plus mono `0`, no prose
-- [ ] 4.6 `remove column` confirmation states plainly that the cards
+- [x] 4.5 Empty parked column: slot kept, header plus mono `0`, no prose
+- [x] 4.6 `remove column` confirmation states plainly that the cards
       return to their status columns and nothing on the host changes — no
       care verb (parking is not a lifecycle end), no implied undo
-- [ ] 4.7 Settings — `clear parked columns` row stating that parked
+- [x] 4.7 Settings — `clear parked columns` row stating that parked
       columns live in this browser only
-- [ ] 4.8 Tokens only: no raw hex, px or rem in the new styles
-- [ ] 4.9 `column.spec.ts` / `card.spec.ts` / `board.spec.ts` — header
+- [x] 4.8 Tokens only: no raw hex, px or rem in the new styles
+- [x] 4.9 `column.spec.ts` / `card.spec.ts` / `board.spec.ts` — header
       renders the rule as text; menus open and complete by keyboard;
       parked columns appear after `unknown`; arrow navigation reaches
       them by stable pane identity
@@ -133,14 +150,20 @@ resolved 2026-09-10" for the reasoning; do not re-ask.
 
 ## 7. Verification
 
-- [ ] 7.1 `pnpm test` green; new specs cover the store, the partition,
+- [x] 7.1 `pnpm test` green; new specs cover the store, the partition,
       the rule matrix and the keyboard paths. Per `CLAUDE.md`, checks
       live in the committed suites — no `/tmp` validation scripts
-- [ ] 7.2 Existing e2e assertion 22 (no enabled `cdkDrag`, no drag
+- [ ] 7.2 DEFERRED (not this lane's file): `apps/web/e2e/**` belongs to
+      the e2e lane. Nothing in phase A adds a `cdkDrag`, a drag handle or
+      a `cursor: grab`, so assertion 22 is expected to hold — unverified
+      here. Existing e2e assertion 22 (no enabled `cdkDrag`, no drag
       handle, no `cursor: grab` anywhere on the board) still passes with
       parked columns present
-- [ ] 7.3 Mobile at 390 × 844: `document.documentElement.scrollWidth <=
+- [ ] 7.3 DEFERRED to the e2e lane for the same reason (it is a
+      measured browser assertion, not a unit test). The paging model is
+      unchanged in kind: a parked column is one more `app-column` in the
+      same strip, with one more switcher segment. Mobile at 390 × 844: `document.documentElement.scrollWidth <=
       clientWidth + 1` with parked columns; each parked column pages as
       one full-width screen; its switcher segment is ≥ 40 × 40
-- [ ] 7.4 `pnpm lint` (pre-commit) clean
-- [ ] 7.5 `openspec validate add-parked-columns --strict` passes
+- [x] 7.4 `pnpm lint` (pre-commit) clean
+- [x] 7.5 `openspec validate add-parked-columns --strict` passes

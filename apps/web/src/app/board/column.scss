@@ -29,6 +29,8 @@
 
 .column-title {
   margin: 0;
+  /* Title left, everything else (count, exit rule, menu) grouped right. */
+  margin-right: auto;
   font-family: var(--font-display);
   font-size: var(--fs-h3);
   line-height: var(--lh-h3);
@@ -96,5 +98,98 @@
   .column {
     /* One column per screen: the page gutters live here, inside the strip. */
     padding: 0 var(--sp-4) var(--sp-4);
+  }
+}
+
+/*
+ * Parked-column header additions. The status header above is untouched: a
+ * status column has no rule and no menu, so neither element is rendered
+ * for it.
+ */
+
+/* The exit rule as plain, always-visible text — the rule is legible without
+ * opening, hovering or focusing anything, the same principle as "status is
+ * never colour alone". */
+.exit-rule {
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  color: var(--ink-mute);
+}
+
+.column-menu {
+  display: flex;
+  align-items: center;
+}
+
+/* Visible on first render, never a hover reveal. */
+.column-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  padding: var(--sp-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink-mute);
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--ink);
+    border-color: var(--rule);
+  }
+
+  .icon {
+    width: var(--icon-md);
+    height: var(--icon-md);
+  }
+}
+
+/* Same box as the card's overflow menu — one menu shape on the board. */
+.column-overflow-menu {
+  margin: var(--sp-1) 0;
+  display: flex;
+  flex-direction: column;
+  min-width: var(--sp-12);
+  padding: var(--sp-1);
+  border-radius: var(--radius-lg);
+  background: var(--paper-raised);
+  border: var(--elev-1);
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: var(--touch-target-min);
+    padding: var(--sp-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--fs-small);
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      border-color: var(--rule);
+      background: var(--paper-sunk);
+    }
+  }
+
+  /* The chosen rule is marked by a word-level mark, not by colour alone:
+   * `aria-checked` drives a leading rule mark in the same ink as the text. */
+  .exit-rule-item[aria-checked='true']::before {
+    content: '\2022';
+    color: var(--ochre-ink);
+  }
+
+  .exit-rule-item[aria-checked='false']::before {
+    content: '\2022';
+    color: transparent;
   }
 }

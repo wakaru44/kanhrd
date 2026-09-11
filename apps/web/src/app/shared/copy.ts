@@ -56,6 +56,28 @@ export const COPY = {
     renameClear: 'clear name',
     splitRight: 'split right',
     splitDown: 'split down',
+    /** Opens the list of parked columns, plus `park.newColumn`. The ellipsis is the promise of that list. */
+    park: 'park in…',
+    unpark: 'unpark',
+  },
+  /**
+   * User-defined columns. Parking is an arrangement of the board, not a
+   * lifecycle event on a session: nothing here takes a care verb, and
+   * `removeColumnBody` states what happens to the cards and what does not
+   * happen on the host, with no implied undo.
+   *
+   * The exit rules are named by what they do to a card, and read as the
+   * tail of "leaves: …" beside the column's name.
+   */
+  park: {
+    newColumn: 'new column…',
+    defaultName: 'parked',
+    rule: {
+      never: 'never',
+      agentActivity: 'on agent activity',
+    },
+    removeColumn: 'remove column',
+    removeColumnBody: 'the cards go back to their status columns. nothing on the host changes.',
   },
   /**
    * The navigator. `navigation` is the rail's accessible name — it says what
@@ -254,6 +276,8 @@ export const COPY = {
     data: 'data',
     dataNote: 'everything kanhrd keeps in this browser. no host and no bridge is touched.',
     clearData: 'clear local data',
+    /** The board's user-defined columns live in this browser only, so they are clearable from here like every other browser-held thing. */
+    clearParked: 'clear parked columns',
     clearTitle: 'clear what this browser remembers?',
     clearBody:
       "this removes kanhrd's saved settings from this browser and reloads the page. no host, session or bridge is affected. this cannot be undone.",

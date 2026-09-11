@@ -5,6 +5,7 @@ import type { BridgeCapabilities, Pane } from '@kanhrd/schema';
 import { CARD_COPY, Card } from './card';
 import { COPY } from '../shared/copy';
 import { PanesStore } from '../state/panes.store';
+import { PARKED_STORAGE_KEY, ParkedStore } from '../state/parked.store';
 
 class FakePanesStore {
   readonly closePane = jasmine.createSpy('closePane');
@@ -345,9 +346,12 @@ describe('Card', () => {
     expect(hidden.querySelector('.card-action.split-right')).toBeFalsy();
   });
 
-  it('renders no action row at all when the bridge supports neither split nor close', () => {
+  it('renders no inline action when the bridge supports neither split nor close, but keeps the overflow trigger', () => {
     const el = render(pane({ host: 'laptop' }), capsWithTerminal('laptop'));
-    expect(el.querySelector('.card-actions')).toBeFalsy();
+    expect(el.querySelector('.actions-inline')).toBeFalsy();
+    // Park and unpark are client-local and need no capability, so the menu —
+    // the only keyboard path to parking — is on every card, on every tier.
+    expect(el.querySelector('.card-action.overflow-trigger')).toBeTruthy();
   });
 
   it('exposes the actions on first render without any hover simulation', () => {
@@ -375,6 +379,7 @@ describe('Card', () => {
       CARD_COPY.splitRight,
       CARD_COPY.splitDown,
       CARD_COPY.close,
+      CARD_COPY.park,
     ]);
     expect(trigger?.getAttribute('aria-expanded')).toBe('true');
 
@@ -837,5 +842,97 @@ describe('Card', () => {
     expect(el.querySelector('.card-action.close')?.getAttribute('aria-label')).toContain(
       COPY.confirm.closePaneAction
     );
+  });
+
+  // --- parking (client-local; state/parked.store.ts) ----------------------
+
+  describe('park and unpark', () => {
+    let parked: ParkedStore;
+
+    beforeEach(() => {
+      localStorage.removeItem(PARKED_STORAGE_KEY);
+      parked = TestBed.inject(ParkedStore);
+    });
+
+    afterEach(() => localStorage.removeItem(PARKED_STORAGE_KEY));
+
+    /** The card's menu items, in order, as text. */
+    function items(fixture: ReturnType<typeof renderFixture>): string[] {
+      return Array.from(
+        menuOf(fixture)!.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
+      ).map((i) => i.textContent?.trim() ?? '');
+    }
+
+    it('offers `park in…` on a tier-1 card, where no other action exists', () => {
+      const fixture = renderFixture(pane({ host: 'laptop' }), capsWithTerminal('laptop'));
+      clickAndSettle(fixture, '.overflow-trigger');
+
+      expect(items(fixture)).toEqual([CARD_COPY.park]);
+    });
+
+    it('expands the destinations in place: every column, then `new column…`', () => {
+      parked.createColumn('archived', 'never');
+      parked.createColumn('parking');
+      const fixture = renderFixture(pane({ host: 'laptop' }), capsWithTerminal('laptop'));
+      clickAndSettle(fixture, '.overflow-trigger');
+      clickAndSettle(fixture, '.park');
+
+      expect(items(fixture)).toEqual([CARD_COPY.park, 'archived', 'parking', CARD_COPY.newColumn]);
+      expect(menuOf(fixture)!.querySelector('.park')!.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('parks the card into the chosen column', () => {
+      const column = parked.createColumn('archived', 'never');
+      const fixture = renderFixture(pane({ id: 'p9', host: 'laptop' }), capsWithTerminal('laptop'));
+      clickAndSettle(fixture, '.overflow-trigger');
+      clickAndSettle(fixture, '.park');
+      menuOf(fixture)!.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')[1].click();
+      fixture.detectChanges();
+
+      expect(parked.columnOf('laptop:p9')).toBe(column.id);
+    });
+
+    it('`new column…` creates one with the approved default name and parks into it', () => {
+      const fixture = renderFixture(pane({ id: 'p9', host: 'laptop' }), capsWithTerminal('laptop'));
+      clickAndSettle(fixture, '.overflow-trigger');
+      clickAndSettle(fixture, '.park');
+      clickAndSettle(fixture, '.new-column');
+
+      expect(parked.columns().map((c) => c.name)).toEqual([COPY.park.defaultName]);
+      expect(parked.columnOf('laptop:p9')).toBe(parked.columns()[0].id);
+    });
+
+    it('offers `unpark` instead once the card is parked, and completes it', () => {
+      const column = parked.createColumn('archived', 'never');
+      parked.park('laptop:p9', column.id);
+      const fixture = renderFixture(pane({ id: 'p9', host: 'laptop' }), capsWithTerminal('laptop'));
+      clickAndSettle(fixture, '.overflow-trigger');
+
+      expect(items(fixture)).toEqual([CARD_COPY.unpark]);
+
+      clickAndSettle(fixture, '.unpark');
+      expect(parked.columnOf('laptop:p9')).toBeNull();
+      expect(parked.columns().length).withContext('the column stays').toBe(1);
+    });
+
+    it('reaches every destination by keyboard, from the trigger', () => {
+      const column = parked.createColumn('archived', 'never');
+      const fixture = renderFixture(pane({ id: 'p9', host: 'laptop' }), capsWithTerminal('laptop'));
+      const host = fixture.nativeElement as HTMLElement;
+      document.body.appendChild(host);
+      strays.push(host);
+
+      clickAndSettle(fixture, '.overflow-trigger');
+      const menu = menuOf(fixture)!;
+      expect(document.activeElement).toBe(menu.querySelector('.park'));
+
+      (document.activeElement as HTMLButtonElement).click();
+      fixture.detectChanges();
+      menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      (document.activeElement as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(parked.columnOf('laptop:p9')).toBe(column.id);
+    });
   });
 });
