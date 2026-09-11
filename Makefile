@@ -47,6 +47,20 @@ hooks: ## Install git-lfs filters and the pre-commit git hooks locally.
 run: build-web build-bridge ## Build then run the bridge locally on 127.0.0.1:5173 (safe default).
 	node apps/bridge/dist/main.js
 
+.PHONY: status
+status: ## Show the locally-run bridge process, if one is up.
+	@pgrep -fl "node apps/bridge/dist/main.js" \
+	  || { echo "no bridge running from apps/bridge/dist/main.js"; exit 0; }
+
+.PHONY: stop
+stop: ## Stop a bridge started by `make run` (and friends). Never touches a container or a herdr session.
+	@pkill -f "node apps/bridge/dist/main.js" \
+	  && echo "bridge stopped" \
+	  || echo "no bridge running from apps/bridge/dist/main.js"
+
+.PHONY: restart
+restart: stop run ## Stop the running bridge, rebuild, and run it again in the foreground.
+
 .PHONY: run-exposed
 run-exposed: build-web build-bridge ## Bind 0.0.0.0 for LAN / dev-through-Tailscale (exposes on EVERY interface including untrusted Wi-Fi — prefer run-tailscale on a laptop).
 	node apps/bridge/dist/main.js --bind 0.0.0.0 --i-know-what-im-doing \
@@ -67,10 +81,12 @@ run-tailscale: _require-tailscale build-web build-bridge ## Bind ONLY to the Tai
 
 .PHONY: run-tailscale-serve
 run-tailscale-serve: _require-tailscale build-web build-bridge ## Bridge stays loopback; `tailscale serve` fronts it with HTTPS via Tailscale certs. Ctrl+C to stop; `make tailoff` to remove.
-	@echo "Starting bridge on loopback (5173) + Tailscale Serve fronting on https://$$($(TAILSCALE) status --self=true --json | jq -r '.Self.DNSName' | sed 's/\.$$//')" ; \
+	@name=$$($(TAILSCALE) status --self=true --json | jq -r '.Self.DNSName' | sed 's/\.$$//') ; \
+	 echo "Starting bridge on loopback (5173) + Tailscale Serve fronting on https://$$name:5173" ; \
 	 $(TAILSCALE) serve --https 5173 --set-path=/ http://127.0.0.1:5173 & \
 	 node apps/bridge/dist/main.js \
-	   --allowed-origin "https://$$($(TAILSCALE) status --self=true --json | jq -r '.Self.DNSName' | sed 's/\.$$//')"
+	   --allowed-origin "https://$$name:5173" \
+	   --allowed-origin "https://$$name"
 
 ## Dev (watch mode, hot reload)
 .PHONY: dev-web
