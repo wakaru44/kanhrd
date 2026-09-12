@@ -2002,6 +2002,56 @@ describe('Board: creation lands where the operator is looking', () => {
     expect(lastParams('tab.create')?.['workspace_id']).toBe('w6');
   });
 
+  // --- the keyboard contract the picker inherits (task 2.3) ---------------
+  //
+  // The e2e check for Escape on this menu skips whenever the run's host has
+  // not advertised a create capability yet, so the contract is pinned here
+  // too, where nothing is conditional.
+
+  it('moves focus into the create menu, walks it with arrows, and Escape returns focus to +', async () => {
+    const el = fixture.nativeElement as HTMLElement;
+    const trigger = el.querySelector<HTMLButtonElement>('.plus-button')!;
+    trigger.click();
+    fixture.detectChanges();
+    await settle(fixture);
+
+    const menu = el.querySelector<HTMLElement>('.plus-menu')!;
+    const items = Array.from(menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+    expect(items.length).toBeGreaterThan(1);
+    expect(document.activeElement)
+      .withContext('an opened menu is operable from the keyboard immediately')
+      .toBe(items[0]);
+
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(document.activeElement).toBe(items[1]);
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    expect(document.activeElement).toBe(items[items.length - 1]);
+
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(el.querySelector('.plus-menu')).toBeNull();
+    expect(document.activeElement).withContext('focus goes back to the trigger').toBe(trigger);
+  });
+
+  it('walks the destination list with the same arrows, as part of the same menu', async () => {
+    await clickCreate(COPY.create.pane);
+    const el = fixture.nativeElement as HTMLElement;
+    const menu = el.querySelector<HTMLElement>('.plus-menu')!;
+    const items = Array.from(menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+    expect(items.length).withContext('the destination rows ARE the menu items now').toBe(2);
+
+    // `Home` first, deliberately. The destination rows are re-rendered
+    // whenever the store moves underneath an open menu, so where focus
+    // happens to be sitting is not the thing under test here — that the
+    // rows answer the menu's own arrows is. (`handleMenuKeydown` treats a
+    // focus it no longer recognises as "start at the top", which is the
+    // honest answer when the list itself has just changed.)
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    expect(document.activeElement?.textContent?.trim()).toBe(items[0].textContent?.trim());
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(document.activeElement?.textContent?.trim()).toBe(items[1].textContent?.trim());
+  });
+
   it('does not ask when there is only one place to go', async () => {
     // `alpha` can create but has no workspace, so a new WORKSPACE has two
     // candidate hosts while a new card has only the tabs `local` carries.
