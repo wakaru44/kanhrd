@@ -1,0 +1,19 @@
+openspec/specs/tier-2-terminal/spec.md
+  s_2776f1a6640bff::t_613be1b72e0a5a 37,39-47,52-75,78,80,83-84,88,93,97-131,133,135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0baeb091bf10298e8fcdb520476139d074752fde",
+  "prompts": {},
+  "sessions": {
+    "s_2776f1a6640bff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaf8a44f-17c4-4808-8aac-9b4fb9fb065e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
