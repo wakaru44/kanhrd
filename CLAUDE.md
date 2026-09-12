@@ -76,6 +76,16 @@ Distinguish tutorial / how-to / reference / explanation. Current split:
 - `docs/BRAND.md`, `docs/DESIGN-SYSTEM.md`, `docs/UX-GUIDELINES.md` —
   authority for UI/UX/copy.
 
+**Correcting a wrong doc**: edit it so it reads as if it had always been
+right. No ADR, no dated amendment block, no changelog paragraph, no
+"previously we believed". State the fact, delete the falsehood, and fix
+the document that is wrong rather than explaining it from a second one.
+An ADR is for a decision that is genuinely hard to reverse — not for
+recording that a sentence was inaccurate. A factual correction needs no
+openspec change, and `openspec/specs/**` may be edited directly for one.
+A one-line caveat in a reference doc is cheaper to write than to ask
+about: write it.
+
 ### Lint gate (pre-commit)
 
 Every commit runs `pre-commit` (config in `.pre-commit-config.yaml`):
