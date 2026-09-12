@@ -34,11 +34,11 @@ phases 2 and 3 are the feature the operator asked for.
 
 ## 3. Move
 
-- [ ] 3.1 `PanesStore.movePane(host, params)` beside `splitPane`.
+- [x] 3.1 `PanesStore.movePane(host, params)` beside `splitPane`.
 - [ ] 3.2 The card's move menu offers herdr's three destinations: an
       existing tab, a new tab, a new workspace. Gated on
       `capabilities.paneMove`.
-- [ ] 3.3 The result's cascade (`closed_tab_id`, `closed_workspace_id`,
+- [x] 3.3 The result's cascade (`closed_tab_id`, `closed_workspace_id`,
       `created_tab`, `created_workspace`) routes through the SAME local
       purge the board already runs for `tab.closed` / `workspace.closed`.
       No second reconciliation path.

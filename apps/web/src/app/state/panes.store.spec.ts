@@ -23,6 +23,7 @@ import {
   paneKey,
   STATUS_COLUMN_ORDER,
   type LifecycleState,
+  type PaneKey,
   type PaneMap,
 } from './panes.store';
 import { WsClient } from './ws-client';
@@ -1690,5 +1691,149 @@ describe("PanesStore close actions are optimistic (don't wait on the broadcast e
 
     expect(store.workspacesSignal().get(paneKey('laptop', 'w1'))?.name).toBe('renamed-ws');
     expect(store.panesSignal().get(paneKey('laptop', 'p1'))?.workspace.name).toBe('renamed-ws');
+  });
+});
+
+/**
+ * `movePane` and its cascade (openspec `add-pane-destinations`, tasks 3.1
+ * and 3.3).
+ *
+ * A move is the only tier-3 action whose result is not a plain upsert: it
+ * can close the tab it left, close that tab's workspace with it, and create
+ * the tab or workspace it moved into. The contract these pin is that the
+ * acting client reconciles all of that through the SAME `pane.moved` path a
+ * broadcast from another client takes — no second implementation to drift.
+ */
+describe('PanesStore.movePane', () => {
+  let ws: FakeWsClient;
+
+  const SEED = pane({
+    id: 'p1',
+    workspace: { id: 'w1', name: 'workspace-1' },
+    tab: { id: 't1', name: 'tab-1' },
+  });
+
+  async function setUp(result: unknown): Promise<PanesStore> {
+    ws = new FakeWsClient();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: ws },
+      ],
+    });
+    ws.request.and.callFake((_host: string, method: string) => {
+      if (method === 'pane.list') return Promise.resolve({ panes: [SEED] });
+      if (method === 'events.subscribe') return Promise.resolve({ subscription_id: 's1' });
+      if (method === 'bridge.capabilities') return Promise.resolve(fallbackCapabilities());
+      if (method === 'pane.move') return Promise.resolve(result);
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+    const store = TestBed.inject(PanesStore);
+    const httpMock = TestBed.inject(HttpTestingController);
+    await settle();
+    for (const req of httpMock.match('/api/hosts')) {
+      if (!req.cancelled) req.flush({ hosts: [{ name: 'laptop', connected: true }] });
+    }
+    await settle();
+    // Seed the tab/workspace maps the cascade purges, which `pane.list`
+    // alone does not populate.
+    store.tabsSignal.set(
+      new Map<PaneKey, TabSummary>([
+        [paneKey('laptop', 't1'), { id: 't1', host: 'laptop', workspace: { id: 'w1' }, name: '1' }],
+        [paneKey('laptop', 't2'), { id: 't2', host: 'laptop', workspace: { id: 'w2' }, name: '2' }],
+      ])
+    );
+    store.workspacesSignal.set(
+      new Map<PaneKey, WorkspaceSummary>([
+        [paneKey('laptop', 'w1'), { id: 'w1', host: 'laptop', name: 'workspace-1' }],
+        [paneKey('laptop', 'w2'), { id: 'w2', host: 'laptop', name: 'workspace-2' }],
+      ])
+    );
+    return store;
+  }
+
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('applies the moved pane without waiting for the broadcast event', async () => {
+    const moved = pane({
+      id: 'p1',
+      workspace: { id: 'w2', name: 'workspace-2' },
+      tab: { id: 't2', name: '2' },
+    });
+    const store = await setUp({
+      changed: true,
+      pane: moved,
+      previous_workspace_id: 'w1',
+      previous_tab_id: 't1',
+    });
+
+    await store.movePane('laptop', {
+      pane_id: 'p1',
+      destination: { type: 'tab', tab_id: 't2', split: 'right' },
+    });
+
+    expect(store.panesSignal().get(paneKey('laptop', 'p1'))?.tab.id)
+      .withContext('no `pane.moved` event was emitted — the response alone must apply')
+      .toBe('t2');
+  });
+
+  it('purges the tab and workspace the move emptied, through the same cascade the event uses', async () => {
+    const moved = pane({
+      id: 'p1',
+      workspace: { id: 'w-new', name: 'workspace-3' },
+      tab: { id: 't-new', name: '1' },
+    });
+    const store = await setUp({
+      changed: true,
+      pane: moved,
+      previous_workspace_id: 'w1',
+      previous_tab_id: 't1',
+      created_workspace: { id: 'w-new', host: 'laptop', name: 'workspace-3' },
+      created_tab: { id: 't-new', host: 'laptop', workspace: { id: 'w-new' }, name: '1' },
+      closed_tab_id: 't1',
+      closed_workspace_id: 'w1',
+    });
+
+    await store.movePane('laptop', {
+      pane_id: 'p1',
+      destination: { type: 'new_workspace' },
+    });
+
+    expect(store.tabsSignal().has(paneKey('laptop', 't1')))
+      .withContext('the emptied tab must not be left in the rail')
+      .toBeFalse();
+    expect(store.workspacesSignal().has(paneKey('laptop', 'w1')))
+      .withContext('its workspace went with it')
+      .toBeFalse();
+    expect(store.workspacesSignal().get(paneKey('laptop', 'w-new'))?.name).toBe('workspace-3');
+    expect(store.tabsSignal().get(paneKey('laptop', 't-new'))?.id).toBe('t-new');
+    expect(store.panesSignal().get(paneKey('laptop', 'p1'))?.workspace.id).toBe('w-new');
+  });
+
+  it('applies nothing when herdr says the move changed nothing, and hands the reason back', async () => {
+    const store = await setUp({
+      changed: false,
+      reason: 'zoomed_tab',
+      pane: SEED,
+      previous_workspace_id: 'w1',
+      previous_tab_id: 't1',
+    });
+
+    const result = await store.movePane('laptop', {
+      pane_id: 'p1',
+      destination: { type: 'tab', tab_id: 't1', split: 'right' },
+    });
+
+    expect(result?.changed).toBeFalse();
+    expect(result?.reason)
+      .withContext('the caller needs herdr’s own word for why nothing happened')
+      .toBe('zoomed_tab');
+    expect(store.panesSignal().get(paneKey('laptop', 'p1'))?.tab.id)
+      .withContext('the card stays where it was')
+      .toBe('t1');
   });
 });
