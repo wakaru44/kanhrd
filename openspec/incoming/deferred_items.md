@@ -22,18 +22,6 @@ change. The ungrouped board — still the default — restores correctly.
 
 From `add-swimlane-grouping` 8.3.
 
-## Column reordering by drag
-
-Unblocked and unbuilt. `docs/BRAND.md` carries `park.moveColumnLeft` /
-`park.moveColumnRight`, so the keyboard equivalent has its copy and the
-"drag-drop must work or not appear" rule is satisfiable. What remains:
-`ParkedStore.moveColumn(id, delta)` over the existing `order` field, two
-header-menu items, and a horizontal `cdkDropList` over the strip with the
-column header as `cdkDragHandle`. `order` is already the render order
-everywhere, so nothing shipped needs changing.
-
-From `add-parked-columns` 5.3.
-
 ## The `on any activity` exit rule
 
 Blocked on a spike, not on a decision. The rule would fire when a pane

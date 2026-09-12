@@ -500,6 +500,19 @@ The vertical grouping by `agent_status` is a **status column**, never a
   may remain a source list, but rejects incoming cards; releasing a card
   over its original column leaves its membership unchanged. (Maintainer
   decision Q1, 2026-09-10; see `openspec/changes/add-parked-columns`.)
+- **Never reordered either.** The status run is `STATUS_COLUMN_ORDER` and
+  no drag moves it: a status column's header is not a drag handle, takes
+  no grab cursor, and is not a reorder target — a dragged column stops at
+  the first user-defined slot. A user-defined column IS reorderable: its
+  header is the `cdkDragHandle`, grab cursor only while that drag is
+  enabled (at least two user-defined columns, above
+  `--breakpoint-mobile`), the lifted copy on `--paper-raised` behind a
+  hairline with no shadow, and the gap it left at `opacity: 0.35` like the
+  card placeholder. The keyboard equivalent lives in the column's header
+  menu (`move column left` / `move column right`, `LucideArrowLeft` /
+  `LucideArrowRight`), `aria-disabled` rather than `disabled` at the ends
+  so arrow keys are never trapped on it. (See
+  `openspec/changes/archive/2026-09-12-add-parked-column-reorder`.)
 
 ### Host seal (hanko)
 

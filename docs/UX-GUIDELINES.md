@@ -126,6 +126,18 @@ them exists — a board with none carries no drag handle and no grab
 cursor. (Maintainer decision Q1, 2026-09-10; see
 `openspec/changes/add-parked-columns`.)
 
+A status column's **position** is herdr's order too, not the user's: it is
+`STATUS_COLUMN_ORDER`, and no drag moves it. A user-defined column is the
+operator's, so it may be **reordered** — dragged horizontally by its own
+header, which is the handle. That drag exists only where it works: not
+below `--breakpoint-mobile` (the pager owns the gesture), and not on a
+board with fewer than two user-defined columns. Its keyboard equivalent
+is `move column left` / `move column right` in the column's header menu,
+present at every width, marked `aria-disabled` at the ends of the row and
+stepping over any column the filter chips have hidden. A dragged column
+never comes to rest among the status columns. (Shipped in
+`openspec/changes/archive/2026-09-12-add-parked-column-reorder`.)
+
 The board never calls `pane.move` to change a status — `pane.move`'s
 destination is a tab or workspace. Relocating a pane between tabs or
 workspaces is a separate feature with its own destination, capability,
@@ -473,9 +485,13 @@ Interaction with the filter bar:
 What this model does not do:
 
 - It does not add a drag affordance. Paging moves the viewport, never a
-  card, and status membership stays herdr's fact.
-- It does not reorder or merge columns by "importance", and it does not
-  become an activity feed. One status per page, in the canonical order.
+  card, and status membership stays herdr's fact. The column-reorder drag
+  is inactive at this width for the same reason; its header-menu
+  equivalent is not.
+- It does not reorder or merge **status** columns by "importance", and it
+  does not become an activity feed. One status per page, in the canonical
+  order. (A user-defined column's position is the operator's and is
+  reorderable; a status column's is not.)
 
 #### Board — empty
 
@@ -669,7 +685,9 @@ width` (already asserted).
   `clear filters` action.
 - **22.** On a board with no user-defined columns, no element carries
   `cdkDrag` enabled, a drag handle, or `cursor: grab`. On any board, no
-  status column is a drop target and no drag changes a card's status.
+  status column is a drop target, no status column's header is a drag
+  handle or a reorder target, and no drag changes a card's status or a
+  status column's position.
 
 #### Assertions — board, empty
 
@@ -749,8 +767,13 @@ mock-bridge harness serves, so the check runs without a herdr.
 - Calling a tab a "lane" — a lane is a swimlane.
 - The display serif on a repeated identifier.
 - Any drop target on a status column, or any drag that changes a card's
-  status. (A card may be a drag _source_ into a user-defined column once
-  one exists — Q1, 2026-09-10.)
+  status or a status column's position. (A card may be a drag _source_
+  into a user-defined column once one exists — Q1, 2026-09-10; a
+  user-defined column may be dragged by its header to reorder it, with
+  the header-menu equivalent that makes it legal.)
+- A column-reorder drag without its keyboard equivalent, or on a board
+  where it cannot work (below `--breakpoint-mobile`, or with one
+  user-defined column).
 - A global unmodified `Escape` or `?` binding.
 - Per-pane terminal themes; the terminal palette is app-wide.
 - Fabricated data for decoration — a duration measured from something
