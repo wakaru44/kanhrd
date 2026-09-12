@@ -1,0 +1,26 @@
+openspec/changes/archive/2026-09-12-add-parked-column-reorder/specs/board-parked-columns/spec.md
+  s_7901944abeeaba::t_a65699db564b21 1-219
+openspec/specs/board-parked-columns/spec.md
+  s_7901944abeeaba::t_a65699db564b21 79-85,109-113,212,242-246,249-256,258-268,272-273,355-439
+  s_7901944abeeaba::t_dff844588f6c0c 114-123,301-354
+  s_7901944abeeaba::t_b7287ba6dc4ebe 440
+openspec/specs/board-swimlanes/spec.md
+  s_7901944abeeaba::t_dff844588f6c0c 26-31,56-58
+  s_7901944abeeaba::t_f784a1c1e40375 59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a1a2f2cf2c809656d0da282ae21d552ac734290a",
+  "prompts": {},
+  "sessions": {
+    "s_7901944abeeaba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cdce5a89-318c-4864-b71b-909fa85af141",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
