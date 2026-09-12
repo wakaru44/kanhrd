@@ -605,9 +605,25 @@ export class HostRuntime extends EventEmitter {
    * re-stamps the observation time on exactly the transitions this loop
    * reports, and leaves it alone otherwise. There is deliberately no second
    * poll and no second clock.
+   *
+   * It is also the ONLY thing that notices a pane that died without herdr
+   * pushing `pane.closed` — the process inside it exiting on its own, an
+   * agent finishing, a crash, or a herdr build that simply does not emit
+   * for that path. `pane.list` is the authority on what exists, so a
+   * tracked id absent from it is gone, and this synthesizes the
+   * `pane.closed` frame the client never received. Without it the board
+   * keeps a card for a dead session forever and the terminal view keeps
+   * painting its last output: the SPA has no other way to learn.
+   * `applyPaneClosed` on the client is an idempotent delete, so a real
+   * `pane.closed` arriving late reapplies the same id harmlessly.
    */
   private async pollAgentStatus(): Promise<void> {
     if (!this.connected) return;
+    // Snapshotted BEFORE the request: a pane created (and tracked off a
+    // pushed `pane.created`) while the request was in flight is legitimately
+    // absent from a `pane.list` taken before it existed, and must not be
+    // reported closed — the client would drop a card nothing ever restores.
+    const known = new Set(this.paneAgentStatus.keys());
     let panes: HerdrPaneInfo[];
     try {
       const result = await this.client.request<{ panes: HerdrPaneInfo[] }>('pane.list');
@@ -615,12 +631,23 @@ export class HostRuntime extends EventEmitter {
     } catch {
       return; // ponytail: transient poll failure — next tick retries, same as OutputPoller's pane.read
     }
-    // A pane that left `pane.list` without a `pane.closed` reaching us drops
-    // its observation record here, so an id that comes back later is stamped
-    // fresh rather than resuming a duration from its previous life.
     const live = new Set(panes.map((pane) => pane.pane_id));
-    for (const id of this.paneAgentStatus.keys()) {
-      if (!live.has(id)) this.paneAgentStatus.delete(id);
+    for (const id of known) {
+      if (live.has(id)) continue;
+      // Read the placement before untracking drops it: the frame carries the
+      // workspace the pane was in, exactly as herdr's own push does.
+      const workspaceId = this.names.panePlacement(id)?.workspace_id;
+      // Dropping the observation record here also means an id that comes
+      // back later is stamped fresh rather than resuming a duration from its
+      // previous life.
+      this.untrackPane(id);
+      if (workspaceId === undefined) continue;
+      const event: WsEvent<'pane.closed'> = {
+        host: this.name,
+        event: 'pane.closed',
+        payload: { id, host: this.name, workspace: { id: workspaceId } },
+      };
+      this.emit('bridge-event', event);
     }
     for (const pane of panes) {
       const previous = this.paneAgentStatus.get(pane.pane_id);

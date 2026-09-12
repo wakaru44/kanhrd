@@ -401,6 +401,45 @@ describe('HostRuntime — agent-status polling', () => {
     }
   });
 
+  /**
+   * The operator's report: a session dies from inside (the process exits,
+   * the agent finishes, it crashes) or is closed from herdr's own CLI/TUI.
+   * Nothing calls `pane.close` through the bridge, and herdr pushes no
+   * `pane.closed` here — so the ONLY signal is the pane leaving `pane.list`.
+   * Before the fix the poll noticed exactly that and told no one, leaving a
+   * card on the board for a session that no longer exists.
+   *
+   * This fake herdr never pushes a lifecycle event at all: the pane just
+   * disappears from `pane.list`.
+   */
+  it('synthesizes pane.closed for a pane that vanishes from pane.list with no push', async () => {
+    const host = new HostRuntime({ name: 'test', socket: socketPath }, 25);
+    const closed: WsEvent<'pane.closed'>[] = [];
+    host.on('bridge-event', (e: WsEvent) => {
+      if (e.event === 'pane.closed') closed.push(e as WsEvent<'pane.closed'>);
+    });
+
+    host.start();
+    try {
+      await waitFor(() => host.state().connected);
+      await new Promise((resolve) => setTimeout(resolve, 80)); // steady polls emit nothing
+      expect(closed).toHaveLength(0);
+
+      panes.splice(0, 1); // the pane dies; herdr says nothing
+
+      await waitFor(() => closed.length === 1);
+      expect(closed[0]?.host).toBe('test');
+      expect(closed[0]?.payload).toEqual({ id: 'p1', host: 'test', workspace: { id: 'w1' } });
+
+      // Exactly one frame — later polls must not re-announce a pane already
+      // reported gone, or the client would see a close storm.
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      expect(closed).toHaveLength(1);
+    } finally {
+      host.stop();
+    }
+  });
+
   it('drops the record when a pane leaves pane.list, and stamps a returning id fresh', async () => {
     const host = new HostRuntime({ name: 'test', socket: socketPath }, 25);
     host.start();
