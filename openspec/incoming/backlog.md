@@ -228,6 +228,88 @@ consequences, not as a feature:
 
 ---
 
+## New pane / tab / workspace land wherever herdr focus happens to be
+
+**Problem**
+
+The `+` menu on the board creates a pane, tab or workspace with no
+destination. `Board.newPane()` (`apps/web/src/app/board/board.ts:599`)
+sends `pane.split { direction: 'right' }` with no `target_pane_id`, no
+`workspace_id` and no `cwd`; `newTab()` and `newWorkspace()` send `{}`.
+herdr therefore splits whatever pane is focused in the host's focused
+workspace, and the new pane inherits that pane's `cwd`.
+
+The host is not chosen either: `primaryHost()`
+(`apps/web/src/app/board/board.ts:569`) picks the **first host in config
+order** that reports any create capability, regardless of which host the
+operator was looking at or filtering by.
+
+On a single-repo, single-host setup this is invisible. On an operator
+running several checkouts — the case the per-pane repo grain was built for
+(`apps/bridge/src/herdr/project.ts:23` derives `project` from each pane's
+own `cwd`) — the new card appears in an unpredictable repo band, on a
+possibly unexpected host, and the operator has no way to say otherwise
+before creating it. The card menu's split right/down is the only
+predictable path, because it passes `target_pane_id` and so inherits that
+pane's workspace, tab and checkout.
+
+**Reproduction/current evidence**
+
+Two or more hosts configured, or one host whose workspaces hold panes in
+different repositories. Focus a pane in repo A in herdr, look at the board
+filtered to repo B, press `+` → new pane. The card appears in repo A's
+band. Repeat with `+` → new tab: the tab is created in the focused
+workspace, not the one the board is showing.
+
+The wire already carries what is missing: `pane.split` accepts
+`workspace_id`, `target_pane_id` and `cwd`, and `tab.create` /
+`workspace.create` accept `cwd` (`packages/schema/src/wire.ts:182` and
+following). kanhrd sends none of them. So this is a UI and intent problem,
+not a protocol gap.
+
+**Expected behavior**
+
+Creating a pane, tab or workspace from the board says where it goes before
+it goes there — host, workspace, and the checkout the new pane starts in —
+with a default that follows what the operator is currently looking at
+rather than what herdr last focused.
+
+**Investigation/fix notes**
+
+- Decide what "where the operator is looking" means, in URL-is-state terms
+  (`docs/UX-GUIDELINES.md`): the rail is a navigator, so a rail selection
+  is a plausible default destination; the filter bar is a filter and is
+  probably not. Settle this before building a picker.
+- Candidate defaults, cheapest first: (a) default the host to the rail's
+  current host instead of config order; (b) default `cwd` to the checkout
+  of the band the operator is in when that is unambiguous; (c) a full
+  destination picker on the `+` menu.
+- Existing checkouts are discoverable from the panes already on the board
+  (`project.checkout_path`), so a repo picker needs no new herdr call.
+  Arbitrary directory entry is a bigger question — the bridge would be
+  resolving operator-typed paths — and should be separated from picking a
+  checkout kanhrd can already see.
+- `primaryHost()` currently doubles as the capability gate for the whole
+  `+` menu (`newPaneAvailable` and friends). Changing how the host is
+  chosen changes when the menu appears; keep the two concerns separate.
+- Copy and any new control are subject to `docs/BRAND.md` and
+  `docs/DESIGN-SYSTEM.md`; if the destination picker has no precedent
+  there, flag it rather than inventing one.
+
+**Verification/acceptance criteria**
+
+- With two hosts configured, `+` → new pane creates the pane on the host
+  the operator is navigated to, not on the first host in config order.
+- With panes in several repositories on one host, a new pane created from
+  the board appears in the repository the operator chose, and the choice is
+  visible before creation, not discovered afterwards.
+- The card menu's split right/down keeps inheriting its source pane's
+  workspace, tab and checkout unchanged.
+- A host that reports no create capability still offers no `+` entries for
+  what it cannot do.
+
+---
+
 ## The web terminal's cursor is not where you are typing
 
 **Problem**
