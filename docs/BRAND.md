@@ -165,6 +165,8 @@ product copy and stay in the template.
 | `nav.toggleNav`                       | `toggle navigation`                                                                                                                           |
 | `nav.help`                            | `keyboard shortcuts`                                                                                                                          |
 | `nav.statusSwitcher`                  | `status columns`                                                                                                                              |
+| `filter.hosts`                        | `hosts`                                                                                                                                       |
+| `filter.columns`                      | `columns`                                                                                                                                     |
 | `nav.statusSwitcherItem`              | `{status} — {count} cards`                                                                                                                    |
 | `nav.tabStrip`                        | `tabs in this workspace`                                                                                                                      |
 | `nav.tabStripItem`                    | `{name} — {count} cards`                                                                                                                      |

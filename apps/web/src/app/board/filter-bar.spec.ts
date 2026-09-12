@@ -240,6 +240,29 @@ describe('FilterBar layout', () => {
     const groupStyle = getComputedStyle(group);
     expect(groupStyle.flexWrap).withContext('chips wrap inside their group').toBe('wrap');
   });
+
+  it('names every group, because the chips cannot tell each other apart', () => {
+    // A host chip and a status-column chip are the same outlined chip with
+    // the same 8px dot. While the groups sat on separate rows the row break
+    // said which was which; sharing a line, only the label does.
+    const fixture = TestBed.createComponent(FilterBar);
+    fixture.detectChanges();
+    const groups = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.chip-row'));
+
+    expect(groups.length).toBe(3);
+    expect(groups.map((g) => g.querySelector('.row-label')?.textContent?.trim())).toEqual([
+      COPY.filter.hosts,
+      COPY.filter.columns,
+      COPY.swimlane.groupBy,
+    ]);
+    // The label is the group's accessible name too, not decoration.
+    for (const group of groups) {
+      expect(group.getAttribute('role')).toBe('group');
+      expect(group.getAttribute('aria-label')).toBe(
+        group.querySelector('.row-label')!.textContent!.trim()
+      );
+    }
+  });
 });
 
 describe('FilterBar parked-column chips', () => {

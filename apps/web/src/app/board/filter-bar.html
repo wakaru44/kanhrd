@@ -1,5 +1,13 @@
+<!--
+  Three groups on one wrapping row. Each carries its own label, because the
+  chips cannot tell each other apart on their own: a host chip and a
+  status-column chip are the same outlined chip with the same dot, and with
+  the groups sharing a line the row break no longer says which is which.
+  The label travels with its group wherever that group wraps to.
+-->
 <div class="filter-bar">
-  <div class="chip-row">
+  <div class="chip-row" role="group" [attr.aria-label]="copy.filter.hosts">
+    <span class="row-label">{{ copy.filter.hosts }}</span>
     @for (host of store.hostsSignal(); track host.name) {
       <button
         type="button"
@@ -26,7 +34,8 @@
     it happens to carry. A parked chip carries no status dot: the dot's five
     colours are herdr's statuses, and a parked column has none.
   -->
-  <div class="chip-row">
+  <div class="chip-row" role="group" [attr.aria-label]="copy.filter.columns">
+    <span class="row-label">{{ copy.filter.columns }}</span>
     @for (column of columns(); track column.key) {
       <button
         type="button"

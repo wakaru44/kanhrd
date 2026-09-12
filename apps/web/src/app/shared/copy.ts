@@ -131,6 +131,24 @@ export const COPY = {
     dismiss: 'dismiss',
   },
   /**
+   * The filter bar's group labels. The bar is one wrapping row of three
+   * groups now, so the row break no longer says which chips are which: a
+   * host chip and a status-column chip are the same outlined chip with the
+   * same 8px dot, and only a word tells them apart. The group-by row had
+   * this from the start ("so the chips are not left to explain
+   * themselves"); the other two groups get the same treatment.
+   *
+   * `hosts` is deliberately the same word Settings uses for its section.
+   * That is not drift: herdr's objects use herdr's words on every surface
+   * (docs/BRAND.md, vocabulary). `columns` covers both kinds on the board —
+   * the status columns and the operator's parked ones — so it is not
+   * `status columns`, which would be a lie about half the chips.
+   */
+  filter: {
+    hosts: 'hosts',
+    columns: 'columns',
+  },
+  /**
    * The board's swimlane grouping. `groupBy` labels the control; the rest
    * name the dimensions the operator picks between. `ungrouped` is a fact
    * about the pane — those cards have no repository — not an error, so it
