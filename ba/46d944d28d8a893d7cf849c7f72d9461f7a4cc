@@ -1,0 +1,27 @@
+openspec/changes/add-pane-gone-state/README.md
+  s_9f6e9e632154c4::t_bb5a5736e67d41 1-3
+openspec/changes/add-pane-gone-state/proposal.md
+  s_9f6e9e632154c4::t_7fb8f2758d62bb 1-75
+openspec/changes/add-pane-gone-state/specs/pane-gone-state/spec.md
+  s_9f6e9e632154c4::t_81118a877db628 1-44
+openspec/changes/add-pane-gone-state/.openspec.yaml
+  s_9f6e9e632154c4::t_bb5a5736e67d41 1-2
+openspec/changes/add-pane-gone-state/tasks.md
+  s_9f6e9e632154c4::t_daff40fc972e98 1-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ba46d944d28d8a893d7cf849c7f72d9461f7a4cc",
+  "prompts": {},
+  "sessions": {
+    "s_9f6e9e632154c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94df2e1b-4541-4873-b074-5ea96fce8f02",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
