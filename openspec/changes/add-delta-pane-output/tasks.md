@@ -47,7 +47,12 @@
 
 ## 7. Verify
 
-- [ ] 7.1 Web and bridge unit tests, `pnpm -w typecheck`, `make lint`.
-- [ ] 7.2 Live: with the isolated session, the terminal matches
+- [x] 7.1 Web and bridge unit tests, `pnpm -w typecheck`, `make lint`.
+- [x] 7.2 Live: with the isolated session, the terminal matches
       `pane.read` after a streaming run with deltas on, and the tier-2 and
       scrollback e2e specs pass.
+      Committed in `apps/web/e2e/terminal-scrollback.spec.ts`: a streaming
+      pane arrives as delta frames under 4 KB with no client re-read. Full
+      e2e run: 89 passed, 5 skipped, 2 failed — `tier3` close confirmation
+      and `toasts` failing close, both reproduced with this change's code
+      reverted, so not caused by it.
