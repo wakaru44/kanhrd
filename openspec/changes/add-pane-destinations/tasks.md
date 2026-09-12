@@ -74,8 +74,11 @@ phases 2 and 3 are the feature the operator asked for.
 
 ## 5. Verify
 
-- [ ] 5.1 `pnpm --filter @kanhrd/web test`, `pnpm -w typecheck`,
-      `pre-commit run --all-files`.
+- [x] 5.1 `pnpm --filter @kanhrd/web test` (786), `pnpm -w typecheck`,
+      `pre-commit run --all-files`, plus the bridge unit suite (156) and
+      the e2e projects `test:e2e` runs (chromium + mobile, 91 passed / 5
+      skipped). e2e serves `apps/web/dist`, so `make build` comes first
+      or the run measures the previous build.
 - [x] 5.2 Against the isolated test session, never the operator's socket:
       create in a chosen tab, move a pane between tabs, and move the last
       pane out of a tab so the cascade fires. Committed as
