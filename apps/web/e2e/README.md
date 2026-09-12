@@ -85,6 +85,19 @@ pnpm test:e2e          # headless run
 pnpm test:e2e:ui       # interactive debug UI
 ```
 
+Run it through the script, or name the projects yourself:
+
+```bash
+npx playwright test --project=chromium --project=mobile
+```
+
+**A bare `npx playwright test` also runs the `capture` project**, which
+writes the committed screenshots under `docs/screenshots/` — seven LFS
+binaries, rewritten in place, whether or not anything about them changed.
+That is what `make screenshots` is for, and it selects the project
+explicitly. If you ran one by accident, `git restore docs/screenshots/`
+puts them back.
+
 ## What's covered
 
 - **`tier1.board.spec.ts`** — kanban board rendering against real herdr
@@ -172,8 +185,9 @@ Run it on its own:
 pnpm --filter @kanhrd/web test:e2e --project=mobile
 ```
 
-`pnpm test:e2e` (no `--project` filter) runs both the `chromium` (desktop)
-and `mobile` projects in one go; each project's `testMatch`/`testIgnore`
+`pnpm test:e2e` runs both the `chromium` (desktop) and `mobile` projects in
+one go — it names the two explicitly, which is also what keeps the `capture`
+project out of an ordinary test run. Each project's `testMatch`/`testIgnore`
 keeps `mobile.spec.ts` off the desktop project and the tier specs off the
 mobile project.
 
