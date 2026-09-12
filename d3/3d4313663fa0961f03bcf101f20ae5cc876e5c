@@ -1,0 +1,19 @@
+docs/BRAND.md
+  s_493b7bedcc134d::t_3c991f49ba5c55 122-126,167,190-193,260-262,264-277
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d33d4313663fa0961f03bcf101f20ae5cc876e5c",
+  "prompts": {},
+  "sessions": {
+    "s_493b7bedcc134d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26ca5883-d6ab-4040-90c0-59f54d9ec3f9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
