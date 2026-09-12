@@ -1,0 +1,18 @@
+# Docker Desktop overlay (macOS, Windows). Mount the socket as a FILE: a
+# directory bind-mount crosses Docker Desktop's file-sharing layer, which
+# passes the socket through as an inode the container can see but cannot
+# connect() to, because the listener lives in the host kernel outside the
+# VM. The file mount is a path-resolving proxy across the VM boundary, so it
+# also survives herdr restarting (unlike a file mount on native Linux).
+# Mounting the directory as well is not an option: the nested socket mount
+# fails and the container will not start.
+services:
+  bridge:
+    volumes:
+      - ~/.config/herdr/herdr.sock:/home/kanhrd/.config/herdr/herdr.sock:ro
+      # herdr's own config, read by the bridge for the keybind prefix. A file
+      # too, since the parent directory is not mounted. If you have no
+      # ~/.config/herdr/config.toml, create an empty one or drop this line;
+      # Docker would otherwise create a *directory* at that path and the
+      # prefix falls back to Ctrl+B.
+      - ~/.config/herdr/config.toml:/home/kanhrd/.config/herdr/config.toml:ro

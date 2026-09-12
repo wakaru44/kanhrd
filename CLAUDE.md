@@ -175,11 +175,13 @@ touches across > 1 file, it's a lane, not a foreman-inline edit.
   `fix-bridge-subscription-backlog-storm`).
 - Bridge broadcasts of rename events for own-session resources may lag;
   SPA applies rename responses optimistically to compensate.
-- Docker: mount the herdr socket as a file
-  (`~/.config/herdr/herdr.sock:...:ro`), not by mounting its parent
-  directory — a directory mount on Docker Desktop shows the socket but
-  can't connect to it. No socat sidecar needed. Getting it wrong is
-  silent: healthcheck green, host `connected:false` forever.
+- Docker: the herdr socket's mount form is platform-dependent, so compose
+  is a base file plus `docker-compose.{linux,macos}.yaml`, selected by
+  `PLATFORM` (defaults from `uname -s`). Docker Desktop mounts the socket
+  file (a directory mount shows the socket but can't connect to it); Linux
+  mounts the parent directory (a file mount pins the inode and dies when
+  herdr restarts). No socat sidecar needed. Getting it wrong is silent:
+  healthcheck green, host `connected:false` forever.
 
 ## Domain vocabulary reminder
 

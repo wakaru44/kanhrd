@@ -1,0 +1,15 @@
+# Linux overlay (native Docker Engine, no VM). Mount the DIRECTORY that
+# holds the socket, not the socket file: a file bind-mount pins the inode,
+# and herdr unlinks and rebinds its socket on restart, so a file mount stops
+# connecting the next time herdr restarts — the container stays healthy and
+# the host goes offline for good. A directory mount resolves the path on
+# every connect, so it survives restarts.
+services:
+  bridge:
+    volumes:
+      # Carries both herdr.sock and herdr's config.toml (read by the bridge
+      # for the keybind prefix). On SELinux distros append `,z` to the
+      # options (`:ro,z`) or the container is denied access. The socket's
+      # uid/gid and mode must also permit the image's `kanhrd` user — a
+      # herdr socket that is mode 0600 for another uid shows up as EACCES.
+      - ~/.config/herdr:/home/kanhrd/.config/herdr:ro

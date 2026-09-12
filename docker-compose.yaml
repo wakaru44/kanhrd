@@ -1,3 +1,8 @@
+# Base compose file. It carries no herdr mount on purpose — the mount form
+# is platform-dependent (see docker-compose.linux.yaml and
+# docker-compose.macos.yaml) — so this file is never used alone. Use
+# `make docker-up`, which picks the overlay from $PLATFORM, or spell it out:
+#   docker compose -f docker-compose.yaml -f docker-compose.macos.yaml up -d
 services:
   bridge:
     build: .
@@ -9,30 +14,12 @@ services:
       # sends, so the image's `--allowed-origin` values (see Dockerfile CMD)
       # must change with it or every handshake is refused with 403.
       - '127.0.0.1:5173:5173'
-    volumes:
-      # Local host, default install. The socket is mounted as a FILE, not by
-      # mounting its parent directory: a directory bind-mount crosses Docker
-      # Desktop's file-sharing layer, which passes the socket through as an
-      # inode the container can see but cannot connect() to (the listener
-      # lives in the host kernel). Mounting the socket path itself hands the
-      # container a real socket endpoint. Do not "simplify" these two lines
-      # into `~/.config/herdr:/home/kanhrd/.config/herdr:ro` — the container
-      # then starts, stays healthy, and reports the host as connected:false
-      # with a `last_error` of `connect ENOTSUP`/`ECONNREFUSED`/`ENOENT`
-      # forever. Mounting both forms is not an option either: the nested
-      # socket mount fails and the container will not start.
-      - ~/.config/herdr/herdr.sock:/home/kanhrd/.config/herdr/herdr.sock:ro
-      # herdr's own config, read by the bridge for the keybind prefix. Mount
-      # it as a file too — the parent directory is not mounted. If you have
-      # no ~/.config/herdr/config.toml, create an empty one or drop this
-      # line; Docker would otherwise create a *directory* at that path and
-      # the prefix falls back to Ctrl+B.
-      - ~/.config/herdr/config.toml:/home/kanhrd/.config/herdr/config.toml:ro
-    # The mount targets are under /home/kanhrd, the image's non-root user's
-    # home, which is also where the bridge's default socket path resolves.
-    # Running with a different `--user` (e.g. -u 1000:1000, no passwd entry)
-    # makes Node's homedir() resolve to `/`, so the bridge looks for
-    # /.config/herdr/herdr.sock and finds neither socket nor config.
+    # Mount targets in the overlays sit under /home/kanhrd, the image's
+    # non-root user's home, which is also where the bridge's default socket
+    # path resolves. Running with a different `--user` (e.g. -u 1000:1000,
+    # no matching passwd entry) makes Node's homedir() resolve to `/`, so the
+    # bridge looks for /.config/herdr/herdr.sock and finds neither socket nor
+    # herdr's config.
     restart: unless-stopped
 
   # Multi-host / remote setup (ADR-0001): reach a non-local herdr through an
@@ -41,8 +28,8 @@ services:
   # config file's `hosts:` list is the supported way to add hosts) that adds
   # it as an extra host entry. Bring up the tunnel yourself first, e.g.:
   #   ssh -N -L /run/user/1000/herdr-cloud.sock:~/.config/herdr/herdr.sock cloud-host
-  # The tunnel socket is subject to the same constraint as the local one:
-  # mount the socket file, never just the directory holding it.
+  # The tunnel socket takes the same mount form as the local one on this
+  # platform — socket file on Docker Desktop, parent directory on Linux.
   # bridge-cloud:
   #   build: .
   #   image: kanhrd-bridge
@@ -59,5 +46,6 @@ services:
   #     - "127.0.0.1:5174:5173"
   #   volumes:
   #     - ./kanhrd.config.yaml:/home/kanhrd/kanhrd.config.yaml:ro
-  #     - /run/user/1000/herdr-cloud.sock:/home/kanhrd/.config/herdr/herdr-cloud.sock:ro
+  #     - /run/user/1000:/home/kanhrd/tunnel:ro          # Linux
+  #     - /run/user/1000/herdr-cloud.sock:/home/kanhrd/.config/herdr/herdr-cloud.sock:ro  # Docker Desktop
   #   restart: unless-stopped

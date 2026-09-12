@@ -34,21 +34,27 @@ can distinguish "container running" from "bridge ready."
 - **THEN** `docker inspect`'s health status is not `healthy`
 
 
-### Requirement: The herdr socket is reachable only as a bind-mounted file
-The shipped `docker-compose.yaml` SHALL bind-mount the herdr socket path
-itself into the container. Exposing the socket only through a bind-mount of
-its parent directory SHALL NOT be relied upon: on Docker Desktop (macOS and
-Windows) the file-sharing layer passes the socket through as an inode the
-container can see but cannot `connect()` to, because the listener lives in
-the host kernel outside the VM. Any other host-side file the bridge reads
-(herdr's `config.toml`) SHALL likewise be mounted as a file, since a socket
-file mount nested inside a directory mount of the same path fails at
-container start.
+### Requirement: The herdr socket is reachable from inside the container
+The shipped compose files SHALL mount the herdr socket in the form that can
+actually be connected to on the host's platform, and SHALL make that form
+selectable without editing a file. On Docker Desktop (macOS, Windows) that
+is a bind-mount of the socket file itself: a bind-mount of its parent
+directory crosses the VM's file-sharing layer, which passes the socket
+through as an inode the container can see but cannot `connect()` to. On a
+native Linux engine that is a bind-mount of the parent directory: a file
+bind-mount pins the inode, and herdr unlinks and rebinds its socket on
+restart. Any other host-side file the bridge reads (herdr's `config.toml`)
+SHALL be reachable under the same mount, or mounted as a file alongside the
+socket where the parent directory is not mounted.
 
-#### Scenario: Socket mounted as a file connects to the host's herdr
-- **WHEN** the compose file mounts `~/.config/herdr/herdr.sock` at the bridge's default socket path inside the container and a herdr server owns that socket on the host
+#### Scenario: Socket mounted in the platform's working form
+- **WHEN** the compose overlay for the host's platform is used and a herdr server owns the socket on the host
 - **THEN** `GET /api/hosts` reports the local host as `connected: true`
 
-#### Scenario: Directory-only mount leaves a permanently offline host
-- **WHEN** only the socket's parent directory is bind-mounted into the container
-- **THEN** the container starts, the healthcheck reports healthy, and `GET /api/hosts` reports the local host as `connected: false` with a `last_error` naming a failed `connect` (`ENOTSUP`, `ECONNREFUSED` or `ENOENT`)
+#### Scenario: Directory-only mount on Docker Desktop
+- **WHEN** only the socket's parent directory is bind-mounted on macOS or Windows
+- **THEN** the container starts, the healthcheck reports healthy, and `GET /api/hosts` reports the local host as `connected: false` with a `last_error` naming a failed `connect`
+
+#### Scenario: Socket-file mount on Linux after herdr restarts
+- **WHEN** the socket file itself is bind-mounted on a native Linux engine and herdr restarts, unlinking and rebinding its socket
+- **THEN** the running container's connections fail with `ECONNREFUSED` and the host stays `connected: false` while the healthcheck still reports healthy

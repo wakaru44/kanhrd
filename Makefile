@@ -154,21 +154,36 @@ format: ## Auto-format everything Prettier owns.
 	pnpm format
 
 ## Docker
+# ---- platform selection ---------------------------------------------------
+# The herdr socket takes a different mount form on Docker Desktop than on a
+# native Linux engine (see deploy/docker/README.md), so compose is split into
+# a base file plus one overlay per platform. PLATFORM picks the overlay:
+# `macos` (Docker Desktop on macOS or Windows) or `linux`. Resolution order:
+# `make docker-up PLATFORM=linux`, then PLATFORM= in .env, then uname.
+ENV_PLATFORM := $(shell [ -f .env ] && sed -n 's/^PLATFORM=//p' .env | tail -1)
+UNAME_PLATFORM := $(if $(filter Linux,$(shell uname -s)),linux,macos)
+PLATFORM ?= $(or $(ENV_PLATFORM),$(UNAME_PLATFORM))
+COMPOSE := docker compose -f docker-compose.yaml -f docker-compose.$(PLATFORM).yaml
+
 .PHONY: docker-build
 docker-build: ## Build the kanhrd:latest container image.
 	docker build -t kanhrd:latest .
 
 .PHONY: docker-up
-docker-up: ## Start the bridge container (docker compose up -d).
-	docker compose up -d
+docker-up: ## Start the bridge container (override the platform with PLATFORM=linux|macos).
+	$(COMPOSE) up -d
 
 .PHONY: docker-down
 docker-down: ## Stop the bridge container.
-	docker compose down
+	$(COMPOSE) down
 
 .PHONY: docker-logs
 docker-logs: ## Tail bridge container logs.
-	docker compose logs -f bridge
+	$(COMPOSE) logs -f bridge
+
+.PHONY: docker-compose-cmd
+docker-compose-cmd: ## Print the compose command the docker-* targets resolve to.
+	@echo '$(COMPOSE)'
 
 ## CI
 .PHONY: ci

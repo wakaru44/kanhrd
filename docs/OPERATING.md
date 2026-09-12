@@ -202,15 +202,19 @@ about the cloud hub or other hosts is affected.
 
 ## 4. Docker (laptop, no host Node toolchain)
 
-The same placement as recipe 1, packaged: `docker compose up -d` from the
-repo root builds the image, publishes the bridge on `127.0.0.1:5173` and
-mounts your local herdr socket in. See `deploy/docker/README.md` for the
-full recipe and troubleshooting.
+The same placement as recipe 1, packaged: `make docker-up` from the repo
+root builds nothing you don't already have, publishes the bridge on
+`127.0.0.1:5173` and mounts your local herdr socket in. See
+`deploy/docker/README.md` for the full recipe and troubleshooting.
 
 Two things decide whether it works.
 
-**Mount the socket as a file**, not by mounting the directory that holds
-it:
+**Mount the socket in the form that works on your platform.** Compose is a
+base file plus one overlay per platform; `make docker-up` picks it from
+`PLATFORM`, which defaults to `uname -s` (Darwin → `macos`, Linux →
+`linux`) and can be overridden in `.env` or on the command line.
+
+On Docker Desktop (macOS, Windows) the socket is mounted as a file:
 
 ```yaml
 volumes:
@@ -218,14 +222,28 @@ volumes:
   - ~/.config/herdr/config.toml:/home/kanhrd/.config/herdr/config.toml:ro
 ```
 
-A directory bind-mount crosses Docker Desktop's file-sharing layer, which
+A directory bind-mount there crosses the VM's file-sharing layer, which
 passes the socket through as an inode the container can see but cannot
-`connect()` to — the listener lives in the host kernel, outside the VM. On
-native Linux both forms work; on macOS and Windows only the file form
-does. The failure is silent: the container starts, the healthcheck stays
-green (it only asserts `/api/hosts` returns 200), and `/api/hosts` reports
-the host as `connected: false` with a `last_error` of `connect ENOTSUP`,
-`ECONNREFUSED` or `ENOENT` — a permanently offline host on the board.
+`connect()` to — the listener lives in the host kernel, outside the VM.
+
+On a native Linux engine the parent directory is mounted instead:
+
+```yaml
+volumes:
+  - ~/.config/herdr:/home/kanhrd/.config/herdr:ro
+```
+
+A file bind-mount there pins the inode, and herdr unlinks and rebinds its
+socket when it restarts, so the container holds a dead inode from that
+point on. Linux also enforces what Docker Desktop fakes: the socket's
+uid/gid and mode have to permit the container's `kanhrd` user, and SELinux
+distros need `,z` on the mount options.
+
+Both failures are silent: the container starts, the healthcheck stays green
+(it only asserts `/api/hosts` returns 200), and `/api/hosts` reports the
+host as `connected: false` with a `last_error` of `connect ENOTSUP`,
+`ECONNREFUSED`, `EACCES` or `ENOENT` — a permanently offline host on the
+board.
 
 **Keep the published port and the origin allowlist in step.** The image's
 `CMD` hard-codes `--allowed-origin http://127.0.0.1:5173` and
