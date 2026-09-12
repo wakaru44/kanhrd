@@ -389,19 +389,89 @@ describe('Card', () => {
     expect(el.querySelector('.card-action.close')).toBeFalsy();
   });
 
-  it('shows both split directions when paneCreate is true, hides them otherwise', () => {
+  it('offers one named split trigger when paneCreate is true, hiding it otherwise', () => {
+    // The row carries a `split` MENU trigger now, not a pair of unlabelled
+    // direction arrows: both directions live inside it, each with its word.
     const shown = render(
       pane({ host: 'laptop' }),
       capsWithTerminal('laptop', { paneCreate: true })
     );
-    expect(shown.querySelector('.card-action.split-right svg')).toBeTruthy();
-    expect(shown.querySelector('.card-action.split-down svg')).toBeTruthy();
+    const trigger = shown.querySelector('.card-action.split');
+    expect(trigger).toBeTruthy();
+    expect(trigger?.getAttribute('aria-label')).toContain(CARD_COPY.split);
+    expect(trigger?.getAttribute('aria-haspopup')).toBe('menu');
 
     const hidden = render(
       pane({ host: 'laptop' }),
       capsWithTerminal('laptop', { paneCreate: false })
     );
-    expect(hidden.querySelector('.card-action.split-right')).toBeFalsy();
+    expect(hidden.querySelector('.card-action.split')).toBeFalsy();
+  });
+
+  // --- the action row: move / split / rest / dots (tasks 4.1, 4.2, 4.5) ---
+
+  it('carries four named controls, and names each one after the card it belongs to', () => {
+    const el = render(
+      pane({ host: 'laptop', label: 'api' }),
+      capsWithTerminal('laptop', { paneCreate: true, paneClose: true, paneMove: true })
+    );
+    const labels = Array.from(el.querySelectorAll('.card-actions .card-action')).map((b) =>
+      b.getAttribute('aria-label')
+    );
+    expect(labels).toEqual([
+      `${CARD_COPY.move} — api`,
+      `${CARD_COPY.split} — api`,
+      `${CARD_COPY.close} — api`,
+      `${CARD_COPY.moreActions} — api`,
+    ]);
+    // Not one of them is an unlabelled glyph, which is what the row was.
+    expect(labels.every((label) => !!label)).toBeTrue();
+  });
+
+  it('opens a menu for move and for split, and a confirmation for rest', () => {
+    const fixture = renderFixture(
+      pane({ host: 'laptop' }),
+      capsWithTerminal('laptop', { paneCreate: true, paneClose: true, paneMove: true })
+    );
+    const el = fixture.nativeElement as HTMLElement;
+    for (const control of ['.card-action.move', '.card-action.split']) {
+      expect(el.querySelector(control)?.getAttribute('aria-haspopup'))
+        .withContext(`${control} opens a menu rather than acting`)
+        .toBe('menu');
+    }
+    expect(el.querySelector('.card-action.close')?.getAttribute('aria-haspopup'))
+      .withContext('rest opens the confirmation dialog, not a menu')
+      .toBeNull();
+
+    clickAndSettle(fixture, '.card-action.close');
+    expect(el.querySelector('app-confirm-modal')).toBeTruthy();
+  });
+
+  it('opens one menu at a time — a second trigger replaces the first', () => {
+    const fixture = renderFixture(
+      pane({ host: 'laptop' }),
+      capsWithTerminal('laptop', { paneCreate: true, paneClose: true, paneMove: true })
+    );
+    const el = fixture.nativeElement as HTMLElement;
+    clickAndSettle(fixture, '.card-action.move');
+    expect(el.querySelector('.card-action.move')?.getAttribute('aria-expanded')).toBe('true');
+
+    clickAndSettle(fixture, '.card-action.split');
+    expect(el.querySelector('.card-action.move')?.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelector('.card-action.split')?.getAttribute('aria-expanded')).toBe('true');
+    expect(document.querySelectorAll('.overflow-menu[role="menu"]').length)
+      .withContext('only one menu is ever mounted')
+      .toBe(1);
+  });
+
+  it('renders no move control on a host that cannot move panes, and the row still stands', () => {
+    const el = render(
+      pane({ host: 'laptop' }),
+      capsWithTerminal('laptop', { paneCreate: true, paneClose: true, paneMove: false })
+    );
+    expect(el.querySelector('.card-action.move')).withContext('absent, not disabled').toBeNull();
+    expect(el.querySelector('.card-action.split')).toBeTruthy();
+    expect(el.querySelector('.card-action.close')).toBeTruthy();
   });
 
   it('renders no inline action when the bridge supports neither split nor close, but keeps the overflow trigger', () => {
@@ -591,9 +661,20 @@ describe('Card', () => {
     });
   });
 
-  it('splits through the inline action', () => {
+  it('splits through the row’s split menu, one direction per named item', () => {
     const fixture = renderFixture(pane({ host: 'laptop' }), capsWithTerminal('laptop', tier3));
-    clickAndSettle(fixture, '.card-action.split-down');
+    clickAndSettle(fixture, '.card-action.split');
+    const id = (fixture.nativeElement as HTMLElement)
+      .querySelector('.card-action.split')
+      ?.getAttribute('aria-controls');
+    const menu = document.getElementById(id!)!;
+    const items = Array.from(menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+    expect(items.map((i) => i.textContent?.trim())).toEqual([
+      CARD_COPY.splitRight,
+      CARD_COPY.splitDown,
+    ]);
+
+    items[1].click();
 
     expect(store.splitPane).toHaveBeenCalledWith('laptop', {
       target_pane_id: 'pane-12345678',

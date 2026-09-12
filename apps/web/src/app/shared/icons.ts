@@ -4,6 +4,7 @@ import {
   LucideArrowRight,
   LucideCheck,
   LucideChevronRight,
+  LucideCornerUpRight,
   LucideCopy,
   LucideGalleryHorizontal,
   LucideInfo,
@@ -22,7 +23,7 @@ import {
 } from '@lucide/angular';
 
 /**
- * The app's icon set: the twenty `@lucide/angular` components pinned by
+ * The app's icon set: the twenty-one `@lucide/angular` components pinned by
  * the icon list in `docs/DESIGN-SYSTEM.md`. Components import from here,
  * never from `@lucide/angular` directly, so the sanctioned set is one
  * import away and one grep wide.
@@ -53,6 +54,8 @@ export {
   LucideArrowRight,
   /** split down — `svg[lucideArrowDown]` */
   LucideArrowDown,
+  /** move a pane to another tab or workspace — `svg[lucideCornerUpRight]` */
+  LucideCornerUpRight,
   /** back to board — `svg[lucideArrowLeft]` */
   LucideArrowLeft,
   /** rail disclosure, scope breadcrumb — `svg[lucideChevronRight]` */
@@ -92,6 +95,7 @@ export const KANHRD_ICONS = [
   LucidePencil,
   LucideArrowRight,
   LucideArrowDown,
+  LucideCornerUpRight,
   LucideArrowLeft,
   LucideChevronRight,
   LucideMoreHorizontal,
@@ -106,9 +110,9 @@ export const KANHRD_ICONS = [
 ] as const;
 
 /**
- * The set is twenty icons. A twenty-first is a change to
+ * The set is twenty-one icons. A twenty-second is a change to
  * `docs/DESIGN-SYSTEM.md` first — this line breaks the build until the
  * count here is deliberately updated to match.
  */
-const ICON_COUNT: 20 = KANHRD_ICONS.length;
+const ICON_COUNT: 21 = KANHRD_ICONS.length;
 void ICON_COUNT;

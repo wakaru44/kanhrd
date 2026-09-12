@@ -402,6 +402,7 @@ purpose:
 | `LucidePencil`                | `svg[lucidePencil]`                | rename workspace / tab                              |
 | `LucideArrowRight`            | `svg[lucideArrowRight]`            | split right                                         |
 | `LucideArrowDown`             | `svg[lucideArrowDown]`             | split down                                          |
+| `LucideCornerUpRight`         | `svg[lucideCornerUpRight]`         | move a pane to another tab or workspace             |
 | `LucideArrowLeft`             | `svg[lucideArrowLeft]`             | back to board                                       |
 | `LucideChevronRight`          | `svg[lucideChevronRight]`          | rail disclosure, scope breadcrumb                   |
 | `LucideMoreHorizontal`        | `svg[lucideMoreHorizontal]`        | overflow menu trigger                               |
@@ -414,13 +415,22 @@ purpose:
 | `LucideGalleryHorizontal`     | `svg[lucideGalleryHorizontal]`     | card switcher on the terminal bar                   |
 | `LucideSquareSplitHorizontal` | `svg[lucideSquareSplitHorizontal]` | next-card button on the terminal bar                |
 
-Twenty icons. Adding a twenty-first is a change to this document first.
+Twenty-one icons. Adding a twenty-second is a change to this document first.
 
 The last two were added by maintainer decision D4 (2026-09-10, see
 `openspec/changes/add-terminal-top-bar`). `LucideSquareSplitHorizontal`
 reads as a window divided into two panes; it marks _navigating to_ the
 other card sharing a tab, not splitting one — splits stay on
 `LucideArrowRight` / `LucideArrowDown`.
+
+`LucideCornerUpRight` was added by maintainer decision (2026-09-13, see
+`openspec/changes/add-pane-destinations`). A path that turns and leaves
+reads as _send it over there_, which is what reparenting a pane into
+another tab or workspace is. It stays visually distinct from the straight
+`LucideArrowRight` that means split, and it carries no drag connotation —
+which matters, because cards genuinely ARE draggable into parked columns,
+so a four-way `LucideMove` cross would have promised dragging where the
+control opens a menu.
 
 `LucideMoreHorizontal` is an alias of `LucideEllipsis` and
 `LucideTriangleAlert` supersedes the deprecated `LucideAlertTriangle`;

@@ -30,6 +30,7 @@ import { ParkedStore } from '../state/parked.store';
 import {
   LucideArrowDown,
   LucideArrowRight,
+  LucideCornerUpRight,
   LucideMoreHorizontal,
   LucidePencil,
   LucideX,
@@ -46,6 +47,7 @@ import { DestinationPicker, type Destination } from '../shared/destination-picke
  * the same control the rail's rows carry.
  */
 export const CARD_COPY = {
+  split: COPY.card.split,
   splitRight: COPY.card.splitRight,
   move: COPY.card.move,
   moveExistingTab: COPY.card.moveExistingTab,
@@ -63,6 +65,13 @@ export const CARD_COPY = {
 /** Ids for `aria-controls`, unique per card instance for the life of the page. */
 let nextMenuId = 0;
 
+/**
+ * The card's three menus. Each has its own trigger in the action row, and
+ * only ever one is open — so which one is open is a single piece of state
+ * rather than three booleans that could disagree with each other.
+ */
+export type CardMenu = 'move' | 'split' | 'overflow';
+
 @Component({
   selector: 'app-card',
   imports: [
@@ -75,6 +84,7 @@ let nextMenuId = 0;
     LucideX,
     LucideMoreHorizontal,
     LucidePencil,
+    LucideCornerUpRight,
     DestinationPicker,
   ],
   templateUrl: './card.html',
@@ -196,7 +206,11 @@ export class Card {
    * menu — which is also the only keyboard path to parking.
    */
   protected readonly hasPaneActions = computed(
-    () => this.paneSplitAvailable() || this.paneCloseAvailable() || this.paneRenameAvailable()
+    () =>
+      this.paneSplitAvailable() ||
+      this.paneCloseAvailable() ||
+      this.paneRenameAvailable() ||
+      this.paneMoveAvailable()
   );
 
   // --- move (herdr's pane.move; NOT parking) ------------------------------
@@ -328,14 +342,31 @@ export class Card {
   /** Inline reason on the rename dialog after a rejection; cleared on the next attempt. */
   protected readonly renameError = signal<string | null>(null);
   protected readonly showRename = signal(false);
-  protected readonly menuOpen = signal(false);
   /**
-   * The menu is portalled into the CDK overlay container, so it is no longer
-   * a DOM descendant of its trigger's parent. `aria-controls` is what still
-   * ties the two together for a screen reader — and it needs an id that is
-   * unique across every card on the board.
+   * Which of the card's three menus is open, if any. The action row's
+   * `move` and `split` triggers each open one of their own rather than
+   * acting immediately: each has more than one destination and neither has
+   * a safe default worth guessing.
    */
-  protected readonly menuId = `card-menu-${nextMenuId++}`;
+  protected readonly openMenu = signal<CardMenu | null>(null);
+  protected readonly menuOpen = computed(() => this.openMenu() !== null);
+
+  protected isMenuOpen(menu: CardMenu): boolean {
+    return this.openMenu() === menu;
+  }
+
+  /**
+   * Every menu is portalled into the CDK overlay container, so none is a DOM
+   * descendant of its trigger's parent. `aria-controls` is what still ties
+   * each trigger to its own menu for a screen reader — and it needs an id
+   * unique across every card on the board, and across the three menus of
+   * this one.
+   */
+  private readonly menuIdBase = `card-menu-${nextMenuId++}`;
+
+  protected menuIdFor(menu: CardMenu): string {
+    return `${this.menuIdBase}-${menu}`;
+  }
 
   /**
    * Below the trigger, right edges aligned — the position the menu has
@@ -348,8 +379,40 @@ export class Card {
   ];
 
   private readonly menuEl = viewChild<ElementRef<HTMLElement>>('menu');
+  private readonly moveMenuEl = viewChild<ElementRef<HTMLElement>>('moveMenu');
+  private readonly splitMenuEl = viewChild<ElementRef<HTMLElement>>('splitMenu');
   private readonly menuTrigger = viewChild<ElementRef<HTMLButtonElement>>('menuTrigger');
+  private readonly moveTrigger = viewChild<ElementRef<HTMLButtonElement>>('moveTrigger');
+  private readonly splitTrigger = viewChild<ElementRef<HTMLButtonElement>>('splitTrigger');
   private readonly actionsEl = viewChild<ElementRef<HTMLElement>>('actions');
+
+  /** The open menu's element, whichever of the three it is. */
+  private activeMenuEl(): HTMLElement | null {
+    switch (this.openMenu()) {
+      case 'move':
+        return this.moveMenuEl()?.nativeElement ?? null;
+      case 'split':
+        return this.splitMenuEl()?.nativeElement ?? null;
+      case 'overflow':
+        return this.menuEl()?.nativeElement ?? null;
+      default:
+        return null;
+    }
+  }
+
+  /** The trigger that owns the open menu, so Escape can put focus back on it. */
+  private activeTriggerEl(): HTMLButtonElement | null {
+    switch (this.openMenu()) {
+      case 'move':
+        return this.moveTrigger()?.nativeElement ?? null;
+      case 'split':
+        return this.splitTrigger()?.nativeElement ?? null;
+      case 'overflow':
+        return this.menuTrigger()?.nativeElement ?? null;
+      default:
+        return null;
+    }
+  }
 
   // --- meta row ----------------------------------------------------------
   // Only data already on the `Pane` surface: the pane's own `agent_status`
@@ -385,9 +448,19 @@ export class Card {
     // must not scroll the column under it — which would also trip the
     // close-on-scroll below.
     effect(() => {
-      const menu = this.menuEl()?.nativeElement;
-      if (this.menuOpen() && menu) {
-        menuItems(menu)[0]?.focus({ preventScroll: true });
+      // Read through the signals so the effect re-runs when a menu opens,
+      // when it is swapped for another, and when an item expands its own
+      // destinations inside it.
+      this.openMenu();
+      this.parkListOpen();
+      this.moveListOpen();
+      this.moveTabListOpen();
+      const menu = this.activeMenuEl();
+      if (menu) {
+        const items = menuItems(menu);
+        if (!menu.contains(document.activeElement)) {
+          items[0]?.focus({ preventScroll: true });
+        }
       }
     });
 
@@ -424,26 +497,34 @@ export class Card {
     return `${label} — ${this.displayName()}`;
   }
 
-  protected toggleMenu(): void {
-    this.menuOpen.update((open) => !open);
+  protected toggleMenu(menu: CardMenu): void {
+    const trigger = this.activeTriggerEl();
+    this.openMenu.update((open) => (open === menu ? null : menu));
+    this.parkListOpen.set(false);
+    this.moveListOpen.set(false);
+    this.moveTabListOpen.set(false);
+    if (this.openMenu() === null) {
+      trigger?.focus();
+    }
   }
 
   protected closeMenu(refocus = true): void {
     if (!this.menuOpen()) {
       return;
     }
-    this.menuOpen.set(false);
+    const trigger = this.activeTriggerEl();
+    this.openMenu.set(null);
     this.parkListOpen.set(false);
     this.moveListOpen.set(false);
     this.moveTabListOpen.set(false);
     if (refocus) {
-      this.menuTrigger()?.nativeElement.focus();
+      trigger?.focus();
     }
   }
 
-  /** Arrow / Home / End move within the menu; Escape dismisses without opening the card. */
+  /** Arrow / Home / End move within the open menu; Escape dismisses without opening the card. */
   protected onMenuKeydown(event: KeyboardEvent): void {
-    handleMenuKeydown(event, this.menuEl()?.nativeElement ?? null, () => this.closeMenu());
+    handleMenuKeydown(event, this.activeMenuEl(), () => this.closeMenu());
   }
 
   /**
@@ -457,7 +538,7 @@ export class Card {
     }
     const target = event.target as Node;
     const actions = this.actionsEl()?.nativeElement;
-    const menu = this.menuEl()?.nativeElement;
+    const menu = this.activeMenuEl();
     if (actions?.contains(target) || menu?.contains(target)) {
       return;
     }

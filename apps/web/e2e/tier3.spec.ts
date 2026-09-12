@@ -241,19 +241,25 @@ test('card split and close affordances are visible on first render, no hover', a
   const actions = cardActions(card);
   // The hover-reveal (`.card-actions { opacity: 0; pointer-events: none }`)
   // is deleted: actions render at --ink-mute and lift on hover/focus
-  // (docs/UX-GUIDELINES.md, "Visible affordances"). The split control also
-  // split in two: `.split-right` and `.split-down`.
+  // (docs/UX-GUIDELINES.md, "Visible affordances").
+  //
+  // The row is move / split / rest / dots, and every one of them carries a
+  // text label in its accessible name — the two split directions live
+  // inside the split menu now, each with its word, rather than as a pair of
+  // unlabelled direction arrows on the row.
   await expect(actions).toBeVisible();
   await expect(actions).toHaveCSS('opacity', '1');
-  await expect(actions.locator('.card-action.split-right')).toHaveCount(1);
-  await expect(actions.locator('.card-action.split-down')).toHaveCount(1);
+  await expect(actions.locator('.card-action.split')).toHaveCount(1);
   await expect(actions.locator('.card-action.close')).toHaveCount(1);
+  for (const control of await actions.locator('.card-action').all()) {
+    expect(await control.getAttribute('aria-label')).toBeTruthy();
+  }
 
   // The overflow trigger is visible at every density, including comfortable
   // on a fine pointer. It used to be the compact/touch path only, and this
   // spec asserted `display: none` here — but that rule never shipped, and
   // since f6763bf the menu carries `rename`, which has NO inline control
-  // (the always-visible row is split-right / split-down / close). Hiding the
+  // (the always-visible row is move / split / rest). Hiding the
   // trigger on desktop would leave pane rename with no path at all, which
   // docs/UX-GUIDELINES.md "Visible affordances" forbids. The mobile project
   // still asserts the touch path (mobile.spec.ts, criteria 5 and 6).

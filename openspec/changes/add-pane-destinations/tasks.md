@@ -49,17 +49,14 @@ phases 2 and 3 are the feature the operator asked for.
 
 ## 4. The action row: move / split / rest / dots
 
-- [ ] 4.1 Four controls, each with an `aria-label` from `copy.ts`:
-      `move`, `split`, `rest`, `more actions`. BLOCKED on one icon:
-      `docs/DESIGN-SYSTEM.md` pins twenty and says a twenty-first is a
-      change to that document first. There is no move glyph among them,
-      and `LucideSquareSplitHorizontal` is explicitly reserved there for
-      navigating between cards, NOT for splitting. A maintainer names the
-      icon (or rules the row may reuse an existing one) and this ships.
-- [ ] 4.2 `move` and `split` open menus; `rest` opens the existing
+- [x] 4.1 Four controls, each with an `aria-label` from `copy.ts`:
+      `move`, `split`, `rest`, `more actions`. `LucideCornerUpRight` is
+      the move glyph by maintainer decision (2026-09-13) and becomes the
+      twenty-first icon; `docs/DESIGN-SYSTEM.md` changed in the same
+      commit, as that document requires.
+- [x] 4.2 `move` and `split` open menus; `rest` opens the existing
       confirm dialog; `dots` carries every action with its label plus
-      rename. Rides with 4.1 — it is the same row. The overflow menu
-      already carries every action with its label, move included.
+      rename, move included.
 - [x] 4.3 The move menu carries herdr destinations ONLY. `park in…`
       stays in the overflow menu where it already lives: it changes
       nothing outside this browser and needs no capability (maintainer
