@@ -119,6 +119,11 @@ product copy and stay in the template.
 | `card.moveNewWorkspace`               | `a new workspace`                                                                                                                             |
 | `card.park`                           | `park in…`                                                                                                                                    |
 | `card.unpark`                         | `unpark`                                                                                                                                      |
+| `card.renameAction`                   | `rename card`                                                                                                                                 |
+| `card.renameModalTitle`               | `name this card`                                                                                                                              |
+| `card.renameFieldLabel`               | `card name`                                                                                                                                   |
+| `card.renameSave`                     | `save`                                                                                                                                        |
+| `card.renameClear`                    | `clear name`                                                                                                                                  |
 | `park.newColumn`                      | `new column…`                                                                                                                                 |
 | `park.defaultName`                    | `parked`                                                                                                                                      |
 | `park.rule.never`                     | `never`                                                                                                                                       |
@@ -159,6 +164,7 @@ product copy and stay in the template.
 | `toast.moveZoomed`                    | `couldn't move it. the tab it's in is zoomed - unzoom it first.`                                                                              |
 | `toast.liveUpdatesUnavailable`        | `no live updates for this card. herdr said: {reason}`                                                                                         |
 | `toast.working`                       | `working…`                                                                                                                                    |
+| `toast.dismiss`                       | `dismiss`                                                                                                                                     |
 | `status.working`                      | `working`                                                                                                                                     |
 | `status.blocked`                      | `blocked`                                                                                                                                     |
 | `status.done`                         | `done`                                                                                                                                        |
@@ -181,6 +187,10 @@ product copy and stay in the template.
 | `nav.statusSwitcherItem`              | `{status} — {count} cards`                                                                                                                    |
 | `nav.tabStrip`                        | `tabs in this workspace`                                                                                                                      |
 | `nav.tabStripItem`                    | `{name} — {count} cards`                                                                                                                      |
+| `nav.cardSwitcher`                    | `cards in this tab`                                                                                                                           |
+| `nav.cardSwitcherItem`                | `{name} — {status}`                                                                                                                           |
+| `nav.nextCard`                        | `next card in this tab`                                                                                                                       |
+| `nav.moreActions`                     | `more actions`                                                                                                                                |
 | `create.menu`                         | `open`                                                                                                                                        |
 | `create.where`                        | `where`                                                                                                                                       |
 | `create.pane`                         | `open a card`                                                                                                                                 |
@@ -247,7 +257,24 @@ product copy and stay in the template.
 | `settings.clearTerminalFontSize`      | `terminal text size`                                                                                                                          |
 | `settings.clearTerminalScrollback`    | `terminal scrollback`                                                                                                                         |
 | `settings.clearKeyboard`              | `keyboard prefix`                                                                                                                             |
+| `settings.clearSwimlane`              | `board grouping`                                                                                                                              |
+| `settings.poll.unavailable`           | `n/a`                                                                                                                                         |
+| `settings.poll.unit`                  | `ms`                                                                                                                                          |
 | `notShipped`                          | `not yet.`                                                                                                                                    |
+| `rail.navigation`                     | `workspaces and tabs`                                                                                                                         |
+| `rail.renameWorkspace`                | `rename workspace`                                                                                                                            |
+| `rail.renameTab`                      | `rename tab`                                                                                                                                  |
+| `rail.lastWorkspaceRefusal`           | `this is the only workspace open on this host. closing it would leave nothing to watch. open another workspace first.`                        |
+| `swimlane.groupBy`                    | `group by`                                                                                                                                    |
+| `swimlane.none`                       | `none`                                                                                                                                        |
+| `swimlane.host`                       | `host`                                                                                                                                        |
+| `swimlane.repository`                 | `repository`                                                                                                                                  |
+| `swimlane.checkout`                   | `checkout path`                                                                                                                               |
+| `swimlane.tab`                        | `tab`                                                                                                                                         |
+| `swimlane.ungrouped`                  | `no repository`                                                                                                                               |
+| `theme.board`                         | `board`                                                                                                                                       |
+| `theme.washi`                         | `washi`                                                                                                                                       |
+| `theme.sumi`                          | `sumi`                                                                                                                                        |
 
 `{host}`, `{name}`, `{reason}`, `{lines}` and `{max}` are interpolation
 slots. `{lines}` and `{max}` are line counts — `{max}` is herdr's measured
