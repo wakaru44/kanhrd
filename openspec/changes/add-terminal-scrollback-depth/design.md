@@ -46,58 +46,35 @@ herdr's `ansi` snapshot is SGR-only: no cursor positioning, no erase
 sequences, rows joined by `\r\n`. That fact decides the notice's rendering
 below.
 
-## Depth must not multiply the live payload
+## What depth costs on the live stream
 
-The poller pushes on every change at `OUTPUT_POLL_INTERVAL_MS` (150 ms),
-and before this change every push was the whole snapshot. Moving the
-stream from 80 lines to 1000 multiplies each push by ~12 — 13 KB per
-change on a busy pane, per open terminal, for as long as it is open. This
-repo has paid for a bridge event storm once already (`58c7624`,
-`fix-bridge-subscription-backlog-storm`).
+`pane.output` stays a full snapshot on every change, polled at
+`OUTPUT_POLL_INTERVAL_MS` (150 ms). The snapshot's size follows the depth:
+~1.2 KB at herdr's 80-line default, ~2.7 KB at 200 lines, ~13 KB at 1000
+(measured above, on plain `seq` output — SGR-heavy agent output is larger).
+A pane whose content changes on every poll ships that much up to ~6.5
+times a second, per open terminal.
 
-Three options were weighed.
+So the default is **250**: about three times what herdr sent before, and a
+fifth of the ceiling. 500 and 1000 stay reachable — an operator who picks
+1000 has chosen that cost for the terminals they open; the risk worth
+guarding is a deep default applied to everyone. The cost is not in the
+settings copy: bandwidth is not the operator's vocabulary.
 
-**(a) Deep first paint, shallow live stream.** Rejected. A shallow tail
-cannot be placed against a deep first paint without guessing where the two
-overlap, and a terminal is full of repeated lines — blank rows, TUI
-borders, repeated log lines — so the guess is sometimes wrong. A wrong
-guess is wrong content on screen, which `docs/UX-GUIDELINES.md` ranks
-below absent. The only non-guessing alternative is to let the shallow push
-repaint, which deletes the history the first paint delivered — the exact
-hazard `wire.ts` documents above `pane.subscribe_output`.
+Making a deep default affordable — line-delta `pane.output` frames — is
+its own change. It alters `pane.output`'s contract, gives the poller
+per-subscriber state, and amends ADR-0004's shared-fan-out and
+"never a delta" decisions, none of which a depth setting should carry.
 
-**(b) Stream at the operator's depth, send deltas.** Taken, made opt-in.
-The bridge is the one party that holds, exactly, the previous snapshot it
-sent on a subscription. So it can describe the next snapshot as
-`previous.slice(drop, drop + keep) + tail`, cut at line boundaries, and
-**verify** that reconstruction character for character before sending it.
-Nothing is inferred on the client; it applies arithmetic to text it
-already holds and checks the resulting `length`. Covered cases:
+### Known limit: a shared loop keeps its first shape
 
-- appended output below the ceiling — `drop: 0`, `keep` = everything, tail
-  = new lines;
-- the window sliding at the ceiling — `drop` = the lines that scrolled off,
-  tail = the new lines;
-- a redraw of the bottom region (an agent TUI's input box, a status line)
-  — `keep` = the unchanged rows above it, tail = the redrawn rows.
-
-Anything else (`clear`, a full-screen TUI, a reflow) produces a delta no
-smaller than the snapshot, and the frame goes out full. The first frame on
-every subscription is full, so a subscriber never depends on a frame it
-did not receive. A subscriber that does not pass `delta: true` receives
-exactly what it did before.
-
-The client check is cheap insurance, not a recovery path the design relies
-on: the WebSocket is ordered and reliable, and the bridge verified the
-delta. If the rebuilt length ever disagrees, the terminal re-reads the
-pane rather than render something it cannot vouch for.
-
-Poll loops are now keyed by host, pane, `source`, `format` and `lines`.
-Before, the first subscriber's shape won the shared loop — harmless while
-every caller sent the same shape, wrong the moment two operators pick
-different depths.
-
-**Payload, before and after.** _Measured numbers land here with task 3.4._
+The poller shares one loop per host and pane, and the first subscriber's
+`source` and `format` already win that loop (`poller.ts`). `lines` joins
+them: a second browser at a different depth on the same pane receives
+snapshots at the first browser's depth. With one operator — the common
+case — every subscription for a pane asks for the same depth, so nothing
+changes. Keying loops by shape as well, and giving up the loop sharing
+ADR-0004 chose, belongs with the delta change above.
 
 ## The notice lives in the buffer
 
@@ -133,10 +110,10 @@ token: xterm does not read CSS custom properties.
 
 ## Defaults and steps
 
-Steps: 250, 500, 1000. The maximum is `HERDR_READ_LINE_CEILING`. The
-settings note interpolates the same constant, so a herdr that lifts the cap
-moves the control and the copy together. The default is decided once the
-payload numbers are in (see the proposal's _Decided_ line).
+Steps: 250, 500, 1000; default 250. The maximum is
+`HERDR_READ_LINE_CEILING`. The settings note interpolates the same
+constant, so a herdr that lifts the cap moves the control and the copy
+together.
 
 xterm's client-side `scrollback` stays at 5000. Appended suffixes
 accumulate past the requested depth between redraws, so the client buffer

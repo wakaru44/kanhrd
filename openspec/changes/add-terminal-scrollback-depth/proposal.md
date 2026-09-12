@@ -45,19 +45,14 @@ belongs in the same place rather than being a constant a reader cannot
 reach. Its maximum is herdr's own ceiling: herdr 0.8.2 serves at most 1000
 lines however many are asked for (see `design.md`).
 
-### Don't let depth multiply the live payload
+### Keep the default shallow enough to stream
 
-The poller pushes the whole snapshot on every change, at 150ms. Taking the
-stream from 80 lines to 1000 makes every push ~12× larger, per open
-terminal, for as long as it is open. So a subscription may opt in to
-**line-delta frames**: the bridge, which holds the previous snapshot it
-sent, pushes only what changed plus enough to rebuild the full snapshot
-exactly — never an approximation. The first frame to every subscriber, and
-any frame a delta would not shrink, stays a full snapshot. The client
-checks the rebuilt length and re-reads the pane if it ever disagrees. A
-subscriber that does not opt in sees `pane.output` exactly as today.
-`design.md` records why this beats a shallow stream behind a deep first
-paint.
+The poller still pushes the whole snapshot on every change, at 150ms, so
+depth multiplies the live payload: a 1000-line snapshot is ~13 KB where
+herdr's default was ~1 KB. The default depth is therefore 250 — three times
+herdr's default, a fifth of the ceiling — and 500 and 1000 are there for an
+operator who chooses the cost. Making a deep default affordable is a
+separate change (delta-encoded `pane.output`), not a rider on this one.
 
 ### Say when the buffer was cut
 
@@ -82,27 +77,27 @@ depth herdr will not serve, and the setting's maximum becomes that ceiling.
 ## Impact
 
 - **Affected specs:** `terminal-scrollback` — MODIFIED (the request
-  agreement gains `lines`), ADDED (the depth is the operator's; a truncated
-  buffer says so). `tier-2-terminal` — MODIFIED (`pane.subscribe_output`
-  carries `lines` and may opt in to line-delta `pane.output` frames).
-- **Affected wire:** `pane.subscribe_output` params gain `lines` and
-  `delta`; `pane.output` gains an optional `delta` descriptor. Additive and
-  opt-in — a caller sending neither sees no change. `pane.read` is
-  unchanged (`lines` already existed there).
+  agreement gains `lines`, which carries `pane.subscribe_output` with it),
+  ADDED (the depth is the operator's; a truncated buffer says so).
+- **Affected wire:** `pane.subscribe_output` params gain `lines`, forwarded
+  by the poller to every poll's `pane.read`. Additive — a caller that omits
+  it is polled exactly as before. `pane.read` is unchanged (`lines` already
+  existed there). `pane.output` is unchanged: full snapshots throughout.
 - **Affected code:** `packages/schema/src/wire.ts`,
-  `apps/bridge/src/output/poller.ts` (+ a line-delta helper),
-  `apps/bridge/src/ws/server.ts`, `apps/web/src/app/pane-detail/pane-terminal.ts`
-  and `pane-detail.ts`, a new `state/terminal-scrollback.service.ts` in
-  the shape of `terminal-font-size.service.ts`,
-  `settings/settings.{ts,html}`, `shared/copy.ts`, `docs/BRAND.md` for the
-  new strings, `docs/UX-GUIDELINES.md` for the truncation state, and
-  ADR-0004, whose "never a delta" decision this narrows.
-- **No change to:** the bridge's poller cadence, `source: 'recent'`, or
-  xterm's client-side `scrollback: 5000` (appends accumulate past the
-  requested depth between redraws, so the client buffer still earns it).
+  `apps/bridge/src/output/poller.ts`, `apps/bridge/src/ws/server.ts`,
+  `apps/web/src/app/pane-detail/pane-terminal.ts` and `pane-detail.ts`, a
+  new `state/terminal-scrollback.service.ts` in the shape of
+  `terminal-font-size.service.ts`, `settings/settings.{ts,html}`,
+  `shared/copy.ts`, `docs/BRAND.md` for the new strings, and
+  `docs/UX-GUIDELINES.md` for the truncation state.
+- **No change to:** the bridge's poller cadence, its poll-loop sharing
+  (still keyed by host and pane, so the first subscriber's `lines` wins a
+  shared loop, as its `source` and `format` already do — see `design.md`),
+  `source: 'recent'`, or xterm's client-side `scrollback: 5000` (appends
+  accumulate past the requested depth between redraws, so the client
+  buffer still earns it).
 - **Decided:** the ceiling is herdr's (1000 lines on herdr 0.8.2, measured),
-  so it is the setting's maximum. The default follows the measured live
-  payload (`design.md`).
+  so it is the setting's maximum. Steps 250 / 500 / 1000, default 250.
 - **Not solved here:** a report longer than 1000 lines still does not fit.
-  The truncation line states the ceiling plainly rather than implying a
-  setting can fix that.
+  The truncation line says how many lines herdr sent and, at the ceiling,
+  does not suggest a setting can fix it.
