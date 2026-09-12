@@ -147,9 +147,10 @@ export interface BridgeMethodParams {
   };
   /**
    * Starts bridge-side polling of `pane_id` and pushes `pane.output` events
-   * on change. Defaults to `source: "visible"` (bounded to the terminal's
-   * current viewport size) so each poll/push is cheap — pass `"recent"` to
-   * also pick up scrollback on first push, at higher per-poll cost.
+   * on change. Defaults to `source: "recent"` — viewport plus scrollback —
+   * matching the default `pane.read` uses, because a stream polled at a
+   * narrower source than the first paint deletes that pane's scrollback on
+   * the first push.
    */
   'pane.subscribe_output': {
     pane_id: string;
@@ -388,9 +389,14 @@ export interface BridgeEventPayload {
    * re-deriving terminal semantics itself. The tier-2 brief's payload sketch
    * used a `chunk` field name assuming byte-level streaming was available —
    * deviation recorded in CONTRACT-TIER2.md section 5. Client-side, the
-   * simplest correct handling is `term.reset(); term.write(content)` on
-   * every event; a smarter diff-and-patch is a bridge-local optimization
-   * that doesn't change this wire shape.
+   * Client-side, paint it by writing RIS (`\x1bc`, the ECMA-48 full reset)
+   * followed by the content in ONE write. Do NOT call `Terminal.reset()`
+   * and then write: reset blanks the screen synchronously while the content
+   * is still queued, so the browser composites a blank frame per event —
+   * at the poll cadence that is a ~6.7 Hz strobe, inside the 3-30 Hz band
+   * WCAG 2.3.1 treats as a seizure risk. A snapshot that merely extends the
+   * previous one should be written as its suffix alone (see the
+   * `terminal-scrollback` capability).
    */
   'pane.output': {
     subscription_id: string;
