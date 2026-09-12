@@ -51,3 +51,41 @@ Determine the appropriate settings UI, allowed values or range, default and migr
 - The selected size survives reload and a new session.
 - Terminal rows and columns are refitted after the size changes, with no clipping, overlap, or loss of input usability.
 - The control remains usable across supported desktop and mobile viewport sizes, and terminal color-theme behavior remains unchanged.
+
+## Parked columns are pinned right of the status columns
+
+**Problem**
+
+A parked column can only sit after `unknown`; it cannot be interleaved with
+the status columns. They are all just columns, so the restriction is
+arbitrary from the operator's side.
+
+**Reproduction/current evidence**
+
+`boardColumnRefs` in `apps/web/src/app/board/column.ts` concatenates the
+status columns and then the parked ones, and `Board.columnSortPredicate`
+(`index >= firstParkedIndex(...)`) refuses a drop left of the first parked
+column. The only recorded reason is one sentence in
+`openspec/changes/archive/2026-09-11-add-parked-columns/design.md`: the
+board is read left to right by urgency and "a parked card is by definition
+the one the operator has decided not to look at". That premise does not hold
+— parking is used to group, not only to defer, and the `on agent activity`
+exit rule exists precisely because a parked card can become urgent. The same
+design section also asserted that a hidden status hides parked cards, which
+was the defect fixed in `2ecdf61`.
+
+**Expected behavior**
+
+Column order is the operator's, across both kinds.
+
+**Investigation/fix notes**
+
+Needs one ordered list with an ordering key shared by both kinds, rather
+than two arrays concatenated. Settle first whether status columns become
+movable too: if they do, `STATUS_COLUMN_ORDER` (`working, blocked, idle,
+done, unknown`, fixed by the tier-1 spec) becomes a default rather than a
+rule, and that is a spec change. If they do not, the board has some columns
+that move and some that do not, which is the confusing middle. The per-column
+filter keys (`parked:<id>`, post-`2ecdf61`) and the mobile pager both follow
+whatever list order they are given, so neither constrains the answer.
+
