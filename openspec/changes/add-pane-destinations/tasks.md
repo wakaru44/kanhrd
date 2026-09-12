@@ -67,9 +67,13 @@ phases 2 and 3 are the feature the operator asked for.
 
 - [ ] 5.1 `pnpm --filter @kanhrd/web test`, `pnpm -w typecheck`,
       `pre-commit run --all-files`.
-- [ ] 5.2 Against the isolated test session, never the operator's socket:
+- [x] 5.2 Against the isolated test session, never the operator's socket:
       create in a chosen tab, move a pane between tabs, and move the last
-      pane out of a tab so the cascade fires.
+      pane out of a tab so the cascade fires. Committed as
+      `apps/bridge/integration/pane-destinations.test.ts` (F1-F3), which
+      needs no UI: these are herdr semantics the SPA rests on and the
+      unit tests cannot prove, because they supply the responses
+      themselves.
 - [ ] 5.3 Shoot the card's action row and the move menu against the
       mocked bridge.
 
