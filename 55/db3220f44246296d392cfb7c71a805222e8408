@@ -1,0 +1,44 @@
+openspec/changes/redesign-card-hierarchy/tasks.md
+  s_41bed7e0e7701d::t_40d79535a79126 1-53
+openspec/changes/redesign-card-hierarchy/.openspec.yaml
+  s_41bed7e0e7701d::t_a07f7285db8e94 1-2
+openspec/changes/redesign-card-hierarchy/README.md
+  s_41bed7e0e7701d::t_a07f7285db8e94 1-3
+apps/web/src/app/board/card.html
+  s_e465e30f266fa2::t_9545c1f3919c4b 7-14,16-37,39-41,43-65,225
+apps/web/src/app/board/card.spec.ts
+  s_e465e30f266fa2::t_9545c1f3919c4b 186-201,204-205,209-225,336-343
+apps/web/src/app/board/card.scss
+  s_e465e30f266fa2::t_9545c1f3919c4b 17-29,32-34,52-73,79-81,103-104,124-130,132,160-168,171,173,180-182,185,219-226,232,284-286,382-385,387-388,393-405,419,423-425
+  s_e465e30f266fa2::t_fe4b46b71539b9 426
+openspec/changes/redesign-card-hierarchy/proposal.md
+  s_41bed7e0e7701d::t_4c54c810ec43d3 1-105
+apps/web/src/app/board/card.ts
+  s_e465e30f266fa2::t_9545c1f3919c4b 133-148
+openspec/changes/redesign-card-hierarchy/specs/l-brand-neo-shepherd-redesign/spec.md
+  s_41bed7e0e7701d::t_40d79535a79126 1-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "55db3220f44246296d392cfb7c71a805222e8408",
+  "prompts": {},
+  "sessions": {
+    "s_41bed7e0e7701d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c985291b-2f83-4b9b-a00d-3f7b63991f12",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    },
+    "s_e465e30f266fa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2c5b23d5-95a9-4f8a-9e19-5ebcf3fb7297",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
