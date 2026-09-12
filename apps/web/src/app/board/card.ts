@@ -10,7 +10,12 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { OverlayModule, type ConnectedPosition } from '@angular/cdk/overlay';
-import type { BridgeCapabilities, Pane, SplitDirection } from '@kanhrd/schema';
+import type {
+  BridgeCapabilities,
+  HerdrPaneMoveDestination,
+  Pane,
+  SplitDirection,
+} from '@kanhrd/schema';
 import { PanesStore, paneKey } from '../state/panes.store';
 import { ConfirmModal } from '../shared/confirm-modal';
 import { RenameModal } from '../shared/rename-modal';
@@ -29,6 +34,7 @@ import {
   LucidePencil,
   LucideX,
 } from '../shared/icons';
+import { DestinationPicker, type Destination } from '../shared/destination-picker';
 
 /**
  * The card's action labels, gathered from `shared/copy.ts` under the names
@@ -41,6 +47,10 @@ import {
  */
 export const CARD_COPY = {
   splitRight: COPY.card.splitRight,
+  move: COPY.card.move,
+  moveExistingTab: COPY.card.moveExistingTab,
+  moveNewTab: COPY.card.moveNewTab,
+  moveNewWorkspace: COPY.card.moveNewWorkspace,
   splitDown: COPY.card.splitDown,
   close: COPY.confirm.closePaneAction,
   moreActions: COPY.nav.moreActions,
@@ -65,6 +75,7 @@ let nextMenuId = 0;
     LucideX,
     LucideMoreHorizontal,
     LucidePencil,
+    DestinationPicker,
   ],
   templateUrl: './card.html',
   styleUrl: './card.scss',
@@ -170,6 +181,15 @@ export class Card {
   );
 
   /**
+   * Tier-3: whether `pane.move` will succeed on this pane's host. Where it
+   * is false the move control is not rendered at all — not disabled, not
+   * hidden behind a failure (spec `board-card-actions`).
+   */
+  protected readonly paneMoveAvailable = computed(
+    () => this.capabilities().get(this.pane().host)?.paneMove === true
+  );
+
+  /**
    * Whether any herdr-side action is offered at all. The action row itself
    * is NOT gated on this: park and unpark are client-local, need no
    * capability and no host, so a tier-1 board still carries the overflow
@@ -178,6 +198,94 @@ export class Card {
   protected readonly hasPaneActions = computed(
     () => this.paneSplitAvailable() || this.paneCloseAvailable() || this.paneRenameAvailable()
   );
+
+  // --- move (herdr's pane.move; NOT parking) ------------------------------
+  //
+  // `move to…` and `park in…` are deliberately not the same menu and not the
+  // same verb. A move reparents the pane on the host, can close the tab it
+  // left behind, and every other herdr client sees it. Parking groups a card
+  // in a column held in this browser and changes nothing anywhere else. One
+  // verb over two operations with opposite blast radii is how an operator
+  // ends up moving a pane on a colleague's machine when they meant to tidy
+  // their own board.
+
+  /** `move to…` expands its three destinations in place, like `park in…` above it. */
+  protected readonly moveListOpen = signal(false);
+  /** `another tab` expands the destination list under it — one menu, one keyboard contract. */
+  protected readonly moveTabListOpen = signal(false);
+
+  /** The pane's own tab, which the destination list leaves out: moving there is herdr's `same_tab` no-op. */
+  protected readonly ownTab = computed(() => ({
+    host: this.pane().host,
+    tabId: this.pane().tab.id,
+  }));
+
+  protected toggleMoveList(): void {
+    this.moveListOpen.update((open) => !open);
+    if (!this.moveListOpen()) {
+      this.moveTabListOpen.set(false);
+    }
+  }
+
+  protected toggleMoveTabList(): void {
+    this.moveTabListOpen.update((open) => !open);
+  }
+
+  protected moveToTab(destination: Destination): void {
+    if (!destination.tabId) {
+      return;
+    }
+    void this.doMove({ type: 'tab', tab_id: destination.tabId, split: 'right' });
+  }
+
+  protected moveToNewTab(): void {
+    void this.doMove({ type: 'new_tab' });
+  }
+
+  protected moveToNewWorkspace(): void {
+    void this.doMove({ type: 'new_workspace' });
+  }
+
+  /**
+   * One move, and three different endings.
+   *
+   * A move that happened needs nothing said: the card is visibly somewhere
+   * else, and a success toast for a result already on screen is noise
+   * (docs/UX-GUIDELINES.md, "Success toasts are used sparingly").
+   *
+   * A move that herdr declined comes back as a SUCCESSFUL response with
+   * `changed: false` and a reason, so it is neither an error nor a
+   * completed move. `same_tab` says nothing at all — the operator asked for
+   * where the card already is, and there is no wrong answer to correct.
+   * `zoomed_tab` is an obstacle they can clear, so it says which one.
+   *
+   * A move that failed carries herdr's own prose, quoted through `{reason}`
+   * like every other lifecycle failure.
+   */
+  private async doMove(destination: HerdrPaneMoveDestination): Promise<void> {
+    this.closeMenu(false);
+    const notice = this.toast.progress(this.noticeKey('move'), COPY.toast.working);
+    try {
+      const result = await this.store.movePane(this.pane().host, {
+        pane_id: this.pane().id,
+        destination,
+        focus: false,
+      });
+      if (result && !result.changed) {
+        if (result.reason === 'zoomed_tab') {
+          notice.fail(COPY.toast.moveZoomed);
+        } else {
+          this.toast.dismissByKey(this.noticeKey('move'));
+        }
+        return;
+      }
+      notice.resolve();
+    } catch (err) {
+      notice.fail(
+        fill(COPY.toast.moveFailed, { name: this.displayName(), reason: Card.reason(err) })
+      );
+    }
+  }
 
   // --- parking (client-local; see state/parked.store.ts) ------------------
 
@@ -326,6 +434,8 @@ export class Card {
     }
     this.menuOpen.set(false);
     this.parkListOpen.set(false);
+    this.moveListOpen.set(false);
+    this.moveTabListOpen.set(false);
     if (refocus) {
       this.menuTrigger()?.nativeElement.focus();
     }

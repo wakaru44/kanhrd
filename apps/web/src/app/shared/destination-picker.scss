@@ -1,0 +1,14 @@
+/*
+ * The group sits inside an open menu, so it inherits that menu's surface,
+ * type and hit areas entirely. All it owns is the indent that says these
+ * rows belong to the item above them — the same step `park in…`'s
+ * destinations take in card.scss.
+ */
+.destination-picker {
+  display: flex;
+  flex-direction: column;
+
+  > button {
+    padding-left: var(--sp-5);
+  }
+}

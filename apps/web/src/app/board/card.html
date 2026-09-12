@@ -186,6 +186,52 @@
               </button>
             }
             <!--
+              Moving: herdr's own operation, offered only where the host
+              says `pane.move` will succeed. Its three destinations are the
+              three herdr's `PaneMoveDestination` union has, and no parked
+              column appears among them — `park in…` below is a different
+              operation with a different blast radius, and they never share
+              a menu.
+            -->
+            @if (paneMoveAvailable()) {
+              <button
+                type="button"
+                role="menuitem"
+                class="move"
+                [attr.aria-expanded]="moveListOpen()"
+                (click)="toggleMoveList()"
+              >
+                {{ action.move }}
+              </button>
+              @if (moveListOpen()) {
+                <div class="move-destinations" role="group" [attr.aria-label]="action.move">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    class="move-existing-tab"
+                    [attr.aria-expanded]="moveTabListOpen()"
+                    (click)="toggleMoveTabList()"
+                  >
+                    {{ action.moveExistingTab }}
+                  </button>
+                  @if (moveTabListOpen()) {
+                    <app-destination-picker
+                      level="tab"
+                      capability="paneMove"
+                      [excludeTab]="ownTab()"
+                      (chosen)="moveToTab($event)"
+                    />
+                  }
+                  <button type="button" role="menuitem" (click)="moveToNewTab()">
+                    {{ action.moveNewTab }}
+                  </button>
+                  <button type="button" role="menuitem" (click)="moveToNewWorkspace()">
+                    {{ action.moveNewWorkspace }}
+                  </button>
+                </div>
+              }
+            }
+            <!--
               Parking: client-local, always offered. `park in…` expands its
               destinations inside this same menu rather than opening a
               second one, so there is one keyboard contract (arrows, Home,

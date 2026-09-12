@@ -54,8 +54,21 @@ export const COPY = {
     renameFieldLabel: 'card name',
     renameSave: 'save',
     renameClear: 'clear name',
+    /**
+     * The action row's two menu triggers. Neither word is a new one: the
+     * approved-copy table already says *split right* / *split down* and
+     * *move to…*, so the control that opens each list says the word its
+     * items already say — the same reasoning `create.menu` follows for the
+     * `+` button.
+     */
+    split: 'split',
     splitRight: 'split right',
     splitDown: 'split down',
+    /** Opens the herdr destinations below. `park in…` is a different operation and a different menu. */
+    move: 'move to…',
+    moveExistingTab: 'another tab',
+    moveNewTab: 'a new tab',
+    moveNewWorkspace: 'a new workspace',
     /** Opens the list of parked columns, plus `park.newColumn`. The ellipsis is the promise of that list. */
     park: 'park in…',
     unpark: 'unpark',
@@ -125,6 +138,17 @@ export const COPY = {
     createTabFailed: "couldn't open a tab. herdr said: {reason}",
     createWorkspaceFailed: "couldn't open a workspace. herdr said: {reason}",
     renameFailed: "couldn't rename. herdr said: {reason}",
+    moveFailed: "couldn't move {name}. herdr said: {reason}",
+    /**
+     * herdr refusing a move it could not perform. Not a `{reason}` slot and
+     * not one of the `*Failed` strings above: `pane.move` answers a no-op
+     * with a SUCCESSFUL response carrying `changed: false` and a
+     * `PaneMoveReason` discriminant — `zoomed_tab` is a token, not prose, so
+     * there is nothing of herdr's to quote. The other reason, `same_tab`,
+     * has no string at all: the operator asked for where the card already
+     * is, and saying nothing is better than saying something wrong.
+     */
+    moveZoomed: "couldn't move it. the tab it's in is zoomed - unzoom it first.",
     liveUpdatesUnavailable: 'no live updates for this card. herdr said: {reason}',
     working: 'working…',
     /** The dismiss control on a toast itself. */
@@ -237,6 +261,13 @@ export const COPY = {
   create: {
     /** Accessible name of the `+` trigger. */
     menu: 'open',
+    /**
+     * The destination list's own label, used wherever a creation has more
+     * than one place it could land and the board has no scope to answer
+     * with. A question the control asks, so it is bare — the list below it
+     * is the answer.
+     */
+    where: 'where',
     pane: 'open a card',
     tab: 'open a tab',
     workspace: 'open a workspace',

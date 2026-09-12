@@ -1,0 +1,20 @@
+<!--
+  A group of menu items inside the menu that opened it — never a second
+  popover. `role="group"` keeps the items in their parent menu's keyboard
+  contract (shared/menu-keys.ts walks `[role="menuitem"]` from the menu
+  root), so arrows, Home, End and Escape behave the same whether focus is
+  on an item above the group or inside it.
+
+  Nothing renders at all when there is nowhere to go: a host that advertises
+  neither capability contributes no rows, and a group with no rows is not a
+  group.
+-->
+@if (destinations().length > 0) {
+  <div class="destination-picker" role="group" [attr.aria-label]="copy.create.where">
+    @for (destination of destinations(); track destination.label) {
+      <button type="button" role="menuitem" (click)="choose(destination)">
+        {{ destination.label }}
+      </button>
+    }
+  </div>
+}

@@ -15,7 +15,7 @@ import { CdkDrag, CdkDropList, CdkDropListGroup, type CdkDragDrop } from '@angul
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
-import type { AgentStatus, BridgeCapabilities, Pane } from '@kanhrd/schema';
+import type { AgentStatus, BridgeCapabilities, BridgeMethodParams, Pane } from '@kanhrd/schema';
 import {
   LucidePlus,
   LucideRefreshCw,
@@ -24,6 +24,7 @@ import {
   LucideX,
 } from '../shared/icons';
 import { COPY, fill } from '../shared/copy';
+import { handleMenuKeydown, menuItems } from '../shared/menu-keys';
 import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from '../state/panes.store';
 import { SettingsService } from '../state/settings.service';
 import {
@@ -46,6 +47,13 @@ import { ToastService } from '../state/toast.service';
 import { BoardReturnService, type BoardRestorePort } from '../state/board-return.service';
 import { ClockTick } from '../util/clock';
 import { EmptyState } from './empty-state';
+import {
+  DestinationPicker,
+  destinationsFor,
+  type Destination,
+  type DestinationCapability,
+  type DestinationLevel,
+} from '../shared/destination-picker';
 
 /**
  * How long a `/workspace/:id` in the URL may stay unresolved before the
@@ -103,6 +111,7 @@ export function nearestVisibleStatus(
     Rail,
     EmptyState,
     StatusSwitcher,
+    DestinationPicker,
     LucideX,
     LucidePlus,
     LucideRefreshCw,
@@ -373,6 +382,18 @@ export class Board implements OnDestroy {
   );
 
   constructor() {
+    // Opening the create menu — or stepping into its destination list —
+    // moves focus onto the first thing there, so the menu is operable from
+    // the keyboard the moment it appears. `preventScroll`: the menu sits
+    // over the board, and focusing it must not scroll what is under it.
+    effect(() => {
+      const menu = this.plusMenuEl()?.nativeElement;
+      this.pendingCreate();
+      if (this.plusMenuOpen() && menu) {
+        menuItems(menu)[0]?.focus({ preventScroll: true });
+      }
+    });
+
     // The route is the single source of truth for `scopeSignal` — see the
     // signal's own doc in panes.store.ts. Re-resolves whenever the route
     // params change OR the workspace/tab data needed to resolve them
@@ -600,6 +621,77 @@ export class Board implements OnDestroy {
     () => this.resolvedWorkspace()?.host ?? this.unscopedHost()
   );
 
+  // --- asking, when there is no scope to answer with ---------------------
+  //
+  // A scoped board already knows where a creation goes. An unscoped one does
+  // not, and the fallback below it is a guess dressed as a default. So the
+  // menu asks — but only when the question has more than one answer: with a
+  // single workspace on a single capable host there is nothing to choose
+  // between, and a list of one is a click, not a question.
+
+  /** Which creation is waiting on a destination, if any. */
+  protected readonly pendingCreate = signal<'pane' | 'tab' | 'workspace' | null>(null);
+
+  /** How deep a destination each creation needs, and what the host must advertise. */
+  private static readonly CREATE_DESTINATION: Record<
+    'pane' | 'tab' | 'workspace',
+    { level: DestinationLevel; capability: DestinationCapability }
+  > = {
+    pane: { level: 'tab', capability: 'paneCreate' },
+    tab: { level: 'workspace', capability: 'tabCrud' },
+    workspace: { level: 'host', capability: 'workspaceCrud' },
+  };
+
+  protected readonly pendingLevel = computed<DestinationLevel>(
+    () => Board.CREATE_DESTINATION[this.pendingCreate() ?? 'pane'].level
+  );
+  protected readonly pendingCapability = computed<DestinationCapability>(
+    () => Board.CREATE_DESTINATION[this.pendingCreate() ?? 'pane'].capability
+  );
+
+  /**
+   * Whether this creation has more than one place it could land. Counted
+   * from the same `destinationsFor` the picker renders, so the decision to
+   * ask and the list that gets shown can never disagree.
+   */
+  private ambiguous(kind: 'pane' | 'tab' | 'workspace'): boolean {
+    if (this.resolvedWorkspace()) {
+      return false;
+    }
+    const { level, capability } = Board.CREATE_DESTINATION[kind];
+    return (
+      destinationsFor(
+        {
+          workspaces: this.store.workspacesSignal().values(),
+          tabs: this.store.tabsSignal().values(),
+          panes: this.store.panesSignal().values(),
+          capabilities: this.capabilities(),
+        },
+        { level, capability }
+      ).length > 1
+    );
+  }
+
+  /** The picker's answer: perform the creation that was waiting on it. */
+  protected async onDestinationChosen(destination: Destination): Promise<void> {
+    const kind = this.pendingCreate();
+    this.pendingCreate.set(null);
+    this.layout.closePlusMenu();
+    if (kind === 'pane') {
+      await this.createPane(destination.host, {
+        ...(destination.workspaceId ? { workspace_id: destination.workspaceId } : {}),
+        ...(destination.targetPaneId ? { target_pane_id: destination.targetPaneId } : {}),
+      });
+    } else if (kind === 'tab') {
+      await this.createTab(
+        destination.host,
+        destination.workspaceId ? { workspace_id: destination.workspaceId } : {}
+      );
+    } else if (kind === 'workspace') {
+      await this.createWorkspace(destination.host);
+    }
+  }
+
   /**
    * A pane inside the scoped tab, so `pane.split` lands in THAT tab rather
    * than the workspace's focused one — `workspace_id` alone only narrows the
@@ -639,11 +731,33 @@ export class Board implements OnDestroy {
 
   protected readonly plusMenuOpen = this.layout.plusMenuOpen;
 
+  private readonly plusMenuEl = viewChild<ElementRef<HTMLElement>>('plusMenu');
+  private readonly plusTrigger = viewChild<ElementRef<HTMLButtonElement>>('plusTrigger');
+
   protected togglePlusMenu(): void {
+    this.pendingCreate.set(null);
     this.layout.togglePlusMenu();
   }
 
+  /**
+   * The same contract a card's menu has (shared/menu-keys.ts): arrows, Home
+   * and End walk the items, Escape closes and puts focus back on the `+`.
+   * The destination list is part of that walk rather than a second menu —
+   * see `shared/destination-picker`.
+   */
+  protected onPlusMenuKeydown(event: KeyboardEvent): void {
+    handleMenuKeydown(event, this.plusMenuEl()?.nativeElement ?? null, () => {
+      this.pendingCreate.set(null);
+      this.layout.closePlusMenu();
+      this.plusTrigger()?.nativeElement.focus();
+    });
+  }
+
   protected async newPane(): Promise<void> {
+    if (this.ambiguous('pane')) {
+      this.pendingCreate.set('pane');
+      return;
+    }
     this.layout.closePlusMenu();
     const host = this.createHost();
     if (!host) {
@@ -651,12 +765,47 @@ export class Board implements OnDestroy {
     }
     const workspace = this.resolvedWorkspace();
     const target = this.scopedTargetPane();
+    await this.createPane(host, {
+      ...(workspace ? { workspace_id: workspace.id } : {}),
+      ...(target ? { target_pane_id: target.id } : {}),
+    });
+  }
+
+  protected async newTab(): Promise<void> {
+    if (this.ambiguous('tab')) {
+      this.pendingCreate.set('tab');
+      return;
+    }
+    this.layout.closePlusMenu();
+    const host = this.createHost();
+    if (!host) {
+      return;
+    }
+    const workspace = this.resolvedWorkspace();
+    await this.createTab(host, workspace ? { workspace_id: workspace.id } : {});
+  }
+
+  protected async newWorkspace(): Promise<void> {
+    if (this.ambiguous('workspace')) {
+      this.pendingCreate.set('workspace');
+      return;
+    }
+    this.layout.closePlusMenu();
+    const host = this.createHost();
+    if (!host) {
+      return;
+    }
+    await this.createWorkspace(host);
+  }
+
+  // --- doing it, once the destination is settled -------------------------
+
+  private async createPane(
+    host: string,
+    destination: Omit<BridgeMethodParams['pane.split'], 'direction'>
+  ): Promise<void> {
     try {
-      await this.store.splitPane(host, {
-        direction: 'right',
-        ...(workspace ? { workspace_id: workspace.id } : {}),
-        ...(target ? { target_pane_id: target.id } : {}),
-      });
+      await this.store.splitPane(host, { direction: 'right', ...destination });
     } catch (err) {
       this.toast.push({
         level: 'error',
@@ -665,18 +814,12 @@ export class Board implements OnDestroy {
     }
   }
 
-  protected async newTab(): Promise<void> {
-    this.layout.closePlusMenu();
-    const host = this.createHost();
-    if (!host) {
-      return;
-    }
-    const workspace = this.resolvedWorkspace();
+  private async createTab(
+    host: string,
+    destination: BridgeMethodParams['tab.create']
+  ): Promise<void> {
     try {
-      const result = await this.store.createTab(
-        host,
-        workspace ? { workspace_id: workspace.id } : {}
-      );
+      const result = await this.store.createTab(host, destination);
       if (result) {
         this.store.requestPendingRename('tab', host, result.tab.id);
       }
@@ -688,12 +831,7 @@ export class Board implements OnDestroy {
     }
   }
 
-  protected async newWorkspace(): Promise<void> {
-    this.layout.closePlusMenu();
-    const host = this.createHost();
-    if (!host) {
-      return;
-    }
+  private async createWorkspace(host: string): Promise<void> {
     try {
       const result = await this.store.createWorkspace(host, {});
       if (result) {

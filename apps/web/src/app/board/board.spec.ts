@@ -1948,13 +1948,73 @@ describe('Board: creation lands where the operator is looking', () => {
     expect(lastParams('tab.create')?.['workspace_id']).toBe('w9');
   });
 
-  it('an unscoped board sends no destination — and that is the gap the picker closes', async () => {
+  // --- asking, when there is no scope to answer with (tasks 1.3, 2.1-2.4) --
+
+  it('an unscoped board asks where, and sends nothing until it is answered', async () => {
     await clickCreate(COPY.create.pane);
 
+    expect(ws.request.calls.allArgs().some((args: unknown[]) => args[1] === 'pane.split'))
+      .withContext('no request may go out while the destination is still a guess')
+      .toBeFalse();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const picker = el.querySelector('.destination-picker');
+    expect(picker).withContext('the + menu should have asked').not.toBeNull();
+    expect(picker?.getAttribute('aria-label')).toBe(COPY.create.where);
+  });
+
+  it('creates into the destination the operator picked, naming its tab', async () => {
+    await clickCreate(COPY.create.pane);
+    const el = fixture.nativeElement as HTMLElement;
+    const options = Array.from(
+      el.querySelectorAll<HTMLButtonElement>('.destination-picker [role="menuitem"]')
+    );
+    expect(options.map((o) => o.textContent?.trim()))
+      .withContext('every tab on every capable host, workspace-qualified')
+      .toEqual(['herdr / one', 'kanhrd / one']);
+
+    options[0].click();
+    fixture.detectChanges();
+    await settle(fixture);
+
     const params = lastParams('pane.split');
-    expect(params?.['workspace_id'])
-      .withContext('nothing to scope to: task 1.3 replaces this fallback with a prompt')
-      .toBeUndefined();
-    expect(params?.['target_pane_id']).toBeUndefined();
+    expect(params?.['host']).toBe('local');
+    expect(params?.['workspace_id']).toBe('w9');
+    expect(params?.['target_pane_id'])
+      .withContext('a tab destination is only reachable through a pane already in it')
+      .toBe('w9:p1');
+  });
+
+  it('asks for a workspace when opening a tab — the depth that creation needs', async () => {
+    await clickCreate(COPY.create.tab);
+    const el = fixture.nativeElement as HTMLElement;
+    const options = Array.from(
+      el.querySelectorAll<HTMLButtonElement>('.destination-picker [role="menuitem"]')
+    );
+    expect(options.map((o) => o.textContent?.trim()))
+      .withContext('a tab lands in a workspace, so the list stops there')
+      .toEqual(['herdr', 'kanhrd']);
+
+    options[1].click();
+    fixture.detectChanges();
+    await settle(fixture);
+
+    expect(lastParams('tab.create')?.['workspace_id']).toBe('w6');
+  });
+
+  it('does not ask when there is only one place to go', async () => {
+    // `alpha` can create but has no workspace, so a new WORKSPACE has two
+    // candidate hosts while a new card has only the tabs `local` carries.
+    // Narrow the board to one host's one tab and the question disappears.
+    paramMap$.next(convertToParamMap({ workspaceId: 'w6', tabId: 'w6:t1' }));
+    await settle(fixture);
+
+    await clickCreate(COPY.create.pane);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.destination-picker'))
+      .withContext('a scoped board already knows; a list of one is a click, not a question')
+      .toBeNull();
+    expect(lastParams('pane.split')?.['workspace_id']).toBe('w6');
   });
 });

@@ -1,16 +1,34 @@
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import type { BridgeCapabilities, Pane } from '@kanhrd/schema';
+import type { BridgeCapabilities, Pane, TabSummary, WorkspaceSummary } from '@kanhrd/schema';
 import { CARD_COPY, Card } from './card';
-import { COPY } from '../shared/copy';
+import { COPY, fill } from '../shared/copy';
 import { PanesStore } from '../state/panes.store';
 import { PARKED_STORAGE_KEY, ParkedStore } from '../state/parked.store';
+import { ToastService } from '../state/toast.service';
 
 class FakePanesStore {
   readonly closePane = jasmine.createSpy('closePane');
   readonly splitPane = jasmine.createSpy('splitPane');
   readonly renamePane = jasmine.createSpy('renamePane').and.resolveTo({});
+  readonly movePane = jasmine.createSpy('movePane').and.resolveTo({ changed: true });
+  // The destination list reads these off the store, so a card that renders
+  // a move menu needs a world to move into.
+  readonly workspacesSignal = signal(
+    new Map<string, WorkspaceSummary>([
+      ['laptop:w1', { id: 'w1', host: 'laptop', name: 'kanhrd' }],
+      ['laptop:w2', { id: 'w2', host: 'laptop', name: 'herdr' }],
+    ])
+  );
+  readonly tabsSignal = signal(
+    new Map<string, TabSummary>([
+      ['laptop:t1', { id: 't1', host: 'laptop', workspace: { id: 'w1' }, name: 'main' }],
+      ['laptop:t2', { id: 't2', host: 'laptop', workspace: { id: 'w2' }, name: 'logs' }],
+    ])
+  );
+  readonly panesSignal = signal(new Map<string, Pane>());
+  readonly capabilitiesSignal = signal<ReadonlyMap<string, BridgeCapabilities>>(new Map());
 }
 
 function pane(overrides: Partial<Pane> = {}): Pane {
@@ -975,4 +993,261 @@ describe('Card', () => {
       expect(parked.columnOf('laptop:p9')).toBe(column.id);
     });
   });
+});
+
+/**
+ * The card's move menu (openspec `add-pane-destinations`, tasks 3.2, 3.4,
+ * 3.5 and the `board-card-actions` spec).
+ *
+ * Two rules carry most of the weight here. `move to` is herdr's operation
+ * and `park in` is this browser's, so they never share a menu — one verb
+ * over two operations with opposite blast radii is how an operator moves a
+ * pane on a colleague's machine when they meant to tidy their own board.
+ * And a move herdr declined comes back as a SUCCESSFUL response, so it is
+ * neither an error nor a completed move.
+ */
+describe('Card: move', () => {
+  let store: FakeMoveStore;
+
+  class FakeMoveStore {
+    readonly closePane = jasmine.createSpy('closePane');
+    readonly splitPane = jasmine.createSpy('splitPane');
+    readonly renamePane = jasmine.createSpy('renamePane').and.resolveTo({});
+    readonly movePane = jasmine.createSpy('movePane').and.resolveTo({ changed: true });
+    readonly workspacesSignal = signal(
+      new Map<string, WorkspaceSummary>([
+        ['laptop:w1', { id: 'w1', host: 'laptop', name: 'kanhrd' }],
+        ['laptop:w2', { id: 'w2', host: 'laptop', name: 'herdr' }],
+      ])
+    );
+    readonly tabsSignal = signal(
+      new Map<string, TabSummary>([
+        ['laptop:t1', { id: 't1', host: 'laptop', workspace: { id: 'w1' }, name: 'main' }],
+        ['laptop:t2', { id: 't2', host: 'laptop', workspace: { id: 'w2' }, name: 'logs' }],
+      ])
+    );
+    readonly panesSignal = signal(
+      new Map<string, Pane>([
+        [
+          'laptop:p-in-t2',
+          {
+            id: 'p-in-t2',
+            host: 'laptop',
+            workspace: { id: 'w2', name: 'herdr' },
+            tab: { id: 't2', name: 'logs' },
+            agent_status: 'idle',
+          },
+        ],
+      ])
+    );
+    readonly capabilitiesSignal = signal<ReadonlyMap<string, BridgeCapabilities>>(
+      new Map([['laptop', { paneMove: true } as BridgeCapabilities]])
+    );
+  }
+
+  function movingPane(): Pane {
+    return {
+      id: 'p1',
+      host: 'laptop',
+      workspace: { id: 'w1', name: 'kanhrd' },
+      tab: { id: 't1', name: 'main' },
+      agent_status: 'working',
+    };
+  }
+
+  function caps(paneMove: boolean): ReadonlyMap<string, BridgeCapabilities> {
+    return new Map([
+      [
+        'laptop',
+        {
+          tier: 3,
+          terminal: true,
+          paneResize: false,
+          paneGraphics: false,
+          outputPollIntervalMs: 150,
+          paneCreate: true,
+          paneClose: true,
+          paneMove,
+          paneRename: true,
+          tabCrud: true,
+          workspaceCrud: true,
+        },
+      ],
+    ]);
+  }
+
+  beforeEach(async () => {
+    store = new FakeMoveStore();
+    await TestBed.configureTestingModule({
+      imports: [Card],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: PanesStore, useValue: store },
+      ],
+    }).compileComponents();
+  });
+
+  function open(paneMove = true) {
+    const fixture = TestBed.createComponent(Card);
+    fixture.componentRef.setInput('pane', movingPane());
+    fixture.componentRef.setInput('capabilities', caps(paneMove));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    el.querySelector<HTMLButtonElement>('.card-action.overflow-trigger')!.click();
+    fixture.detectChanges();
+    const id = el.querySelector('.overflow-trigger')?.getAttribute('aria-controls');
+    return { fixture, menu: document.getElementById(id!)! };
+  }
+
+  function click(menu: HTMLElement, selector: string): void {
+    menu.querySelector<HTMLButtonElement>(selector)!.click();
+  }
+
+  afterEach(() => {
+    for (const el of Array.from(document.querySelectorAll('.cdk-overlay-container'))) {
+      el.remove();
+    }
+  });
+
+  it('offers no move control at all on a host that cannot move panes', () => {
+    const { menu } = open(false);
+    expect(menu.querySelector('.move')).withContext('not disabled — absent').toBeNull();
+    expect(menu.querySelector('.park'))
+      .withContext('parking is browser-local and needs no capability')
+      .not.toBeNull();
+  });
+
+  it('lists herdr destinations only — no parked column appears among them', (done) => {
+    const { fixture, menu } = open();
+    click(menu, '.move');
+    fixture.detectChanges();
+    const group = menu.querySelector('.move-destinations')!;
+    const labels = Array.from(group.querySelectorAll('[role="menuitem"]')).map((b) =>
+      b.textContent?.trim()
+    );
+    expect(labels).toEqual([
+      CARD_COPY.moveExistingTab,
+      CARD_COPY.moveNewTab,
+      CARD_COPY.moveNewWorkspace,
+    ]);
+    expect(group.querySelector('.park')).toBeNull();
+    done();
+  });
+
+  it('moves into a chosen tab, and never offers the tab the pane is already in', () => {
+    const { fixture, menu } = open();
+    click(menu, '.move');
+    fixture.detectChanges();
+    click(menu, '.move-existing-tab');
+    fixture.detectChanges();
+
+    const options = Array.from(
+      menu.querySelectorAll<HTMLButtonElement>('.destination-picker [role="menuitem"]')
+    );
+    expect(options.map((o) => o.textContent?.trim()))
+      .withContext("the pane's own tab is herdr's same_tab no-op, so it is not offered")
+      .toEqual(['herdr / logs']);
+
+    options[0].click();
+    expect(store.movePane).toHaveBeenCalledWith('laptop', {
+      pane_id: 'p1',
+      destination: { type: 'tab', tab_id: 't2', split: 'right' },
+      focus: false,
+    });
+  });
+
+  it('moves into a new tab and a new workspace, using herdr’s own destination union', () => {
+    const first = open();
+    click(first.menu, '.move');
+    first.fixture.detectChanges();
+    const firstItems = Array.from(
+      first.menu.querySelectorAll<HTMLButtonElement>('.move-destinations > [role="menuitem"]')
+    );
+    firstItems[1].click();
+    expect(store.movePane.calls.mostRecent().args[1].destination).toEqual({ type: 'new_tab' });
+
+    store.movePane.calls.reset();
+    const second = open();
+    click(second.menu, '.move');
+    second.fixture.detectChanges();
+    const items = Array.from(
+      second.menu.querySelectorAll<HTMLButtonElement>('.move-destinations > [role="menuitem"]')
+    );
+    items[2].click();
+    expect(store.movePane.calls.mostRecent().args[1].destination).toEqual({
+      type: 'new_workspace',
+    });
+  });
+
+  // --- what a move SAYS (tasks 3.4 and 3.5) -------------------------------
+  //
+  // `pane.move` answers a no-op with a SUCCESSFUL response carrying
+  // `changed: false`, so the two endings below are neither errors nor
+  // completed moves, and neither may be drawn as one.
+
+  it('says nothing at all when herdr reports the card is already there', async () => {
+    store.movePane.and.resolveTo({ changed: false, reason: 'same_tab' });
+    const toast = TestBed.inject(ToastService);
+    const { fixture, menu } = open();
+    click(menu, '.move');
+    fixture.detectChanges();
+    const items = Array.from(
+      menu.querySelectorAll<HTMLButtonElement>('.move-destinations > [role="menuitem"]')
+    );
+    items[1].click();
+    await settleMove();
+
+    expect(toast.toasts().length)
+      .withContext('the operator asked for where the card already is; absent beats wrong')
+      .toBe(0);
+  });
+
+  it('says which obstacle to clear when herdr refuses because the tab is zoomed', async () => {
+    store.movePane.and.resolveTo({ changed: false, reason: 'zoomed_tab' });
+    const toast = TestBed.inject(ToastService);
+    const { fixture, menu } = open();
+    click(menu, '.move');
+    fixture.detectChanges();
+    const items = Array.from(
+      menu.querySelectorAll<HTMLButtonElement>('.move-destinations > [role="menuitem"]')
+    );
+    items[1].click();
+    await settleMove();
+
+    const shown = toast.toasts();
+    expect(shown.length).toBe(1);
+    expect(shown[0].message).toBe(COPY.toast.moveZoomed);
+    expect(shown[0].message)
+      .withContext('a discriminant is not prose — there is nothing of herdr’s to quote')
+      .not.toContain('zoomed_tab');
+  });
+
+  it("quotes herdr's own words when a move genuinely fails", async () => {
+    store.movePane.and.rejectWith(new Error('Tab "logs" is gone'));
+    const toast = TestBed.inject(ToastService);
+    const { fixture, menu } = open();
+    click(menu, '.move');
+    fixture.detectChanges();
+    const items = Array.from(
+      menu.querySelectorAll<HTMLButtonElement>('.move-destinations > [role="menuitem"]')
+    );
+    items[1].click();
+    await settleMove();
+
+    const shown = toast.toasts();
+    expect(shown.length).toBe(1);
+    expect(shown[0].level).toBe('error');
+    expect(shown[0].message).toBe(
+      fill(COPY.toast.moveFailed, { name: 'p1', reason: 'Tab "logs" is gone' })
+    );
+  });
+
+  /** Lets the move promise and the toast service's own timers settle. */
+  async function settleMove(): Promise<void> {
+    for (let i = 0; i < 5; i++) {
+      await Promise.resolve();
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
 });

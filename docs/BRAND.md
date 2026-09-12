@@ -110,6 +110,13 @@ product copy and stay in the template.
 | `emptyState.notFoundAction`           | `back to the board`                                                                                                                           |
 | `emptyState.scopeUnavailable`         | `that workspace is no longer here.`                                                                                                           |
 | `column.empty`                        | `0`                                                                                                                                           |
+| `card.split`                          | `split`                                                                                                                                       |
+| `card.splitRight`                     | `split right`                                                                                                                                 |
+| `card.splitDown`                      | `split down`                                                                                                                                  |
+| `card.move`                           | `move to…`                                                                                                                                    |
+| `card.moveExistingTab`                | `another tab`                                                                                                                                 |
+| `card.moveNewTab`                     | `a new tab`                                                                                                                                   |
+| `card.moveNewWorkspace`               | `a new workspace`                                                                                                                             |
 | `card.park`                           | `park in…`                                                                                                                                    |
 | `card.unpark`                         | `unpark`                                                                                                                                      |
 | `park.newColumn`                      | `new column…`                                                                                                                                 |
@@ -148,6 +155,8 @@ product copy and stay in the template.
 | `toast.createTabFailed`               | `couldn't open a tab. herdr said: {reason}`                                                                                                   |
 | `toast.createWorkspaceFailed`         | `couldn't open a workspace. herdr said: {reason}`                                                                                             |
 | `toast.renameFailed`                  | `couldn't rename. herdr said: {reason}`                                                                                                       |
+| `toast.moveFailed`                    | `couldn't move {name}. herdr said: {reason}`                                                                                                  |
+| `toast.moveZoomed`                    | `couldn't move it. the tab it's in is zoomed - unzoom it first.`                                                                              |
 | `toast.liveUpdatesUnavailable`        | `no live updates for this card. herdr said: {reason}`                                                                                         |
 | `toast.working`                       | `working…`                                                                                                                                    |
 | `status.working`                      | `working`                                                                                                                                     |
@@ -173,6 +182,7 @@ product copy and stay in the template.
 | `nav.tabStrip`                        | `tabs in this workspace`                                                                                                                      |
 | `nav.tabStripItem`                    | `{name} — {count} cards`                                                                                                                      |
 | `create.menu`                         | `open`                                                                                                                                        |
+| `create.where`                        | `where`                                                                                                                                       |
 | `create.pane`                         | `open a card`                                                                                                                                 |
 | `create.tab`                          | `open a tab`                                                                                                                                  |
 | `create.workspace`                    | `open a workspace`                                                                                                                            |
