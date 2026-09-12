@@ -1,0 +1,52 @@
+apps/web/src/app/board/card.spec.ts
+  s_493b7bedcc134d::t_a761090dad3e16 1,4,6,9,15-31
+  s_493b7bedcc134d::t_9f81b73a99b932 997-1253
+apps/web/src/app/shared/destination-picker.scss
+  s_493b7bedcc134d::t_4052a7ffd11ad4 1-14
+apps/web/src/app/shared/destination-picker.ts
+  s_493b7bedcc134d::t_a197cc041a4f02 139-150
+  s_493b7bedcc134d::t_8b1fae10ce7376 1,3-39,151-166,171,183-187
+  s_493b7bedcc134d::t_742f1d816085a6 2,40-138,167-170,172-182
+apps/web/src/app/board/board.html
+  s_493b7bedcc134d::t_fab2d021ec033c 25-27,35-70
+docs/BRAND.md
+  s_493b7bedcc134d::t_3ae1763e74204e 113-119,158-159,185
+apps/web/src/app/shared/copy.ts
+  s_493b7bedcc134d::t_6fe011c85cea5c 57-64,67-71,141-151,264-270
+apps/web/src/app/shared/destination-picker.html
+  s_493b7bedcc134d::t_4052a7ffd11ad4 1-20
+apps/web/src/app/board/card.html
+  s_493b7bedcc134d::t_91119c1e73921a 189-233
+  s_493b7bedcc134d::t_3c3eea44e35971 188
+apps/web/src/app/board/card.ts
+  s_493b7bedcc134d::t_dbe28c9f7d445b 13-18,37,50-53
+  s_493b7bedcc134d::t_9ba3a39de1fe08 78,183-191,202-289,437-438
+apps/web/src/app/board/card.scss
+  s_493b7bedcc134d::t_91119c1e73921a 479-480,488-495
+  s_493b7bedcc134d::t_5320785608e7ba 496
+apps/web/src/app/board/board.ts
+  s_493b7bedcc134d::t_679f6c393c5134 27,734-736,738,742-753
+  s_493b7bedcc134d::t_fab2d021ec033c 385-396
+  s_493b7bedcc134d::t_785126ec35cb15 18,50-56,114,624-693,757-760,768-771,775-778,785-806,808-822,834
+  s_493b7bedcc134d::t_661f612e8e236c 694,754-755
+apps/web/src/app/board/board.spec.ts
+  s_493b7bedcc134d::t_c4b7842ac4e408 1951-1966,1968-1978,1981-2018
+apps/web/src/app/shared/destination-picker.spec.ts
+  s_493b7bedcc134d::t_eff7ce87b4b7cc 1-131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "400cf5b62cbcf55c5cfcc502cc1633710bbcd87c",
+  "prompts": {},
+  "sessions": {
+    "s_493b7bedcc134d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26ca5883-d6ab-4040-90c0-59f54d9ec3f9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
