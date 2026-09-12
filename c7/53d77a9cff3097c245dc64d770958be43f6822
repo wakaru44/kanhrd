@@ -1,0 +1,27 @@
+openspec/changes/add-pane-destinations/specs/board-card-actions/spec.md
+  s_41bed7e0e7701d::t_dfd822ff019f96 1-101
+openspec/changes/add-pane-destinations/.openspec.yaml
+  s_41bed7e0e7701d::t_8c5d8d701a629f 1-2
+openspec/changes/add-pane-destinations/README.md
+  s_41bed7e0e7701d::t_8c5d8d701a629f 1-3
+openspec/changes/add-pane-destinations/tasks.md
+  s_41bed7e0e7701d::t_dfd822ff019f96 1-75
+openspec/changes/add-pane-destinations/proposal.md
+  s_41bed7e0e7701d::t_7199146f97ed08 1-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c753d77a9cff3097c245dc64d770958be43f6822",
+  "prompts": {},
+  "sessions": {
+    "s_41bed7e0e7701d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c985291b-2f83-4b9b-a00d-3f7b63991f12",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
