@@ -221,6 +221,55 @@ existing explicit prefix-shortcut mechanism plus a visible back control
 in the pane-detail header. Help is reachable from that mechanism and
 from a visible control — never from a bare `?`.
 
+### Non-modal popovers
+
+A third overlay shape sits between the overflow menu and the modal dialog:
+a **non-modal popover** — a small panel, anchored to the control that
+opened it, holding real form controls while the rest of the app stays
+operable. The header's theme panel (`shared/theme-panel`) is the shipped
+exemplar: a `role="radiogroup"` for the board theme and a `<select>` for
+the terminal theme, over the board.
+
+Pick between the three by what the surface holds and what it takes away:
+
+| Surface           | Contains                        | Rest of the app |
+| ----------------- | ------------------------------- | --------------- |
+| overflow menu     | menu items — one action each    | stays reachable |
+| non-modal popover | mixed form controls             | stays reachable |
+| modal dialog      | a decision the user must settle | inert           |
+
+A radio group and a `<select>` are not menu items, so `role="menu"` is
+wrong for them — a menu's roles and keyboard model do not describe a
+form control. And nothing here needs answering before the board can be
+touched again, so it is not a modal.
+
+Rules:
+
+- The panel is `role="dialog"` with an accessible name. Its trigger
+  carries `aria-haspopup="dialog"`, `aria-expanded`, and `aria-controls`
+  naming the panel while it is open.
+- **No focus trap.** Non-modal means the page stays operable: background
+  content is not `inert`, and Tab leaves the panel. The trap-and-`inert`
+  rule under _Keyboard-first_ is written for modal dialogs and the mobile
+  drawer; it does not apply here.
+- Opening moves focus into the panel, onto the first control's current
+  value — so the first arrow press is already inside the control.
+- Escape dismisses and returns focus to the trigger. Re-activating the
+  trigger does the same.
+- An outside click dismisses and leaves focus where the user clicked.
+  Focus belongs where the pointer went, not back on a control the user
+  was leaving.
+- Escape is handled through the existing precedence ladder
+  (`KeyboardService.closeTopOverlay`), never by a separate global
+  binding — see the no-global-Escape rule above. Open state therefore
+  lives on `LayoutService` beside the rail and the board's `+` menu.
+- Keyboard operation of the controls inside is governed by their own
+  roles, not by the panel: a radio group is one tab stop with a roving
+  tabindex, arrows on both axes, and Home/End; a `<select>` is the
+  native control.
+- The panel fits inside the viewport at the 390px reference width. It
+  flips or shifts rather than clipping, and it never widens the page.
+
 ### URL is state
 
 The rail is a **navigator**, not a filter. Every scoping decision is in
@@ -666,6 +715,18 @@ width` (already asserted).
 - **38.** With a confirm dialog open and a toast visible, the dialog's `keep`
   and destructive buttons are still hittable
   (`toBeVisible` + a successful click).
+
+#### Assertions — theme panel
+
+Asserted in `apps/web/e2e/viewport-matrix.spec.ts` rather than
+`mobile.spec.ts`: the header is app chrome and renders in every state the
+mock-bridge harness serves, so the check runs without a herdr.
+
+- **39.** At 390 × 844, activating the header theme trigger sets its
+  `aria-expanded` to `true` and renders the `role="dialog"` panel; the
+  panel's bounding box has `x >= 0` and `x + width <= viewport width`,
+  and `document.documentElement.scrollWidth <= clientWidth + 1` while it
+  is open.
 
 ## Anti-patterns (rejects at review)
 
