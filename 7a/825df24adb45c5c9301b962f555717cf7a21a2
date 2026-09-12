@@ -1,0 +1,41 @@
+openspec/changes/add-terminal-scrollback-depth/specs/tier-2-terminal/spec.md
+  s_9f6e9e632154c4::t_fe575778c9748c 1-90
+openspec/changes/add-terminal-scrollback-depth/specs/terminal-scrollback/spec.md
+  s_9f6e9e632154c4::t_b02e846bb50dce 1,3,5-13,15,17-18,23-38,42-48,50-53,57-58,81,83-84
+  s_493b7bedcc134d::t_f3087dd5c1db88 49,63
+  s_9f6e9e632154c4::t_4a043987a19c8a 59-62,64-65
+  s_9f6e9e632154c4::t_56df5ebe32841c 82,85-90
+openspec/changes/add-terminal-scrollback-depth/tasks.md
+  s_9f6e9e632154c4::t_bded2e48534ff5 5,7,10-11,15,17-24,26,28-42,44-49,51,53-58,60,62-64
+openspec/changes/add-terminal-scrollback-depth/design.md
+  s_9f6e9e632154c4::t_1becc522d7d589 1-143
+openspec/changes/add-terminal-scrollback-depth/proposal.md
+  s_9f6e9e632154c4::t_f83f785ec9531d 8-20
+  s_9f6e9e632154c4::t_d91f275666b226 40-60
+  s_9f6e9e632154c4::t_e2a27d7b457e08 104-105
+  s_9f6e9e632154c4::t_434a78b1dacb9b 85-103,106-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7a825df24adb45c5c9301b962f555717cf7a21a2",
+  "prompts": {},
+  "sessions": {
+    "s_493b7bedcc134d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26ca5883-d6ab-4040-90c0-59f54d9ec3f9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    },
+    "s_9f6e9e632154c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94df2e1b-4541-4873-b074-5ea96fce8f02",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
