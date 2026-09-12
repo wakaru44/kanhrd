@@ -1,0 +1,24 @@
+openspec/changes/add-delta-pane-output/tasks.md
+  s_9f6e9e632154c4::t_d57cd1f02fcd65 37,39-42,44,46-50
+  s_9f6e9e632154c4::t_dbed49a5d92f43 51
+openspec/changes/add-delta-pane-output/design.md
+  s_9f6e9e632154c4::t_d57cd1f02fcd65 39-42,125-138
+openspec/changes/add-delta-pane-output/proposal.md
+  s_9f6e9e632154c4::t_d57cd1f02fcd65 29-45,79-87,122-123,128-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d1f5815e6157a93b3aeb7262274d62d8ea510a77",
+  "prompts": {},
+  "sessions": {
+    "s_9f6e9e632154c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94df2e1b-4541-4873-b074-5ea96fce8f02",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
