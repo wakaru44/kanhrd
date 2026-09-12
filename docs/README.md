@@ -18,6 +18,15 @@ You want kanhrd running on a machine.
   is, and which deployment shape defends against what. Read it alongside
   `OPERATING.md` before exposing kanhrd beyond loopback.
 
+## Use it
+
+You have kanhrd open in front of you.
+
+- [USER-GUIDE.md](./USER-GUIDE.md) — the prefix chords, moving between cards
+  and tabs from inside a terminal, columns of your own with their exit rules,
+  and the chip rows and scoping that narrow the board. Open it once you are
+  past the first click.
+
 ## Understand it
 
 You want to know why kanhrd is shaped the way it is.

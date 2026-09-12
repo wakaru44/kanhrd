@@ -38,6 +38,8 @@ Two things keep that safe:
 - **Settings that stick.** Light/dark app theme, board density, terminal font size, and six terminal palettes (washi, sumi, catppuccin mocha, monokai, solarized dark and light) plus an `auto` that follows the app theme.
 - **Mobile.** The board is usable on a phone, not merely responsive.
 
+What to reach for once it is open: [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md).
+
 ### Known gaps
 
 These are herdr-side limits, not to-dos:
