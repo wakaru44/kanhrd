@@ -245,3 +245,46 @@ for (const vp of VIEWPORTS) {
     });
   }
 }
+
+// --- theme panel bounds at the mobile reference width -----------------------
+
+/**
+ * `docs/UX-GUIDELINES.md` assertion 39 — the header's theme panel is a
+ * non-modal dialog, and at the 390px reference width it must open inside the
+ * viewport rather than clipping past its edge. Same shape as
+ * `mobile.spec.ts [8]` asserts for the board's `+` menu, but mocked: the
+ * header is app chrome, so it renders in every state this harness serves and
+ * the assertion needs no herdr.
+ */
+test('theme panel — opens inside the viewport at 390px', async ({ page }) => {
+  const width = 390;
+  await page.setViewportSize({ width, height: 844 });
+  await installMock(page, { state: 'populated-small' });
+  await page.goto('/');
+
+  const trigger = page.locator('.theme-toggle');
+  await expect(trigger).toBeVisible({ timeout: 10_000 });
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+  await trigger.click();
+
+  // Open for real, not vacuously: the trigger says so and the dialog exists.
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  const panel = page.locator('[role="dialog"].theme-panel');
+  await expect(panel).toBeVisible();
+
+  const box = await panel.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+
+  // And it does not widen the page while it is open.
+  const overflow = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
+
+  await page.keyboard.press('Escape');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+});

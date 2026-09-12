@@ -75,6 +75,20 @@
       `style-lint.spec.ts` (three new components join the gate's list).
 - [x] 5.5 Update `e2e/theme.spec.ts` for the two-step header path. No new
       e2e file — the suites here are herdr-gated.
+- [x] 5.6 `e2e/viewport-matrix.spec.ts` — the panel opens inside a
+      390 × 844 viewport and does not widen the page, asserted in the
+      mock-bridge harness so it runs without a herdr (guidelines
+      assertion 39).
+
+## 7. Guidelines
+
+- [x] 7.1 `docs/UX-GUIDELINES.md` — a _Non-modal popovers_ pattern next
+      to overflow menus and modal dialogs: when to reach for each,
+      `role="dialog"` plus trigger ARIA, no focus trap and why, Escape
+      and outside-click dismissal, the Escape precedence ladder, inner
+      controls keeping their own keyboard model, and the 390px bound.
+- [x] 7.2 Assertion **39** appended at the end of the E2E-assertable
+      list; no existing assertion renumbered.
 
 ## 6. Verify
 
