@@ -81,7 +81,27 @@
         <div class="rail-backdrop" (click)="layout.closeRail()"></div>
       }
       <app-rail class="rail" [class.open]="layout.railOpen()" />
-      <div class="board-region">
+      <!--
+        The column-reorder drop list sits on the region, not on the strip:
+        the strip carries `cdkDropListGroup`, which is what connects the
+        per-column CARD lists, and `CdkDropList` provides an undefined group
+        on its own element. One element with both directives would make
+        "which group does a column body see" depend on directive order, so
+        the list is mounted one element up and told where its items live
+        (`cdkDropListElementContainer`). Neither list is in the other's
+        group and neither names the other in `cdkDropListConnectedTo`, so a
+        card can never be dropped on the strip and a column can never be
+        dropped into a column's cards.
+      -->
+      <div
+        class="board-region"
+        cdkDropList
+        cdkDropListOrientation="horizontal"
+        [cdkDropListElementContainer]="grouped() ? '' : '.board-strip'"
+        [cdkDropListDisabled]="grouped() || !reorderEnabled()"
+        [cdkDropListSortPredicate]="columnSortPredicate"
+        (cdkDropListDropped)="onColumnDropped($event)"
+      >
         @if (staleHosts().length > 0) {
           <p class="stale-note">
             <svg lucideUnplug class="icon"></svg>
@@ -135,6 +155,9 @@
               @for (column of visibleColumns(); track column.key) {
                 <app-column
                   #columnEl
+                  cdkDrag
+                  [cdkDragData]="column"
+                  [cdkDragDisabled]="column.parked === null || !reorderEnabled()"
                   role="tabpanel"
                   [attr.id]="'column-panel-' + column.key"
                   [attr.aria-labelledby]="'switcher-tab-' + column.key"

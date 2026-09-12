@@ -226,3 +226,49 @@
   border: 1px dashed var(--ochre-line);
   border-radius: var(--radius-md);
 }
+
+/*
+ * Column reorder. Same rule as the card drag above it: the affordance
+ * appears only while it works. `cdk-drag-disabled` is the CDK's own marker,
+ * so a status column (whose drag is always disabled) and every column on a
+ * phone or on a board with one parked column carry no grab cursor at all.
+ *
+ * The selectors are `:host(...)` because the `cdkDrag` lives on the
+ * `app-column` element — it is the strip's business who may be dragged, and
+ * the host is where the CDK puts its classes.
+ */
+:host(.cdk-drag:not(.cdk-drag-disabled)) .column-header {
+  cursor: grab;
+}
+
+:host(.cdk-drag-dragging) .column-header {
+  cursor: grabbing;
+}
+
+/* The column left behind while its copy is under the pointer, in the same
+ * form the card placeholder already uses. */
+:host(.cdk-drag-placeholder) {
+  opacity: 0.35;
+}
+
+/* The copy under the pointer is lifted off the board, so it needs its own
+ * surface: the board paints no fill behind a column. A hairline, not a
+ * shadow (docs/DESIGN-SYSTEM.md). */
+:host(.cdk-drag-preview) {
+  padding: var(--sp-3);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-md);
+}
+
+/* An end-of-row `move column` item stays in the menu and stays focusable
+ * (an arrow key must not be trapped on it), so it says it is unavailable in
+ * ink rather than by disappearing. */
+.column-overflow-menu [role='menuitem'][aria-disabled='true'] {
+  color: var(--ink-mute);
+  cursor: default;
+
+  &:hover {
+    background: transparent;
+  }
+}

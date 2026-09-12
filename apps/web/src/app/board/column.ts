@@ -9,20 +9,28 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { OverlayModule, type ConnectedPosition } from '@angular/cdk/overlay';
-import { CdkDrag, CdkDropList, type CdkDragDrop } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragHandle, CdkDropList, type CdkDragDrop } from '@angular/cdk/drag-drop';
 import type { AgentStatus, BridgeCapabilities, Pane } from '@kanhrd/schema';
 import { COPY } from '../shared/copy';
-import { LucideMoreHorizontal, LucidePencil } from '../shared/icons';
+import {
+  LucideArrowLeft,
+  LucideArrowRight,
+  LucideMoreHorizontal,
+  LucidePencil,
+} from '../shared/icons';
 import { handleMenuKeydown, menuItems } from '../shared/menu-keys';
 import { ConfirmModal } from '../shared/confirm-modal';
 import { RenameModal } from '../shared/rename-modal';
-import { paneKey } from '../state/panes.store';
+import { PanesStore, paneKey } from '../state/panes.store';
 import {
   EXIT_RULES,
   ParkedStore,
   parkedColumnKey,
+  reorderDelta,
+  visibleNeighbour,
   type ExitRule,
   type ParkedColumn,
 } from '../state/parked.store';
@@ -112,6 +120,64 @@ export function canDrag(hasParkedColumns: boolean, mobile: boolean): boolean {
   return hasParkedColumns && !mobile;
 }
 
+/**
+ * Whether the columns themselves may be dragged, in the same shape and for
+ * the same reason as `canDrag`: karma's viewport is permanently below
+ * `--breakpoint-mobile`, so the enabled half can only be proven as
+ * arithmetic.
+ *
+ * - Fewer than two parked columns: there is no rearrangement to make, so no
+ *   handle and no grab cursor appear ("drag-drop must work or not appear").
+ * - Below `--breakpoint-mobile`: the board is a one-column-per-screen pager
+ *   and a horizontal drag fights it. The header menu's `move column left` /
+ *   `move column right` are the path at that width, and they are present at
+ *   every width.
+ */
+export function canReorderColumns(parkedCount: number, mobile: boolean): boolean {
+  return parkedCount > 1 && !mobile;
+}
+
+/**
+ * Index of the first parked column in a strip, i.e. the leftmost position a
+ * dragged column may come to rest in. `boardColumnRefs` puts every status
+ * column first, so this is the count of the visible status columns — and the
+ * whole of the rule "a status column is never a reorder target", as the
+ * strip's `cdkDropListSortPredicate`.
+ */
+export function firstParkedIndex(refs: readonly BoardColumnRef[]): number {
+  const index = refs.findIndex((ref) => ref.parked !== null);
+  return index < 0 ? refs.length : index;
+}
+
+/**
+ * A drop on the VISIBLE strip, as a `moveColumn` argument over the FULL
+ * parked order.
+ *
+ * The CDK reports positions in the list it dragged over, which holds only
+ * the columns the filter bar left visible (commit `2ecdf61`); `order` holds
+ * every parked column. So the drop is read as "land where the column
+ * currently at `currentIndex` is", and that column's position in the full
+ * order is what the delta is measured against — a hidden column between two
+ * visible ones cannot shift the result.
+ *
+ * `null` when the drag was not a column reorder at all, or when it changed
+ * nothing.
+ */
+export function columnReorderDelta(
+  refs: readonly BoardColumnRef[],
+  order: readonly string[],
+  previousIndex: number,
+  currentIndex: number
+): { id: string; delta: number } | null {
+  const moved = refs[previousIndex]?.parked;
+  const neighbour = refs[currentIndex]?.parked;
+  if (!moved || !neighbour) {
+    return null;
+  }
+  const delta = reorderDelta(order, moved.id, neighbour.id);
+  return delta === 0 ? null : { id: moved.id, delta };
+}
+
 const MOBILE_QUERY = '(max-width: 900px)';
 let mobileViewport: Signal<boolean> | null = null;
 
@@ -166,6 +232,16 @@ export function focusCard(
 }
 
 /**
+ * Whether a CDK drag is carrying a pane, i.e. is a card rather than a column.
+ * `cdkDragData` is the only thing a drop target can ask about the item it is
+ * being offered, so the shape of the data is the test.
+ */
+function isPaneDrag(drag: CdkDrag): boolean {
+  const data = drag.data as Partial<Pane> | undefined;
+  return typeof data?.id === 'string' && typeof data?.host === 'string';
+}
+
+/**
  * One board column, in either of the board's two kinds.
  *
  * **Status column** (`status` set): membership is herdr's fact, not the
@@ -186,8 +262,12 @@ export function focusCard(
     Card,
     ScrollingModule,
     OverlayModule,
+    NgTemplateOutlet,
     CdkDrag,
+    CdkDragHandle,
     CdkDropList,
+    LucideArrowLeft,
+    LucideArrowRight,
     LucideMoreHorizontal,
     LucidePencil,
     ConfirmModal,
@@ -206,6 +286,7 @@ export class Column {
 
   private readonly mobile = mobileViewportSignal();
   private readonly parkedStore = inject(ParkedStore);
+  private readonly panesStore = inject(PanesStore);
 
   protected readonly copy = COPY;
   protected readonly itemSize = VIRTUAL_ITEM_SIZE;
@@ -237,9 +318,15 @@ export class Column {
     canDrag(this.parkedStore.hasColumns(), this.mobile())
   );
 
-  /** A parked column receives cards; a status column never does. */
+  /**
+   * A parked column receives cards; a status column never does — and what it
+   * receives must actually be a card. The column strip's own reorder list is
+   * neither in this list's `cdkDropListGroup` nor connected to it, so a
+   * column drag can never reach here; requiring a pane in `cdkDragData`
+   * costs one predicate and makes that independent of the wiring.
+   */
   protected readonly enterPredicate = (drag: CdkDrag, drop: CdkDropList): boolean =>
-    this.parked() !== null || drag.dropContainer === drop;
+    drag.dropContainer === drop || (this.parked() !== null && isPaneDrag(drag));
 
   protected onCardDropped(event: CdkDragDrop<unknown>): void {
     const parked = this.parked();
@@ -249,6 +336,62 @@ export class Column {
     }
     this.parkedStore.park(paneKey(pane.host, pane.id), parked.id);
   }
+  // --- column reorder ----------------------------------------------------
+  //
+  // Two paths onto one store call (`ParkedStore.moveColumn`): the header
+  // menu's `move column left` / `move column right`, which exist at every
+  // width, and a horizontal drag of the header, which exists only where it
+  // can work. The drag is what needed the keyboard path to be legal at all
+  // (docs/UX-GUIDELINES.md: keyboard-first, and "drag-drop must work or not
+  // appear").
+  //
+  // The strip's own `cdkDropList` lives in `board.html` / `swimlane.html` —
+  // it is the strip's property, not the column's. What is the column's is
+  // being (or refusing to be) a drag source, and where its handle is.
+
+  protected readonly reorderEnabled = computed(() =>
+    canReorderColumns(this.parkedStore.columns().length, this.mobile())
+  );
+
+  /**
+   * The column this one would trade places with, per direction, or `null` at
+   * the end of the row — which is what renders the menu item `disabled`
+   * rather than hiding it or leaving it enabled and inert.
+   */
+  private readonly neighbour = computed(() => {
+    const parked = this.parked();
+    const order = this.parkedStore.columns().map((column) => column.id);
+    const hidden = this.panesStore.filtersSignal().hiddenColumns;
+    if (!parked) {
+      return { left: null, right: null };
+    }
+    return {
+      left: visibleNeighbour(order, hidden, parked.id, -1),
+      right: visibleNeighbour(order, hidden, parked.id, 1),
+    };
+  });
+
+  protected readonly canMoveLeft = computed(() => this.neighbour().left !== null);
+  protected readonly canMoveRight = computed(() => this.neighbour().right !== null);
+
+  /**
+   * The end items are `aria-disabled` rather than `disabled`, so they stay
+   * focusable: `handleMenuKeydown` walks the items it finds, and a real
+   * `disabled` button in that list would swallow an arrow key and trap the
+   * user on it. Activating one does nothing at all — it does not even close
+   * the menu, because a dead item must not look like it did something.
+   */
+  protected moveColumn(direction: -1 | 1): void {
+    const parked = this.parked();
+    const neighbour = direction === -1 ? this.neighbour().left : this.neighbour().right;
+    if (!parked || !neighbour) {
+      return;
+    }
+    const order = this.parkedStore.columns().map((column) => column.id);
+    this.parkedStore.moveColumn(parked.id, reorderDelta(order, parked.id, neighbour));
+    this.closeMenu();
+  }
+
   protected readonly label = computed(() => {
     const parked = this.parked();
     const status = this.status();

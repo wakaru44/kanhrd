@@ -1,10 +1,27 @@
-import { Component, ElementRef, computed, effect, input, output, viewChild } from '@angular/core';
-import { CdkDropListGroup } from '@angular/cdk/drag-drop';
+import {
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
+import { CdkDrag, CdkDropList, CdkDropListGroup, type CdkDragDrop } from '@angular/cdk/drag-drop';
 import type { AgentStatus, BridgeCapabilities, Pane } from '@kanhrd/schema';
 import { COPY } from '../shared/copy';
 import type { Swimlane as SwimlaneBand } from '../state/panes.store';
 import type { SwimlaneDimension } from '../state/settings.service';
-import { Column, mobileViewportSignal, type BoardColumnRef } from './column';
+import { ParkedStore } from '../state/parked.store';
+import {
+  Column,
+  canReorderColumns,
+  columnReorderDelta,
+  firstParkedIndex,
+  mobileViewportSignal,
+  type BoardColumnRef,
+} from './column';
 
 /**
  * The resting page index of a paging strip. Deterministic by construction:
@@ -93,7 +110,7 @@ export function bandLabels(
  */
 @Component({
   selector: 'app-swimlane',
-  imports: [Column, CdkDropListGroup],
+  imports: [Column, CdkDrag, CdkDropList, CdkDropListGroup],
   templateUrl: './swimlane.html',
   styleUrl: './swimlane.scss',
 })
@@ -122,6 +139,35 @@ export class Swimlane {
   readonly page = output<number>();
 
   protected readonly mobile = mobileViewportSignal();
+
+  private readonly parked = inject(ParkedStore);
+
+  // --- column reorder ----------------------------------------------------
+  //
+  // A band reorders the board's columns, not its own: there is one `order`
+  // and every band renders it, so a drag here is visible in every band at
+  // once. The wiring is the board's, repeated on the band because the band
+  // owns its own strip; the arithmetic is shared (`column.ts`).
+
+  protected readonly reorderEnabled = computed(() =>
+    canReorderColumns(this.parked.columns().length, this.mobile())
+  );
+
+  /** Nothing comes to rest left of the first parked column. */
+  protected readonly columnSortPredicate = (index: number): boolean =>
+    index >= firstParkedIndex(this.columns());
+
+  protected onColumnDropped(event: CdkDragDrop<unknown>): void {
+    const move = columnReorderDelta(
+      this.columns(),
+      this.parked.columns().map((column) => column.id),
+      event.previousIndex,
+      event.currentIndex
+    );
+    if (move) {
+      this.parked.moveColumn(move.id, move.delta);
+    }
+  }
 
   private readonly strip = viewChild<ElementRef<HTMLElement>>('strip');
 

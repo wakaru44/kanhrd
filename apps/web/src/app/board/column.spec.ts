@@ -1,4 +1,4 @@
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
@@ -11,8 +11,12 @@ import {
   VIRTUALIZE_THRESHOLD,
   VIRTUAL_ITEM_SIZE,
   canDrag,
+  canReorderColumns,
+  columnReorderDelta,
+  firstParkedIndex,
+  type BoardColumnRef,
 } from './column';
-import { PanesStore } from '../state/panes.store';
+import { PanesStore, defaultFilters } from '../state/panes.store';
 import { PARKED_STORAGE_KEY, ParkedStore, type ParkedColumn } from '../state/parked.store';
 import { COPY } from '../shared/copy';
 
@@ -38,6 +42,12 @@ import { COPY } from '../shared/copy';
 class FakePanesStore {
   readonly closePane = jasmine.createSpy('closePane');
   readonly splitPane = jasmine.createSpy('splitPane');
+  /**
+   * The column reads the per-column filter chips (commit `2ecdf61`) to decide
+   * which way a `move column` item may go: a hidden neighbour is stepped
+   * over, so the store's hidden set is part of the column's contract now.
+   */
+  readonly filtersSignal = signal(defaultFilters());
 }
 
 function panes(count: number, status: AgentStatus = 'working'): Pane[] {
@@ -307,7 +317,7 @@ describe('Column', () => {
     expect(getComputedStyle(trigger!).opacity).toBe('1');
   });
 
-  it('opens a menu of the two rules plus remove, and marks the current rule', async () => {
+  it('opens a menu of the two rules, the two moves and remove, and marks the current rule', async () => {
     const fixture = await renderParked();
     el(fixture).querySelector<HTMLButtonElement>('.column-menu-trigger')!.click();
     fixture.detectChanges();
@@ -321,6 +331,8 @@ describe('Column', () => {
       COPY.park.renameColumn,
       COPY.park.rule.never,
       COPY.park.rule.agentActivity,
+      COPY.park.moveColumnLeft,
+      COPY.park.moveColumnRight,
       COPY.park.removeColumn,
     ]);
     const radios = Array.from(menu.querySelectorAll('[role="menuitemradio"]'));
@@ -505,12 +517,164 @@ describe('Column', () => {
       .toBeTrue();
   });
 
-  it('accepts any card on a parked column', async () => {
+  it('accepts any card on a parked column, and only a card', async () => {
     const fixture = await renderParked();
-    const foreign = { dropContainer: {} } as unknown as CdkDrag;
+    const card = { dropContainer: {}, data: panes(1)[0] } as unknown as CdkDrag;
+    const columnDrag = { dropContainer: {}, data: archived() } as unknown as CdkDrag;
     const elsewhereList = {} as unknown as CdkDropList;
 
-    expect(internals(fixture).enterPredicate(foreign, elsewhereList)).toBeTrue();
+    expect(internals(fixture).enterPredicate(card, elsewhereList)).toBeTrue();
+    // The strip's column-reorder list is neither in this list's group nor
+    // connected to it, so a column drag cannot reach here at all; requiring a
+    // pane in `cdkDragData` makes that true independently of the wiring.
+    expect(internals(fixture).enterPredicate(columnDrag, elsewhereList))
+      .withContext('a column is not a card')
+      .toBeFalse();
+  });
+
+  // --- column reorder (add-parked-column-reorder) -------------------------
+  //
+  // Same split as the card drag above: the enabled half of the drag is
+  // arithmetic, because karma's viewport is permanently below
+  // `--breakpoint-mobile`. What the DOM proves here is the keyboard path,
+  // which exists at EVERY width, and that a status column is neither a
+  // reorder source nor a handle.
+
+  function refs(...keys: readonly string[]): readonly BoardColumnRef[] {
+    return keys.map((key) =>
+      key.startsWith('parked:')
+        ? {
+            key,
+            label: key,
+            status: null,
+            parked: archived({ id: key.slice('parked:'.length) }),
+          }
+        : { key, label: key, status: 'idle' as const, parked: null }
+    );
+  }
+
+  it('makes a column draggable only with two of them, and never on a phone', () => {
+    expect(canReorderColumns(0, false)).withContext('nothing to rearrange').toBeFalse();
+    expect(canReorderColumns(1, false)).withContext('one column is an order').toBeFalse();
+    expect(canReorderColumns(2, true)).withContext('the pager owns the phone').toBeFalse();
+    expect(canReorderColumns(2, false)).toBeTrue();
+  });
+
+  it('refuses every index left of the first parked column', () => {
+    // The strip's sort predicate is `index >= firstParkedIndex`, so nothing
+    // can come to rest among the status columns.
+    expect(firstParkedIndex(refs('working', 'idle', 'parked:p1', 'parked:p2'))).toBe(2);
+    expect(firstParkedIndex(refs('working', 'idle')))
+      .withContext('no parked column')
+      .toBe(2);
+    expect(firstParkedIndex(refs('parked:p1'))).toBe(0);
+  });
+
+  it('reads a drop on the visible strip as a delta in the full stored order', () => {
+    const visible = refs('working', 'parked:p1', 'parked:p3');
+    // `p2` is hidden by its filter chip, so it is not in the strip at all;
+    // the delta must still be measured against the full order.
+    const order = ['p1', 'p2', 'p3'];
+
+    expect(columnReorderDelta(visible, order, 1, 2)).toEqual({ id: 'p1', delta: 2 });
+    expect(columnReorderDelta(visible, order, 2, 1)).toEqual({ id: 'p3', delta: -2 });
+  });
+
+  it('reads a drop that moved nothing, or moved a status column, as no move at all', () => {
+    const visible = refs('working', 'parked:p1', 'parked:p2');
+    const order = ['p1', 'p2'];
+
+    expect(columnReorderDelta(visible, order, 1, 1)).toBeNull();
+    expect(columnReorderDelta(visible, order, 1, 0))
+      .withContext('onto a status column')
+      .toBeNull();
+    expect(columnReorderDelta(visible, order, 0, 2))
+      .withContext('from a status column')
+      .toBeNull();
+    expect(columnReorderDelta(visible, order, 9, 1)).toBeNull();
+  });
+
+  it('moves the column from its header menu, and returns focus to the trigger', async () => {
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+    const parked = TestBed.inject(ParkedStore);
+    const first = parked.createColumn('archived', 'never');
+    parked.createColumn('parking', 'never');
+    const fixture = await renderParked({ ...archived(), id: first.id });
+    const trigger = el(fixture).querySelector<HTMLButtonElement>('.column-menu-trigger')!;
+    document.body.appendChild(el(fixture));
+
+    trigger.click();
+    fixture.detectChanges();
+    menuOf(fixture)!.querySelector<HTMLButtonElement>('.move-right')!.click();
+    fixture.detectChanges();
+
+    expect(parked.columns().map((c) => c.name)).toEqual(['parking', 'archived']);
+    expect(menuOf(fixture)).toBeFalsy();
+    expect(document.activeElement).toBe(trigger);
+    el(fixture).remove();
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+  });
+
+  it('marks the end of the row aria-disabled, and activating it does nothing', async () => {
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+    const parked = TestBed.inject(ParkedStore);
+    const first = parked.createColumn('archived', 'never');
+    parked.createColumn('parking', 'never');
+    const fixture = await renderParked({ ...archived(), id: first.id });
+
+    el(fixture).querySelector<HTMLButtonElement>('.column-menu-trigger')!.click();
+    fixture.detectChanges();
+    const menu = menuOf(fixture)!;
+    const left = menu.querySelector<HTMLButtonElement>('.move-left')!;
+
+    expect(left.getAttribute('aria-disabled')).withContext('leftmost column').toBe('true');
+    expect(menu.querySelector('.move-right')!.getAttribute('aria-disabled')).toBe('false');
+    // Focusable on purpose: a real `disabled` button would swallow an arrow
+    // key and trap the user on it (shared/menu-keys.ts walks what it finds).
+    expect(left.hasAttribute('disabled')).toBeFalse();
+
+    left.click();
+    fixture.detectChanges();
+
+    expect(parked.columns().map((c) => c.name)).toEqual(['archived', 'parking']);
+    expect(menuOf(fixture)).withContext('a dead item does not even close the menu').toBeTruthy();
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+  });
+
+  it('steps a move over a column the filter bar has hidden', async () => {
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+    const parked = TestBed.inject(ParkedStore);
+    const first = parked.createColumn('archived', 'never');
+    const hidden = parked.createColumn('hidden', 'never');
+    parked.createColumn('parking', 'never');
+    const panesStore = TestBed.inject(PanesStore) as unknown as FakePanesStore;
+    panesStore.filtersSignal.set({
+      ...defaultFilters(),
+      hiddenColumns: new Set([`parked:${hidden.id}`]),
+    });
+    const fixture = await renderParked({ ...archived(), id: first.id });
+
+    el(fixture).querySelector<HTMLButtonElement>('.column-menu-trigger')!.click();
+    fixture.detectChanges();
+    menuOf(fixture)!.querySelector<HTMLButtonElement>('.move-right')!.click();
+    fixture.detectChanges();
+
+    // Past the hidden column, not into a swap nobody could see.
+    expect(parked.columns().map((c) => c.name)).toEqual(['hidden', 'parking', 'archived']);
+    panesStore.filtersSignal.set(defaultFilters());
+    localStorage.removeItem(PARKED_STORAGE_KEY);
+  });
+
+  it('gives a status column no drag handle at all', async () => {
+    const status = el(await render(1));
+    expect(status.querySelector('.column-header')!.classList.contains('cdk-drag-handle'))
+      .withContext('a status column is never a reorder source')
+      .toBeFalse();
+
+    const parkedRoot = el(await renderParked());
+    expect(
+      parkedRoot.querySelector('.column-header')!.classList.contains('cdk-drag-handle')
+    ).toBeTrue();
   });
 
   it('parks the dropped card, without touching anything on the host', async () => {

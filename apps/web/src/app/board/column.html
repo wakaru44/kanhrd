@@ -6,10 +6,19 @@
   [attr.data-parked]="parked()?.id ?? null"
   [class.compact]="compact()"
 >
-  <header class="column-header">
-    <h2 class="column-title">{{ label() }}</h2>
-    <span class="count">{{ panes().length }}</span>
-    @if (parked(); as column) {
+  <!--
+    Two headers, one title row. A parked column's header IS the drag handle
+    (docs/UX-GUIDELINES.md: the affordance must work or not appear), so the
+    handle directive may not be on an element a status column also renders —
+    a status column is never a reorder source and carries no handle at all.
+  -->
+  @if (parked(); as column) {
+    <header
+      class="column-header"
+      cdkDragHandle
+      [cdkDragHandleDisabled]="!reorderEnabled()"
+    >
+      <ng-container [ngTemplateOutlet]="titleRow" />
       <!--
         The exit rule is readable without opening anything: a word in
         `--ink-mute`, beside the count. The menu below changes it; it is
@@ -60,14 +69,36 @@
                 {{ ruleLabel(rule) }}
               </button>
             }
+            <button
+              type="button"
+              role="menuitem"
+              class="move-left"
+              [attr.aria-disabled]="!canMoveLeft()"
+              (click)="moveColumn(-1)"
+            >
+              <svg lucideArrowLeft class="icon"></svg>{{ copy.park.moveColumnLeft }}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              class="move-right"
+              [attr.aria-disabled]="!canMoveRight()"
+              (click)="moveColumn(1)"
+            >
+              <svg lucideArrowRight class="icon"></svg>{{ copy.park.moveColumnRight }}
+            </button>
             <button type="button" role="menuitem" class="remove" (click)="onRemoveClick()">
               {{ copy.park.removeColumn }}
             </button>
           </div>
         </ng-template>
       </div>
-    }
-  </header>
+    </header>
+  } @else {
+    <header class="column-header">
+      <ng-container [ngTemplateOutlet]="titleRow" />
+    </header>
+  }
   <!--
     Every column is a drop LIST, because a card has to be dragged out of
     somewhere; only a parked column is a drop TARGET. `enterPredicate`
@@ -142,3 +173,10 @@
     (cancelled)="showRemoveConfirm.set(false)"
   />
 }
+
+<!-- The name and the count: identical in both kinds of column, so one
+     template rather than two that can drift. -->
+<ng-template #titleRow>
+  <h2 class="column-title">{{ label() }}</h2>
+  <span class="count">{{ panes().length }}</span>
+</ng-template>

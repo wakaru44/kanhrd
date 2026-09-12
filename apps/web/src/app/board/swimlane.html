@@ -1,4 +1,22 @@
-<section class="swimlane" [attr.aria-label]="title() ?? label()" [attr.data-lane]="lane().key">
+<!--
+  The band's own column-reorder drop list, on the band rather than on the
+  strip: the strip carries the `cdkDropListGroup` that connects its card
+  lists, and one element cannot host both without making the group's
+  resolution depend on directive order. `cdkDropListElementContainer` names
+  the strip as where the items are. A reorder here reorders the whole board —
+  there is one `order`, and every band renders it.
+-->
+<section
+  class="swimlane"
+  [attr.aria-label]="title() ?? label()"
+  [attr.data-lane]="lane().key"
+  cdkDropList
+  cdkDropListOrientation="horizontal"
+  cdkDropListElementContainer=".swimlane-strip"
+  [cdkDropListDisabled]="!reorderEnabled()"
+  [cdkDropListSortPredicate]="columnSortPredicate"
+  (cdkDropListDropped)="onColumnDropped($event)"
+>
   <header class="swimlane-header">
     <h2 class="swimlane-title" [attr.title]="title()">{{ label() }}</h2>
     <span class="swimlane-count">{{ count() }}</span>
@@ -16,6 +34,9 @@
            in a band, so every band renders the whole column set — parked
            columns included, empty ones kept. -->
       <app-column
+        cdkDrag
+        [cdkDragData]="column"
+        [cdkDragDisabled]="column.parked === null || !reorderEnabled()"
         [status]="column.status"
         [parked]="column.parked"
         [panes]="panesFor(column)"

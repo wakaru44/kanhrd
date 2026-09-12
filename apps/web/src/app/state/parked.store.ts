@@ -79,6 +79,52 @@ export function parkedColumnKey(id: string): string {
   return `${PARKED_COLUMN_KEY_PREFIX}${id}`;
 }
 
+/**
+ * The delta that lands `id` where `neighbourId` sits today, over the parked
+ * order as `ParkedStore.columns` yields it. `0` when either id is unknown or
+ * they are the same column, because `moveColumn` treats `0` as a no-op.
+ *
+ * Pure, and here rather than in the board, because all three callers need the
+ * same arithmetic: the two header-menu items and a column drop.
+ */
+export function reorderDelta(order: readonly string[], id: string, neighbourId: string): number {
+  const from = order.indexOf(id);
+  const to = order.indexOf(neighbourId);
+  if (from < 0 || to < 0) {
+    return 0;
+  }
+  return to - from;
+}
+
+/**
+ * The next parked column in `direction` that the filter bar has NOT hidden,
+ * or `null` when there is none.
+ *
+ * Hidden columns are stepped OVER rather than counted: the chips are
+ * per-column (`Filters.hiddenColumns`, keyed by `parked:<id>`), so a
+ * `move column right` that swapped with a hidden neighbour would be a
+ * control that visibly did nothing. `null` is what makes the menu item
+ * `disabled` rather than enabled-but-inert.
+ */
+export function visibleNeighbour(
+  order: readonly string[],
+  hiddenKeys: ReadonlySet<string>,
+  id: string,
+  direction: -1 | 1
+): string | null {
+  const from = order.indexOf(id);
+  if (from < 0) {
+    return null;
+  }
+  for (let i = from + direction; i >= 0 && i < order.length; i += direction) {
+    const candidate = order[i];
+    if (!hiddenKeys.has(parkedColumnKey(candidate))) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 export function defaultParked(): ParkedState {
   return { version: 1, columns: [], membership: {} };
 }
@@ -233,6 +279,40 @@ export class ParkedStore {
 
   setExitRule(id: string, exitRule: ExitRule): void {
     this.updateColumn(id, (column) => ({ ...column, exitRule }));
+  }
+
+  /**
+   * Moves a column `delta` places along the order, clamped at both ends:
+   * moving the leftmost column left is a no-op, not an error, the same shape
+   * `park()` has for an unknown column id.
+   *
+   * `order` is rewritten as a dense `0..n-1` sequence rather than nudged, so
+   * a document that arrives with sparse or duplicated values (an older
+   * browser, a hand-edited key) comes out of the first move canonical. Only
+   * `order` changes: membership, ids and therefore every `parked:<id>` filter
+   * key are untouched — a reorder moves columns, not cards.
+   */
+  moveColumn(id: string, delta: number): void {
+    if (delta === 0) {
+      return;
+    }
+    this.state.update((state) => {
+      const ordered = [...state.columns].sort((a, b) => a.order - b.order);
+      const from = ordered.findIndex((column) => column.id === id);
+      if (from < 0) {
+        return state;
+      }
+      const to = Math.min(Math.max(from + delta, 0), ordered.length - 1);
+      if (to === from) {
+        return state;
+      }
+      const [moved] = ordered.splice(from, 1);
+      ordered.splice(to, 0, moved);
+      return {
+        ...state,
+        columns: ordered.map((column, index) => ({ ...column, order: index })),
+      };
+    });
   }
 
   /** Drops the column; its cards return to their status columns. Nothing on the host changes. */

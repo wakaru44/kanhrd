@@ -196,13 +196,20 @@ describe('Swimlane component', () => {
   });
 
   it('exposes no drag handle, no enabled drop list and nothing draggable', () => {
-    // The band itself is never draggable and never a drop target; with no
-    // parked column its columns' lists are all disabled (Q1's amended rule).
+    // The band itself is never draggable and never a card drop target. It
+    // does carry the column-REORDER list (add-parked-column-reorder), which
+    // with no parked column — and at karma's sub-breakpoint viewport — is
+    // inert, like every card list inside it (Q1's amended rule).
     expect(el().querySelector("[draggable='true']")).toBeNull();
     expect(el().querySelector('.drag-handle')).toBeNull();
-    expect(el().querySelector('.swimlane.cdk-drag, .swimlane.cdk-drop-list')).toBeNull();
+    expect(el().querySelector('.swimlane.cdk-drag')).toBeNull();
+    expect(el().querySelector('.swimlane.cdk-drop-list')).not.toBeNull();
     for (const list of Array.from(el().querySelectorAll('.cdk-drop-list'))) {
       expect(list.classList.contains('cdk-drop-list-disabled')).toBeTrue();
     }
+    for (const column of Array.from(el().querySelectorAll('app-column.cdk-drag'))) {
+      expect(column.classList.contains('cdk-drag-disabled')).toBeTrue();
+    }
+    expect(el().querySelector('.column-header.cdk-drag-handle')).toBeNull();
   });
 });

@@ -7,7 +7,9 @@ import {
   defaultParked,
   loadParked,
   saveParked,
+  reorderDelta,
   shouldExit,
+  visibleNeighbour,
   type ExitRule,
   type ParkedState,
 } from './parked.store';
@@ -149,6 +151,39 @@ describe('parked.store shouldExit', () => {
   });
 });
 
+describe('parked.store reorder arithmetic', () => {
+  const order = ['p1', 'p2', 'p3'];
+
+  it('measures the delta that lands a column where its neighbour is', () => {
+    expect(reorderDelta(order, 'p1', 'p3')).toBe(2);
+    expect(reorderDelta(order, 'p3', 'p1')).toBe(-2);
+    expect(reorderDelta(order, 'p2', 'p2')).toBe(0);
+  });
+
+  it('reports 0 — a no-op — for a column or neighbour it does not know', () => {
+    expect(reorderDelta(order, 'p9', 'p1')).toBe(0);
+    expect(reorderDelta(order, 'p1', 'p9')).toBe(0);
+    expect(reorderDelta([], 'p1', 'p2')).toBe(0);
+  });
+
+  it('steps over a hidden neighbour rather than swapping with it', () => {
+    // The filter chips are per-column and keyed `parked:<id>` (commit
+    // 2ecdf61): trading places with a column nobody can see would be a
+    // control that visibly did nothing.
+    const hidden = new Set(['parked:p2']);
+    expect(visibleNeighbour(order, hidden, 'p1', 1)).toBe('p3');
+    expect(visibleNeighbour(order, hidden, 'p3', -1)).toBe('p1');
+  });
+
+  it('has no neighbour at the ends, nor when every candidate is hidden', () => {
+    const none = new Set<string>();
+    expect(visibleNeighbour(order, none, 'p1', -1)).toBeNull();
+    expect(visibleNeighbour(order, none, 'p3', 1)).toBeNull();
+    expect(visibleNeighbour(order, new Set(['parked:p2', 'parked:p3']), 'p1', 1)).toBeNull();
+    expect(visibleNeighbour(order, none, 'p9', 1)).toBeNull();
+  });
+});
+
 describe('ParkedStore', () => {
   let store: ParkedStore;
 
@@ -240,6 +275,81 @@ describe('ParkedStore', () => {
 
     store.applyAgentStatusChanged('laptop:a', 'working', 'blocked');
     expect(store.columnOf('laptop:a')).toBeNull();
+  });
+
+  it('moves a column along the order, in both directions', () => {
+    store.createColumn('a', 'never');
+    store.createColumn('b', 'never');
+    store.createColumn('c', 'never');
+
+    store.moveColumn('p1', 2);
+    expect(store.columns().map((c) => c.name)).toEqual(['b', 'c', 'a']);
+
+    store.moveColumn('p1', -1);
+    expect(store.columns().map((c) => c.name)).toEqual(['b', 'a', 'c']);
+  });
+
+  it('renumbers order densely, so the stored document stays canonical', () => {
+    store.createColumn('a', 'never');
+    store.createColumn('b', 'never');
+    store.createColumn('c', 'never');
+
+    store.moveColumn('p3', -2);
+
+    expect(store.columns().map((c) => [c.id, c.order])).toEqual([
+      ['p3', 0],
+      ['p1', 1],
+      ['p2', 2],
+    ]);
+  });
+
+  it('clamps at both ends — the leftmost moving left is a no-op, not an error', () => {
+    store.createColumn('a', 'never');
+    store.createColumn('b', 'never');
+
+    expect(() => store.moveColumn('p1', -1)).not.toThrow();
+    expect(() => store.moveColumn('p2', 5)).not.toThrow();
+    expect(store.columns().map((c) => c.id)).toEqual(['p1', 'p2']);
+
+    store.moveColumn('p1', 9);
+    expect(store.columns().map((c) => c.id)).toEqual(['p2', 'p1']);
+  });
+
+  it('ignores an unknown id and a zero delta', () => {
+    store.createColumn('a', 'never');
+    store.createColumn('b', 'never');
+
+    store.moveColumn('nope', 1);
+    store.moveColumn('p1', 0);
+
+    expect(store.columns().map((c) => c.id)).toEqual(['p1', 'p2']);
+  });
+
+  it('moves columns, not cards: membership and ids survive a reorder', () => {
+    const first = store.createColumn('a', 'never');
+    const second = store.createColumn('b', 'never');
+    store.park('laptop:a', first.id);
+    store.park('laptop:b', second.id);
+
+    store.moveColumn(first.id, 1);
+
+    expect(store.columnOf('laptop:a')).toBe(first.id);
+    expect(store.columnOf('laptop:b')).toBe(second.id);
+    expect(store.columns().map((c) => c.id)).toEqual([second.id, first.id]);
+  });
+
+  it('persists the new order, so a reload draws the columns where they were left', () => {
+    store.createColumn('a', 'never');
+    store.createColumn('b', 'never');
+
+    store.moveColumn('p1', 1);
+    TestBed.tick(); // flush the persisting effect
+
+    const reloaded = loadParked();
+    expect([...reloaded.columns].sort((a, b) => a.order - b.order).map((c) => c.name)).toEqual([
+      'b',
+      'a',
+    ]);
   });
 
   it('persists every change under the kanhrd.* key, and reloads it', () => {

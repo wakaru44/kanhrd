@@ -11,7 +11,7 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
-import { CdkDropListGroup } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDropList, CdkDropListGroup, type CdkDragDrop } from '@angular/cdk/drag-drop';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
@@ -29,6 +29,9 @@ import { SettingsService } from '../state/settings.service';
 import {
   Column,
   boardColumnRefs,
+  canReorderColumns,
+  columnReorderDelta,
+  firstParkedIndex,
   focusCard,
   mobileViewportSignal,
   type BoardColumnRef,
@@ -92,6 +95,8 @@ export function nearestVisibleStatus(
   selector: 'app-board',
   imports: [
     Column,
+    CdkDrag,
+    CdkDropList,
     CdkDropListGroup,
     Swimlane,
     FilterBar,
@@ -180,6 +185,39 @@ export class Board implements OnDestroy {
       (column) => !hidden.has(column.key)
     );
   });
+
+  // --- column reorder ----------------------------------------------------
+  //
+  // The strip is a horizontal drop list whose items are the columns and whose
+  // handle is a parked column's header. The list is mounted on the region
+  // rather than on the strip, because the strip's `cdkDropListGroup` is what
+  // connects the per-column CARD lists (see board.html). The two lists are
+  // never connected to each other, so neither drag can end in the other's
+  // list.
+
+  protected readonly reorderEnabled = computed(() =>
+    canReorderColumns(this.parkedColumns().length, this.mobile())
+  );
+
+  /**
+   * A status column is never a reorder target: nothing may come to rest left
+   * of the first parked column, so the status run keeps `STATUS_COLUMN_ORDER`
+   * whatever is dragged over it.
+   */
+  protected readonly columnSortPredicate = (index: number): boolean =>
+    index >= firstParkedIndex(this.visibleColumns());
+
+  protected onColumnDropped(event: CdkDragDrop<unknown>): void {
+    const move = columnReorderDelta(
+      this.visibleColumns(),
+      this.parkedColumns().map((column) => column.id),
+      event.previousIndex,
+      event.currentIndex
+    );
+    if (move) {
+      this.parked.moveColumn(move.id, move.delta);
+    }
+  }
 
   /**
    * The status half of `visibleColumns`, in `STATUS_COLUMN_ORDER`. Derived

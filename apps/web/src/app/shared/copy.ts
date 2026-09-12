@@ -77,6 +77,8 @@ export const COPY = {
       agentActivity: 'on agent activity',
     },
     renameColumn: 'rename column',
+    moveColumnLeft: 'move column left',
+    moveColumnRight: 'move column right',
     removeColumn: 'remove column',
     removeColumnBody: 'the cards go back to their status columns. nothing on the host changes.',
   },

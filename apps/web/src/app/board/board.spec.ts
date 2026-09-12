@@ -1358,6 +1358,113 @@ describe('Board: swimlanes', () => {
       }
     });
 
+    it('carries a column-reorder list per strip, unconnected to the card lists', async () => {
+      parked.createColumn('archived', 'never');
+      parked.createColumn('parking', 'never');
+      await settle(fixture);
+      const el = fixture.nativeElement as HTMLElement;
+
+      // The reorder list is mounted on the REGION, not on the strip: the
+      // strip's `cdkDropListGroup` is what connects the card lists, and
+      // `CdkDropList` shadows that token on its own element. The two lists
+      // therefore share no group and name each other in no `connectedTo`,
+      // which is what keeps a card out of the strip and a column out of a
+      // column's cards.
+      const region = el.querySelector('.board-region')!;
+      expect(region.classList.contains('cdk-drop-list')).toBeTrue();
+      expect(region.hasAttribute('cdkDropListGroup')).toBeFalse();
+      expect(el.querySelector('.board-strip[cdkDropListGroup]')).not.toBeNull();
+      expect(el.querySelector('.board-strip')!.classList.contains('cdk-drop-list')).toBeFalse();
+
+      settings.setSwimlaneDimension('host');
+      await settle(fixture);
+      for (const band of bands()) {
+        expect(band.querySelector('.swimlane')!.classList.contains('cdk-drop-list')).toBeTrue();
+        expect(band.querySelector('.swimlane-strip[cdkDropListGroup]')).not.toBeNull();
+        expect(
+          band.querySelector('.swimlane-strip')!.classList.contains('cdk-drop-list')
+        ).toBeFalse();
+      }
+    });
+
+    it('makes only the parked columns drag sources, and only their headers handles', async () => {
+      parked.createColumn('archived', 'never');
+      parked.createColumn('parking', 'never');
+      await settle(fixture);
+      const el = fixture.nativeElement as HTMLElement;
+
+      // Karma's viewport is below `--breakpoint-mobile`, so EVERY column
+      // drag is inert here and the enabled half is proven as arithmetic
+      // (`canReorderColumns`, column.spec.ts). What the DOM proves is who
+      // could ever be a source: a status column carries no handle at all,
+      // and its `cdkDrag` is disabled whatever the viewport says.
+      const columns = Array.from(el.querySelectorAll('app-column'));
+      expect(columns.length).toBe(7);
+      for (const column of columns) {
+        expect(column.classList.contains('cdk-drag')).toBeTrue();
+        expect(column.classList.contains('cdk-drag-disabled')).toBeTrue();
+      }
+      const handles = Array.from(el.querySelectorAll('.column-header.cdk-drag-handle'));
+      expect(handles.length).withContext('one per parked column').toBe(2);
+      for (const handle of handles) {
+        expect(
+          handle.closest('app-column')!.querySelector('.column')!.getAttribute('data-parked')
+        ).not.toBeNull();
+      }
+    });
+
+    it('applies a drop on the strip to the store, by position', async () => {
+      const archived = parked.createColumn('archived', 'never');
+      const parking = parked.createColumn('parking', 'never');
+      await settle(fixture);
+      const board = fixture.componentInstance as unknown as {
+        onColumnDropped(event: { previousIndex: number; currentIndex: number }): void;
+        columnSortPredicate(index: number): boolean;
+      };
+
+      // Five status columns, so the parked pair is at 5 and 6. A drop is
+      // read as "land where the column now at `currentIndex` is".
+      expect(board.columnSortPredicate(4)).withContext('among the statuses').toBeFalse();
+      expect(board.columnSortPredicate(5)).toBeTrue();
+
+      board.onColumnDropped({ previousIndex: 6, currentIndex: 5 });
+      await settle(fixture);
+
+      expect(parked.columns().map((c) => c.id)).toEqual([parking.id, archived.id]);
+
+      // A drop that came to rest on a status column moves nothing at all.
+      board.onColumnDropped({ previousIndex: 6, currentIndex: 2 });
+      await settle(fixture);
+      expect(parked.columns().map((c) => c.id)).toEqual([parking.id, archived.id]);
+    });
+
+    it('draws a reordered column in the same place on every strip', async () => {
+      const archived = parked.createColumn('archived', 'never');
+      const parking = parked.createColumn('parking', 'never');
+      parked.moveColumn(archived.id, 1);
+      await settle(fixture);
+
+      expect(columnKinds(fixture.nativeElement as HTMLElement)).toEqual([
+        'working',
+        'blocked',
+        'idle',
+        'done',
+        'unknown',
+        `parked:${parking.id}`,
+        `parked:${archived.id}`,
+      ]);
+
+      // One `order`, every band: a reorder is the board's, not a band's.
+      settings.setSwimlaneDimension('host');
+      await settle(fixture);
+      for (const band of bands()) {
+        expect(columnKinds(band).slice(5)).toEqual([
+          `parked:${parking.id}`,
+          `parked:${archived.id}`,
+        ]);
+      }
+    });
+
     it('survives a reload of the page-level state: the store re-reads localStorage', async () => {
       const column = parked.createColumn('archived', 'never');
       parked.park('local:p1', column.id);
