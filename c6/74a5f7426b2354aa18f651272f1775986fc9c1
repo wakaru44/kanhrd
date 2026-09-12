@@ -1,0 +1,61 @@
+apps/web/src/app/pane-detail/tab-strip.ts
+  s_41bed7e0e7701d::t_d562ea3fcb273e 1-164
+openspec/changes/add-pane-tab-hierarchy/.openspec.yaml
+  s_41bed7e0e7701d::t_0facbf498880a4 1-2
+apps/web/src/app/pane-detail/tab-strip.spec.ts
+  s_41bed7e0e7701d::t_2a84985a738118 1-61,68-146
+  s_41bed7e0e7701d::t_5b05266bfe564c 62-67
+apps/web/src/app/state/keyboard.service.ts
+  s_41bed7e0e7701d::t_ad13c0d44d8721 59-71,386,397-406,681-687,689-693
+  s_41bed7e0e7701d::t_f704e857cd798d 58
+openspec/changes/add-pane-tab-hierarchy/specs/terminal-top-bar/spec.md
+  s_41bed7e0e7701d::t_c657443aa7d549 1-52
+apps/web/src/app/pane-detail/tab-strip.scss
+  s_41bed7e0e7701d::t_d562ea3fcb273e 1-62
+apps/web/src/app/pane-detail/pane-detail.spec.ts
+  s_41bed7e0e7701d::t_ed549c0284d467 215-219
+  s_41bed7e0e7701d::t_5b05266bfe564c 220-222,231-233
+  s_41bed7e0e7701d::t_addfed092c399b 87-88,379-380,774-775
+  s_41bed7e0e7701d::t_8ff722d6310465 156-160,163,176,201-214,223-230,234
+  s_41bed7e0e7701d::t_5574b504f8fa54 235
+openspec/changes/add-pane-tab-hierarchy/README.md
+  s_41bed7e0e7701d::t_0facbf498880a4 1-3
+apps/web/src/app/pane-detail/tab-strip.html
+  s_41bed7e0e7701d::t_d562ea3fcb273e 1-22
+openspec/changes/add-pane-tab-hierarchy/proposal.md
+  s_41bed7e0e7701d::t_0facbf498880a4 1-74
+apps/web/src/app/pane-detail/pane-detail.ts
+  s_41bed7e0e7701d::t_d444adf9e15333 93,194-227,305-312,364
+  s_41bed7e0e7701d::t_2a7ce177699174 38
+apps/web/src/app/pane-detail/pane-detail.scss
+  s_41bed7e0e7701d::t_ecfe116ffb5b14 105-114,119
+apps/web/src/app/state/keyboard.service.spec.ts
+  s_41bed7e0e7701d::t_c9cce2f7ec449f 472-514
+openspec/changes/add-pane-tab-hierarchy/specs/keyboard-shortcuts/spec.md
+  s_41bed7e0e7701d::t_c657443aa7d549 1-36
+docs/BRAND.md
+  s_41bed7e0e7701d::t_b68638ea2a5489 169-170
+apps/web/src/app/shared/copy.ts
+  s_41bed7e0e7701d::t_b68638ea2a5489 182-188
+apps/web/src/app/pane-detail/pane-detail.html
+  s_41bed7e0e7701d::t_d444adf9e15333 71-79
+openspec/changes/add-pane-tab-hierarchy/tasks.md
+  s_41bed7e0e7701d::t_5b05266bfe564c 5,8,12,14,16,18,20,22,27,29,34,36,38-39,44-48
+  s_41bed7e0e7701d::t_c657443aa7d549 1-4,6-7,9-11,13,15,17,19,21,23-26,28,30-33,35,37,40-43,49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c674a5f7426b2354aa18f651272f1775986fc9c1",
+  "prompts": {},
+  "sessions": {
+    "s_41bed7e0e7701d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c985291b-2f83-4b9b-a00d-3f7b63991f12",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
