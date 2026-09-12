@@ -89,3 +89,139 @@ that move and some that do not, which is the confusing middle. The per-column
 filter keys (`parked:<id>`, post-`2ecdf61`) and the mobile pager both follow
 whatever list order they are given, so neither constrains the answer.
 
+---
+
+## Host management from the UI, writing the bridge's config
+
+**Problem**
+
+Adding a host means editing `kanhrd.config.yaml` by hand on the machine
+running the bridge, then restarting it. The operator wants to manage hosts
+from the product, with the UI and the file staying in agreement however
+that is implemented.
+
+**Reproduction/current evidence**
+
+`apps/bridge/src/config.ts` reads the file once at startup
+(`readConfigFile`) into `BridgeConfig.hosts`; nothing re-reads it and
+nothing writes it. Settings renders the host list read-only and says so in
+shipped copy: `settings.hostsNote` — "the host list is bridge-owned. to
+add, remove or reconfigure a host, edit ... on the machine running the
+bridge — this screen reads it, it never writes it."
+(`apps/web/src/app/shared/copy.ts:300-302`). There is no HTTP or wire
+method that mutates configuration; `apps/bridge/src/ws/dispatch.ts` only
+proxies herdr methods.
+
+**Expected behavior**
+
+An operator adds, edits and removes hosts in the UI; the bridge's effective
+host list and the file on disk match afterwards, without a manual restart.
+
+**Investigation/fix notes**
+
+This REVERSES a shipped product promise, so `settings.hostsNote` and
+`docs/UX-GUIDELINES.md` change with it, not after it.
+
+It is also a privilege change, and the threat model
+(`docs/THREAT-MODEL.md`, ADR-0003 loopback default) has to be revisited
+BEFORE the feature is designed, not after. Today a browser that reaches the
+bridge can drive herdr sessions; afterwards it could change what the bridge
+connects to. The documented Tailscale path (`make run-tailscale-serve`)
+puts that surface on a network. Decisions the maintainer owes:
+
+1. Is config writable at all, or does the UI produce a snippet the operator
+   applies (a middle path that keeps the bridge read-only and still removes
+   the hand-typing)?
+2. If writable: only when bound to loopback? Behind an explicit
+   `--allow-config-writes`? Never in the container image?
+3. Reload semantics — re-read on write, watch the file, or restart? A host
+   list that drifts from the file is worse than one that needs a restart.
+4. What happens to a file the operator hand-edited with comments and
+   anchors: does a UI write preserve them, or rewrite the file?
+5. Does a config write need a confirmation, and is it audited anywhere?
+
+**Verification/acceptance criteria**
+
+- Adding a host in the UI makes it appear in the board without a manual
+  restart, and the file on disk names it too.
+- The file's comments and unrelated keys survive a UI write.
+- With the bridge on a non-loopback bind, the write path behaves as the
+  maintainer's decision above says (refused, or gated) and the UI states
+  which.
+- `settings.hostsNote` no longer claims the screen never writes.
+- The threat model documents the new surface before the code ships.
+
+---
+
+## Remote hosts without hand-built SSH tunnels (ADR-0001 revisit)
+
+**Problem**
+
+"Remote host" is not a thing kanhrd does. A host is a LOCAL Unix socket
+path (`HostConfig = { name, socket }`, `apps/bridge/src/config.ts:6-9`);
+reaching another machine means the operator brings up an SSH tunnel that
+lands that machine's socket on the bridge's box, with autossh or a systemd
+unit (`docs/OPERATING.md:151-199`). The operator reports this as
+cumbersome, and wants remote hosts declared the way ssh already declares
+them.
+
+**Reproduction/current evidence**
+
+`docs/adr/0001-hub-bridge-ssh-tunnels.md` chose this deliberately: herdr
+speaks only a local Unix socket, and its own remote transport
+(`remote-client-bridge`) speaks a private bincode TUI wire gated by
+`PROTOCOL_VERSION`, so building on it would couple kanhrd to herdr's
+internal protocol. The ADR's own last line is the trigger being pulled
+here: "Revisit if the operator ergonomics of setting up and maintaining
+tunnels (autossh/systemd units per host) becomes a recurring blocker."
+
+**Expected behavior**
+
+An operator names a host that ssh already knows how to reach, picks a key
+if one is needed, and kanhrd does the rest.
+
+**Investigation/fix notes**
+
+This is an ADR revisit, so it starts as a design document with options and
+consequences, not as a feature:
+
+- **Who owns the tunnel?** Today: nobody inside kanhrd, on purpose. If the
+  bridge starts spawning `ssh`, it acquires process supervision, restart
+  and backoff, host-key verification, and a new failure surface in the
+  logs. That is the decision, and it is bigger than the UI on top of it.
+- **Parsing `~/.ssh/config`:** do NOT hand-roll it (the operator's
+  instruction, and `Include`, `Match`, negated patterns and percent
+  expansions are why). Candidate library: `ssh-config` on npm. Evaluate
+  licence, maintenance and whether it resolves `Include` before adopting.
+  Read-only parsing is a much smaller step than tunnel ownership and could
+  ship first: offer the operator the hosts ssh already knows, still
+  requiring them to say what the socket path will be.
+- **Key discovery** (the operator's suggestion: list files under `~/.ssh`
+  and the project folder that contain `PRIVATE KEY`, names only) is a
+  server-side enumeration of the operator's private keys, surfaced to a
+  browser. Names only is still a disclosure to anyone who reaches the UI,
+  and the documented Tailscale path puts that on a network. If it is built:
+  loopback only, opt-in, names only, never contents, and never a path
+  outside the directories the operator named.
+- **Docker:** the container runs no ssh client today — the tunnel is made
+  on the host and the container mounts the resulting socket
+  (`docker-compose.yaml`, the commented `bridge-cloud` service). So a
+  documented `~/.ssh` mount would document a capability that does not
+  exist. The mount example (including how to point at one specific key,
+  e.g. `- ~/.ssh/id_ed25519_cloud:/home/kanhrd/.ssh/id_rsa:ro`) belongs to
+  whichever change gives the container a reason to hold a key, and ships
+  with it.
+
+**Verification/acceptance criteria**
+
+- A written ADR revisit that either supersedes ADR-0001 or records why it
+  stands, with the tunnel-ownership decision explicit.
+- If read-only ssh-config parsing ships: a host whose `Host` block ssh
+  resolves is offerable in kanhrd without the operator retyping its
+  address, and a malformed or `Include`-heavy config degrades to "we could
+  not read this" rather than to a wrong host.
+- If tunnel ownership ships: a tunnel that drops is visible in the UI as a
+  host state, restarts are bounded and logged, and host-key verification is
+  not weakened to make it work.
+- Any key-file listing is unreachable from a non-loopback bind, and the
+  threat model says so.

@@ -15,3 +15,7 @@ tmp/
 
 # Accidental `nohup` output from ad-hoc runs.
 nohup.out
+
+# The operator's real bridge config: it names socket paths on their machines.
+# The committed template is kanhrd.config.example.yaml.
+kanhrd.config.yaml
