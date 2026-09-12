@@ -1,0 +1,19 @@
+apps/web/src/app/board/board.spec.ts
+  s_493b7bedcc134d::t_3d010d3686f2ef 2005-2054
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2008b4e62c657902efa06cb941879e6281a32d59",
+  "prompts": {},
+  "sessions": {
+    "s_493b7bedcc134d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26ca5883-d6ab-4040-90c0-59f54d9ec3f9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
