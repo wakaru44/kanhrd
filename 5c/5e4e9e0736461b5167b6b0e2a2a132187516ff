@@ -1,0 +1,23 @@
+apps/bridge/integration/pane-destinations.test.ts
+  s_493b7bedcc134d::t_8ca3d94b0cbb68 1-172
+openspec/changes/add-pane-destinations/tasks.md
+  s_493b7bedcc134d::t_e7d6b3878c4cb5 70,72-76
+apps/bridge/integration/README.md
+  s_493b7bedcc134d::t_e7d6b3878c4cb5 73-74,122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5c5e4e9e0736461b5167b6b0e2a2a132187516ff",
+  "prompts": {},
+  "sessions": {
+    "s_493b7bedcc134d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26ca5883-d6ab-4040-90c0-59f54d9ec3f9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
