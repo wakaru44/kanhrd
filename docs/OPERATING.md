@@ -5,7 +5,8 @@ never talks to herdr directly (see `docs/adr/0001-hub-bridge-ssh-tunnels.md`),
 and the bridge owns no credentials of its own (see
 `docs/adr/0003-delegated-auth-with-loopback-default.md`). This page covers
 the three placements that combination supports: laptop-only, cloud hub, and
-a mix of the two with a reverse SSH tunnel bridging them.
+a mix of the two with a reverse SSH tunnel bridging them — plus the Docker
+packaging of the laptop case.
 
 The bridge binds `127.0.0.1` by default. Binding on any other interface
 requires an explicit `--i-know-what-im-doing` flag — that flag is your
@@ -198,3 +199,38 @@ local — that's the point of the hub-bridge design
 (`docs/adr/0001-hub-bridge-ssh-tunnels.md`). If the laptop goes offline, the
 socket read fails and that host shows as offline on the board; nothing
 about the cloud hub or other hosts is affected.
+
+## 4. Docker (laptop, no host Node toolchain)
+
+The same placement as recipe 1, packaged: `docker compose up -d` from the
+repo root builds the image, publishes the bridge on `127.0.0.1:5173` and
+mounts your local herdr socket in. See `deploy/docker/README.md` for the
+full recipe and troubleshooting.
+
+Two things decide whether it works.
+
+**Mount the socket as a file**, not by mounting the directory that holds
+it:
+
+```yaml
+volumes:
+  - ~/.config/herdr/herdr.sock:/home/kanhrd/.config/herdr/herdr.sock:ro
+  - ~/.config/herdr/config.toml:/home/kanhrd/.config/herdr/config.toml:ro
+```
+
+A directory bind-mount crosses Docker Desktop's file-sharing layer, which
+passes the socket through as an inode the container can see but cannot
+`connect()` to — the listener lives in the host kernel, outside the VM. On
+native Linux both forms work; on macOS and Windows only the file form
+does. The failure is silent: the container starts, the healthcheck stays
+green (it only asserts `/api/hosts` returns 200), and `/api/hosts` reports
+the host as `connected: false` with a `last_error` of `connect ENOTSUP`,
+`ECONNREFUSED` or `ENOENT` — a permanently offline host on the board.
+
+**Keep the published port and the origin allowlist in step.** The image's
+`CMD` hard-codes `--allowed-origin http://127.0.0.1:5173` and
+`http://localhost:5173`. Publish on another host port (`-p 5174:5173`) and
+the browser's origin no longer matches, so every `/ws` handshake is
+refused with 403 and the reason appears only in `docker compose logs
+bridge`. Change the `--allowed-origin` values to the origin you actually
+publish.

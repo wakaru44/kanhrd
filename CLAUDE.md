@@ -175,9 +175,11 @@ touches across > 1 file, it's a lane, not a foreman-inline edit.
   `fix-bridge-subscription-backlog-storm`).
 - Bridge broadcasts of rename events for own-session resources may lag;
   SPA applies rename responses optimistically to compensate.
-- macOS Docker Desktop cannot bind-mount Unix sockets — the container
-  can't reach the host's herdr socket. Docker path works on Linux;
-  macOS needs a socat sidecar (deferred to L-DOCKER round 2).
+- Docker: mount the herdr socket as a file
+  (`~/.config/herdr/herdr.sock:...:ro`), not by mounting its parent
+  directory — a directory mount on Docker Desktop shows the socket but
+  can't connect to it. No socat sidecar needed. Getting it wrong is
+  silent: healthcheck green, host `connected:false` forever.
 
 ## Domain vocabulary reminder
 
