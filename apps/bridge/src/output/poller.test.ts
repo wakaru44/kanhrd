@@ -5,7 +5,8 @@ import { OutputPoller, type PaneReader, type PaneReaderSource } from './poller.j
 /** Fake `pane.read` that resolves however the test script tells it to, and counts in-flight calls. */
 class FakeHost implements PaneReader {
   calls = 0;
-  lastParams: { pane_id: string; source?: ReadSource; format?: ReadFormat } | null = null;
+  lastParams: { pane_id: string; source?: ReadSource; format?: ReadFormat; lines?: number } | null =
+    null;
   inFlightCount = 0;
   maxInFlight = 0;
   private script: Array<{ revision: number; content: string }> = [];
@@ -26,7 +27,12 @@ class FakeHost implements PaneReader {
     this.script.push({ revision, content });
   }
 
-  async paneRead(params: { pane_id: string; source?: ReadSource; format?: ReadFormat }): Promise<{
+  async paneRead(params: {
+    pane_id: string;
+    source?: ReadSource;
+    format?: ReadFormat;
+    lines?: number;
+  }): Promise<{
     content: string;
     revision: number;
     truncated: boolean;
@@ -75,7 +81,7 @@ describe('OutputPoller', () => {
     host.queue(1, 'a');
 
     const poller = new OutputPoller(sourceOf(host), 10);
-    poller.subscribe('local', 'p1', undefined, undefined, 'conn-1', () => {});
+    poller.subscribe('local', 'p1', {}, 'conn-1', () => {});
     await vi.advanceTimersByTimeAsync(10);
 
     expect(host.lastParams).toEqual({ pane_id: 'p1', source: 'recent', format: 'ansi' });
@@ -86,10 +92,36 @@ describe('OutputPoller', () => {
     host.queue(1, 'a');
 
     const poller = new OutputPoller(sourceOf(host), 10);
-    poller.subscribe('local', 'p1', 'visible', 'text', 'conn-1', () => {});
+    poller.subscribe('local', 'p1', { source: 'visible', format: 'text' }, 'conn-1', () => {});
     await vi.advanceTimersByTimeAsync(10);
 
     expect(host.lastParams).toEqual({ pane_id: 'p1', source: 'visible', format: 'text' });
+  });
+
+  it('forwards a requested depth to every poll, so the stream is as deep as the first paint', async () => {
+    // Without `lines` herdr answers at its 80-line default, which cuts a
+    // deeper first `pane.read` back to 80 lines on the first push — the
+    // same hazard as polling a narrower `source`.
+    const host = new FakeHost();
+    host.queue(1, 'a');
+    host.queue(2, 'b');
+
+    const poller = new OutputPoller(sourceOf(host), 10);
+    poller.subscribe('local', 'p1', { lines: 500 }, 'conn-1', () => {});
+    await vi.advanceTimersByTimeAsync(10);
+    expect(host.lastParams).toEqual({
+      pane_id: 'p1',
+      source: 'recent',
+      format: 'ansi',
+      lines: 500,
+    });
+    await vi.advanceTimersByTimeAsync(10);
+    expect(host.lastParams).toEqual({
+      pane_id: 'p1',
+      source: 'recent',
+      format: 'ansi',
+      lines: 500,
+    });
   });
 
   it('emits pane.output only when the revision advances (dedup)', async () => {
@@ -100,7 +132,7 @@ describe('OutputPoller', () => {
 
     const events: WsEvent<'pane.output'>[] = [];
     const poller = new OutputPoller(sourceOf(host), 10);
-    poller.subscribe('local', 'p1', undefined, undefined, 'conn-1', (e) => events.push(e));
+    poller.subscribe('local', 'p1', {}, 'conn-1', (e) => events.push(e));
 
     for (let i = 0; i < 3; i++) {
       await vi.advanceTimersByTimeAsync(10);
@@ -117,7 +149,7 @@ describe('OutputPoller', () => {
     host.queue(1, 'a');
 
     const poller = new OutputPoller(sourceOf(host), 10);
-    poller.subscribe('local', 'p1', undefined, undefined, 'conn-1', () => {});
+    poller.subscribe('local', 'p1', {}, 'conn-1', () => {});
 
     // First tick starts a poll and never resolves (gated). Advance well past
     // several intervals — no new poll should start while one is in flight.
@@ -136,12 +168,8 @@ describe('OutputPoller', () => {
     const poller = new OutputPoller(sourceOf(host), 10);
     const eventsA: WsEvent<'pane.output'>[] = [];
     const eventsB: WsEvent<'pane.output'>[] = [];
-    const subA = poller.subscribe('local', 'p1', undefined, undefined, 'conn-1', (e) =>
-      eventsA.push(e)
-    );
-    const subB = poller.subscribe('local', 'p1', undefined, undefined, 'conn-2', (e) =>
-      eventsB.push(e)
-    );
+    const subA = poller.subscribe('local', 'p1', {}, 'conn-1', (e) => eventsA.push(e));
+    const subB = poller.subscribe('local', 'p1', {}, 'conn-2', (e) => eventsB.push(e));
 
     await vi.advanceTimersByTimeAsync(10);
 
@@ -158,7 +186,7 @@ describe('OutputPoller', () => {
     host.queue(1, 'a');
 
     const poller = new OutputPoller(sourceOf(host), 10);
-    const subId = poller.subscribe('local', 'p1', undefined, undefined, 'conn-1', () => {});
+    const subId = poller.subscribe('local', 'p1', {}, 'conn-1', () => {});
     await vi.advanceTimersByTimeAsync(10);
     expect(host.calls).toBe(1);
 
@@ -172,8 +200,8 @@ describe('OutputPoller', () => {
     for (let i = 1; i <= 5; i++) host.queue(i, `v${i}`);
 
     const poller = new OutputPoller(sourceOf(host), 10);
-    const subA = poller.subscribe('local', 'p1', undefined, undefined, 'conn-1', () => {});
-    const subB = poller.subscribe('local', 'p1', undefined, undefined, 'conn-2', () => {});
+    const subA = poller.subscribe('local', 'p1', {}, 'conn-1', () => {});
+    const subB = poller.subscribe('local', 'p1', {}, 'conn-2', () => {});
     await vi.advanceTimersByTimeAsync(10);
     expect(host.calls).toBe(1);
 
@@ -194,7 +222,7 @@ describe('OutputPoller', () => {
 
     const events: WsEvent<'pane.output'>[] = [];
     const poller = new OutputPoller(sourceOf(host), 10);
-    poller.subscribe('local', 'p1', undefined, undefined, 'conn-1', (e) => events.push(e));
+    poller.subscribe('local', 'p1', {}, 'conn-1', (e) => events.push(e));
 
     for (let i = 0; i < 3; i++) {
       await vi.advanceTimersByTimeAsync(10);
@@ -211,8 +239,8 @@ describe('OutputPoller', () => {
     const poller = new OutputPoller(sourceOf(host), 10);
     const eventsA: WsEvent<'pane.output'>[] = [];
     const eventsB: WsEvent<'pane.output'>[] = [];
-    poller.subscribe('local', 'p1', undefined, undefined, 'conn-1', (e) => eventsA.push(e));
-    poller.subscribe('local', 'p1', undefined, undefined, 'conn-2', (e) => eventsB.push(e));
+    poller.subscribe('local', 'p1', {}, 'conn-1', (e) => eventsA.push(e));
+    poller.subscribe('local', 'p1', {}, 'conn-2', (e) => eventsB.push(e));
     await vi.advanceTimersByTimeAsync(10);
     expect(eventsA).toHaveLength(1);
     expect(eventsB).toHaveLength(1);

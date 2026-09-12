@@ -13,7 +13,12 @@ import type { ReadFormat, ReadSource, WsEvent } from '@kanhrd/schema';
 
 /** Just enough of `DispatchHost` for the poller to fetch pane content. */
 export interface PaneReader {
-  paneRead(params: { pane_id: string; source?: ReadSource; format?: ReadFormat }): Promise<{
+  paneRead(params: {
+    pane_id: string;
+    source?: ReadSource;
+    format?: ReadFormat;
+    lines?: number;
+  }): Promise<{
     content: string;
     revision: number;
     truncated: boolean;
@@ -38,6 +43,8 @@ interface PollEntry {
   paneId: string;
   source: ReadSource;
   format: ReadFormat;
+  /** Forwarded to every `pane.read`; `undefined` leaves the depth to herdr (80 lines on 0.8.2). */
+  lines: number | undefined;
   lastRevision: number;
   lastContentHash: string | null;
   inFlight: boolean;
@@ -47,6 +54,13 @@ interface PollEntry {
 
 function entryKey(host: string, paneId: string): string {
   return `${host}::${paneId}`;
+}
+
+/** What a subscriber asks the shared poll loop to read. Every field is optional; see `subscribe`. */
+export interface OutputShape {
+  source?: ReadSource;
+  format?: ReadFormat;
+  lines?: number;
 }
 
 export class OutputPoller {
@@ -63,8 +77,7 @@ export class OutputPoller {
   subscribe(
     host: string,
     paneId: string,
-    source: ReadSource | undefined,
-    format: ReadFormat | undefined,
+    shape: OutputShape,
     connectionId: string,
     emit: (event: WsEvent<'pane.output'>) => void
   ): string {
@@ -72,10 +85,10 @@ export class OutputPoller {
     let entry = this.entries.get(key);
     if (!entry) {
       // ponytail: dedupe is keyed on (host, pane_id) only, per CONTRACT-TIER2 §5.1 — the
-      // first subscriber's source/format wins for the whole shared poll loop. Fine in
-      // practice since the SPA is the only caller and always requests the same
-      // (recent, ansi) shape; revisit with per-(host,pane_id,source,format) keys if a
-      // caller ever needs a second shape.
+      // first subscriber's source/format/lines wins for the whole shared poll loop. Fine in
+      // practice since the SPA is the only caller and one browser asks every pane for the
+      // same shape; two browsers at different scrollback depths share the first one's
+      // depth. Keying by shape gives up ADR-0004's loop sharing, so it is its own decision.
       const created: PollEntry = {
         key,
         host,
@@ -86,8 +99,9 @@ export class OutputPoller {
         // `visible` poll behind a `recent` initial read silently deletes the pane's
         // scrollback on the first tick. A caller that wants the cheap viewport-only
         // stream asks for `source: "visible"` explicitly.
-        source: source ?? 'recent',
-        format: format ?? 'ansi',
+        source: shape.source ?? 'recent',
+        format: shape.format ?? 'ansi',
+        lines: shape.lines,
         lastRevision: -1,
         lastContentHash: null,
         inFlight: false,
@@ -143,6 +157,7 @@ export class OutputPoller {
         pane_id: entry.paneId,
         source: entry.source,
         format: entry.format,
+        ...(entry.lines !== undefined ? { lines: entry.lines } : {}),
       });
 
       // ponytail: herdr 0.8.2 hardcodes `revision: 0` on every `pane.read` response

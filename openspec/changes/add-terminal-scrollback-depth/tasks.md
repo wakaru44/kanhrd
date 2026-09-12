@@ -14,9 +14,9 @@
 
 ## 2. One request shape, on the wire
 
-- [ ] 2.1 `pane.subscribe_output` gains `lines` in
+- [x] 2.1 `pane.subscribe_output` gains `lines` in
       `packages/schema/src/wire.ts`.
-- [ ] 2.2 The poller forwards `lines` to every poll's `pane.read`.
+- [x] 2.2 The poller forwards `lines` to every poll's `pane.read`.
 - [ ] 2.3 A single source of truth in the SPA for `{ source, format, lines }`,
       used by the first `pane.read` and by `pane.subscribe_output`, so a
       later snapshot can never be narrower than the first paint.

@@ -150,12 +150,16 @@ export interface BridgeMethodParams {
    * on change. Defaults to `source: "recent"` — viewport plus scrollback —
    * matching the default `pane.read` uses, because a stream polled at a
    * narrower source than the first paint deletes that pane's scrollback on
-   * the first push.
+   * the first push. The same holds for `lines`: omitted, herdr polls at its
+   * own 80-line default, so a caller whose first `pane.read` asked for more
+   * must pass the same `lines` here or lose that depth on the first push.
    */
   'pane.subscribe_output': {
     pane_id: string;
     source?: ReadSource;
     format?: ReadFormat;
+    /** Forwarded to every poll's `pane.read`. herdr 0.8.2 serves at most 1000. */
+    lines?: number;
   };
   'pane.unsubscribe_output': { subscription_id: string };
   'pane.send_keys': { pane_id: string; keys: string[] };

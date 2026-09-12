@@ -81,14 +81,7 @@ export async function registerWebSocket(
               return randomUUID();
             },
             subscribeOutput: (host, params) =>
-              poller.subscribe(
-                host,
-                params.pane_id,
-                params.source,
-                params.format,
-                connectionId,
-                send
-              ),
+              poller.subscribe(host, params.pane_id, params, connectionId, send),
             unsubscribeOutput: (subscriptionId) => poller.unsubscribe(subscriptionId),
           });
 
