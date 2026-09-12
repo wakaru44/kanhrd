@@ -49,9 +49,10 @@ phases 2 and 3 are the feature the operator asked for.
 - [ ] 4.2 `move` and `split` open menus; `rest` opens the existing
       confirm dialog; `dots` carries every action with its label plus
       rename.
-- [ ] 4.3 The move menu separates herdr destinations from `park in…`
-      under their own headings — one changes the host, the other does not
-      (maintainer decision pending, see proposal).
+- [ ] 4.3 The move menu carries herdr destinations ONLY. `park in…`
+      stays in the overflow menu where it already lives: it changes
+      nothing outside this browser and needs no capability (maintainer
+      decision, 2026-09-12).
 - [ ] 4.4 Every control is visible on first render, never hover-only, and
       meets `--touch-target-min`.
 - [ ] 4.5 The compact card keeps ONE visible trigger (the dots menu), as

@@ -72,30 +72,40 @@ Per the operator's design (2026-09-12):
 
 | control | opens | contains |
 | --- | --- | --- |
-| move | a menu | move to tab…, new tab, new workspace, and park in… |
+| move | a menu | move to tab…, move to new tab, move to new workspace |
 | split | a menu | split right, split down |
 | rest | a confirm | the existing `let this one rest?` dialog |
-| dots | the menu | every action above, with its label, plus rename |
+| dots | the menu | every action above with its label, plus rename and `park in…` |
 
 `rest` is the word the product already uses for closing a pane
 (`copy.confirm.closePaneAction`), so the row stops spelling the most
 destructive action as an unlabelled X.
 
-**Two decisions the maintainer owes, called out rather than assumed:**
+### `move to` and `park in` are different operations, and different menus
 
-1. **`move to column` is not a move.** The operator's sketch lists "move to
-   column" beside tab and workspace. A status column is herdr's fact and is
-   not settable by anything (`docs/UX-GUIDELINES.md`, "Status columns are
-   read-only"); a parked column is browser-local membership that changes
-   nothing on the host. So one menu would mix a herdr mutation with a local
-   arrangement under one verb. This change proposes keeping `park in…`
-   inside the move menu but under its own heading, so the boundary between
-   "this changes herdr" and "this rearranges your board" stays visible. Say
-   if you would rather they were separate menus.
-2. **Splitting costs a click it did not before.** Split right is one press
-   today and becomes two under this model. That is the stated design and
-   the labels are worth it, but it is a real regression for the most
-   frequent action — worth knowing before it ships.
+Maintainer decision, 2026-09-12. The operator's first sketch listed "move
+to column" beside tab and workspace; it is not the same kind of thing, and
+the two are now deliberately separated:
+
+- **`move to`** changes herdr. It reparents the pane into another tab or
+  workspace, it can close the tab it left behind, and every other herdr
+  client sees it. It lives behind the `move` control, gated on
+  `capabilities.paneMove`.
+- **`park in`** changes nothing outside this browser. A parked column is
+  the operator's own grouping, held in `localStorage`, invisible to herdr
+  and to every other client, and a status column is herdr's fact that
+  nothing may set (`docs/UX-GUIDELINES.md`, "Status columns are
+  read-only"). It stays where it already is — the card's overflow menu —
+  and needs no capability.
+
+They SHALL NOT share a menu. One verb over two operations with opposite
+blast radii is how an operator ends up moving a pane on a colleague's
+machine when they meant to tidy their own board.
+
+**One decision still open:** splitting costs a click it did not before.
+Split right is one press today and becomes two under this model. That is
+the stated design and the labels are worth it, but it is a real regression
+for the most frequent action — worth knowing before it ships.
 
 ## Impact
 

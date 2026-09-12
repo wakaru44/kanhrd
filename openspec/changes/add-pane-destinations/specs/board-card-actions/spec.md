@@ -85,17 +85,24 @@ Every control SHALL be visible on first render, never revealed on hover,
 and SHALL meet `--touch-target-min`. The compact card SHALL keep exactly
 one visible trigger, as it does today.
 
-Where a menu mixes an operation that changes herdr with one that only
-rearranges this browser's board — moving to a tab, versus parking in a
-board column — the two SHALL be separated under their own headings, so the
-operator can see which of the two they are about to do.
+Moving a pane and parking a card SHALL NOT share a menu. `move to` is a
+herdr operation: it reparents the pane, can close the tab it left, and is
+visible to every other herdr client. `park in` is browser-local: it groups
+a card in a column held in this browser's storage, changes nothing on the
+host, and requires no capability. The move control SHALL offer herdr
+destinations only, and parking SHALL remain in the card's overflow menu.
 
 #### Scenario: The destructive action says what it is
 
 - **WHEN** a card renders its action row
 - **THEN** the closing control is labelled with the product's own word for it and opens a confirmation, rather than being an unlabelled glyph that acts immediately
 
-#### Scenario: Local and remote arrangements are not mixed silently
+#### Scenario: Parking is not offered as a move
 
 - **WHEN** the operator opens a card's move menu on a board that has parked columns
-- **THEN** the herdr destinations and the board's own parked columns appear under separate headings
+- **THEN** the menu lists only herdr destinations — another tab, a new tab, a new workspace — and no parked column appears in it
+
+#### Scenario: Parking stays reachable, and stays local
+
+- **WHEN** a card's host reports `paneMove: false`
+- **THEN** the card offers no move control, and `park in…` is still available in its overflow menu
