@@ -26,11 +26,23 @@ The alternate-screen row is the honest limit. A TUI that owns the
 alternate screen has no scrollback in `recent`, so depth does nothing for
 it, and it repaints every row, so every delta falls back to a full frame.
 It gains nothing and loses nothing: the fallback costs exactly what a full
-frame costs today. What the delta pays for is output above a changing
-region on the primary screen — streaming logs, a status line, a redraw
-under retained history. Whether a given coding agent's TUI renders inline
-or on the alternate screen was not measured here; that decides which row
-an agent falls in.
+frame costs today.
+
+The coding agents kanhrd watches are not in that row. Read-only
+`pane.read` against three live agent panes on the operator's own herdr
+(foreman diagnostic, 2026-09-12; reads only, no input, not a test):
+
+| pane   | agent       | `lines: 80` | `lines: 1000` | `visible` |
+| ------ | ----------- | ----------- | ------------- | --------- |
+| w6:pJD | Claude Code | 79 rows     | 999 rows      | 21 rows   |
+| w6:pJG | Claude Code | 79 rows     | 999 rows      | 21 rows   |
+| w6:pAS | Codex       | 80 rows     | 829 rows      | 48 rows   |
+
+Both render inline on the primary screen and accumulate into herdr's
+scrollback, far past their viewport. An agent's live pane is the
+clear-and-redraw row — 63.4 KB/s full at 1000 lines, 3.1 KB/s as deltas,
+no fallbacks — and its report lands in the scrollback depth exposes. This
+check is answered; it does not need re-running.
 
 **A second browser at a different depth gets the first one's.** Recorded
 in the backlog (_A second browser at a different scrollback depth gets the
@@ -64,12 +76,15 @@ the snapshot is exactly `previous.slice(drop, drop + keep) + content`.
 
 A subscriber's first `pane.output` is always a full frame: its first paint
 came from its own `pane.read`, not from the loop's previous snapshot. The
-poller therefore keeps one bit per subscriber — _has it received the
-loop's current snapshot_ — and sends a full frame to any subscriber that
-has not. A browser that joins a running loop mid-stream gets a full frame
-on the next change, then deltas. The client still checks the rebuilt
-`length` and re-reads the pane if it disagrees, as a guard against a bug,
-not as the late joiner's path.
+loop keeps one `lastContent`; each subscriber keeps one bit — _has it
+received `lastContent`_ — and any subscriber without it gets a full frame,
+then deltas. No subscriber holds its own copy of the snapshot.
+
+A browser that joins a running loop mid-stream is therefore an ordinary
+path with no failure in it: it is unprimed, so its next frame is full.
+The client's check of the rebuilt `length` is a guard against a bug in the
+bridge or the client, and re-reads the pane if it ever trips. It is not how
+a late joiner recovers, and on a correct bridge it never trips.
 
 ### Loops are keyed by shape
 
@@ -104,16 +119,15 @@ wrong claims in its deferred line-diff paragraph — that it would diff
   `pane.output` gains an optional `delta` descriptor. Additive and opt-in.
 - **Affected code:** `packages/schema/src/wire.ts`,
   `apps/bridge/src/output/poller.ts` plus a pure line-delta helper and its
-  tests, `apps/web/src/app/pane-detail/pane-terminal.ts` and its spec.
+  tests, `apps/web/src/app/pane-detail/pane-terminal.ts` and its spec,
+  `apps/web/src/app/state/terminal-scrollback.service.ts` (default).
 - **Affected docs:** `docs/adr/0004-full-snapshot-terminal-output-via-polling.md`
   (amendment).
 - **No change to:** the poll cadence, `pane.read`, the truncation line, or
   how `paint()` renders a snapshot.
-- **Open for the maintainer:** whether to raise the default depth to 1000
-  once this ships. It is a one-line change to
-  `DEFAULT_TERMINAL_SCROLLBACK` and deliberately not part of this change.
-- **Not measured:** a live coding agent (none could be run inside the
-  isolated session). An agent that renders inline behaves like the
-  status-line and redraw rows; one on the alternate screen behaves like
-  `top` and gains nothing from this change. Checking which is which is the
-  first thing to do if the numbers need confirming before building.
+- **Default depth rises to 1000.** 250 was chosen only because 1000-line
+  full frames cost 63–86 KB/s. As deltas, 1000 lines cost 2.1–3.1 KB/s,
+  less than the shipped 250-line default's 14.8–29.2 KB/s, so the ceiling
+  becomes the default (foreman ruling, 2026-09-12, on these numbers).
+- **Answered by live agents, not the isolated session:** whether coding
+  agents render inline or on the alternate screen (inline — see Why).

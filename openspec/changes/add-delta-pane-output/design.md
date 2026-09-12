@@ -36,9 +36,10 @@ Reading it:
   irrelevant, and every row changes. Every frame falls back to full, at
   exactly the full-frame cost. The fallback rule is what keeps the worst
   case equal to today rather than worse.
-- A live coding agent's TUI was not measured. Its input box and spinner
-  are bottom-of-screen redraws on the primary screen, which is the
-  status-line and full-redraw rows' shape.
+- Coding agents are in the primary-screen rows, not the `top` row. Read
+  against live Claude Code and Codex panes (see the proposal): `lines:
+  1000` returns 999 and 829 rows against 21- and 48-row viewports, so their
+  output accumulates in herdr's scrollback like the redraw pane's.
 
 ## The delta
 
@@ -121,3 +122,17 @@ format, lines)`;
 - the deferred line-diff paragraph assumed `visible` snapshots and called
   the optimisation "not a wire-shape change"; the diff runs on `recent`
   and is on the wire.
+
+## The default depth
+
+`add-terminal-scrollback-depth` set the default to 250 against full-frame
+cost. On the same measurements, per open terminal on a busy pane:
+
+| default                   | streaming | status line | redraw    |
+| ------------------------- | --------- | ----------- | --------- |
+| before: 250, full frames  | 29.2 KB/s | 18.4 KB/s   | 14.8 KB/s |
+| after: 1000, delta frames | 2.1 KB/s  | 1.9 KB/s    | 3.1 KB/s  |
+
+The deeper default costs 7–14× less than the shallower one did, so the
+default becomes the ceiling. An alternate-screen pane costs the same at
+either default.
