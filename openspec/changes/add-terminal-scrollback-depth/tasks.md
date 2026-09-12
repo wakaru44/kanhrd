@@ -44,8 +44,10 @@
 
 ## 5. Verify
 
-- [ ] 5.1 `pnpm --filter @kanhrd/web test`, bridge tests, `pnpm -w typecheck`,
+- [x] 5.1 `pnpm --filter @kanhrd/web test`, bridge tests, `pnpm -w typecheck`,
       `make lint`.
-- [ ] 5.2 A live check against the isolated session: a pane with more
+- [x] 5.2 A live check against the isolated session: a pane with more
       output than the depth shows the truncation line, and one with less
       does not.
+      Committed as `apps/web/e2e/terminal-scrollback.spec.ts` (live-only,
+      skips without herdr), so it runs with the suite rather than once.
