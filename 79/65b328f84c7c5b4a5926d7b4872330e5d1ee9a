@@ -1,0 +1,27 @@
+openspec/changes/redesign-board-chrome-density/specs/l-brand-neo-shepherd-redesign/spec.md
+  s_41bed7e0e7701d::t_8541e9fe401f1e 1-55
+openspec/changes/redesign-board-chrome-density/tasks.md
+  s_41bed7e0e7701d::t_8541e9fe401f1e 1-38
+openspec/changes/redesign-board-chrome-density/README.md
+  s_41bed7e0e7701d::t_5573b277c45c4b 1-3
+openspec/changes/redesign-board-chrome-density/proposal.md
+  s_41bed7e0e7701d::t_5573b277c45c4b 1-89
+openspec/changes/redesign-board-chrome-density/.openspec.yaml
+  s_41bed7e0e7701d::t_5573b277c45c4b 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7965b328f84c7c5b4a5926d7b4872330e5d1ee9a",
+  "prompts": {},
+  "sessions": {
+    "s_41bed7e0e7701d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c985291b-2f83-4b9b-a00d-3f7b63991f12",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
