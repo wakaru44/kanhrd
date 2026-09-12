@@ -21,6 +21,14 @@ services:
     # bridge looks for /.config/herdr/herdr.sock and finds neither socket nor
     # herdr's config.
     restart: unless-stopped
+    # Guard against a bare `docker compose up`, which would otherwise start a
+    # bridge with no herdr mount at all and fail the way this whole setup is
+    # built to avoid: container healthy, host offline forever, nothing in the
+    # logs but a connect error. The overlays redefine this volume as an
+    # ordinary local one; on its own the base file declares it external and
+    # missing, so compose refuses to start.
+    volumes:
+      - platform-overlay:/var/lib/kanhrd/platform-overlay:ro
 
   # Multi-host / remote setup (ADR-0001): reach a non-local herdr through an
   # SSH tunnel that lands a socket on this machine, then mount that socket
@@ -49,3 +57,9 @@ services:
   #     - /run/user/1000:/home/kanhrd/tunnel:ro          # Linux
   #     - /run/user/1000/herdr-cloud.sock:/home/kanhrd/.config/herdr/herdr-cloud.sock:ro  # Docker Desktop
   #   restart: unless-stopped
+
+volumes:
+  # Deliberately external and non-existent: see the guard comment above.
+  platform-overlay:
+    external: true
+    name: kanhrd-no-platform-overlay-selected-use-make-docker-up

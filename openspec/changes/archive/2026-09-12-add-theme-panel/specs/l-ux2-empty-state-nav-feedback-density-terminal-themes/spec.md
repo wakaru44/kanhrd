@@ -11,11 +11,11 @@ terminal section and the header theme panel — and both SHALL render the
 same control over the same option list, so that neither can offer a
 palette the other does not.
 
-#### Scenario: Auto theme follows the board theme
+#### Scenario: Auto theme follows the SPA theme toggle
 - **WHEN** the terminal theme is set to `auto` and the user changes the SPA between dark and light
 - **THEN** every open terminal's palette updates to match
 
-#### Scenario: Pinned palette ignores the board theme
+#### Scenario: Pinned palette ignores the SPA theme
 - **WHEN** the terminal theme is set to a specific palette (e.g. `catppuccin-mocha`)
 - **THEN** terminals keep that palette regardless of the SPA's board theme, and the choice survives a reload
 

@@ -16,3 +16,8 @@ services:
       # Docker would otherwise create a *directory* at that path and the
       # prefix falls back to Ctrl+B.
       - ~/.config/herdr/config.toml:/home/kanhrd/.config/herdr/config.toml:ro
+
+volumes:
+  # Satisfies the base file's guard: an ordinary local volume compose creates
+  # on demand, so `up` proceeds once an overlay is in play.
+  platform-overlay: !override {}
