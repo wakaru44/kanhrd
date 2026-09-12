@@ -177,6 +177,7 @@ describe('PaneTerminal', () => {
       source: 'recent',
       format: 'ansi',
       lines: 250,
+      delta: true,
     });
 
     const methods = ws.request.calls.allArgs().map(([, method]) => method);
@@ -704,7 +705,7 @@ describe('PaneTerminal', () => {
       ['pane.read', { pane_id: 'pane-1', format: 'ansi', source: 'recent', lines: 1000 }],
       [
         'pane.subscribe_output',
-        { pane_id: 'pane-1', source: 'recent', format: 'ansi', lines: 1000 },
+        { pane_id: 'pane-1', source: 'recent', format: 'ansi', lines: 1000, delta: true },
       ],
     ]);
   });
@@ -721,6 +722,56 @@ describe('PaneTerminal', () => {
     t.applyScrollback(250);
     await flushMicrotasks();
     expect(ws.request).not.toHaveBeenCalled();
+  });
+
+  // --- delta frames: rebuilt before painting, never painted on a mismatch ---
+
+  /** A `pane.output` frame carrying a line delta against the previous snapshot. */
+  function emitDelta(tail: string, delta: { drop: number; keep: number; length: number }): void {
+    const frame = paneOutput(tail);
+    frame.payload.delta = delta;
+    ws.events$.next(frame);
+  }
+
+  it('paints a delta frame exactly as it would paint the full snapshot it describes', async () => {
+    const writeSpy = spyOn(Terminal.prototype, 'write');
+    await mounted();
+    emitOutput('one\r\ntwo\r\n$ ');
+    writeSpy.calls.reset();
+
+    // Slides the window by one line and redraws the prompt.
+    emitDelta('three\r\n$ ', { drop: 5, keep: 5, length: 14 });
+
+    expect(writeSpy.calls.mostRecent().args[0]).toBe('\x1bctwo\r\nthree\r\n$ ');
+    expect(term.state()).toBe('live');
+  });
+
+  it('appends a delta that only grew the snapshot, as a full frame would', async () => {
+    const writeSpy = spyOn(Terminal.prototype, 'write');
+    await mounted();
+    emitOutput('one\r\n$ ');
+    writeSpy.calls.reset();
+
+    emitDelta('$ ls', { drop: 0, keep: 5, length: 9 });
+
+    expect(writeSpy.calls.allArgs().map((args) => args[0])).toEqual(['ls']);
+  });
+
+  it('re-reads the pane instead of painting when a delta does not rebuild to its length', async () => {
+    const writeSpy = spyOn(Terminal.prototype, 'write');
+    const warn = spyOn(console, 'warn');
+    await mounted();
+    emitOutput('one\r\ntwo\r\n$ ');
+    writeSpy.calls.reset();
+    ws.request.calls.reset();
+
+    emitDelta('three\r\n$ ', { drop: 5, keep: 5, length: 999 });
+    await flushMicrotasks();
+
+    const written = writeSpy.calls.allArgs().map((args) => String(args[0]));
+    expect(written.some((data) => data.includes('three'))).toBeFalse();
+    expect(warn).toHaveBeenCalled();
+    expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.read', jasmine.anything());
   });
 
   // --- truncation: a state at the head of the buffer, never a toast --------

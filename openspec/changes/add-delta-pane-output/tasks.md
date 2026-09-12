@@ -29,21 +29,21 @@
 
 ## 4. SPA
 
-- [ ] 4.1 `PaneTerminal` subscribes with `delta: true`, rebuilds snapshots,
+- [x] 4.1 `PaneTerminal` subscribes with `delta: true`, rebuilds snapshots,
       and re-loads the pane when the rebuilt length disagrees.
-- [ ] 4.2 Unit tests: a delta frame paints as its full snapshot would; a
+- [x] 4.2 Unit tests: a delta frame paints as its full snapshot would; a
       mismatched length re-reads instead of painting.
 
 ## 5. Default depth
 
-- [ ] 5.1 `DEFAULT_TERMINAL_SCROLLBACK` becomes `HERDR_READ_LINE_CEILING`
+- [x] 5.1 `DEFAULT_TERMINAL_SCROLLBACK` becomes `HERDR_READ_LINE_CEILING`
       (1000), with the before/after payload recorded in `design.md`, and
       its tests follow. The `terminal-scrollback` spec names no default, so
       it needs no delta.
 
 ## 6. Docs
 
-- [ ] 6.1 ADR-0004 dated amendment, in the form of the existing one.
+- [x] 6.1 ADR-0004 dated amendment, in the form of the existing one.
 
 ## 7. Verify
 

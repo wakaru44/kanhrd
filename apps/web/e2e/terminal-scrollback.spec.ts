@@ -61,21 +61,22 @@ test('a pane with more history than the depth says herdr cut it, at the head of 
   app,
 }) => {
   const [paneId] = seededWorld().paneIds;
-  await herdrPaneSendText(paneId, `${WIPE}seq -f 'depth-%04g' 1 600\r`);
-  await waitFor(async () => (await herdrPaneRead(paneId)).includes('depth-0600'), {
+  await herdrPaneSendText(paneId, `${WIPE}seq -f 'depth-%04g' 1 1500\r`);
+  await waitFor(async () => (await herdrPaneRead(paneId)).includes('depth-1500'), {
     timeoutMs: 5_000,
     message: 'the seeded output never reached the pane',
   });
 
   await openPane(app, paneId);
-  await waitFor(async () => ((await xtermRows(app).textContent()) ?? '').includes('depth-0600'), {
+  await waitFor(async () => ((await xtermRows(app).textContent()) ?? '').includes('depth-1500'), {
     timeoutMs: 5_000,
     message: 'the terminal never painted the tail of the output',
   });
 
   const top = await topOfBuffer(app);
-  // The default depth is 250, below herdr's ceiling, so the raise hint rides along.
-  expect(top).toContain('herdr sent the last 250 lines.');
+  // The default depth is herdr's ceiling, so no raise hint: no setting brings more back.
+  expect(top).toContain('herdr sent the last 1000 lines. history above this line was not sent.');
+  expect(top).not.toContain('raise scrollback in settings.');
   expect(top).not.toContain('depth-0001');
   await expect(app.locator('.toast')).toHaveCount(0);
 });

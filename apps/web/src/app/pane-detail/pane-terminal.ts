@@ -320,6 +320,9 @@ export class PaneTerminal {
           source: READ_SOURCE,
           format: READ_FORMAT,
           lines,
+          // Line deltas after a full first frame: at 1000 lines a busy pane
+          // costs ~3 KB/s instead of ~63-86 KB/s. See `rebuildSnapshot`.
+          delta: true,
         });
         if (this.isStale(host, id)) {
           if (sub) {
@@ -414,11 +417,36 @@ export class PaneTerminal {
     if (payload.subscription_id !== this.subscriptionId) {
       return;
     }
-    this.paint(this.term, payload.content, payload.truncated);
+    const content = this.rebuildSnapshot(payload);
+    if (content === null) {
+      // Not a state the bridge should ever produce: it verifies every delta and
+      // sends each subscription's first frame whole. Painting a snapshot this
+      // terminal cannot vouch for would be wrong content, so read the pane again.
+      console.warn('pane-detail: pane.output delta did not rebuild; re-reading the pane');
+      this.retry();
+      return;
+    }
+    this.paint(this.term, content, payload.truncated);
     this.revisionSignal.set(payload.revision);
     this.lastPollAtSignal.set(Date.now());
     this.frameReceived.set(true);
-    this.hasContent.set(payload.content.length > 0);
+    this.hasContent.set(content.length > 0);
+  }
+
+  /**
+   * The full snapshot a `pane.output` frame describes. A plain frame carries
+   * it; a delta frame carries only its new tail, to be laid after
+   * `lastSnapshot.slice(drop, drop + keep)` — `lastSnapshot` being exactly
+   * the snapshot this subscription's previous frame described. `null` when
+   * the rebuilt length disagrees with the bridge's.
+   */
+  private rebuildSnapshot(payload: BridgeEventPayload['pane.output']): string | null {
+    if (!payload.delta) {
+      return payload.content;
+    }
+    const { drop, keep, length } = payload.delta;
+    const rebuilt = this.lastSnapshot.slice(drop, drop + keep) + payload.content;
+    return rebuilt.length === length ? rebuilt : null;
   }
 
   /**

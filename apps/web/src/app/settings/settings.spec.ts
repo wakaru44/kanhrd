@@ -319,12 +319,12 @@ describe('Settings', () => {
     ]);
 
     scrollbackSegments()
-      .find((b) => b.textContent?.trim() === '1000')!
+      .find((b) => b.textContent?.trim() === '250')!
       .click();
     fixture.detectChanges();
 
-    expect(TestBed.inject(TerminalScrollbackService).lines()).toBe(1000);
-    expect(pressed().map((b) => b.textContent?.trim())).toEqual(['1000']);
+    expect(TestBed.inject(TerminalScrollbackService).lines()).toBe(250);
+    expect(pressed().map((b) => b.textContent?.trim())).toEqual(['250']);
     expect(fontSizeService.size()).toBe(DEFAULT_TERMINAL_FONT_SIZE);
   });
 });

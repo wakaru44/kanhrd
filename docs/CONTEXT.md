@@ -49,13 +49,17 @@ Rationale: shipping a read-only overlay would mean maintaining three clients (TU
 
 Clicking a card opens that pane's terminal, rendered with xterm.js.
 
-Output arrives as full snapshots (~150ms cadence by default), not
-incremental chunks. herdr's `pane.read` returns rendered content from its
+Output arrives as snapshots (~150ms cadence by default), not incremental
+chunks of PTY bytes. herdr's `pane.read` returns rendered content from its
 own terminal-grid state (parsed via libghostty-vt), not a raw byte tap on
 the PTY, and there is no public per-pane push event for output changes — see
 `docs/adr/0004-full-snapshot-terminal-output-via-polling.md`. The bridge
-polls `pane.read` per subscribed `(host, pane)`, dedupes on herdr's
-`revision` counter, and pushes `pane.output` events.
+polls `pane.read` per subscribed `(host, pane, source, format, lines)`,
+dedupes on herdr's `revision` counter or the content, and pushes
+`pane.output` events. A subscription that asks for `delta: true` — the SPA
+does — gets the first snapshot whole and later ones as verified line deltas
+against the previous one; the client rebuilds the full snapshot before
+painting it.
 
 A correct browser handler is **not** `term.reset(); term.write(content)`
 per event, though that reads as the obvious one. `Terminal.reset()` blanks

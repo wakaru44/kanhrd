@@ -17,13 +17,15 @@ function fakeStorage(value: string | null): Pick<Storage, 'getItem'> {
 
 describe('terminal scrollback depth', () => {
   describe('the steps', () => {
-    it('end at herdr 0.8.2 measured ceiling, and start at the shallow default', () => {
+    it('end at herdr 0.8.2 measured ceiling, which is also the default', () => {
       // 1000 is measured (design.md), not a preference: herdr answers any
       // larger `lines` with exactly 1000.
       expect(HERDR_READ_LINE_CEILING).toBe(1000);
       expect([...TERMINAL_SCROLLBACK_STEPS]).toEqual([250, 500, 1000]);
       expect(Math.max(...TERMINAL_SCROLLBACK_STEPS)).toBe(HERDR_READ_LINE_CEILING);
-      expect(DEFAULT_TERMINAL_SCROLLBACK).toBe(250);
+      // 1000 as the default is affordable only because live updates are line
+      // deltas (add-delta-pane-output).
+      expect(DEFAULT_TERMINAL_SCROLLBACK).toBe(HERDR_READ_LINE_CEILING);
     });
   });
 
@@ -62,17 +64,17 @@ describe('terminal scrollback depth', () => {
     });
 
     it('seeds from storage, so the depth survives a reload', () => {
-      localStorage.setItem(STORAGE_KEY, '1000');
-      expect(TestBed.inject(TerminalScrollbackService).lines()).toBe(1000);
+      localStorage.setItem(STORAGE_KEY, '500');
+      expect(TestBed.inject(TerminalScrollbackService).lines()).toBe(500);
     });
 
     it('persists a chosen depth under a kanhrd. key, so clear-local-data sweeps it', () => {
       const service = TestBed.inject(TerminalScrollbackService);
-      service.set(500);
+      service.set(250);
       TestBed.tick();
 
-      expect(service.lines()).toBe(500);
-      expect(localStorage.getItem(STORAGE_KEY)).toBe('500');
+      expect(service.lines()).toBe(250);
+      expect(localStorage.getItem(STORAGE_KEY)).toBe('250');
       expect(STORAGE_KEY.startsWith('kanhrd.')).toBeTrue();
     });
 

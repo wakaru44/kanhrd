@@ -19,12 +19,12 @@ export const HERDR_READ_LINE_CEILING = 1000;
 export const TERMINAL_SCROLLBACK_STEPS: readonly number[] = [250, 500, HERDR_READ_LINE_CEILING];
 
 /**
- * Every `pane.output` is a full snapshot, pushed on every change at the
- * bridge's poll cadence, so the depth multiplies the live payload. 250 is
- * three times herdr's own 80-line default and a fifth of the ceiling; a
- * deeper depth is the operator's choice, not everyone's default.
+ * The ceiling. Live updates arrive as line deltas, so depth no longer
+ * multiplies the payload: 1000 lines as deltas measured 2.1-3.1 KB/s on a
+ * busy pane, less than 250 lines as full snapshots (14.8-29.2 KB/s). See
+ * openspec/changes/add-delta-pane-output/design.md.
  */
-export const DEFAULT_TERMINAL_SCROLLBACK = 250;
+export const DEFAULT_TERMINAL_SCROLLBACK = HERDR_READ_LINE_CEILING;
 
 const STORAGE_KEY = 'kanhrd.terminal-scrollback';
 

@@ -411,6 +411,7 @@ describe('PaneDetail', () => {
       source: 'recent',
       format: 'ansi',
       lines: 250,
+      delta: true,
     });
   });
 
@@ -452,6 +453,7 @@ describe('PaneDetail', () => {
       source: 'recent',
       format: 'ansi',
       lines: 250,
+      delta: true,
     });
   });
 
@@ -488,6 +490,7 @@ describe('PaneDetail', () => {
       source: 'recent',
       format: 'ansi',
       lines: 250,
+      delta: true,
     });
   });
 
@@ -856,6 +859,7 @@ describe('PaneDetail terminal settings', () => {
       source: 'recent',
       format: 'ansi',
       lines: 1000,
+      delta: true,
     });
   });
 
