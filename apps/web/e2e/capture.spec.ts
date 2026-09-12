@@ -62,6 +62,12 @@ interface Capture {
   readonly tier3?: boolean;
   /** A selector that must be visible before the shot is taken. */
   readonly waitFor?: string;
+  /**
+   * Controls to click, in order, before shooting — for a subject that only
+   * exists once something is open. Each is waited for, so a menu that has
+   * not painted yet fails the capture rather than shooting past it.
+   */
+  readonly open?: readonly string[];
   /** `localStorage` seeded before the app boots — theme, palette, density. */
   readonly storage?: Readonly<Record<string, string>>;
 }
@@ -152,6 +158,21 @@ const CAPTURES: readonly Capture[] = [
     waitFor: '.xterm-screen',
   },
   {
+    file: 'card_actions.png',
+    state: 'populated-small',
+    width: 1280,
+    height: 480,
+    why: "a card's four named controls, and the move menu one of them opens",
+    // One shot rather than two: the row and the menu it opens are the same
+    // subject at two depths, and the committed set is deliberately small
+    // (see the note above). `another tab` is deliberately left closed —
+    // this mock serves one tab, which is the card's own, so the list under
+    // it is correctly empty and a shot of it would teach nothing.
+    tier3: true,
+    open: ['.card .card-action.move'],
+    waitFor: '.card .card-action.move',
+  },
+  {
     file: 'settings.png',
     state: 'populated-small',
     width: 1280,
@@ -196,6 +217,12 @@ async function bootFrozen(page: Page, capture: Capture): Promise<void> {
         message: `no shell surface painted for ${capture.file}`,
       })
       .toBeGreaterThan(0);
+  }
+
+  for (const selector of capture.open ?? []) {
+    const control = page.locator(selector).first();
+    await control.waitFor({ state: 'visible', timeout: 10_000 });
+    await control.click();
   }
 
   // Advance and pin. `pauseAt` leaves the clock stopped, so nothing ticks

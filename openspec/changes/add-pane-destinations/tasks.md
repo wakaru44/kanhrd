@@ -83,9 +83,12 @@ phases 2 and 3 are the feature the operator asked for.
       needs no UI: these are herdr semantics the SPA rests on and the
       unit tests cannot prove, because they supply the responses
       themselves.
-- [ ] 5.3 Shoot the card's action row and the move menu against the
-      mocked bridge. Held until 4.1 lands so the row is shot once, in its
-      final shape, rather than twice.
+- [x] 5.3 Shoot the card's action row and the move menu against the
+      mocked bridge: `docs/screenshots/card_actions.png`, added to the
+      `capture` project so it regenerates with the rest. One shot, not
+      two — the row and the menu it opens are the same subject at two
+      depths, and the committed set is deliberately small. It is used by
+      a new `docs/USER-GUIDE.md` section rather than left orphaned.
 
 ## 6. Docs a maintainer owes
 
