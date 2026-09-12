@@ -385,3 +385,76 @@ Neither is chosen here.
 - The snapshot repaint path keeps its current behaviour: scrollback
   survives a repaint, and a reader scrolled up is not yanked to the tail
   (the `terminal-scrollback` capability).
+
+---
+
+## herdr caps `pane.read` at 1000 lines, so a long agent report still will not fit
+
+**Problem**
+
+`add-terminal-scrollback-depth` exists because a full agent report does not
+fit in the scrollback kanhrd shows. Measurement during that change found the
+binding constraint is not kanhrd's missing `lines` parameter but herdr
+itself: herdr 0.8.2 caps `pane.read` at **1000 lines server-side**. Sending
+the parameter is still right and still an improvement over the 80-line
+default, but the depth setting cannot deliver the change's stated
+motivation. A report longer than 1000 lines remains unreadable from
+kanhrd, whatever the operator sets.
+
+**Reproduction/current evidence**
+
+Measured against an isolated `kanhrd-test-scrollback-measure` session on
+herdr 0.8.2, with a pane holding 30000 lines of `seq` output and
+`scroll.max_offset_from_bottom` reporting 12147 lines of retained history:
+
+| requested `lines` | returned | `truncated` |
+| --- | --- | --- |
+| omitted | 80 | `true` |
+| 200 | 200 | `true` |
+| 2000 | 1000 | `true` |
+| 20000 | 1000 | `true` |
+| 100000 | 1000 (13.1KB) | `true` |
+
+Latency was flat at ~105ms regardless of requested depth, so the cap is
+applied before the read does work. `text` and `recent-unwrapped` behave
+identically; `source: 'visible'` ignores `lines` entirely and returns the
+viewport. `truncated` is honest rather than always-on: a 990-line pane
+returns `truncated: true` at `lines=990` and `false` at `lines=1000`, and a
+50-line pane returns `false` at every depth. So herdr retains far more
+history than it will serve in one read.
+
+**Expected behavior**
+
+An operator can read the whole of a long agent report from kanhrd, not its
+last 1000 lines.
+
+**Investigation/fix notes**
+
+Three directions, and the first is a question for herdr rather than a
+change here:
+
+1. **Ask herdr to raise or page the cap.** The history exists — 12147 lines
+   retained against 1000 served. A paged read (offset plus limit) would be
+   more useful than a larger ceiling, and would let kanhrd fetch backwards
+   on demand instead of asking for everything at once. This is the honest
+   fix and it is upstream.
+2. **Page it client-side if herdr gains an offset.** kanhrd would request
+   successive windows as the reader scrolls up, which is a different
+   interaction from one depth setting and needs its own design.
+3. **Accept the ceiling and say so.** This is what shipped: the setting's
+   maximum is herdr's ceiling, and the terminal states when a buffer was
+   cut. The reader at least stops mistaking a truncated buffer for a short
+   session.
+
+Whatever is chosen, the ceiling is tied to a herdr version. Record the
+version alongside it so a herdr that lifts the cap does not leave kanhrd
+silently pinned to 1000.
+
+**Verification/acceptance criteria**
+
+- An agent report longer than 1000 lines can be read from its start in the
+  kanhrd terminal view.
+- The depth setting's maximum reflects what the connected herdr will
+  actually serve, rather than a hardcoded constant.
+- A truncated buffer continues to say so; absent beats wrong, and a
+  truncation that looks like a short session is wrong.
