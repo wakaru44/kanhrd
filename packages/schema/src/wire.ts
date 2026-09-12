@@ -160,6 +160,12 @@ export interface BridgeMethodParams {
     format?: ReadFormat;
     /** Forwarded to every poll's `pane.read`. herdr 0.8.2 serves at most 1000. */
     lines?: number;
+    /**
+     * Opt in to line-delta `pane.output` frames — see `PaneOutputDelta`.
+     * Omitted, every frame carries the full snapshot. It never changes what
+     * is polled, so it never splits a shared poll loop.
+     */
+    delta?: boolean;
   };
   'pane.unsubscribe_output': { subscription_id: string };
   'pane.send_keys': { pane_id: string; keys: string[] };
@@ -367,6 +373,28 @@ export interface BridgeMethodResult {
  * Per-event `payload`, keyed the same way as `EventKind`. Tier-1's three
  * events are unchanged.
  */
+/**
+ * A line-delta `pane.output` frame, sent only to a subscription that passed
+ * `delta: true`. The frame's `content` is the new tail, and the snapshot is
+ * exactly
+ *
+ * ```ts
+ * previous.slice(drop, drop + keep) + content // and its length === length
+ * ```
+ *
+ * where `previous` is the snapshot this subscription's previous
+ * `pane.output` described. `drop` and `keep` fall on line boundaries. The
+ * bridge verifies the reconstruction before sending, sends a subscription's
+ * first frame in full, and sends any frame a delta would not shrink in full.
+ * A client whose rebuilt length is not `length` has a bug on one side or the
+ * other and should re-read the pane rather than paint.
+ */
+export interface PaneOutputDelta {
+  drop: number;
+  keep: number;
+  length: number;
+}
+
 export interface BridgeEventPayload {
   'pane.created': { pane: Pane };
   'pane.closed': { id: string; host: string; workspace: { id: string } };
@@ -401,6 +429,10 @@ export interface BridgeEventPayload {
    * WCAG 2.3.1 treats as a seizure risk. A snapshot that merely extends the
    * previous one should be written as its suffix alone (see the
    * `terminal-scrollback` capability).
+   *
+   * On a subscription that passed `delta: true`, a frame may carry `delta`
+   * instead, and then `content` is NOT the snapshot — see `PaneOutputDelta`.
+   * Rebuild the snapshot first; everything above applies to the rebuilt one.
    */
   'pane.output': {
     subscription_id: string;
@@ -409,6 +441,8 @@ export interface BridgeEventPayload {
     content: string;
     format: ReadFormat;
     truncated: boolean;
+    /** Present only on a `delta: true` subscription's non-first frames; see `PaneOutputDelta`. */
+    delta?: PaneOutputDelta;
   };
   /**
    * OPTIONAL. Announces a graphics-overlay frame on a JSON control frame;

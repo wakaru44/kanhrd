@@ -9,21 +9,21 @@
 
 ## 2. Wire
 
-- [ ] 2.1 `pane.subscribe_output` gains `delta?: boolean`; `pane.output`
+- [x] 2.1 `pane.subscribe_output` gains `delta?: boolean`; `pane.output`
       gains `delta?: { drop; keep; length }`, documented in
       `packages/schema/src/wire.ts`.
 
 ## 3. Bridge
 
-- [ ] 3.1 A pure line-delta helper with unit tests: appends, a sliding
+- [x] 3.1 A pure line-delta helper with unit tests: appends, a sliding
       window at the depth, a bottom-region redraw, repeated identical rows,
       a snapshot sharing nothing, an empty previous, and a delta no smaller
       than the full frame (returns none). Every returned delta rebuilds the
       next snapshot exactly.
-- [ ] 3.2 Poll loops keyed by host, pane, `source`, `format`, `lines`.
-- [ ] 3.3 Per-subscriber `primed`; a delta against the loop's last snapshot
+- [x] 3.2 Poll loops keyed by host, pane, `source`, `format`, `lines`.
+- [x] 3.3 Per-subscriber `primed`; a delta against the loop's last snapshot
       only for a primed subscriber that asked for one; full otherwise.
-- [ ] 3.4 Poller tests: a subscriber without `delta` never gets one; the
+- [x] 3.4 Poller tests: a subscriber without `delta` never gets one; the
       first frame is full; a late joiner gets a full frame then deltas; two
       depths on one pane run two loops.
 
