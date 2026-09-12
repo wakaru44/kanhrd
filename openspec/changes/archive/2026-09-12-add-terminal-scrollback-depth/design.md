@@ -108,6 +108,14 @@ in this design depends on the choice.
 The dim rendering uses the terminal palette's own foreground, not a design
 token: xterm does not read CSS custom properties.
 
+A known consequence, accepted: when truncation first appears to a reader
+who has scrolled up, the redraw that adds the line restores the viewport's
+absolute offset (`PaneTerminal.paint()`), and every row of the snapshot now
+sits one row lower — so their view shifts by one row. The same one-row
+shift happens the other way when the line is dropped. It is not a bug in
+the scroll restore; the restore is absolute, and the buffer gained or lost
+a row above the reader.
+
 ## Defaults and steps
 
 Steps: 250, 500, 1000; default 250. The maximum is
