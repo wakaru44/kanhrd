@@ -52,6 +52,28 @@ reload.
 - **WHEN** the operator opens the depth control
 - **THEN** no step exceeds the ceiling herdr serves
 
+### Requirement: Settings exposes the depth beside text size
+
+The Settings screen's `terminal` section SHALL contain a labelled
+scrollback row beside the text-size row, built the same way: one
+`.segment` per step inside a labelled `.segmented` group, each exposing its
+selection through `aria-pressed`, meeting the same 40 × 40 coarse-pointer
+minimum and stacking below 900px like every other `.setting-row`.
+
+A note under the row SHALL state herdr's ceiling, with the number filled
+in from the constant that caps the steps rather than written into the copy.
+The "clear local data" preview list SHALL name the scrollback depth.
+
+#### Scenario: Choosing a depth
+
+- **WHEN** the operator taps the `1000` segment
+- **THEN** that segment reports `aria-pressed="true"`, the text-size selection is unchanged, and the depth becomes 1000
+
+#### Scenario: The note follows the ceiling
+
+- **WHEN** the Settings screen renders
+- **THEN** the note under the scrollback row carries the ceiling constant's value, not a placeholder
+
 ### Requirement: A truncated buffer says it is truncated
 
 When herdr reports `truncated: true` for a pane's content — on the initial
