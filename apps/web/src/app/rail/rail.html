@@ -97,7 +97,7 @@
                 <button type="button" class="row-nav" (click)="onTabClick(tab)">
                   <span class="tab-name">{{ tab.name }}</span>
                 </button>
-                @if (tabCrudAvailable(tab.host)) {
+                @if (tabRowMenuAvailable(tab.host)) {
                   <div class="row-menu-wrap" (focusout)="onMenuFocusOut($event)">
                     <button
                       type="button"
@@ -111,22 +111,40 @@
                     </button>
                     @if (isMenuOpen(rowKey('tab', tab.host, tab.id))) {
                       <div class="row-menu" role="menu" (keydown)="onMenuKeydown($event)">
-                        <button
-                          type="button"
-                          role="menuitem"
-                          class="row-menu-item"
-                          (click)="startRenameTab(tab, $event)"
-                        >
-                          {{ railCopy.renameTab }}
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          class="row-menu-item danger"
-                          (click)="requestCloseTab(tab, $event)"
-                        >
-                          {{ copy.confirm.closeTabAction }}
-                        </button>
+                        <!--
+                          The row is the destination: opening a card here
+                          asks for nothing, because there is nothing left to
+                          ask. Same word the board's `+` menu uses for the
+                          same action.
+                        -->
+                        @if (paneCreateAvailable(tab.host)) {
+                          <button
+                            type="button"
+                            role="menuitem"
+                            class="row-menu-item new-pane"
+                            (click)="newPaneInTab(tab, $event)"
+                          >
+                            {{ copy.create.pane }}
+                          </button>
+                        }
+                        @if (tabCrudAvailable(tab.host)) {
+                          <button
+                            type="button"
+                            role="menuitem"
+                            class="row-menu-item"
+                            (click)="startRenameTab(tab, $event)"
+                          >
+                            {{ railCopy.renameTab }}
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            class="row-menu-item danger"
+                            (click)="requestCloseTab(tab, $event)"
+                          >
+                            {{ copy.confirm.closeTabAction }}
+                          </button>
+                        }
                       </div>
                     }
                   </div>

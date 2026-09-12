@@ -5,16 +5,21 @@ phases 2 and 3 are the feature the operator asked for.
 
 ## 1. Creation lands where the operator is looking
 
-- [ ] 1.1 `Board.newPane()` sends the current scope's `workspace_id`, and
+- [x] 1.1 `Board.newPane()` sends the current scope's `workspace_id`, and
       `target_pane_id` when a card is in view, instead of `{ direction }`
       alone.
-- [ ] 1.2 `newTab()` sends the current scope's `workspace_id`.
+- [x] 1.2 `newTab()` sends the current scope's `workspace_id`.
 - [ ] 1.3 With no scope, the `+` menu asks for a destination rather than
-      falling through to `primaryHost()`'s first-in-config-order host.
-- [ ] 1.4 A tab row's overflow menu in the rail gains `new card in this
+      falling through to the first-in-config-order host. Ships WITH the
+      picker (2.1): there is nothing to ask with until it exists. The
+      fallback is now `unscopedHost()`, named for what it is and used
+      nowhere else.
+- [x] 1.4 A tab row's overflow menu in the rail gains `new card in this
       tab`, which needs no picker: the row IS the destination.
-- [ ] 1.5 Specs: a scoped board creates in that workspace; an unscoped
-      board with two capable hosts does not silently pick one.
+- [x] 1.5 Specs: a scoped board creates in that workspace (and on that
+      workspace's host, over first-in-config-order). The second half —
+      an unscoped board with two capable hosts does not silently pick
+      one — belongs to 1.3 and ships with it.
 
 ## 2. The shared destination picker
 

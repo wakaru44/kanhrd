@@ -1771,3 +1771,190 @@ describe('Board: scroller count at the 600-pane fixture', () => {
     expect(scrollers()).toBe(6);
   });
 });
+
+/**
+ * Creation carries a destination (openspec `add-pane-destinations`, phase 1).
+ *
+ * The bug this pins: `pane.split` and `tab.create` resolve an omitted
+ * destination against whatever herdr has FOCUSED on the host, so a board
+ * scoped to one workspace could put the new card in another one — and the
+ * host was the first in configuration order regardless of what the operator
+ * was looking at. Two hosts are configured here, `alpha` first, so a request
+ * landing on `local` can only be the scope's doing.
+ */
+describe('Board: creation lands where the operator is looking', () => {
+  let ws: FakeWsClient;
+  let fixture: ComponentFixture<Board>;
+  let httpMock: HttpTestingController;
+  let paramMap$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+
+  const TIER3 = {
+    tier: 3,
+    terminal: true,
+    paneResize: false,
+    paneGraphics: false,
+    outputPollIntervalMs: 150,
+    paneCreate: true,
+    paneClose: true,
+    paneMove: true,
+    paneRename: true,
+    tabCrud: true,
+    workspaceCrud: true,
+  };
+
+  /** The `pane.split` / `tab.create` params of the last such request. */
+  function lastParams(method: string): Record<string, unknown> | null {
+    const calls = ws.request.calls
+      .allArgs()
+      .filter((args: unknown[]) => args[1] === method) as unknown[][];
+    const last = calls[calls.length - 1];
+    return last ? ({ host: last[0], ...(last[2] as object) } as Record<string, unknown>) : null;
+  }
+
+  async function clickCreate(label: string): Promise<void> {
+    const el = fixture.nativeElement as HTMLElement;
+    el.querySelector<HTMLButtonElement>('.plus-button')?.click();
+    fixture.detectChanges();
+    Array.from(el.querySelectorAll<HTMLButtonElement>('.plus-menu button'))
+      .find((btn) => btn.textContent?.trim() === label)
+      ?.click();
+    fixture.detectChanges();
+    await settle(fixture);
+  }
+
+  beforeEach(async () => {
+    ws = new FakeWsClient();
+    paramMap$ = new BehaviorSubject(convertToParamMap({}));
+
+    ws.request.and.callFake((host: string, method: string) => {
+      if (method === 'pane.list') {
+        if (host !== 'local') return Promise.resolve({ panes: [] });
+        return Promise.resolve({
+          panes: [
+            {
+              id: 'w6:p1',
+              host: 'local',
+              workspace: { id: 'w6', name: 'kanhrd' },
+              tab: { id: 'w6:t1', name: 'one' },
+              agent_status: 'idle',
+            },
+            {
+              id: 'w9:p1',
+              host: 'local',
+              workspace: { id: 'w9', name: 'herdr' },
+              tab: { id: 'w9:t1', name: 'one' },
+              agent_status: 'idle',
+            },
+          ],
+        });
+      }
+      if (method === 'events.subscribe') return Promise.resolve({ subscription_id: `s-${host}` });
+      if (method === 'bridge.capabilities') return Promise.resolve(TIER3);
+      if (method === 'pane.split') {
+        return Promise.resolve({
+          pane: {
+            id: 'p-new',
+            host,
+            workspace: { id: 'w9', name: 'herdr' },
+            tab: { id: 'w9:t1', name: 'one' },
+            agent_status: 'unknown',
+          },
+        });
+      }
+      if (method === 'tab.create') {
+        return Promise.resolve({
+          tab: { id: 't-new', host, workspace: { id: 'w9' }, name: '2' },
+          pane: {
+            id: 'p-new',
+            host,
+            workspace: { id: 'w9', name: 'herdr' },
+            tab: { id: 't-new', name: '2' },
+            agent_status: 'unknown',
+          },
+        });
+      }
+      return Promise.reject(new Error(`unexpected method ${method}`));
+    });
+
+    await TestBed.configureTestingModule({
+      imports: [Board],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: WsClient, useValue: ws },
+        // The real router: these cards are tier-3 and so render `routerLink`,
+        // which needs `createUrlTree`. Only `ActivatedRoute` is faked, because
+        // the scope is what this suite drives.
+        { provide: ActivatedRoute, useValue: { paramMap: paramMap$.asObservable() } },
+      ],
+    }).compileComponents();
+    httpMock = TestBed.inject(HttpTestingController);
+
+    fixture = TestBed.createComponent(Board);
+    fixture.detectChanges();
+    await settle(fixture);
+    for (const req of httpMock.match('/api/hosts')) {
+      if (!req.cancelled) {
+        req.flush({
+          hosts: [
+            { name: 'alpha', connected: true },
+            { name: 'local', connected: true },
+          ],
+        });
+      }
+    }
+    await settle(fixture);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('a workspace-scoped board splits into THAT workspace, on THAT workspace’s host', async () => {
+    paramMap$.next(convertToParamMap({ workspaceId: 'w9' }));
+    await settle(fixture);
+
+    await clickCreate(COPY.create.pane);
+
+    const params = lastParams('pane.split');
+    expect(params).withContext('the + menu should have sent pane.split').toBeTruthy();
+    expect(params?.['workspace_id'])
+      .withContext('pane.split must carry the scoped workspace, not herdr’s focus')
+      .toBe('w9');
+    expect(params?.['host'])
+      .withContext('the scope’s host wins over first-in-configuration-order (alpha)')
+      .toBe('local');
+  });
+
+  it('a tab-scoped board names a pane in that tab, so the split cannot land in the focused tab', async () => {
+    paramMap$.next(convertToParamMap({ workspaceId: 'w6', tabId: 'w6:t1' }));
+    await settle(fixture);
+
+    await clickCreate(COPY.create.pane);
+
+    const params = lastParams('pane.split');
+    expect(params?.['workspace_id']).toBe('w6');
+    expect(params?.['target_pane_id'])
+      .withContext('workspace_id alone still leaves herdr to pick the tab')
+      .toBe('w6:p1');
+  });
+
+  it('a scoped board creates its tab in the scoped workspace', async () => {
+    paramMap$.next(convertToParamMap({ workspaceId: 'w9' }));
+    await settle(fixture);
+
+    await clickCreate(COPY.create.tab);
+
+    expect(lastParams('tab.create')?.['workspace_id']).toBe('w9');
+  });
+
+  it('an unscoped board sends no destination — and that is the gap the picker closes', async () => {
+    await clickCreate(COPY.create.pane);
+
+    const params = lastParams('pane.split');
+    expect(params?.['workspace_id'])
+      .withContext('nothing to scope to: task 1.3 replaces this fallback with a prompt')
+      .toBeUndefined();
+    expect(params?.['target_pane_id']).toBeUndefined();
+  });
+});

@@ -15,7 +15,7 @@ import { CdkDrag, CdkDropList, CdkDropListGroup, type CdkDragDrop } from '@angul
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
-import type { AgentStatus, Pane } from '@kanhrd/schema';
+import type { AgentStatus, BridgeCapabilities, Pane } from '@kanhrd/schema';
 import {
   LucidePlus,
   LucideRefreshCw,
@@ -23,7 +23,7 @@ import {
   LucideUnplug,
   LucideX,
 } from '../shared/icons';
-import { COPY } from '../shared/copy';
+import { COPY, fill } from '../shared/copy';
 import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from '../state/panes.store';
 import { SettingsService } from '../state/settings.service';
 import {
@@ -559,14 +559,32 @@ export class Board implements OnDestroy {
 
   // --- header "+" menu: new pane / new tab / new workspace -------------
   //
-  // Tier-3 lifecycle create actions need a host to act on; the brief scopes
-  // this to lifecycle CRUD, not a full multi-host picker UI, so this picks
-  // the first host that advertises any tier-3 create capability and acts on
-  // it. Fine for the common single-host case; a per-host submenu is a
-  // natural follow-up once multi-host lifecycle create comes up in
-  // practice.
+  // Every creation carries a destination. `pane.split` and `tab.create`
+  // both resolve an omitted destination against whatever herdr has FOCUSED
+  // on that host, which is a place the operator is not looking at and has
+  // no way to see from here — so the board sends the scope the URL already
+  // names (the rail is the navigator; the scope is in the route).
+  //
+  // The host is part of that destination, and it is deliberately NOT the
+  // capability gate. `createHost()` answers "where does this go"; the three
+  // availability signals answer "can that host do it", and each is a plain
+  // capability read on whatever `createHost()` returned. They used to be
+  // the same question, which is how first-in-config-order quietly became
+  // both the default destination and the reason the menu appeared at all.
+  //
+  // Host identity is read per-resource — a workspace carries its own
+  // `host`, so nothing here assumes the host list is fixed at startup or
+  // that a host is a local socket. `unscopedHost()` is the one place that
+  // still walks the configured order, and it is what the destination
+  // picker replaces (tasks 1.3 / 2.1).
 
-  private readonly primaryHost = computed<string | null>(() => {
+  /**
+   * The fallback destination host with no scope on the board: the first
+   * configured host that can create anything. A guess, and the only one
+   * left — the picker in phase 2 asks instead when more than one host
+   * qualifies.
+   */
+  private readonly unscopedHost = computed<string | null>(() => {
     const capabilities = this.capabilities();
     for (const host of this.store.hostsSignal()) {
       const caps = capabilities.get(host.name);
@@ -577,15 +595,43 @@ export class Board implements OnDestroy {
     return null;
   });
 
+  /** The host the `+` menu acts on: the scoped workspace's own, else the fallback. */
+  private readonly createHost = computed<string | null>(
+    () => this.resolvedWorkspace()?.host ?? this.unscopedHost()
+  );
+
+  /**
+   * A pane inside the scoped tab, so `pane.split` lands in THAT tab rather
+   * than the workspace's focused one — `workspace_id` alone only narrows the
+   * destination to the workspace. `null` when the board is not tab-scoped,
+   * which is the case where the workspace id is the whole destination.
+   */
+  private readonly scopedTargetPane = computed<Pane | null>(() => {
+    const tab = this.resolvedTab();
+    if (!tab) {
+      return null;
+    }
+    for (const pane of this.store.panesSignal().values()) {
+      if (pane.host === tab.host && pane.tab.id === tab.id) {
+        return pane;
+      }
+    }
+    return null;
+  });
+
+  private capabilitiesForCreateHost(): BridgeCapabilities | undefined {
+    const host = this.createHost();
+    return host ? this.capabilities().get(host) : undefined;
+  }
+
   protected readonly newPaneAvailable = computed(
-    () => !!this.primaryHost() && this.capabilities().get(this.primaryHost()!)?.paneCreate === true
+    () => this.capabilitiesForCreateHost()?.paneCreate === true
   );
   protected readonly newTabAvailable = computed(
-    () => !!this.primaryHost() && this.capabilities().get(this.primaryHost()!)?.tabCrud === true
+    () => this.capabilitiesForCreateHost()?.tabCrud === true
   );
   protected readonly newWorkspaceAvailable = computed(
-    () =>
-      !!this.primaryHost() && this.capabilities().get(this.primaryHost()!)?.workspaceCrud === true
+    () => this.capabilitiesForCreateHost()?.workspaceCrud === true
   );
   protected readonly plusMenuAvailable = computed(
     () => this.newPaneAvailable() || this.newTabAvailable() || this.newWorkspaceAvailable()
@@ -599,42 +645,52 @@ export class Board implements OnDestroy {
 
   protected async newPane(): Promise<void> {
     this.layout.closePlusMenu();
-    const host = this.primaryHost();
+    const host = this.createHost();
     if (!host) {
       return;
     }
+    const workspace = this.resolvedWorkspace();
+    const target = this.scopedTargetPane();
     try {
-      await this.store.splitPane(host, { direction: 'right' });
+      await this.store.splitPane(host, {
+        direction: 'right',
+        ...(workspace ? { workspace_id: workspace.id } : {}),
+        ...(target ? { target_pane_id: target.id } : {}),
+      });
     } catch (err) {
       this.toast.push({
         level: 'error',
-        message: `Could not create a new pane: ${describeError(err)}`,
+        message: fill(COPY.toast.createPaneFailed, { reason: describeError(err) }),
       });
     }
   }
 
   protected async newTab(): Promise<void> {
     this.layout.closePlusMenu();
-    const host = this.primaryHost();
+    const host = this.createHost();
     if (!host) {
       return;
     }
+    const workspace = this.resolvedWorkspace();
     try {
-      const result = await this.store.createTab(host, {});
+      const result = await this.store.createTab(
+        host,
+        workspace ? { workspace_id: workspace.id } : {}
+      );
       if (result) {
         this.store.requestPendingRename('tab', host, result.tab.id);
       }
     } catch (err) {
       this.toast.push({
         level: 'error',
-        message: `Could not create a new tab: ${describeError(err)}`,
+        message: fill(COPY.toast.createTabFailed, { reason: describeError(err) }),
       });
     }
   }
 
   protected async newWorkspace(): Promise<void> {
     this.layout.closePlusMenu();
-    const host = this.primaryHost();
+    const host = this.createHost();
     if (!host) {
       return;
     }
@@ -646,7 +702,7 @@ export class Board implements OnDestroy {
     } catch (err) {
       this.toast.push({
         level: 'error',
-        message: `Could not create a new workspace: ${describeError(err)}`,
+        message: fill(COPY.toast.createWorkspaceFailed, { reason: describeError(err) }),
       });
     }
   }

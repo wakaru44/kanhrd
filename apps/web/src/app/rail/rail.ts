@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { KeyValuePipe } from '@angular/common';
 import { Router } from '@angular/router';
-import type { TabSummary, WorkspaceSummary } from '@kanhrd/schema';
+import type { Pane, TabSummary, WorkspaceSummary } from '@kanhrd/schema';
 import { LucideMoreHorizontal } from '../shared/icons';
 import { COPY, fill } from '../shared/copy';
 import { isWorkspaceGroupCloseRequiredError, paneKey, PanesStore } from '../state/panes.store';
@@ -94,6 +94,63 @@ export class Rail implements OnDestroy {
 
   protected tabCrudAvailable(host: string): boolean {
     return this.store.capabilitiesSignal().get(host)?.tabCrud === true;
+  }
+
+  protected paneCreateAvailable(host: string): boolean {
+    return this.store.capabilitiesSignal().get(host)?.paneCreate === true;
+  }
+
+  /**
+   * A tab row's menu carries two different capabilities now — renaming and
+   * closing the tab (`tabCrud`), and opening a card inside it
+   * (`paneCreate`) — so the menu itself is offered whenever EITHER holds.
+   * Gating the whole menu on `tabCrud` would have hidden the only
+   * destination-free way to open a card on a host that can split panes but
+   * not manage tabs.
+   */
+  protected tabRowMenuAvailable(host: string): boolean {
+    return this.tabCrudAvailable(host) || this.paneCreateAvailable(host);
+  }
+
+  /**
+   * Opens a card in the tab whose menu this is. No destination prompt: the
+   * row IS the destination. `workspace_id` narrows it to the workspace and
+   * `target_pane_id` — any pane already in this tab — narrows it the rest of
+   * the way, because herdr otherwise splits the workspace's FOCUSED tab,
+   * which is rarely the row that was clicked.
+   */
+  protected async newPaneInTab(tab: TabSummary, event: Event): Promise<void> {
+    event.stopPropagation();
+    this.closeMenu();
+    const target = this.firstPaneIn(tab);
+    try {
+      await this.store.splitPane(tab.host, {
+        direction: 'right',
+        workspace_id: tab.workspace.id,
+        ...(target ? { target_pane_id: target.id } : {}),
+      });
+    } catch (err) {
+      this.toast.push({
+        level: 'error',
+        message: fill(COPY.toast.createPaneFailed, {
+          reason: err instanceof Error ? err.message : String(err),
+        }),
+      });
+    }
+  }
+
+  /**
+   * Any pane of `tab`, or `null` for a tab the board has no pane for yet —
+   * in which case the workspace id is the whole destination and herdr
+   * resolves the tab itself.
+   */
+  private firstPaneIn(tab: TabSummary): Pane | null {
+    for (const pane of this.store.panesSignal().values()) {
+      if (pane.host === tab.host && pane.tab.id === tab.id) {
+        return pane;
+      }
+    }
+    return null;
   }
 
   // --- row overflow menu (replaces the removed hover affordances) ---------
