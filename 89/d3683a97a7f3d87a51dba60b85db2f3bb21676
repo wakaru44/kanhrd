@@ -1,0 +1,30 @@
+openspec/changes/add-delta-pane-output/proposal.md
+  s_9f6e9e632154c4::t_f5b340395cd4de 3-41,76-80
+  s_9f6e9e632154c4::t_80d47e208f8b91 1-2,42-75,81-114
+  s_9f6e9e632154c4::t_b6fdd1104ea230 115-119
+openspec/changes/add-delta-pane-output/README.md
+  s_9f6e9e632154c4::t_1aa5c10436909e 1-3
+openspec/changes/add-delta-pane-output/tasks.md
+  s_9f6e9e632154c4::t_c8598f0573b163 1-46
+openspec/changes/add-delta-pane-output/specs/tier-2-terminal/spec.md
+  s_9f6e9e632154c4::t_b6fdd1104ea230 1-38,43-102
+  s_9f6e9e632154c4::t_5caeb34c809632 39-42
+openspec/changes/add-delta-pane-output/design.md
+  s_9f6e9e632154c4::t_94e3487f69f1f7 1-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "89d3683a97a7f3d87a51dba60b85db2f3bb21676",
+  "prompts": {},
+  "sessions": {
+    "s_9f6e9e632154c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94df2e1b-4541-4873-b074-5ea96fce8f02",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
