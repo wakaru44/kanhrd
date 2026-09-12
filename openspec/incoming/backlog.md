@@ -225,3 +225,81 @@ consequences, not as a feature:
   not weakened to make it work.
 - Any key-file listing is unreachable from a non-loopback bind, and the
   threat model says so.
+
+---
+
+## The web terminal's cursor is not where you are typing
+
+**Problem**
+
+In the pane-detail terminal the caret does not sit at the insertion point.
+A cursor indicator is stuck at the bottom of the rendered content while
+the actual editing position is somewhere else, so editing in the middle of
+a line is done blind.
+
+**Reproduction/current evidence**
+
+Open any pane, type a line, then move back into it (arrow keys, `Ctrl+A`,
+`Alt+B`) and edit. The visible caret does not follow.
+
+The cause is structural rather than a styling slip, and it follows from
+ADR-0004:
+
+- Nothing on the wire carries a cursor position. `HerdrPaneReadResult`
+  (`packages/schema/src/herdr.ts`) is `{ pane_id, workspace_id, tab_id,
+  source, format, text, revision, truncated }` — no row, no column — and
+  `grep -i cursor` over `packages/schema/src/**` returns nothing at all.
+- kanhrd paints rendered SNAPSHOTS, not a PTY byte stream.
+  `PaneTerminal.paint()` writes `RIS + content` (full reset, then the
+  whole snapshot) or appends the new suffix. xterm therefore leaves its
+  caret wherever the written text ended — the end of the snapshot, i.e.
+  the bottom — which is exactly the reported symptom.
+- Input does not move it either: `term.onData` relays to
+  `pane.send_text` / `pane.send_keys`, herdr applies the keystroke, and
+  the next snapshot repaints. The local caret is decoration; it has never
+  reflected herdr's cursor.
+
+ADR-0004 names this indirectly: re-deriving "cursor position, scroll
+region, and wrapped-line reflow" is listed as work the project chose NOT
+to do bridge-side, because `pane.read` returns already-rendered grid
+state.
+
+**Expected behavior**
+
+The caret marks the insertion point, so mid-line editing is possible
+without counting characters. Failing that, the terminal does not show a
+caret that is lying about where typing goes.
+
+**Investigation/fix notes**
+
+Three directions, cheapest first, and the first one is a question for
+herdr rather than a change here:
+
+1. **Ask herdr for the cursor.** herdr parses the grid with libghostty-vt
+   and therefore knows the cursor position; the question is whether its
+   JSON API exposes it on `pane.read` / the output subscription, or could.
+   If it does, this is a schema mirror update plus
+   `term.write(..., () => moveCursor(row, col))` and nothing more. Check
+   the herdr source before designing anything else.
+2. **Hide the caret while it cannot be truthful.** xterm can render no
+   cursor. A caret in the wrong place is worse than no caret — "absent
+   beats wrong" (`docs/UX-GUIDELINES.md`). This is a small, honest
+   stopgap that does not block option 1, and it would remove the
+   misleading indicator at the bottom.
+3. **Reconstruct the position client-side** from the snapshot. Rejected
+   for the bridge in ADR-0004 for good reasons, and the same reasons apply
+   in the browser: it duplicates libghostty-vt's job fragilely, and it
+   cannot see a cursor that a rendered snapshot does not encode.
+
+Option 2 changes what the operator sees today; option 1 is the real fix.
+Neither is chosen here.
+
+**Verification/acceptance criteria**
+
+- Typing and then moving within the line keeps the caret at the insertion
+  point, verified against a real shell and against an agent TUI in a pane.
+- If the caret cannot be placed truthfully, no caret is rendered, and no
+  indicator sits at the bottom implying one.
+- The snapshot repaint path keeps its current behaviour: scrollback
+  survives a repaint, and a reader scrolled up is not yanked to the tail
+  (the `terminal-scrollback` capability).
