@@ -35,8 +35,8 @@ function deferred<T>(): Deferred<T> {
   return { promise, resolve, reject };
 }
 
-function readResult(content: string, revision = 1) {
-  return { content, revision, truncated: false, format: 'ansi', source: 'recent' };
+function readResult(content: string, revision = 1, truncated = false) {
+  return { content, revision, truncated, format: 'ansi', source: 'recent' };
 }
 
 class FakeWsClient {
@@ -54,7 +54,11 @@ class FakeWsClient {
   });
 }
 
-function paneOutput(content: string, subscriptionId = 'sub-1'): WsEvent<'pane.output'> {
+function paneOutput(
+  content: string,
+  subscriptionId = 'sub-1',
+  truncated = false
+): WsEvent<'pane.output'> {
   return {
     host: 'laptop',
     event: 'pane.output',
@@ -64,7 +68,7 @@ function paneOutput(content: string, subscriptionId = 'sub-1'): WsEvent<'pane.ou
       revision: 2,
       content,
       format: 'ansi',
-      truncated: false,
+      truncated,
     },
   };
 }
@@ -81,6 +85,7 @@ describe('PaneTerminal', () => {
   let ws: FakeWsClient;
   let theme: WritableSignal<ITheme>;
   let fontSize: WritableSignal<number>;
+  let scrollback: WritableSignal<number>;
   let toast: { push: jasmine.Spy };
   let term: PaneTerminal;
   let el: HTMLElement;
@@ -92,8 +97,8 @@ describe('PaneTerminal', () => {
   }
 
   /** Feeds a `pane.output` frame in on the fake socket. */
-  function emitOutput(content: string, subscriptionId = 'sub-1'): void {
-    ws.events$.next(paneOutput(content, subscriptionId));
+  function emitOutput(content: string, subscriptionId = 'sub-1', truncated = false): void {
+    ws.events$.next(paneOutput(content, subscriptionId, truncated));
   }
 
   /**
@@ -117,6 +122,7 @@ describe('PaneTerminal', () => {
     ws = new FakeWsClient();
     theme = signal<ITheme>(THEME_A);
     fontSize = signal(13);
+    scrollback = signal(250);
     toast = { push: jasmine.createSpy('push') };
     openSpy = spyOn(Terminal.prototype, 'open').and.callThrough();
 
@@ -139,6 +145,7 @@ describe('PaneTerminal', () => {
       ws: ws as unknown as PaneTerminalDeps['ws'],
       terminalTheme: { theme },
       terminalFontSize: { size: fontSize },
+      terminalScrollback: { lines: scrollback },
       toast,
     };
     term = new PaneTerminal(deps);
@@ -156,18 +163,20 @@ describe('PaneTerminal', () => {
 
   // --- load: read then subscribe, both at `source: "recent"` --------------
 
-  it('reads then subscribes, both asking for the same source', async () => {
+  it('reads then subscribes, both asking for the same source and depth', async () => {
     await mounted();
 
     expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.read', {
       pane_id: 'pane-1',
       format: 'ansi',
       source: 'recent',
+      lines: 250,
     });
     expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.subscribe_output', {
       pane_id: 'pane-1',
       source: 'recent',
       format: 'ansi',
+      lines: 250,
     });
 
     const methods = ws.request.calls.allArgs().map(([, method]) => method);
@@ -179,6 +188,11 @@ describe('PaneTerminal', () => {
     const subscribe = ws.request.calls.allArgs().find(([, m]) => m === 'pane.subscribe_output');
     expect((subscribe?.[2] as { source: string }).source).toBe(
       (read?.[2] as { source: string }).source
+    );
+    // Depth likewise: herdr's default is 80 lines, so a stream that named
+    // none would cut this 250-line first paint back to 80 on its first push.
+    expect((subscribe?.[2] as { lines: number }).lines).toBe(
+      (read?.[2] as { lines: number }).lines
     );
   });
 
@@ -196,6 +210,7 @@ describe('PaneTerminal', () => {
       pane_id: 'pane-2',
       format: 'ansi',
       source: 'recent',
+      lines: 250,
     });
   });
 
@@ -671,6 +686,166 @@ describe('PaneTerminal', () => {
 
     // CONTRACT-TIER2.md section 6: resizing is client-side only.
     expect(ws.request).not.toHaveBeenCalled();
+  });
+
+  // --- scrollback depth -----------------------------------------------------
+
+  it('re-reads and re-subscribes at a new depth, tearing the old stream down first', async () => {
+    const t = await mounted();
+    ws.request.calls.reset();
+
+    scrollback.set(1000);
+    t.applyScrollback(1000);
+    await flushMicrotasks();
+
+    const calls = ws.request.calls.allArgs().map(([, method, params]) => [method, params]);
+    expect(calls).toEqual([
+      ['pane.unsubscribe_output', { subscription_id: 'sub-1' }],
+      ['pane.read', { pane_id: 'pane-1', format: 'ansi', source: 'recent', lines: 1000 }],
+      [
+        'pane.subscribe_output',
+        { pane_id: 'pane-1', source: 'recent', format: 'ansi', lines: 1000 },
+      ],
+    ]);
+  });
+
+  it('sends nothing when the depth applied is the one already loaded, or before any load', async () => {
+    const early = build();
+    early.attach(el);
+    early.applyScrollback(1000);
+    expect(ws.request).not.toHaveBeenCalled();
+    early.dispose();
+
+    const t = await mounted();
+    ws.request.calls.reset();
+    t.applyScrollback(250);
+    await flushMicrotasks();
+    expect(ws.request).not.toHaveBeenCalled();
+  });
+
+  // --- truncation: a state at the head of the buffer, never a toast --------
+
+  const NOTICE_250 =
+    '\x1b[2mherdr sent the last 250 lines. history above this line was not sent. raise scrollback in settings.\x1b[0m\r\n';
+  const NOTICE_1000 =
+    '\x1b[2mherdr sent the last 1000 lines. history above this line was not sent.\x1b[0m\r\n';
+
+  /** Makes the next `pane.read` answer `truncated: true`. */
+  function truncatedRead(content = 'hello'): void {
+    ws.request.and.callFake((_host: string, method: string) => {
+      switch (method) {
+        case 'pane.read':
+          return Promise.resolve(readResult(content, 1, true));
+        case 'pane.subscribe_output':
+          return Promise.resolve({ subscription_id: 'sub-1' });
+        default:
+          return Promise.resolve({});
+      }
+    });
+  }
+
+  it('heads a truncated first paint with one faint line naming herdr and the depth', async () => {
+    truncatedRead();
+    const writeSpy = spyOn(Terminal.prototype, 'write');
+    await mounted();
+
+    expect(writeSpy).toHaveBeenCalledWith(NOTICE_250 + 'hello');
+    expect(toast.push).not.toHaveBeenCalled();
+  });
+
+  it('says nothing about truncation when the whole history fit', async () => {
+    const writeSpy = spyOn(Terminal.prototype, 'write');
+    await mounted();
+
+    expect(writeSpy).toHaveBeenCalledWith('hello');
+    emitOutput('a redraw');
+    expect(writeSpy.calls.mostRecent().args[0]).toBe('\x1bca redraw');
+  });
+
+  it("drops the raise hint at herdr's ceiling, where no setting brings history back", async () => {
+    scrollback.set(1000);
+    truncatedRead();
+    const writeSpy = spyOn(Terminal.prototype, 'write');
+    await mounted();
+
+    expect(writeSpy).toHaveBeenCalledWith(NOTICE_1000 + 'hello');
+  });
+
+  it('re-writes the line on every full repaint while the snapshot is still truncated', async () => {
+    truncatedRead();
+    const writeSpy = spyOn(Terminal.prototype, 'write');
+    await mounted();
+    writeSpy.calls.reset();
+
+    // RIS wipes the whole buffer, the line included, so each redraw must
+    // carry it again.
+    emitOutput('a completely different screen', 'sub-1', true);
+    emitOutput('and another one', 'sub-1', true);
+
+    expect(writeSpy.calls.allArgs().map((args) => args[0] as string)).toEqual([
+      '\x1bc' + NOTICE_250 + 'a completely different screen',
+      '\x1bc' + NOTICE_250 + 'and another one',
+    ]);
+    expect(toast.push).not.toHaveBeenCalled();
+  });
+
+  it('still appends a grown snapshot when truncation has not changed, leaving the line in place', async () => {
+    truncatedRead();
+    const writeSpy = spyOn(Terminal.prototype, 'write');
+    await mounted();
+    writeSpy.calls.reset();
+
+    emitOutput('hello world', 'sub-1', true);
+
+    expect(writeSpy.calls.allArgs().map((args) => args[0])).toEqual([' world']);
+  });
+
+  it('repaints without the line once a complete snapshot arrives, even one that only grew', async () => {
+    truncatedRead();
+    const writeSpy = spyOn(Terminal.prototype, 'write');
+    await mounted();
+    writeSpy.calls.reset();
+
+    // An append would leave the line on screen; losing it is a redraw.
+    emitOutput('hello world', 'sub-1', false);
+
+    expect(writeSpy.calls.mostRecent().args[0]).toBe('\x1bchello world');
+  });
+
+  it('adds the line with a redraw when a live snapshot first comes back truncated', async () => {
+    const writeSpy = spyOn(Terminal.prototype, 'write');
+    await mounted();
+    writeSpy.calls.reset();
+
+    emitOutput('hello world', 'sub-1', true);
+
+    expect(writeSpy.calls.mostRecent().args[0]).toBe('\x1bc' + NOTICE_250 + 'hello world');
+  });
+
+  it('leaves the line as the first row of the real buffer after a redraw', async () => {
+    truncatedRead('one\r\ntwo');
+    const t = await mounted();
+    emitOutput('three\r\nfour', 'sub-1', true);
+    await new Promise<void>((resolve) => liveTerm().write('', resolve));
+
+    // Logical lines: the notice is wider than this 600px box, so xterm wraps
+    // it across rows — rejoin wrapped rows before reading.
+    const buffer = liveTerm().buffer.active;
+    const rows: string[] = [];
+    for (let i = 0; i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      const text = line?.translateToString(true) ?? '';
+      if (line?.isWrapped && rows.length > 0) {
+        rows[rows.length - 1] += text;
+      } else {
+        rows.push(text);
+      }
+    }
+    expect(rows[0]).toBe(
+      'herdr sent the last 250 lines. history above this line was not sent. raise scrollback in settings.'
+    );
+    expect(rows.slice(1, 3)).toEqual(['three', 'four']);
+    expect(t.state()).toBe('live');
   });
 
   // --- touch: the terminal owns the vertical axis --------------------------

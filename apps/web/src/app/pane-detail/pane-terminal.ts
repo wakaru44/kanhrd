@@ -7,6 +7,10 @@ import type { BridgeEventPayload, WsEvent } from '@kanhrd/schema';
 import { WsClient } from '../state/ws-client';
 import { TerminalThemeService } from '../state/terminal-theme.service';
 import { TerminalFontSizeService } from '../state/terminal-font-size.service';
+import {
+  HERDR_READ_LINE_CEILING,
+  TerminalScrollbackService,
+} from '../state/terminal-scrollback.service';
 import { ToastService } from '../state/toast.service';
 import { COPY, fill } from '../shared/copy';
 import { classifyInput } from './key-mapping';
@@ -26,6 +30,14 @@ const XTERM_FONT_FAMILY =
  * with the frame that replaces the screen. See `paint()`.
  */
 const RIS = '\x1bc';
+
+/** SGR faint on, and a full SGR reset — the truncation line's only styling. */
+const SGR_DIM = '\x1b[2m';
+const SGR_RESET = '\x1b[0m';
+
+/** The one `source`/`format` pane detail reads at. `lines` joins them per load. */
+const READ_SOURCE = 'recent';
+const READ_FORMAT = 'ansi';
 
 /**
  * The reliability states the *terminal itself* can be in. They are mutually
@@ -48,6 +60,7 @@ export interface PaneTerminalDeps {
   readonly ws: Pick<WsClient, 'connected' | 'events$' | 'request'>;
   readonly terminalTheme: Pick<TerminalThemeService, 'theme'>;
   readonly terminalFontSize: Pick<TerminalFontSizeService, 'size'>;
+  readonly terminalScrollback: Pick<TerminalScrollbackService, 'lines'>;
   readonly toast: Pick<ToastService, 'push'>;
 }
 
@@ -72,7 +85,7 @@ export interface PaneTerminalDeps {
  * the `Terminal` constructor needs them before any effect has run.
  *
  * The surface is small (`attach` / `load` / `retry` / `send` / `dispose` /
- * `applyTheme` / `applyFontSize` plus four readonly signals) and everything
+ * `applyTheme` / `applyFontSize` / `applyScrollback` plus four readonly signals) and everything
  * else — the fit convergence loop, the touch scroll engine, snapshot
  * painting, the send queue, the subscription lifecycle — is private to it.
  */
@@ -80,12 +93,14 @@ export class PaneTerminal {
   private readonly ws: PaneTerminalDeps['ws'];
   private readonly terminalTheme: PaneTerminalDeps['terminalTheme'];
   private readonly terminalFontSize: PaneTerminalDeps['terminalFontSize'];
+  private readonly terminalScrollback: PaneTerminalDeps['terminalScrollback'];
   private readonly toast: PaneTerminalDeps['toast'];
 
   constructor(deps: PaneTerminalDeps) {
     this.ws = deps.ws;
     this.terminalTheme = deps.terminalTheme;
     this.terminalFontSize = deps.terminalFontSize;
+    this.terminalScrollback = deps.terminalScrollback;
     this.toast = deps.toast;
   }
 
@@ -151,6 +166,20 @@ export class PaneTerminal {
    * on every pane load — a snapshot of one pane is never a prefix of another's.
    */
   private lastSnapshot = '';
+
+  /**
+   * The depth the pane in view was read and subscribed at. Fixed per load,
+   * so a setting change is noticed (`applyScrollback`) and the truncation
+   * line names the depth that was actually requested.
+   */
+  private loadedLines = 0;
+
+  /**
+   * Whether the snapshot on screen is one herdr cut short. The truncation
+   * line is written at the head of the buffer while this holds — see
+   * `withNotice()`.
+   */
+  private truncated = false;
 
   /**
    * Builds the xterm instance into `el` and claims everything that hangs off
@@ -221,6 +250,20 @@ export class PaneTerminal {
   }
 
   /**
+   * Called by `PaneDetail` whenever the scrollback depth setting changes.
+   * Unlike palette and size, depth is part of the request: the pane in view
+   * is re-read and re-subscribed at the new depth, so the buffer and the
+   * live stream both move with it. A no-op before a pane has loaded, and
+   * when the depth is the one the pane was already loaded at.
+   */
+  applyScrollback(lines: number): void {
+    if (!this.term || !this.currentHost || !this.currentId || lines === this.loadedLines) {
+      return;
+    }
+    void this.load(this.currentHost, this.currentId);
+  }
+
+  /**
    * Points the terminal at a pane: reset, `pane.read`, then
    * `pane.subscribe_output`. Safe to call again for the same or a different
    * pane — the previous subscription is torn down first and any response
@@ -235,6 +278,12 @@ export class PaneTerminal {
     this.teardownSubscription();
     this.term.reset();
     this.lastSnapshot = '';
+    this.truncated = false;
+    // One read of the setting per load, used by both requests below: the
+    // first paint and the live stream must ask for the same depth, or the
+    // stream's first push cuts the first paint's history back to its own.
+    const lines = this.terminalScrollback.lines();
+    this.loadedLines = lines;
     this.frameReceived.set(false);
     this.hasContent.set(false);
     this.failure.set(null);
@@ -242,15 +291,17 @@ export class PaneTerminal {
     try {
       const result = await this.ws.request(host, 'pane.read', {
         pane_id: id,
-        format: 'ansi',
-        source: 'recent',
+        format: READ_FORMAT,
+        source: READ_SOURCE,
+        lines,
       });
       if (this.isStale(host, id)) {
         return; // the pane moved on again while this request was in flight
       }
       if (result) {
         this.lastSnapshot = result.content;
-        this.term.write(result.content);
+        this.truncated = result.truncated;
+        this.term.write(this.withNotice(result.content));
         this.revisionSignal.set(result.revision);
         this.lastPollAtSignal.set(Date.now());
         this.frameReceived.set(true);
@@ -264,10 +315,11 @@ export class PaneTerminal {
           pane_id: id,
           // The same request the initial read above makes. `pane.output` is a
           // full snapshot painted over the whole terminal, so a live stream at
-          // a narrower source than the first paint deletes this pane's
-          // scrollback on the first poll.
-          source: 'recent',
-          format: 'ansi',
+          // a narrower source — or fewer lines — than the first paint deletes
+          // this pane's scrollback on the first poll.
+          source: READ_SOURCE,
+          format: READ_FORMAT,
+          lines,
         });
         if (this.isStale(host, id)) {
           if (sub) {
@@ -362,7 +414,7 @@ export class PaneTerminal {
     if (payload.subscription_id !== this.subscriptionId) {
       return;
     }
-    this.paint(this.term, payload.content);
+    this.paint(this.term, payload.content, payload.truncated);
     this.revisionSignal.set(payload.revision);
     this.lastPollAtSignal.set(Date.now());
     this.frameReceived.set(true);
@@ -403,11 +455,23 @@ export class PaneTerminal {
    * xterm parses the reset and the new content in one pass and refreshes once,
    * so no blank frame is ever painted. `e2e/terminal-flicker.spec.ts` holds
    * the line.
+   *
+   * A change in `truncated` always takes the redraw path: the truncation
+   * line sits above the snapshot, so gaining or losing it is not an append.
+   * Every redraw re-writes the line while the snapshot is still truncated —
+   * `RIS` would otherwise wipe it with the rest of the screen.
    */
-  private paint(term: Terminal, content: string): void {
+  private paint(term: Terminal, content: string, truncated: boolean): void {
     const previous = this.lastSnapshot;
+    const truncationChanged = truncated !== this.truncated;
     this.lastSnapshot = content;
-    if (previous.length > 0 && content.length >= previous.length && content.startsWith(previous)) {
+    this.truncated = truncated;
+    if (
+      !truncationChanged &&
+      previous.length > 0 &&
+      content.length >= previous.length &&
+      content.startsWith(previous)
+    ) {
       const appended = content.slice(previous.length);
       if (appended.length > 0) {
         term.write(appended);
@@ -419,11 +483,33 @@ export class PaneTerminal {
     // actually shown — equal means "pinned to the bottom".
     const anchoredAt = buffer.viewportY;
     const wasAtBottom = buffer.viewportY >= buffer.baseY;
-    term.write(RIS + content, () => {
+    term.write(RIS + this.withNotice(content), () => {
       if (!wasAtBottom) {
         term.scrollToLine(anchoredAt);
       }
     });
+  }
+
+  /**
+   * The snapshot as written to the buffer: preceded, when herdr cut it short,
+   * by one faint line saying so. A state, not an event — it lives where the
+   * missing history would be, not in a toast (docs/UX-GUIDELINES.md).
+   *
+   * Safe to prepend because herdr's snapshot carries no cursor positioning:
+   * one extra leading row shifts every row down by one and overwrites
+   * nothing. `lastSnapshot` holds the raw snapshot, never this, so append
+   * detection is unaffected. The raise hint is left off at herdr's ceiling,
+   * where no setting brings the missing history back.
+   */
+  private withNotice(content: string): string {
+    if (!this.truncated) {
+      return content;
+    }
+    let line = fill(COPY.terminal.truncated, { lines: String(this.loadedLines) });
+    if (this.loadedLines < HERDR_READ_LINE_CEILING) {
+      line += ` ${COPY.terminal.truncatedRaise}`;
+    }
+    return `${SGR_DIM}${line}${SGR_RESET}\r\n${content}`;
   }
 
   // --- input ------------------------------------------------------------

@@ -5,6 +5,11 @@ import { SettingsService, type Density } from '../state/settings.service';
 import { ParkedStore } from '../state/parked.store';
 import { TERMINAL_FONT_SIZES, TerminalFontSizeService } from '../state/terminal-font-size.service';
 import {
+  HERDR_READ_LINE_CEILING,
+  TERMINAL_SCROLLBACK_STEPS,
+  TerminalScrollbackService,
+} from '../state/terminal-scrollback.service';
+import {
   DEFAULT_PREFIX,
   KeyboardService,
   formatBinding,
@@ -14,7 +19,7 @@ import { ConfirmModal, type ConfirmPreviewItem } from '../shared/confirm-modal';
 import { LucideArrowLeft } from '../shared/icons';
 import { ThemeChoice } from '../shared/theme-choice';
 import { TerminalThemeChoice } from '../shared/terminal-theme-choice';
-import { COPY } from '../shared/copy';
+import { COPY, fill } from '../shared/copy';
 
 /**
  * `/settings` — appearance (theme + density), terminal palette, runtime
@@ -39,6 +44,12 @@ export class Settings {
   protected readonly keyboardService = inject(KeyboardService);
   protected readonly terminalFontSizeService = inject(TerminalFontSizeService);
   protected readonly terminalFontSizes = TERMINAL_FONT_SIZES;
+  protected readonly terminalScrollbackService = inject(TerminalScrollbackService);
+  protected readonly terminalScrollbackSteps = TERMINAL_SCROLLBACK_STEPS;
+  /** The ceiling is a measured herdr fact, so it is filled in from the constant that caps the control rather than written into the copy. */
+  protected readonly terminalScrollbackNote = fill(COPY.settings.terminalScrollbackNote, {
+    max: String(HERDR_READ_LINE_CEILING),
+  });
 
   protected readonly copy = COPY;
   /** The screen's copy. */
@@ -57,6 +68,10 @@ export class Settings {
 
   protected setTerminalFontSize(size: number): void {
     this.terminalFontSizeService.set(size);
+  }
+
+  protected setTerminalScrollback(lines: number): void {
+    this.terminalScrollbackService.set(lines);
   }
 
   protected onRequestedPollIntervalInput(value: string): void {
@@ -111,6 +126,7 @@ export class Settings {
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearAppearance },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminal },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminalFontSize },
+    { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminalScrollback },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearKeyboard },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearParked },
   ];

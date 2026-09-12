@@ -305,6 +305,10 @@ export const COPY = {
       'one palette for every open terminal — cards are told apart by title, host seal and status, never by terminal colour.',
     terminalTheme: 'colour theme',
     terminalFontSize: 'text size',
+    terminalScrollback: 'scrollback',
+    /** `{max}` is herdr's measured line ceiling, from the same constant that caps the control. */
+    terminalScrollbackNote:
+      'lines of history each terminal asks herdr for. herdr sends at most {max}.',
 
     runtime: 'runtime',
     runtimeNote:
@@ -346,12 +350,22 @@ export const COPY = {
     clearAppearance: 'theme and density',
     clearTerminal: 'terminal palette',
     clearTerminalFontSize: 'terminal text size',
+    clearTerminalScrollback: 'terminal scrollback',
     clearKeyboard: 'keyboard prefix',
 
     poll: {
       unavailable: 'n/a',
       unit: 'ms',
     },
+  },
+  /**
+   * Lines the terminal writes into its own buffer. `truncated` is the first
+   * line of a buffer herdr cut short; `truncatedRaise` follows it only below
+   * herdr's ceiling, where a deeper setting would bring more history back.
+   */
+  terminal: {
+    truncated: 'herdr sent the last {lines} lines. history above this line was not sent.',
+    truncatedRaise: 'raise scrollback in settings.',
   },
   notShipped: 'not yet.',
 } as const;

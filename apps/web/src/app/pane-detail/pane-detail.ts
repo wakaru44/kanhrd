@@ -19,6 +19,7 @@ import { PanesStore, paneKey } from '../state/panes.store';
 import { WsClient } from '../state/ws-client';
 import { TerminalThemeService } from '../state/terminal-theme.service';
 import { TerminalFontSizeService } from '../state/terminal-font-size.service';
+import { TerminalScrollbackService } from '../state/terminal-scrollback.service';
 import { ToastService } from '../state/toast.service';
 import { ClockTick, formatElapsed } from '../util/clock';
 import { COPY, fill } from '../shared/copy';
@@ -118,11 +119,13 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
    */
   private readonly terminalTheme = inject(TerminalThemeService);
   private readonly terminalFontSize = inject(TerminalFontSizeService);
+  private readonly terminalScrollback = inject(TerminalScrollbackService);
 
   private readonly terminal = new PaneTerminal({
     ws: this.ws,
     terminalTheme: this.terminalTheme,
     terminalFontSize: this.terminalFontSize,
+    terminalScrollback: this.terminalScrollback,
     toast: this.toast,
   });
 
@@ -351,6 +354,14 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     effect(() => {
       const size = this.terminalFontSize.size();
       untracked(() => this.terminal.applyFontSize(size));
+    });
+
+    // Depth is part of the request, not the rendering, so a change re-reads
+    // the pane in view. `applyScrollback` ignores the depth the pane is
+    // already loaded at, which is every run of this effect but a real change.
+    effect(() => {
+      const lines = this.terminalScrollback.lines();
+      untracked(() => this.terminal.applyScrollback(lines));
     });
   }
 

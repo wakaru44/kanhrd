@@ -160,6 +160,8 @@ product copy and stay in the template.
 | `loading.retry`                       | `try again`                                                                                                                                   |
 | `state.stale`                         | `stale — reconnecting`                                                                                                                        |
 | `state.unavailable`                   | `this host is out of sight.`                                                                                                                  |
+| `terminal.truncated`                  | `herdr sent the last {lines} lines. history above this line was not sent.`                                                                    |
+| `terminal.truncatedRaise`             | `raise scrollback in settings.`                                                                                                               |
 | `nav.backToBoard`                     | `back to the board`                                                                                                                           |
 | `nav.settings`                        | `settings`                                                                                                                                    |
 | `nav.toggleNav`                       | `toggle navigation`                                                                                                                           |
@@ -201,6 +203,8 @@ product copy and stay in the template.
 | `settings.terminalNote`               | `one palette for every open terminal — cards are told apart by title, host seal and status, never by terminal colour.`                        |
 | `settings.terminalTheme`              | `colour theme`                                                                                                                                |
 | `settings.terminalFontSize`           | `text size`                                                                                                                                   |
+| `settings.terminalScrollback`         | `scrollback`                                                                                                                                  |
+| `settings.terminalScrollbackNote`     | `lines of history each terminal asks herdr for. herdr sends at most {max}.`                                                                   |
 | `settings.runtime`                    | `runtime`                                                                                                                                     |
 | `settings.runtimeNote`                | `the output poll interval is bridge-owned. each connected host advertises its own cadence.`                                                   |
 | `settings.noHostsConnected`           | `no hosts connected yet.`                                                                                                                     |
@@ -231,10 +235,14 @@ product copy and stay in the template.
 | `settings.clearAppearance`            | `theme and density`                                                                                                                           |
 | `settings.clearTerminal`              | `terminal palette`                                                                                                                            |
 | `settings.clearTerminalFontSize`      | `terminal text size`                                                                                                                          |
+| `settings.clearTerminalScrollback`    | `terminal scrollback`                                                                                                                         |
 | `settings.clearKeyboard`              | `keyboard prefix`                                                                                                                             |
 | `notShipped`                          | `not yet.`                                                                                                                                    |
 
-`{host}`, `{name}` and `{reason}` are interpolation slots. A `{reason}`
+`{host}`, `{name}`, `{reason}`, `{lines}` and `{max}` are interpolation
+slots. `{lines}` and `{max}` are line counts — `{max}` is herdr's measured
+ceiling, filled from the constant that caps the control, never written
+into the string. A `{reason}`
 quotes herdr's wire response verbatim, including its original case. The
 framing copy and the quoted portion use the same word for the same
 object.

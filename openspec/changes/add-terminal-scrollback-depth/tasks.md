@@ -17,30 +17,30 @@
 - [x] 2.1 `pane.subscribe_output` gains `lines` in
       `packages/schema/src/wire.ts`.
 - [x] 2.2 The poller forwards `lines` to every poll's `pane.read`.
-- [ ] 2.3 A single source of truth in the SPA for `{ source, format, lines }`,
+- [x] 2.3 A single source of truth in the SPA for `{ source, format, lines }`,
       used by the first `pane.read` and by `pane.subscribe_output`, so a
       later snapshot can never be narrower than the first paint.
 
 ## 3. The operator's depth
 
-- [ ] 3.1 `state/terminal-scrollback.service.ts`, modelled on
+- [x] 3.1 `state/terminal-scrollback.service.ts`, modelled on
       `terminal-font-size.service.ts`: a `kanhrd.*` key, a defensive load,
       steps 250 / 500 / 1000 whose maximum is herdr's measured ceiling, and
       a default of 250.
-- [ ] 3.2 A Settings control beside text size and palette, its note
+- [x] 3.2 A Settings control beside text size and palette, its note
       interpolating the ceiling from the same constant, and a row in the
       clear-local-data preview.
-- [ ] 3.3 Changing it re-reads and re-subscribes the open pane without a
+- [x] 3.3 Changing it re-reads and re-subscribes the open pane without a
       reload.
 
 ## 4. Truncation is visible
 
-- [ ] 4.1 Read `truncated` from the read result and from `pane.output`.
-- [ ] 4.2 One quiet line at the head of the buffer when it is true, from
+- [x] 4.1 Read `truncated` from the read result and from `pane.output`.
+- [x] 4.2 One quiet line at the head of the buffer when it is true, from
       `copy.ts`, recorded in `docs/BRAND.md`, re-rendered on every full
       repaint. Not a toast.
-- [ ] 4.3 It disappears when a later snapshot is complete.
-- [ ] 4.4 `docs/UX-GUIDELINES.md` records truncation as a reliability state.
+- [x] 4.3 It disappears when a later snapshot is complete.
+- [x] 4.4 `docs/UX-GUIDELINES.md` records truncation as a reliability state.
 
 ## 5. Verify
 

@@ -8,6 +8,7 @@ import type { ITheme } from '@xterm/xterm';
 import { PaneDetail, nextSiblingCard } from './pane-detail';
 import { TerminalThemeService } from '../state/terminal-theme.service';
 import { TerminalFontSizeService } from '../state/terminal-font-size.service';
+import { TerminalScrollbackService } from '../state/terminal-scrollback.service';
 import { BoardReturnService } from '../state/board-return.service';
 import { COPY } from '../shared/copy';
 import { PanesStore } from '../state/panes.store';
@@ -386,6 +387,8 @@ describe('PaneDetail', () => {
           provide: ActivatedRoute,
           useValue: { paramMap: paramMap$ },
         },
+        // Stubbed, not real: the real one reads a depth from localStorage.
+        { provide: TerminalScrollbackService, useValue: { lines: signal(250) } },
       ],
     }).compileComponents();
   });
@@ -401,11 +404,13 @@ describe('PaneDetail', () => {
       pane_id: 'pane-1',
       format: 'ansi',
       source: 'recent',
+      lines: 250,
     });
     expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.subscribe_output', {
       pane_id: 'pane-1',
       source: 'recent',
       format: 'ansi',
+      lines: 250,
     });
   });
 
@@ -440,11 +445,13 @@ describe('PaneDetail', () => {
       pane_id: 'pane-1',
       format: 'ansi',
       source: 'recent',
+      lines: 250,
     });
     expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.subscribe_output', {
       pane_id: 'pane-1',
       source: 'recent',
       format: 'ansi',
+      lines: 250,
     });
   });
 
@@ -457,6 +464,7 @@ describe('PaneDetail', () => {
       pane_id: 'pane-1',
       format: 'ansi',
       source: 'recent',
+      lines: 250,
     });
     ws.request.calls.reset();
 
@@ -473,11 +481,13 @@ describe('PaneDetail', () => {
       pane_id: 'pane-2',
       format: 'ansi',
       source: 'recent',
+      lines: 250,
     });
     expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.subscribe_output', {
       pane_id: 'pane-2',
       source: 'recent',
       format: 'ansi',
+      lines: 250,
     });
   });
 
@@ -757,16 +767,20 @@ describe('PaneDetail terminal settings', () => {
 
   let theme: WritableSignal<ITheme>;
   let fontSize: WritableSignal<number>;
+  let scrollback: WritableSignal<number>;
+  let settingsWs: FakeWsClient;
 
   beforeEach(async () => {
     theme = signal<ITheme>({ background: '#f4ede0', foreground: '#2b2b2b' });
     fontSize = signal(13);
+    scrollback = signal(250);
+    settingsWs = new FakeWsClient();
 
     await TestBed.configureTestingModule({
       imports: [PaneDetail],
       providers: [
         provideZonelessChangeDetection(),
-        { provide: WsClient, useValue: new FakeWsClient() },
+        { provide: WsClient, useValue: settingsWs },
         {
           provide: PanesStore,
           useValue: {
@@ -783,6 +797,7 @@ describe('PaneDetail terminal settings', () => {
         },
         { provide: TerminalThemeService, useValue: { theme } },
         { provide: TerminalFontSizeService, useValue: { size: fontSize } },
+        { provide: TerminalScrollbackService, useValue: { lines: scrollback } },
       ],
     }).compileComponents();
   });
@@ -820,5 +835,38 @@ describe('PaneDetail terminal settings', () => {
     TestBed.tick();
 
     expect(live.options.fontSize).toBe(20);
+  });
+
+  it('re-reads and re-subscribes the open pane when the scrollback depth changes', async () => {
+    await mountedTerminal();
+    settingsWs.request.calls.reset();
+
+    scrollback.set(1000);
+    TestBed.tick();
+    await flushMicrotasks();
+
+    expect(settingsWs.request).toHaveBeenCalledWith('laptop', 'pane.read', {
+      pane_id: 'pane-1',
+      format: 'ansi',
+      source: 'recent',
+      lines: 1000,
+    });
+    expect(settingsWs.request).toHaveBeenCalledWith('laptop', 'pane.subscribe_output', {
+      pane_id: 'pane-1',
+      source: 'recent',
+      format: 'ansi',
+      lines: 1000,
+    });
+  });
+
+  it('sends no read when a settings effect re-runs at the depth already loaded', async () => {
+    await mountedTerminal();
+    settingsWs.request.calls.reset();
+
+    fontSize.set(17);
+    TestBed.tick();
+    await flushMicrotasks();
+
+    expect(settingsWs.request).not.toHaveBeenCalledWith('laptop', 'pane.read', jasmine.anything());
   });
 });

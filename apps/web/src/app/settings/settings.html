@@ -60,6 +60,26 @@
         }
       </div>
     </div>
+
+    <div class="setting-row">
+      <span class="setting-label" id="terminal-scrollback-label">{{
+        text.terminalScrollback
+      }}</span>
+      <div class="segmented" role="group" aria-labelledby="terminal-scrollback-label">
+        @for (lines of terminalScrollbackSteps; track lines) {
+          <button
+            type="button"
+            class="segment segment-numeric"
+            [class.active]="terminalScrollbackService.lines() === lines"
+            [attr.aria-pressed]="terminalScrollbackService.lines() === lines"
+            (click)="setTerminalScrollback(lines)"
+          >
+            {{ lines }}
+          </button>
+        }
+      </div>
+    </div>
+    <p class="section-note">{{ terminalScrollbackNote }}</p>
   </section>
 
   <section class="settings-section">

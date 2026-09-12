@@ -183,6 +183,15 @@ Pane detail shows `keeping watch…` until its first frame, then the
 terminal. Failure replaces it with retry + back, never a permanent
 pulse.
 
+A terminal buffer herdr cut short is a reliability state too. When
+`pane.read` or `pane.output` carries `truncated: true`, the buffer's first
+line says so — `terminal.truncated`, naming herdr and the line count, with
+`terminal.truncatedRaise` appended only while a deeper scrollback setting
+would bring more back. It is written into the buffer in faint text, where
+the missing history would be, and re-written on every full repaint; it is
+never a toast, and it goes on the first complete snapshot. A truncated
+buffer that looks like a short session is wrong, not absent.
+
 ### Destructive confirmations
 
 Cascading closes (a workspace that closes N tabs, a linked-worktree group
@@ -300,8 +309,9 @@ resolve to something else.
 The rule governs **scope**, not arrangement. A short, closed list of
 per-browser preferences stays out of the URL and therefore does not
 travel with a shared link: the status filter chips (`kanhrd.filters`),
-board density, terminal palette and text size, the keybind prefix
-(`kanhrd.keyboard`), and user-defined columns (`kanhrd.parked-columns`).
+board density, terminal palette, text size and scrollback depth, the
+keybind prefix (`kanhrd.keyboard`), and user-defined columns
+(`kanhrd.parked-columns`).
 Each is a view preference the recipient is entitled to their own answer
 to; none changes _which_ cards a link resolves to. Anything that selects
 which entities are shown belongs in the URL. (Maintainer decision Q5,
