@@ -1,0 +1,35 @@
+docs/DESIGN-SYSTEM.md
+  s_493b7bedcc134d::t_b181b9dfb6237a 428
+  s_493b7bedcc134d::t_17c970832cf39b 405,418,426-427,429-433
+  s_493b7bedcc134d::t_328e7fc58a3fc4 434
+apps/web/e2e/tier3.spec.ts
+  s_493b7bedcc134d::t_853077a586ee2e 244-249,252,254-256,262
+apps/web/src/app/board/card.html
+  s_493b7bedcc134d::t_e666a8517a46fb 95-107,109,112-120,122,124-165,168-176,178,180-202,237-238,240,247,255
+apps/web/src/app/board/card.spec.ts
+  s_493b7bedcc134d::t_d2a05450e7a7a2 392-394,399-402,408-474,664,666-677
+apps/web/src/app/board/card.ts
+  s_493b7bedcc134d::t_c77c6fab030c36 33,50,68-74,87,209-213,346-349,351-369,382-383,385-386,389-416,451-463,500-508,515-516,521,525,527,541
+apps/web/src/app/shared/icons.spec.ts
+  s_493b7bedcc134d::t_0ffef3428f33cd 6-8,22
+apps/web/src/app/shared/icons.ts
+  s_493b7bedcc134d::t_e8c56339919a63 7,26,57-58,98,113,117
+openspec/changes/add-pane-destinations/tasks.md
+  s_493b7bedcc134d::t_e75192374faf47 52-57,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "35cbe3d1e93a85d3da09ca68ae5c240bc4bdbe5c",
+  "prompts": {},
+  "sessions": {
+    "s_493b7bedcc134d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26ca5883-d6ab-4040-90c0-59f54d9ec3f9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
