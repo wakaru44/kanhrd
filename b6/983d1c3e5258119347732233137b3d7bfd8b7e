@@ -1,0 +1,42 @@
+apps/web/src/app/rail/rail.html
+  s_493b7bedcc134d::t_d5f0d6604ed2fb 100,114-147
+apps/web/src/app/board/board.ts
+  s_493b7bedcc134d::t_fc28a4193be6f7 18,26,562-587,598-626,628,631,634,648,652-653,655-659,663,670,674,676-679,686,693,705
+apps/web/src/app/rail/rail.spec.ts
+  s_2776f1a6640bff::t_4703d0f414c722 539-543,547-558,562-570,574-578
+  s_493b7bedcc134d::t_067cbb04092d1b 544-546,559-561,571-573
+  s_2776f1a6640bff::t_63b2a22dd5adf2 4,23-30,48,69
+apps/web/src/app/board/board.spec.ts
+  s_493b7bedcc134d::t_6d71908549bbe3 1887-1889
+  s_493b7bedcc134d::t_067cbb04092d1b 1920
+  s_493b7bedcc134d::t_cc661c0e256cf8 1774-1886,1890-1919,1921-1960
+apps/web/src/app/rail/rail.ts
+  s_493b7bedcc134d::t_3b1f321f48c6ba 15,99-154
+  s_2776f1a6640bff::t_3be22c197460b6 155
+openspec/changes/add-pane-destinations/tasks.md
+  s_493b7bedcc134d::t_39b13f1d59ded0 8,11,13-17,19-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b6983d1c3e5258119347732233137b3d7bfd8b7e",
+  "prompts": {},
+  "sessions": {
+    "s_2776f1a6640bff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaf8a44f-17c4-4808-8aac-9b4fb9fb065e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    },
+    "s_493b7bedcc134d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26ca5883-d6ab-4040-90c0-59f54d9ec3f9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
