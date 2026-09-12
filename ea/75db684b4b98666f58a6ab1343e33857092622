@@ -1,0 +1,33 @@
+openspec/changes/add-terminal-scrollback-depth/proposal.md
+  s_41bed7e0e7701d::t_351b29d1d0e23b 1-71
+openspec/changes/add-terminal-scrollback-depth/tasks.md
+  s_41bed7e0e7701d::t_351b29d1d0e23b 1-44
+openspec/incoming/backlog.md
+  s_41bed7e0e7701d::t_b119d44b0e9c23 92-227
+kanhrd.config.example.yaml
+  s_41bed7e0e7701d::t_432352e4d94d94 1-50
+openspec/changes/add-terminal-scrollback-depth/.openspec.yaml
+  s_41bed7e0e7701d::t_6e31e59bc4c5aa 1-2
+.gitignore
+  s_41bed7e0e7701d::t_432352e4d94d94 18-21
+openspec/changes/add-terminal-scrollback-depth/specs/terminal-scrollback/spec.md
+  s_41bed7e0e7701d::t_351b29d1d0e23b 1-48
+openspec/changes/add-terminal-scrollback-depth/README.md
+  s_41bed7e0e7701d::t_6e31e59bc4c5aa 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ea75db684b4b98666f58a6ab1343e33857092622",
+  "prompts": {},
+  "sessions": {
+    "s_41bed7e0e7701d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c985291b-2f83-4b9b-a00d-3f7b63991f12",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
