@@ -45,6 +45,16 @@ an empty status column receives.
 - **WHEN** the operator moves a parked column holding two cards one place to the left
 - **THEN** both cards are still in that column, its id and its `parked:<id>` filter key are unchanged, and no herdr call is made
 
+#### Scenario: A parked card is not hidden by the status it carries
+
+- **WHEN** three panes with `agent_status: "unknown"` are parked into a column and the operator hides the `unknown` column
+- **THEN** the `unknown` status column is removed from the board and all three cards remain in their parked column
+
+#### Scenario: Hiding a parked column hides exactly its cards
+
+- **WHEN** the operator hides a parked column holding cards of mixed statuses
+- **THEN** that column and only that column is removed from the board, and no status column gains or loses a card
+
 ### Requirement: Parked-column controls are visible and keyboard-operable
 
 Every parking action SHALL be reachable without hover and without a

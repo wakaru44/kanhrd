@@ -76,6 +76,13 @@ Parked columns SHALL render to the right of the status columns, after
 `unknown`, ordered by their `order` field. `STATUS_COLUMN_ORDER` and the
 status columns' own rendering SHALL be unchanged.
 
+The `order` field SHALL be the operator's, not only the creation order: it
+SHALL be changeable after creation, and every surface that draws the
+columns — the desktop strip, the mobile pager, the switcher and every
+swimlane band — SHALL draw the one changed order. Changing it SHALL
+remain browser-local and SHALL NOT move a card between columns, alter any
+membership entry, or change a column's id or its `parked:<id>` key.
+
 Parked columns SHALL honour the board's active `Filters` (excluded hosts,
 hidden statuses) and the active URL scope identically to status columns,
 and their card count SHALL reflect the filtered collection.
@@ -98,6 +105,21 @@ an empty status column receives.
 
 - **WHEN** the last card leaves a parked column
 - **THEN** the column keeps its position and header and renders the count `0`, and the neighbouring columns do not move
+
+#### Scenario: A reordered column keeps its cards and its key
+
+- **WHEN** the operator moves a parked column holding two cards one place to the left
+- **THEN** both cards are still in that column, its id and its `parked:<id>` filter key are unchanged, and no herdr call is made
+
+#### Scenario: A parked card is not hidden by the status it carries
+
+- **WHEN** three panes with `agent_status: "unknown"` are parked into a column and the operator hides the `unknown` column
+- **THEN** the `unknown` status column is removed from the board and all three cards remain in their parked column
+
+#### Scenario: Hiding a parked column hides exactly its cards
+
+- **WHEN** the operator hides a parked column holding cards of mixed statuses
+- **THEN** that column and only that column is removed from the board, and no status column gains or loses a card
 
 ### Requirement: Per-column exit rules are driven only by agent status
 
@@ -187,7 +209,7 @@ pointer:
   its current exit rule as **visible text**, plus a
   `LucideMoreHorizontal` trigger visible on first render opening a
   `role="menu"` with rename, the exit rules as `role="menuitemradio"`
-  items, and remove.
+  items, `move column left`, `move column right`, and remove.
 - Both menus SHALL open by keyboard, navigate with arrow keys, dismiss
   with Escape, and return focus to their trigger without opening the
   pane — the contract the shipped card menu already implements.
@@ -217,25 +239,38 @@ model (the same blocker recorded for the unimplemented `prefix+x`).
 - **WHEN** the operator opens a parked column's header menu by keyboard and selects the `never` rule item
 - **THEN** the column's rule becomes `never`, the header text updates, the menu closes, and focus returns to the trigger
 
+#### Scenario: Reordering by keyboard
+
+- **WHEN** the operator opens the second parked column's header menu by keyboard and selects `move column left`
+- **THEN** that column and the one to its left exchange places on every strip on the board, the menu closes, and focus returns to the trigger
+
 ### Requirement: No drag affordance ships until the design docs permit one
 
-While `docs/UX-GUIDELINES.md` forbids a drag affordance on the board,
-the SPA SHALL NOT render a drag handle, enable `cdkDrag`, apply
-`cursor: grab`, or expose a drop target on any status column or parked
-column. The existing E2E assertion that no board element carries an
-enabled `cdkDrag`, a drag handle, or `cursor: grab` SHALL continue to
-pass.
+The board SHALL carry only the drag affordances the design docs permit,
+and each SHALL be gated on actually working:
 
-Drag-and-drop parking SHALL be implemented only after a maintainer
-amends `docs/UX-GUIDELINES.md` and `docs/DESIGN-SYSTEM.md` to define
-which drag affordances the board permits, and SHALL then satisfy
-"drag-drop must work or not appear": a status column SHALL remain a
-non-drop-target whose membership is never changed by a drag.
+- Parking a card by dragging it into a user-defined column (maintainer
+  decision Q1, `docs/UX-GUIDELINES.md` § "Status membership").
+- Reordering the operator's own columns by dragging one by its header,
+  as specified in "Parked columns are reorderable by keyboard and by
+  drag".
+
+On a board with no user-defined column there SHALL be nothing to drag
+and nothing to drop into, and every `cdkDrag` and every `cdkDropList`
+SHALL be inert (`.cdk-drag-disabled` / `.cdk-drop-list-disabled`), with
+no drag handle and no `cursor: grab` anywhere. The existing E2E
+assertion to that effect SHALL continue to pass.
+
+No drag SHALL make a status column a drop target, a reorder target or a
+reorder source, and no drag SHALL change a card's status or call
+`pane.move`. Any further drag affordance SHALL be specified before it
+ships, and SHALL satisfy "drag-drop must work or not appear": a pointer
+gesture with no keyboard equivalent in approved copy SHALL NOT ship.
 
 #### Scenario: The shipped board is drag-free
 
-- **WHEN** the board renders with parked columns present
-- **THEN** no element carries an enabled `cdkDrag`, a drag handle, or `cursor: grab`, and every parking action remains reachable through the overflow menus
+- **WHEN** the board renders with no user-defined column present
+- **THEN** no element carries an enabled `cdkDrag`, an enabled drag handle, or `cursor: grab`, and every parking action remains reachable through the overflow menus
 
 ### Requirement: An unimplementable exit rule is not offered
 
@@ -262,4 +297,144 @@ or a real terminal.
 
 - **WHEN** a later change proposes an "on any activity" rule
 - **THEN** it first establishes, against a live herdr, that `PaneInfo.revision` advances on pane output across successive `pane.list` responses, and implements the rule by diffing that value on the bridge's existing agent-status poll rather than by adding any per-card output subscription
+
+### Requirement: The board's visibility filter hides columns, not statuses
+
+The board's visibility filter SHALL be keyed by column: the same identity
+the board, the mobile pager and the status switcher already use — the
+status name for a status column, `parked:<id>` for a parked column. It
+SHALL NOT be keyed by `agent_status`.
+
+The filter bar SHALL render one chip per column the board renders,
+parked columns included, in the board's own column order. Each chip
+SHALL toggle its own column and no other. A parked column's chip SHALL be
+labelled with the operator's column name and SHALL NOT display a status
+dot, since a parked column has no status.
+
+Each chip SHALL carry its column's card count. Counts SHALL be computed
+under the same attribution the board uses — a parked card counts toward
+its parked column and toward no status column — and SHALL honour excluded
+hosts and the URL scope while deliberately ignoring the hidden set, so a
+hidden column keeps reporting what is in it.
+
+The hidden set SHALL persist in `localStorage` under the existing
+`kanhrd.filters` key as `hiddenColumns`. A payload written before this
+change, carrying `hiddenStatuses`, SHALL load without error and SHALL
+hide exactly the status columns it named; the next save SHALL rewrite it
+under `hiddenColumns`.
+
+When a parked column ceases to exist — removed by the operator, cleared
+by Settings' `clear parked columns`, or dropped on load as malformed —
+its key SHALL be removed from the hidden set, so no stranded key can
+hide a later column.
+
+#### Scenario: A chip per column
+
+- **WHEN** the operator has created two parked columns
+- **THEN** the filter bar renders seven chips — the five status columns in `STATUS_COLUMN_ORDER` followed by the two parked columns in their own order — each labelled and counted
+
+#### Scenario: Chip counts agree with the board
+
+- **WHEN** a card is parked out of the `idle` column into a parked column
+- **THEN** the `idle` chip's count decreases by one and the parked column's chip count increases by one, matching the counts the two columns render
+
+#### Scenario: A stored status filter still hides its column
+
+- **WHEN** `kanhrd.filters` holds `{"excludedHosts":[],"hiddenStatuses":["unknown"]}` and the board loads
+- **THEN** the `unknown` status column is hidden and every other column is shown
+
+#### Scenario: Removing a parked column leaves no stranded key
+
+- **WHEN** the operator hides a parked column and then removes that column
+- **THEN** the hidden set no longer names it, and a parked column created afterwards is visible
+
+#### Scenario: Clearing parked columns clears their hidden keys
+
+- **WHEN** the operator hides two parked columns and then uses Settings' `clear parked columns`
+- **THEN** the hidden set retains only status-column keys
+
+### Requirement: Parked columns are reorderable by keyboard and by drag
+
+The SPA SHALL let the operator change the left-to-right position of a
+parked column, by keyboard and by pointer, writing only the `order`
+field of the existing `kanhrd.parked-columns` document.
+
+The keyboard path SHALL be two items in the parked column's existing
+header menu, labelled with the approved copy `move column left` and
+`move column right`. Each item SHALL be present at every viewport width.
+An item SHALL be marked `aria-disabled` when there is no visible parked
+column in that direction, and SHALL NOT be hidden and SHALL NOT be
+silently enabled-but-inert. It SHALL remain focusable, so that arrow
+navigation within the menu is never trapped on it, and activating it
+SHALL do nothing at all — no move, no error, and not even a menu
+dismissal. An enabled item SHALL move the column
+past any column the filter bar has hidden, so that activating it always
+changes what the operator can see.
+
+The pointer path SHALL be a horizontal drag of the column by its header:
+
+- Only a parked column SHALL be a drag source. A status column's drag
+  SHALL be disabled and its header SHALL carry no drag handle.
+- A status column SHALL NOT be a reorder target: a dragged column SHALL
+  NOT come to rest anywhere left of the first parked column, and the
+  status columns' relative order SHALL remain `STATUS_COLUMN_ORDER`.
+- The drag SHALL NOT appear below `--breakpoint-mobile`, where the board
+  is a one-column-per-screen pager, nor on a board with fewer than two
+  parked columns. The menu items SHALL remain available in both cases.
+- A drop SHALL be interpreted against the columns actually on screen and
+  applied to the full stored order, so a hidden column between two
+  visible ones SHALL NOT shift the result.
+
+A reorder in any swimlane band SHALL apply to the whole board, because
+there is one `order` and every band renders it. A reorder SHALL NOT
+reorder, hide, show or renumber a status column, SHALL NOT move a card,
+and SHALL NOT send anything to the bridge.
+
+The column-reorder drop list and the per-column card drop lists SHALL
+remain unconnected: neither SHALL be a member of the other's
+`cdkDropListGroup` and neither SHALL name the other in
+`cdkDropListConnectedTo`, so a card SHALL NOT be droppable onto the
+column strip and a column SHALL NOT be droppable into a column's card
+list. A parked column SHALL accept a dropped item as a card only when
+the dragged item carries a pane.
+
+#### Scenario: Moving a column by keyboard
+
+- **WHEN** the operator selects `move column right` on the first of three parked columns
+- **THEN** it renders second, the other two keep their relative order, and the stored `order` values are a dense sequence reflecting the new arrangement
+
+#### Scenario: The ends are honest
+
+- **WHEN** the operator opens the header menu of the leftmost parked column
+- **THEN** `move column left` is present and marked `aria-disabled`, `move column right` is enabled, and activating the disabled item moves nothing, raises no error and leaves the menu open
+
+#### Scenario: A hidden neighbour is stepped over
+
+- **WHEN** the operator has hidden the middle of three parked columns with its filter chip and selects `move column right` on the first
+- **THEN** the moved column renders to the right of the hidden column's position, the hidden column stays hidden and keeps its `parked:<id>` key and chip, and the visible arrangement has changed
+
+#### Scenario: A status column is not a reorder target
+
+- **WHEN** a parked column is dragged left across the status columns and released over `working`
+- **THEN** it comes to rest as the leftmost parked column, no status column changes position, and no card changes status
+
+#### Scenario: A status column is not a reorder source
+
+- **WHEN** the board renders with two parked columns above the mobile breakpoint
+- **THEN** each parked column's header is a drag handle, no status column's header is a handle or carries `cursor: grab`, and every status column's `cdkDrag` is inert
+
+#### Scenario: The phone keeps the keyboard path only
+
+- **WHEN** the board renders below `--breakpoint-mobile` with two parked columns
+- **THEN** no column is draggable and the column strip's reorder list is inert, while both `move column` items remain in each parked column's header menu
+
+#### Scenario: A reorder in a band reorders the board
+
+- **WHEN** the operator reorders two parked columns from inside one swimlane band
+- **THEN** every band and the board's own strip draw the new order
+
+#### Scenario: The two drags do not collide
+
+- **WHEN** a card is dragged from a status column into a parked column while the board also permits column reordering
+- **THEN** the card is parked exactly as before, the column order is unchanged, and no column drag starts from the pointer press on the card
 

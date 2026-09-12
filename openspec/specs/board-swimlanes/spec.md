@@ -23,6 +23,12 @@ Status columns SHALL keep their order, their filter behaviour and their
 empty slots within every swimlane. A swimlane holding no cards in any
 column SHALL NOT be rendered.
 
+Banding SHALL apply the board's visibility filter under the same
+attribution the ungrouped board uses: a card's column is resolved first
+and that column is tested against the hidden set, so a parked card
+appears in its parked column inside its own band whatever status it
+carries, and hiding a column removes it from every band.
+
 Grouping SHALL be a browser-held board arrangement. It SHALL NOT call
 any wire method, alter any pane's workspace, tab or status, or persist
 to herdr.
@@ -46,6 +52,10 @@ to herdr.
 #### Scenario: Turning grouping off
 - **WHEN** the operator sets grouping to none
 - **THEN** the board renders a single set of status columns, identical to the board before this feature
+
+#### Scenario: A parked card bands under its parked column
+- **WHEN** a swimlane dimension is active, a card is parked, and the status that card carries is hidden
+- **THEN** the card still renders in its parked column inside its own band, and its band is not emptied by the hidden status
 
 ### Requirement: Swimlane membership is derived, never assigned
 A card's swimlane SHALL be derived from the pane's own data for the
