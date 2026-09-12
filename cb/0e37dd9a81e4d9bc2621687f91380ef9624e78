@@ -1,0 +1,27 @@
+openspec/changes/fix-dead-pane-reconciliation/tasks.md
+  s_e465e30f266fa2::t_671effc7d20c82 1-6
+openspec/changes/fix-dead-pane-reconciliation/proposal.md
+  s_e465e30f266fa2::t_79709e2535d02d 1-43
+apps/bridge/src/herdr/hosts.ts
+  s_e465e30f266fa2::t_449eefd2afe886 608-618,622-626,635-650
+openspec/changes/fix-dead-pane-reconciliation/specs/tier-1-kanban/spec.md
+  s_e465e30f266fa2::t_22d0b831f641d3 1-51
+apps/bridge/src/herdr/hosts.test.ts
+  s_e465e30f266fa2::t_4e18c915e9558e 404-442
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cb0e37dd9a81e4d9bc2621687f91380ef9624e78",
+  "prompts": {},
+  "sessions": {
+    "s_e465e30f266fa2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2c5b23d5-95a9-4f8a-9e19-5ebcf3fb7297",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
