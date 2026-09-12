@@ -81,9 +81,14 @@ its accessible name: **move**, **split**, **rest** and the overflow menu.
   label, plus rename. An action reachable only as an unlabelled icon SHALL
   NOT exist.
 
-Every control SHALL be visible on first render, never revealed on hover,
-and SHALL meet `--touch-target-min`. The compact card SHALL keep exactly
-one visible trigger, as it does today.
+Every control SHALL be visible on first render and SHALL NOT be revealed
+on hover. The inline row is NOT held to `--touch-target-min`: it renders
+at pointer width, and `docs/UX-GUIDELINES.md`'s 40 × 40 rule names card
+overflow triggers and items in an open overflow menu, which it still
+governs. The compact card SHALL keep exactly one visible trigger, as it
+does today — and that trigger, with every item of the menu it opens, does
+meet `--touch-target-min`. See `design.md` for the measurements this was
+decided on.
 
 Moving a pane and parking a card SHALL NOT share a menu. `move to` is a
 herdr operation: it reparents the pane, can close the tab it left, and is

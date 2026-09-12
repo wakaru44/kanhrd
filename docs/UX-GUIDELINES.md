@@ -139,10 +139,35 @@ never comes to rest among the status columns. (Shipped in
 `openspec/changes/archive/2026-09-12-add-parked-column-reorder`.)
 
 The board never calls `pane.move` to change a status — `pane.move`'s
-destination is a tab or workspace. Relocating a pane between tabs or
-workspaces is a separate feature with its own destination, capability,
-keyboard, error and reconciliation requirements; it is not part of this
-redesign, and the UI must not hint that it exists.
+destination is a tab or workspace, and nothing on the board may set a
+status.
+
+Relocating a pane between tabs or workspaces is its own operation, and it
+follows these rules:
+
+- **`move to` and `park in` never share a menu.** A move reparents the
+  pane on the host, can close the tab it left behind, and every other
+  herdr client sees it. Parking groups a card in a column held in this
+  browser and changes nothing anywhere else. One verb over two operations
+  with opposite blast radii is how an operator moves a pane on a
+  colleague's machine when they meant to tidy their own board.
+- **The move control is rendered only where `capabilities.paneMove` is
+  true** — not disabled, not hidden behind a failure.
+- **Its destinations are herdr's three**, the `PaneMoveDestination` union:
+  another tab, a new tab, a new workspace. A parked column is never among
+  them.
+- **The tab the pane is already in is not offered.** herdr answers that
+  with `changed: false, reason: "same_tab"`, and an option that cannot do
+  anything is not an option.
+- **A refused move is not a failed one.** `pane.move` answers a no-op with
+  a SUCCESSFUL response carrying `changed: false` and a reason.
+  `same_tab` says nothing at all; `zoomed_tab` names the obstacle the
+  operator can clear. Neither wears the failure wording, and neither
+  quotes a `{reason}` — the reason is a discriminant, not herdr's prose.
+- **A move's cascade is reconciled through the same purge** the board runs
+  for `tab.closed` / `workspace.closed`. Moving the last pane out of a tab
+  closes it, and possibly its workspace; there is one reconciliation path
+  for that, not a second one for the acting client.
 
 ### Feedback surface
 
