@@ -82,7 +82,20 @@ test('a failing pane.close request surfaces an error toast', async ({ page }) =>
   // `.card-actions { opacity: 0; pointer-events: none }` hover-reveal is
   // gone — docs/UX-GUIDELINES.md, "Visible affordances").
   await expect(closeButton).toBeVisible();
-  await closeButton.click();
+  // Two things make a single click unreliable, neither a defect in the app.
+  // The board is a horizontally scrolling strip and this run's seeded panes
+  // are bare shells, so every card lands in the LAST status column — past
+  // the right edge of the 1280px viewport; Playwright calls the button
+  // visible and its click scrolls the strip, but lands at the coordinates
+  // measured before that scroll. And a card's height changes shortly after
+  // it appears, as the bridge starts reporting `status_since` and the meta
+  // row gains its duration readout, moving the rows below it by more than
+  // half this 26px button. Retry the scroll-and-click until the dialog is up.
+  await expect(async () => {
+    await closeButton.scrollIntoViewIfNeeded();
+    await closeButton.click();
+    await expect(page.locator('app-confirm-modal')).toHaveCount(1, { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
   // A pane close is accent-filled, not `--danger-fill` (that is reserved
   // for irrecoverable local-data loss), so the confirm is `.btn.primary`.
   await page.locator('app-confirm-modal .modal-actions .btn.primary').click();

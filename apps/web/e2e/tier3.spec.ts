@@ -109,6 +109,36 @@ function cardCloseButton(card: Locator): Locator {
   return card.locator('.card-action.close');
 }
 
+/**
+ * Clicks a card action and waits for the dialog it opens, retrying until the
+ * dialog is actually there.
+ *
+ * Two things make a single click unreliable here, neither of them a defect
+ * in the app:
+ *
+ * 1. The board is a horizontally scrolling strip, and this suite's session
+ *    seeds bare shells — every pane is `unknown`, so every card sits in the
+ *    LAST status column, which begins past the right edge of the 1280px
+ *    chromium viewport. Playwright calls the button visible (it has a box
+ *    and is not hidden) and its click scrolls the strip, but the click lands
+ *    at the coordinates measured before that scroll.
+ * 2. A card's height changes shortly after it appears, as the bridge starts
+ *    reporting `status_since` and the meta row gains its duration readout.
+ *    A card below one that grows moves down by a row — measured here at
+ *    ~16px, more than half the 26px button — so the click lands beside it.
+ *
+ * Both are ordinary live-board behaviour: an operator scrolls the strip and
+ * does not click in the same millisecond a row reflows. Retrying the
+ * scroll-and-click until the dialog appears is the honest way to say that.
+ */
+async function clickCardAction(page: Page, action: Locator): Promise<void> {
+  await expect(async () => {
+    await action.scrollIntoViewIfNeeded();
+    await action.click();
+    await expect(modal(page)).toHaveCount(1, { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
+}
+
 /** A rail row's overflow-menu trigger — rail row actions are never hover-revealed. */
 function rowMenuTrigger(row: Locator): Locator {
   return row.locator('.row-menu-trigger');
@@ -363,7 +393,7 @@ test("closing a pane's card shows a danger-styled confirmation; cancel keeps it,
     const targetCard = app.locator('.card', { hasText: name });
     await expect(targetCard).toHaveCount(1, { timeout: 3_000 });
 
-    await cardCloseButton(targetCard).click();
+    await clickCardAction(app, cardCloseButton(targetCard));
 
     await expect(modalTitle(app)).toHaveText(COPY.confirm.closePane);
     await expect(modalConfirm(app)).toBeVisible();
@@ -376,7 +406,7 @@ test("closing a pane's card shows a danger-styled confirmation; cancel keeps it,
     await expect(app.locator('.card', { hasText: name })).toHaveCount(1);
 
     // Now actually confirm — safe, this is a throwaway tab/pane.
-    await cardCloseButton(targetCard).click();
+    await clickCardAction(app, cardCloseButton(targetCard));
     await modalConfirm(app).click();
 
     await expect(app.locator('.card', { hasText: name })).toHaveCount(0, { timeout: 3_000 });
