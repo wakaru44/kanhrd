@@ -1,0 +1,26 @@
+apps/web/e2e/terminal-scrollback.spec.ts
+  s_9f6e9e632154c4::t_3644e9a25cb49c 10-11,123-127,129-157,160,162-171
+  s_9f6e9e632154c4::t_8ffe57ea804a0a 15-21,41-51,85,107,128
+  s_9f6e9e632154c4::t_4c465e0f893f76 62-67,69,72
+  s_9f6e9e632154c4::t_2c442584a7acd3 22
+  s_9f6e9e632154c4::t_e59be6f3570567 73,158-159,161
+  s_9f6e9e632154c4::t_5a98a937f29ef0 172
+openspec/changes/add-delta-pane-output/tasks.md
+  s_9f6e9e632154c4::t_0dc76585438c8b 50-51,54-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6af12754f61a7a526e1f9f1f4be59ed3fc57a8a3",
+  "prompts": {},
+  "sessions": {
+    "s_9f6e9e632154c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94df2e1b-4541-4873-b074-5ea96fce8f02",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
