@@ -1,0 +1,23 @@
+openspec/changes/add-pane-destinations/tasks.md
+  s_41bed7e0e7701d::t_4e2a7078894838 52-55
+openspec/changes/add-pane-destinations/proposal.md
+  s_41bed7e0e7701d::t_4e2a7078894838 75,78,84-108
+openspec/changes/add-pane-destinations/specs/board-card-actions/spec.md
+  s_41bed7e0e7701d::t_4e2a7078894838 88-93,100,103-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ed5dfdec6cfe6a8ce16f37ad36b55f62dc4d0dc9",
+  "prompts": {},
+  "sessions": {
+    "s_41bed7e0e7701d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c985291b-2f83-4b9b-a00d-3f7b63991f12",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
