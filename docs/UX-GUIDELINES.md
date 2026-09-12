@@ -607,8 +607,11 @@ a time (see _Board paging model_). Everything else fits.
 ### E2E-assertable requirements
 
 The following are written to be turned directly into Playwright
-assertions in `apps/web/e2e/mobile.spec.ts` under the existing `mobile`
-project. They are the acceptance criteria for the mobile test suite.
+assertions. Most live in `apps/web/e2e/mobile.spec.ts` under the `mobile`
+project; an assertion that needs no herdr belongs in a mock-bridge suite
+instead, so it runs everywhere (assertion 39 is in
+`apps/web/e2e/viewport-matrix.spec.ts` for that reason). Each assertion
+names its home where it is not the mobile suite.
 
 #### Assertions — board, populated
 
