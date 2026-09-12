@@ -1,0 +1,20 @@
+openspec/specs/terminal-scrollback/spec.md
+  s_2776f1a6640bff::t_7a0e6f0a22b253 12,14-20,23,25-30,84-169
+  s_2776f1a6640bff::t_7e6026bffd4956 170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ff4e2ea843c1cf4ff38cfba090ff27d364cccd10",
+  "prompts": {},
+  "sessions": {
+    "s_2776f1a6640bff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaf8a44f-17c4-4808-8aac-9b4fb9fb065e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
