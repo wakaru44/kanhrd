@@ -130,6 +130,22 @@ export class Card {
     return `${pane.workspace.name} / ${pane.tab.name}`;
   });
 
+  /**
+   * Whether the repo name is worth its own locator. It is not when it is
+   * the workspace's name again, which is the common shape on this board
+   * (a workspace named after the repo it is checked out from): the
+   * `workspace / tab` locator beside it already prints that word, and a
+   * locator that repeats its neighbour is not a second fact. The checkout
+   * path still names the directory, so nothing becomes unreachable.
+   */
+  protected readonly showRepo = computed(() => {
+    const project = this.project();
+    if (!project) {
+      return false;
+    }
+    return project.repo.toLowerCase() !== this.pane().workspace.name.toLowerCase();
+  });
+
   /** The status word rendered beside the dot — colour is never the only carrier. */
   protected readonly statusLabel = computed(
     () => COPY.status[this.pane().agent_status] ?? COPY.status.unknown

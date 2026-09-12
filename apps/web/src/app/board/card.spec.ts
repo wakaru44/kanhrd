@@ -183,13 +183,46 @@ describe('Card', () => {
   };
 
   it('renders the repo name and a computed path tail, with the full path as a pointer convenience', () => {
-    const el = render(pane({ project: PROJECT }));
+    // A repo whose name is NOT the workspace's ("kanhrd"), so both locators
+    // have something of their own to say.
+    const el = render(pane({ project: { ...PROJECT, repo_name: 'herdr' } }));
 
-    expect(el.querySelector('.project .repo')?.textContent?.trim()).toBe('kanhrd');
+    expect(el.querySelector('.project .repo')?.textContent?.trim()).toBe('herdr');
     expect(el.querySelector('.project .checkout-tail')?.textContent?.trim()).toBe(
       '…/wakaru44/kanhrd'
     );
-    expect(el.querySelector('.project')?.getAttribute('title')).toBe(PROJECT.checkout_path);
+    expect(el.querySelector('.project-checkout')?.getAttribute('title')).toBe(
+      PROJECT.checkout_path
+    );
+  });
+
+  it('drops the repo locator when it is the workspace name again', () => {
+    // `kanhrd / main` beside `kanhrd` is one fact printed twice. The checkout
+    // path still names the directory, so nothing becomes unreachable.
+    const el = render(pane({ project: PROJECT }));
+
+    expect(el.querySelector('.location')?.textContent?.trim()).toBe('kanhrd / main');
+    expect(el.querySelector('.project .repo')).toBeNull();
+    expect(el.querySelector('.project .checkout-tail')?.textContent?.trim()).toBe(
+      '…/wakaru44/kanhrd'
+    );
+  });
+
+  it('lays the card out as independent rows, so no row insets another', () => {
+    const el = render(pane({ project: PROJECT }), capsWithTerminal('laptop', tier3));
+    const identity = el.querySelector('.row-identity')!;
+    const state = el.querySelector('.row-state')!;
+
+    // What the old single grid coupled: the status word and the action row
+    // sized the columns the NAME was laid out in. Different rows now, so
+    // neither can reach it.
+    expect(identity.querySelector('.card-open')).not.toBeNull();
+    expect(identity.querySelector('.status-label')).toBeNull();
+    expect(identity.querySelector('.card-actions')).toBeNull();
+    expect(state.querySelector('.status-label')).not.toBeNull();
+    expect(state.querySelector('.card-actions')).not.toBeNull();
+    // The locator row is the only one that wraps.
+    expect(getComputedStyle(el.querySelector('.path')!).flexWrap).toBe('wrap');
   });
 
   it('keeps the full path in the DOM so it is reachable without a pointer', () => {
@@ -300,7 +333,14 @@ describe('Card', () => {
       expect(link.contains(button)).withContext(button.className).toBe(false);
       expect(button.closest('a')).toBeNull();
     }
-    expect(link.parentElement).toBe(el.querySelector('.card-actions')?.parentElement ?? null);
+    // The invariant is "never nested", not "same parent": the card is a
+    // column of row boxes now (redesign-card-hierarchy), so the link sits in
+    // the identity row and the actions in the state row. What must stay true
+    // is that neither contains the other.
+    const actions = el.querySelector('.card-actions') as HTMLElement;
+    expect(link.contains(actions)).toBeFalse();
+    expect(actions.contains(link)).toBeFalse();
+    expect(actions.closest('a')).toBeNull();
   });
 
   it('gives the link and every action an accessible name', () => {

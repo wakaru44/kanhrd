@@ -14,16 +14,24 @@
   display: block;
 }
 
+/*
+ * Rows as grouping, not areas over a shared column set. The card is a
+ * COLUMN box; each child is a ROW box that sizes only its own children.
+ *
+ * What this replaced, and why it is not coming back: the card was one grid
+ * with `grid-template-areas`, so its three columns were shared by three
+ * unrelated rows. A grid column is as wide as the widest cell in it across
+ * EVERY row, which meant the status word (row 3) set the name's left inset
+ * (row 1), and the four action buttons (row 3) set where the name had to
+ * stop. At the minimum column width the name was a truncated sliver with
+ * visible emptiness on both sides of it. A row box cannot reach into
+ * another row box, so that coupling is structurally impossible here.
+ */
 .card {
   position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas:
-    'dot title seal'
-    'path path path'
-    'status meta actions';
-  align-items: center;
-  gap: var(--sp-1) var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
   padding: calc(var(--sp-3) * var(--density-scale, 1));
   border-radius: var(--radius-md);
   background: var(--paper-sunk);
@@ -41,12 +49,36 @@
   border: var(--elev-1);
 }
 
+/* Every row: a horizontal box on one baseline. Rows never wrap unless they
+ * say so (only the locator row does). */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+/* The name's row. `min-width: 0` on the row and on the name is what stops a
+ * long name from widening the card and, through it, the column. */
+.row-identity {
+  align-items: baseline;
+}
+
+/* The state row: status word and meta read left to right, the actions sit at
+ * the trailing edge of the SAME row rather than in a column that reserves
+ * width from the rows above. */
+.row-state {
+  gap: var(--sp-2);
+}
+
 /*
  * Stretched link: the whole card opens the pane, but the control is a real
  * <a> that is a SIBLING of the action buttons — never their ancestor.
  */
 .card-open {
-  grid-area: title;
+  /* Fills what the dot and the hanko leave in ITS row. Nothing below this
+   * row has a say in where it starts or stops. */
+  flex: 1 1 auto;
   min-width: 0;
   font-family: var(--font-ui);
   font-weight: var(--fw-medium);
@@ -67,8 +99,9 @@ a.card-open::after {
 }
 
 .status-dot {
-  grid-area: dot;
   flex: none;
+  /* Optically centred on the name's cap height rather than its baseline. */
+  align-self: center;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -88,9 +121,15 @@ a.card-open::after {
   }
 }
 
-/* Colour is never the only carrier: the word is always rendered. */
+/*
+ * Colour is never the only carrier: the word is always rendered — on every
+ * card, including one sitting under a status column header that already
+ * says the same word. A card is self-describing wherever it is drawn
+ * (maintainer decision, 2026-09-12). It costs the name nothing now: it is
+ * in the state row, and rows are independent.
+ */
 .status-label {
-  grid-area: status;
+  flex: none;
   font-family: var(--font-ui);
   font-size: var(--fs-caption);
   line-height: var(--lh-caption);
@@ -118,31 +157,37 @@ a.card-open::after {
  * both the row and its children is what keeps a 200-character checkout path
  * from widening the column and, through it, the page.
  */
+/*
+ * The locator row WRAPS. Each locator claims at least half the row
+ * (`flex-basis: 50%` with `min-width: 0` so it may still shrink), which is
+ * the whole of the "at most two per line" rule: two short locators share a
+ * line, and one that needs more than half takes the line and pushes its
+ * neighbour down. Three ellipses side by side — `kanhrd / do-…  kan…
+ * …/wakaru44/ka…` — said nothing; two whole strings on two lines say two
+ * things.
+ */
 .path {
-  grid-area: path;
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--sp-2);
+  gap: 0 var(--sp-2);
   min-width: 0;
   font-size: var(--fs-small);
   line-height: var(--lh-small);
   color: var(--ink-mute);
-  overflow: hidden;
-  white-space: nowrap;
 }
 
-.location {
+.location,
+.project {
+  flex: 1 1 50%;
   min-width: 0;
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 /* The project herdr already knows about: repo name, then where it is checked out. */
 .project {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sp-2);
-  min-width: 0;
   font-family: var(--font-mono);
   font-size: var(--fs-caption);
   line-height: var(--lh-caption);
@@ -152,8 +197,6 @@ a.card-open::after {
 .repo,
 .checkout {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /*
@@ -173,12 +216,20 @@ a.card-open::after {
   .checkout-full {
     display: block;
   }
+
+  /* The whole path is the point of revealing it, so let it have the row
+   * rather than ellipsing it at half width. */
+  .project-checkout {
+    flex-basis: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 
 /* Meta row: durations and counts in mono. Elapsed is the bridge's observation
  * of when the pane entered its status, and is absent when it has none. */
 .meta {
-  grid-area: meta;
+  flex: 1 1 auto;
   display: flex;
   gap: var(--sp-2);
   min-width: 0;
@@ -230,7 +281,9 @@ a.card-open::after {
  * action a keyboard user can reach.
  */
 .card-actions {
-  grid-area: actions;
+  /* Trailing edge of the state row. It reserves width from that row only. */
+  margin-left: auto;
+  flex: none;
   position: relative;
   z-index: 1; /* above the stretched link overlay */
   justify-self: end;
@@ -326,11 +379,28 @@ a.card-open::after {
  * viewport under --breakpoint-mobile.
  */
 @mixin compact {
+  /* One row box: the rows collapse into their parent so dot, name, seal,
+   * elapsed, status cue and trigger sit on a single line. `display: contents`
+   * is what lets the DOM order stay identical between densities — no
+   * second template, no re-ordered markup for a screen reader. */
   .card {
-    grid-template-columns: auto minmax(0, 1fr) auto auto auto auto;
-    grid-template-areas: 'dot title seal meta status actions';
+    flex-direction: row;
+    align-items: center;
     min-height: var(--card-compact-height);
     gap: var(--sp-2);
+  }
+
+  .row {
+    display: contents;
+  }
+
+  .card-open {
+    flex: 1 1 auto;
+  }
+
+  .status-label,
+  .host-seal {
+    flex: none;
   }
 
   .card-open {
@@ -346,7 +416,12 @@ a.card-open::after {
 
   /* Title truncates; the status label, seal and elapsed never do. */
   .meta {
+    flex: none;
     overflow: visible;
+  }
+
+  .card-actions {
+    margin-left: 0;
   }
 
   .actions-inline {

@@ -4,21 +4,65 @@
   above it. A <button> inside the card's <a> is invalid HTML and breaks
   keyboard and screen-reader semantics — do not nest them again.
 -->
+<!--
+  Rows, not areas. The card is a COLUMN box of ROW boxes, and each row
+  sizes only its own children: the identity row's name is not inset by the
+  status word below it, and not clipped by the action row beside it. That
+  coupling — one grid whose columns were shared by three unrelated rows —
+  is what used to leave the name a truncated sliver between two empty
+  gaps. A row cannot reach into another row, so it cannot come back.
+-->
 <div class="card" [class.card--static]="!terminalAvailable()">
-  <span class="status-dot" [class]="pane().agent_status" aria-hidden="true"></span>
+  <div class="row row-identity">
+    <span class="status-dot" [class]="pane().agent_status" aria-hidden="true"></span>
 
-  @if (terminalAvailable()) {
-    <a
-      class="card-open"
-      [routerLink]="['/pane', pane().host, pane().id]"
-      (click)="rememberReturn()"
-      >{{ displayName() }}</a
-    >
-  } @else {
-    <span class="card-open">{{ displayName() }}</span>
-  }
+    @if (terminalAvailable()) {
+      <a
+        class="card-open"
+        [routerLink]="['/pane', pane().host, pane().id]"
+        (click)="rememberReturn()"
+        >{{ displayName() }}</a
+      >
+    } @else {
+      <span class="card-open">{{ displayName() }}</span>
+    }
 
-  <span class="host-seal">{{ pane().host }}</span>
+    <span class="host-seal">{{ pane().host }}</span>
+  </div>
+
+  <!--
+    Location row: `workspace / tab`, then the checkout herdr already knows
+    about. It WRAPS rather than truncating: each locator claims at least
+    half the row, so two short ones share a line and a long one takes its
+    own instead of two ellipses saying nothing beside each other.
+
+    The repo name is absent whenever it is the workspace's name again
+    (the common case here) — a locator that repeats its neighbour is not
+    a second fact.
+
+    The truncated path is computed (util/path-tail.ts), not CSS-elided —
+    the head of a path cannot be ellipsed by `text-overflow`, and faking
+    it with `direction: rtl` is bidi-unsafe. The full path is rendered on
+    keyboard focus and on the detail route; `title` is a pointer
+    convenience only.
+  -->
+  <span class="path row row-locators">
+    <span class="location">{{ path() }}</span>
+    @if (project(); as p) {
+      @if (showRepo()) {
+        <span class="project project-repo">
+          <span class="repo">{{ p.repo }}</span>
+        </span>
+      }
+      <span class="project project-checkout" [title]="p.full">
+        <span class="checkout checkout-tail">{{ p.tail }}</span>
+        <span class="checkout checkout-full">{{ p.full }}</span>
+      </span>
+    }
+  </span>
+
+  <div class="row row-state">
+  <span class="status-label" [class]="pane().agent_status">{{ statusLabel() }}</span>
 
   <span class="meta">
     <!--
@@ -38,26 +82,6 @@
          a count and its unit, like the `12m` beside it. -->
     @if (lineCount(); as lines) {
       <span class="lines">{{ lines }} lines</span>
-    }
-  </span>
-
-  <span class="status-label" [class]="pane().agent_status">{{ statusLabel() }}</span>
-
-  <!--
-    Location row: workspace / tab, then the project herdr already knows about.
-    The truncated path is computed (util/path-tail.ts), not CSS-elided — the
-    head of a path cannot be ellipsed by `text-overflow`, and faking it with
-    `direction: rtl` is bidi-unsafe. The full path is rendered on keyboard
-    focus and on the detail route; `title` is a pointer convenience only.
-  -->
-  <span class="path">
-    <span class="location">{{ path() }}</span>
-    @if (project(); as p) {
-      <span class="project" [title]="p.full">
-        <span class="repo">{{ p.repo }}</span>
-        <span class="checkout checkout-tail">{{ p.tail }}</span>
-        <span class="checkout checkout-full">{{ p.full }}</span>
-      </span>
     }
   </span>
 
@@ -197,6 +221,7 @@
           </div>
         </ng-template>
       </div>
+  </div>
   </div>
 </div>
 
