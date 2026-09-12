@@ -1,0 +1,21 @@
+docs/DESIGN-SYSTEM.md
+  s_41bed7e0e7701d::t_074ded96a8a1dc 503-515
+docs/UX-GUIDELINES.md
+  s_41bed7e0e7701d::t_074ded96a8a1dc 129-140,488-494,688-690,770-776
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "6c7589a671c437fa94583a2ef1fc62c01e322891",
+  "prompts": {},
+  "sessions": {
+    "s_41bed7e0e7701d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c985291b-2f83-4b9b-a00d-3f7b63991f12",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
