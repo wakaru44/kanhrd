@@ -1,0 +1,22 @@
+<!--
+  The tab level. Each entry is a LINK to a pane of that tab, never a control
+  that swaps the terminal behind a stable URL (docs/UX-GUIDELINES.md § URL is
+  state). The current tab is marked by weight and an ochre rule, plus
+  `aria-current` — never by colour alone.
+-->
+<div class="tab-strip" role="group" [attr.aria-label]="stripLabel" (keydown)="onKeydown($event)">
+  @for (entry of entries(); track entry.tab.id; let i = $index) {
+    <a
+      #entry
+      class="tab"
+      [class.current]="entry.current"
+      [routerLink]="['/pane', entry.pane.host, entry.pane.id]"
+      [attr.aria-current]="entry.current ? 'page' : null"
+      [attr.tabindex]="i === rovingIndex() ? 0 : -1"
+      [attr.aria-label]="itemLabel(entry)"
+    >
+      <span class="tab-name">{{ entry.tab.name }}</span>
+      <span class="tab-count">{{ entry.count }}</span>
+    </a>
+  }
+</div>

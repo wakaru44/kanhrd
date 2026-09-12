@@ -35,6 +35,7 @@ import {
 } from '../shared/icons';
 import { BoardReturnService } from '../state/board-return.service';
 import { CardSwitcher } from './card-switcher';
+import { TabStrip, stepTab, tabEntries, type TabEntry } from './tab-strip';
 import { PaneTerminal } from './pane-terminal';
 
 /**
@@ -89,6 +90,7 @@ export function nextSiblingCard(siblings: readonly Pane[], currentId: string): P
     RouterLink,
     RenameModal,
     CardSwitcher,
+    TabStrip,
     LucideArrowLeft,
     LucidePencil,
     LucideSquareSplitHorizontal,
@@ -189,6 +191,40 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   /** The switcher, the next-card button and both card chords all hang off this one condition. */
   protected readonly sharesTab = computed(() => this.siblings().length > 1);
 
+  // --- the tab level ------------------------------------------------------
+  //
+  // herdr's model is host -> workspace -> tab -> pane, and its TUI shows the
+  // bottom two levels at once. This view used to show only `siblings` (the
+  // panes of ONE tab) in the slot herdr gives to tabs, so a terminal had no
+  // route to another tab at all and `prefix + n` moved the board's scope
+  // behind the operator's back. Both levels are drawn now, and the keys and
+  // the strip share one implementation (`tabEntries` / `stepTab`).
+
+  protected readonly tabEntries = computed<readonly TabEntry[]>(() => {
+    const pane = this.pane();
+    if (!pane) {
+      return [];
+    }
+    return tabEntries(
+      this.store.tabsSignal().values(),
+      this.store.panesSignal().values(),
+      this.host(),
+      pane.workspace.id,
+      pane.tab.id
+    );
+  });
+
+  /** A workspace of one tab renders no strip: no empty rail, no disabled control. */
+  protected readonly hasTabs = computed(() => this.tabEntries().length > 1);
+
+  /** `prefix + n` / `prefix + p`, and the pointer's own entry links, on one implementation. */
+  private stepTabBy(direction: 1 | -1): void {
+    const next = stepTab(this.tabEntries(), direction);
+    if (next) {
+      void this.router.navigate(['/pane', next.pane.host, next.pane.id]);
+    }
+  }
+
   /** herdr's git provenance for this pane's workspace — the FULL path here, never the card's truncated form. */
   protected readonly project = computed(() => this.pane()?.project ?? null);
 
@@ -266,6 +302,14 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       nextCard: () => this.goToNextCard(),
     });
 
+    // Same seam for the level above: with this registered, `prefix + n` /
+    // `prefix + p` move the terminal the operator is looking at rather than
+    // a board scope they cannot see.
+    this.keyboard.registerTabNavigator({
+      available: () => this.hasTabs(),
+      step: (direction) => this.stepTabBy(direction),
+    });
+
     // Fetch (and refetch) this pane's content whenever the route resolves to
     // a different pane or the socket (re)connects — driven off signals
     // (Angular 20 way) rather than a one-shot `ngOnInit`/`ngAfterViewInit`
@@ -317,6 +361,7 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.keyboard.registerCardSwitcher(null);
+    this.keyboard.registerTabNavigator(null);
     this.terminal.dispose();
   }
 

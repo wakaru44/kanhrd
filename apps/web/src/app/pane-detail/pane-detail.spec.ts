@@ -84,6 +84,8 @@ describe('PaneDetail metadata strip — project provenance', () => {
           provide: PanesStore,
           useValue: {
             panesSignal: () => panes,
+            // The bar draws herdr's tab level from this (add-pane-tab-hierarchy).
+            tabsSignal: () => new Map(),
             capabilitiesSignal: () => new Map(),
             hostsSignal: () => [{ name: 'laptop', connected: true }],
           },
@@ -151,9 +153,14 @@ describe('PaneDetail top bar', () => {
     };
   }
 
-  async function render(list: Pane[], currentId = 'pane-1'): Promise<HTMLElement> {
+  async function render(
+    list: Pane[],
+    currentId = 'pane-1',
+    tabs: { id: string; host: string; name: string; workspace: { id: string } }[] = []
+  ): Promise<HTMLElement> {
     ws = new FakeWsClient();
     panes = new Map(list.map((p) => [`${p.host}:${p.id}`, p]));
+    const tabMap = new Map(tabs.map((t) => [`${t.host}:${t.id}`, t]));
 
     await TestBed.configureTestingModule({
       imports: [PaneDetail],
@@ -166,7 +173,7 @@ describe('PaneDetail top bar', () => {
             panesSignal: () => panes,
             capabilitiesSignal: () => new Map(),
             hostsSignal: () => [{ name: 'laptop', connected: true }],
-            tabsSignal: () => new Map(),
+            tabsSignal: () => tabMap,
             tabFilterSignal: () => null,
             scopeSignal: () => null,
             primaryHostKeybinds: () => null,
@@ -190,6 +197,41 @@ describe('PaneDetail top bar', () => {
   }
 
   afterEach(() => TestBed.resetTestingModule());
+
+  // --- the two levels (add-pane-tab-hierarchy) ---------------------------
+
+  function tabOf(id: string, name: string) {
+    return { id, host: 'laptop', name, workspace: { id: 'w1' } };
+  }
+
+  it("draws herdr's two levels: the workspace's tabs, then this tab's cards", async () => {
+    const el = await render(
+      [pane('pane-1'), pane('pane-2'), pane('pane-3', { tab: { id: 't2', name: 'gpt' } })],
+      'pane-1',
+      [tabOf('t1', 'build'), tabOf('t2', 'gpt')]
+    );
+
+    const tabs = Array.from(el.querySelectorAll('app-tab-strip a.tab'));
+    expect(tabs.map((a) => a.querySelector('.tab-name')?.textContent?.trim())).toEqual([
+      'build',
+      'gpt',
+    ]);
+    expect(tabs.map((a) => a.querySelector('.tab-count')?.textContent?.trim())).toEqual(['2', '1']);
+    expect(tabs[0].getAttribute('aria-current'))
+      .withContext('the route pane sits in t1')
+      .toBe('page');
+    // The pane level is still there, below the tabs and subordinate to them.
+    expect(el.querySelectorAll('app-card-switcher .entry').length).toBe(2);
+  });
+
+  it('renders no tab strip in a workspace of one tab — no empty rail', async () => {
+    const el = await render([pane('pane-1'), pane('pane-2')], 'pane-1', [tabOf('t1', 'build')]);
+
+    expect(el.querySelector('app-tab-strip')).toBeNull();
+    expect(el.querySelector('app-card-switcher'))
+      .withContext('the pane level stays')
+      .not.toBeNull();
+  });
 
   // --- breadcrumb --------------------------------------------------------
 
@@ -334,6 +376,8 @@ describe('PaneDetail', () => {
           provide: PanesStore,
           useValue: {
             panesSignal: () => new Map(),
+            // The bar draws herdr's tab level from this (add-pane-tab-hierarchy).
+            tabsSignal: () => new Map(),
             capabilitiesSignal: () => new Map(),
             hostsSignal: () => hosts(),
           },
@@ -727,6 +771,8 @@ describe('PaneDetail terminal settings', () => {
           provide: PanesStore,
           useValue: {
             panesSignal: () => new Map(),
+            // The bar draws herdr's tab level from this (add-pane-tab-hierarchy).
+            tabsSignal: () => new Map(),
             capabilitiesSignal: () => new Map(),
             hostsSignal: () => [{ name: 'laptop', connected: true }],
           },

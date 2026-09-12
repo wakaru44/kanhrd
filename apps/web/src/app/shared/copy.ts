@@ -179,6 +179,13 @@ export const COPY = {
     cardSwitcher: 'cards in this tab',
     cardSwitcherItem: '{name} — {status}',
     nextCard: 'next card in this tab',
+    /**
+     * The level above the card switcher: herdr's tabs, in herdr's own word.
+     * Same clinical register as the switcher below it — a navigator is
+     * neither a lifecycle nor an empty state.
+     */
+    tabStrip: 'tabs in this workspace',
+    tabStripItem: '{name} — {count} cards',
     /** Every overflow trigger: a card's and a rail row's are the same control. */
     moreActions: 'more actions',
   },

@@ -166,6 +166,8 @@ product copy and stay in the template.
 | `nav.help`                            | `keyboard shortcuts`                                                                                                                          |
 | `nav.statusSwitcher`                  | `status columns`                                                                                                                              |
 | `nav.statusSwitcherItem`              | `{status} — {count} cards`                                                                                                                    |
+| `nav.tabStrip`                        | `tabs in this workspace`                                                                                                                      |
+| `nav.tabStripItem`                    | `{name} — {count} cards`                                                                                                                      |
 | `create.menu`                         | `open`                                                                                                                                        |
 | `create.pane`                         | `open a card`                                                                                                                                 |
 | `create.tab`                          | `open a tab`                                                                                                                                  |

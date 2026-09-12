@@ -1,0 +1,62 @@
+/*
+ * The tab level of the bar. It is the LOUDER of the two strips: tabs are
+ * herdr's grouping and the panes below them are its contents, so the
+ * hierarchy is carried by type scale and indent rather than by giving the
+ * second strip a different kind of chrome.
+ */
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.tab-strip {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-1);
+  min-width: 0;
+  /* Entries scroll INSIDE the strip; the page never scrolls sideways. */
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.tab {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex: none;
+  padding: var(--sp-1) var(--sp-2);
+  /* The current tab's 2px rule sits here on every tab, transparent until
+   * current, so selecting one never shifts the row by two pixels. */
+  border-bottom: 2px solid transparent;
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--ink-soft);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--ink);
+  }
+}
+
+.tab.current {
+  font-weight: var(--fw-semi);
+  color: var(--ink);
+  border-bottom-color: var(--ochre-line);
+}
+
+.tab-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-mute);
+}
+
+@media (pointer: coarse) {
+  .tab {
+    min-height: var(--touch-target-min);
+    align-items: center;
+  }
+}

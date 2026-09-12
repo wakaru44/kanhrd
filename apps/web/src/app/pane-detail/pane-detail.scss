@@ -102,10 +102,21 @@
   }
 
   /* The switcher takes its own row beneath the title, above the meta strip. */
+  /* The tab level comes first of the two strips: it is herdr's grouping and
+   * the pane strip below lists its contents. */
+  .tab-slot {
+    order: 3;
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+
+  /* The pane level, subordinate by indent — not by a second border, a fill
+   * or a different family of chrome. One widget, two levels. */
   .switcher-slot {
     order: 4;
     flex: 1 0 100%;
     min-width: 0;
+    padding-left: var(--sp-3);
   }
 
   /* Title + its rename control, kept adjacent at every width. */

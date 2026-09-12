@@ -68,6 +68,15 @@
 
     <span class="host-seal">{{ host() }}</span>
 
+    <!--
+      Two levels, in herdr's order: the workspace's tabs, then the panes of
+      the selected tab. The pane strip below is the SAME widget one level
+      down, subordinate by scale and indent rather than by different chrome.
+    -->
+    @if (hasTabs()) {
+      <app-tab-strip class="tab-slot" [entries]="tabEntries()" />
+    }
+
     @if (sharesTab()) {
       <app-card-switcher
         class="switcher-slot"

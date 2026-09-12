@@ -469,6 +469,49 @@ describe('KeyboardService', () => {
       expect(store.tabFilterSignal()).toEqual({ host: 'local', tabId: 't2' });
     });
 
+    it('hands prefix+n / prefix+p to the view when one registers a tab navigator', () => {
+      // Pane detail registers this on mount. Before it existed, these keys
+      // moved the BOARD's scope while the operator was looking at a
+      // terminal — nothing on screen changed, so the keys read as dead.
+      store.setTabs([tab('local', 't1'), tab('local', 't2')]);
+      store.setScope('local', 'w1', 't1');
+      const steps: number[] = [];
+      service.registerTabNavigator({ available: () => true, step: (d) => steps.push(d) });
+
+      service.handleKeydown(keyEvent('b', { ctrlKey: true }), document.body);
+      service.handleKeydown(keyEvent('n'), document.body);
+      service.handleKeydown(keyEvent('b', { ctrlKey: true }), document.body);
+      service.handleKeydown(keyEvent('p'), document.body);
+
+      expect(steps).toEqual([1, -1]);
+      expect(store.setScope).withContext('the view moved, not the board').toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the board behaviour when the view has nothing to step through', () => {
+      // A workspace of one tab: the navigator is registered but reports
+      // unavailable, and the keys fall back rather than doing nothing.
+      store.setTabs([tab('local', 't1'), tab('local', 't2')]);
+      store.setScope('local', 'w1', 't1');
+      service.registerTabNavigator({ available: () => false, step: () => fail('not reachable') });
+
+      service.handleKeydown(keyEvent('b', { ctrlKey: true }), document.body);
+      service.handleKeydown(keyEvent('n'), document.body);
+
+      expect(store.tabFilterSignal()).toEqual({ host: 'local', tabId: 't2' });
+    });
+
+    it('returns the keys to the board when the view unregisters on destroy', () => {
+      store.setTabs([tab('local', 't1'), tab('local', 't2')]);
+      store.setScope('local', 'w1', 't1');
+      service.registerTabNavigator({ available: () => true, step: () => fail('not reachable') });
+      service.registerTabNavigator(null);
+
+      service.handleKeydown(keyEvent('b', { ctrlKey: true }), document.body);
+      service.handleKeydown(keyEvent('n'), document.body);
+
+      expect(store.tabFilterSignal()).toEqual({ host: 'local', tabId: 't2' });
+    });
+
     it('prefix+0..9 jumps to the tab at that index', () => {
       store.setTabs([tab('local', 't1'), tab('local', 't2'), tab('local', 't3')]);
 

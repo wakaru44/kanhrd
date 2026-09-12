@@ -56,6 +56,20 @@ export interface CardSwitcherHandle {
 }
 
 /**
+ * The seam a VIEW hands `KeyboardService` so that "which tab is next" has
+ * one implementation, shared by `prefix + n` / `prefix + p` and by the
+ * visible strip the keys mirror. `null` whenever the view that registered
+ * it is not mounted, which is what returns the keys to the board's own
+ * meaning (move the board's scope).
+ */
+export interface TabNavigatorHandle {
+  /** True when this view can actually move between tabs — more than one tab to reach. */
+  readonly available: () => boolean;
+  /** Move to the next (`1`) or previous (`-1`) tab, wrapping. */
+  readonly step: (direction: 1 | -1) => void;
+}
+
+/**
  * Every chord kanhrd recognizes DESPITE a focused input — including
  * xterm.js's helper textarea. Each entry is a key the program running
  * inside a pane can no longer receive, so this list is deliberately one
@@ -369,6 +383,7 @@ export class KeyboardService {
 
   /** Set while pane detail is mounted; `null` otherwise. See {@link CardSwitcherHandle}. */
   private cardSwitcher: CardSwitcherHandle | null = null;
+  private tabNavigator: TabNavigatorHandle | null = null;
 
   shortcuts(): ReadonlyMap<ShortcutAction, ShortcutBinding> {
     return SHORTCUT_MAP;
@@ -377,6 +392,16 @@ export class KeyboardService {
   /** Pane detail registers on mount and passes `null` on destroy. */
   registerCardSwitcher(handle: CardSwitcherHandle | null): void {
     this.cardSwitcher = handle;
+  }
+
+  /**
+   * The view's own answer to "which tab is next". Registered by whatever
+   * view draws a tab strip (pane detail today) and cleared on destroy; with
+   * none registered, `prefix + n` / `prefix + p` keep moving the BOARD's
+   * scope, which is their meaning on the board.
+   */
+  registerTabNavigator(handle: TabNavigatorHandle | null): void {
+    this.tabNavigator = handle;
   }
 
   setPrefix(prefix: string): void {
@@ -653,7 +678,19 @@ export class KeyboardService {
     }));
   }
 
+  /**
+   * `prefix + n` / `prefix + p`. A view that draws its own tab strip owns
+   * what they mean there: on pane detail they navigate to the next tab's
+   * pane, because moving the board's scope while the operator is looking at
+   * a terminal changed nothing they could see. Without a registered
+   * navigator this is the board, and the board's meaning is its scope.
+   */
   private cycleTab(direction: 1 | -1): void {
+    const navigator = this.tabNavigator;
+    if (navigator?.available()) {
+      navigator.step(direction);
+      return;
+    }
     const tabs = this.orderedTabs();
     if (tabs.length === 0) {
       return;
