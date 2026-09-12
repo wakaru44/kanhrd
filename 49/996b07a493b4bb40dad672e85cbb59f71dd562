@@ -1,0 +1,28 @@
+apps/bridge/src/ws/server.ts
+  s_9f6e9e632154c4::t_ff01260fc3c830 84
+packages/schema/src/wire.ts
+  s_9f6e9e632154c4::t_473386d64c7501 153-155,161-162
+apps/bridge/src/output/poller.ts
+  s_9f6e9e632154c4::t_dbf09f4998edbc 16-21,46-47,59-65,80,88-91,102-104,160
+apps/bridge/src/output/poller.test.ts
+  s_9f6e9e632154c4::t_dbf09f4998edbc 8-9,30-35,84,95,101-111,118,125-126,135,152,189,203-204,225,242-243
+  s_9f6e9e632154c4::t_ff01260fc3c830 112-117,119-124,171-172
+openspec/changes/add-terminal-scrollback-depth/tasks.md
+  s_9f6e9e632154c4::t_2a55f08af075d5 17,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "49996b07a493b4bb40dad672e85cbb59f71dd562",
+  "prompts": {},
+  "sessions": {
+    "s_9f6e9e632154c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94df2e1b-4541-4873-b074-5ea96fce8f02",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
