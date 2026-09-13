@@ -658,6 +658,9 @@ describe('PaneDetail', () => {
     expect(gone?.textContent).toContain(COPY.state.gone);
     expect(gone?.querySelector('svg[lucideSunset]')).not.toBeNull();
     expect(gone?.querySelector('a.state-back')?.textContent).toContain(COPY.nav.backToBoard);
+    // A caption under the frame, not a panel over it.
+    expect(stateEl('.terminal-status .terminal-gone')).toBeNull();
+    expect(stateEl('.terminal-wrap + .gone-slot > .terminal-gone')).not.toBeNull();
     expect(stateEl('button.retry')).toBeNull();
     expect(stateEl('.stale-marker')).toBeNull();
     expect(stateEl('.terminal-unavailable')).toBeNull();

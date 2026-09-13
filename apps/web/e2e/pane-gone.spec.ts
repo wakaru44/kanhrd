@@ -87,6 +87,28 @@ test('a pane whose shell exits while open is reported gone, unwatched and unwrit
     await expect(terminalContainer(app)).toHaveClass(/\binert\b/);
     await expect(xtermElement(app)).toBeVisible();
 
+    // A caption under the last row, never over it: the caption starts below
+    // the terminal sheet, and the last row with output is still inside the
+    // (refitted) terminal box.
+    await waitFor(
+      async () =>
+        app.evaluate(() => {
+          const wrap = document.querySelector('.terminal-wrap')?.getBoundingClientRect();
+          const box = document.querySelector('.terminal-container')?.getBoundingClientRect();
+          const caption = document.querySelector('.terminal-gone')?.getBoundingClientRect();
+          const rows = [...document.querySelectorAll('.xterm-rows > div')].filter(
+            (row) => (row.textContent ?? '').trim().length > 0
+          );
+          const last = rows[rows.length - 1]?.getBoundingClientRect();
+          if (!wrap || !box || !caption || !last) return false;
+          return caption.top >= wrap.bottom && last.bottom <= box.bottom + 1;
+        }),
+      {
+        timeoutMs: 3_000,
+        message: 'the gone caption overlaps the frame, or the last row left view',
+      }
+    );
+
     await waitFor(async () => sent.some((frame) => frame.includes('pane.unsubscribe_output')), {
       timeoutMs: 3_000,
       message: 'entering gone never sent pane.unsubscribe_output',

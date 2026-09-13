@@ -152,18 +152,6 @@
               </div>
             </div>
           }
-          @case ('gone') {
-            <!-- The last frame stays readable underneath, dimmed. Nothing to retry. -->
-            <div class="terminal-state terminal-gone">
-              <p class="state-line">
-                <svg lucideSunset class="icon" aria-hidden="true"></svg>
-                {{ copy.state.gone }}
-              </p>
-              <div class="state-actions">
-                <a [routerLink]="backUrl" class="state-back">{{ copy.nav.backToBoard }}</a>
-              </div>
-            </div>
-          }
           @case ('empty') {
             <div class="terminal-state terminal-empty">
               <p class="state-line">{{ copy.emptyState.hostEmpty }}</p>
@@ -171,6 +159,23 @@
           }
         }
       </div>
+    </div>
+
+    <!--
+      Gone is a caption under the last row, never a panel over it: the frame
+      is the content its copy points at (design.md, "Placement"). Nothing to
+      retry. The live region stays mounted so the caption is announced.
+    -->
+    <div class="gone-slot" aria-live="polite">
+      @if (viewState() === 'gone') {
+        <div class="terminal-gone">
+          <p class="state-line">
+            <svg lucideSunset class="icon" aria-hidden="true"></svg>
+            {{ copy.state.gone }}
+          </p>
+          <a [routerLink]="backUrl" class="state-back">{{ copy.nav.backToBoard }}</a>
+        </div>
+      }
     </div>
   </div>
 

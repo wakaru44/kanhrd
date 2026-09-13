@@ -29,9 +29,8 @@ dimming is what stops the frozen frame lying.
 
 It is `opacity` on `.terminal-container` itself, not a translucent layer
 laid over it: no extra element, no extra render cost, and the thing that
-is inert is the thing that looks inert. The state box in the
-terminal-status area is a sibling of the container and stays at full
-contrast.
+is inert is the thing that looks inert. The caption below it (see
+_Placement_) is outside the container and stays at full contrast.
 
 0.45 was chosen by the operator from rendered specimens at 1.0 / 0.6 /
 0.45 / 0.3 on both themes: plainly inert while the last output stays
@@ -41,6 +40,33 @@ There was no precedent for statically dimming a surface, and
 `--paper-scrim` cannot be borrowed: it is a modal / drawer backdrop that
 always sits behind a raised surface, which this is not.
 `docs/DESIGN-SYSTEM.md` gains the token under _Colour usage rules_.
+
+### Placement: a caption under the frame, not a panel over it
+
+`failed` and `unavailable` sit centred over the terminal. `gone` does not,
+and this is a deliberate exception, ruled by the operator — do not "fix" it
+back to match its neighbours.
+
+Those two can sit centred at no cost because they have nothing behind them
+worth reading: a failed load or a lost host has no last output. `gone` is
+the only reliability state where the frame _is_ the content, and its copy
+points straight at it — "the session ended. this is the last thing it
+said." A box covering the thing that sentence names undercuts the sentence.
+The placement follows the copy.
+
+So the state line and the back link render as a caption under a hairline
+divider below the terminal sheet, with the same components and copy as
+before. The caption is in flow, outside `.terminal-wrap`, so `FitAddon`
+fits the terminal to the space that is left: it loses a few rows and no
+columns, nothing reflows, and xterm gives the rows up from the top — the
+oldest visible lines go to scrollback and the last output stays in view.
+The dimmed frame is otherwise untouched. The live e2e checks both halves:
+the caption starts below the sheet, and the last row with output is still
+inside the terminal box.
+
+The exception is scoped to `gone` alone. A future reliability state with
+content behind it can make the same argument; a future state without
+content stays centred.
 
 ## 3. Icon: `LucideSunset`
 
@@ -92,4 +118,12 @@ carrying the same id.
   retries and a subscribe that lands late are all refused for that pane.
   The buffer is left as it is. Loading a different pane lifts it.
 - `gone` is final for the route: a later reconnect of the socket does not
-  re-read the pane.
+  re-read the pane. herdr does not reuse pane ids, so there is nothing a
+  reconnect could legitimately restore that URL to.
+
+## Verification scope
+
+The live e2e (`e2e/pane-gone.spec.ts`) is tested on chromium only:
+`playwright.config.ts` scopes the `mobile` project to `mobile.spec.ts`, and
+widening that is outside this change. Phone-width layout of the caption is
+covered by nothing live.

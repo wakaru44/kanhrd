@@ -261,6 +261,7 @@
 .detail-body {
   flex: 1;
   display: flex;
+  flex-direction: column;
   min-height: 0;
   min-width: 0;
   /*
@@ -282,6 +283,7 @@
   position: relative;
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   /*
    * The terminal's breathing room lives here, not on
@@ -403,6 +405,37 @@
 
   to {
     opacity: 1;
+  }
+}
+
+/*
+ * Gone: a caption on the frozen output, under a divider below its last row.
+ * In flow, outside `.terminal-wrap`, so FitAddon measures the space that is
+ * left: the terminal loses rows, never columns, and xterm gives those rows
+ * up from the top — the last line stays in view (design.md, "Placement").
+ */
+.gone-slot:empty {
+  display: none;
+}
+
+.terminal-gone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: var(--elev-1);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink-soft);
+
+  .state-line {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: 0;
   }
 }
 
