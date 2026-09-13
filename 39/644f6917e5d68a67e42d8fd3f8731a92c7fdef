@@ -1,0 +1,21 @@
+openspec/changes/add-terminal-key-bar/design.md
+  s_9f6e9e632154c4::t_c4c1607bab5266 406-417
+openspec/changes/add-terminal-key-bar/tasks.md
+  s_9f6e9e632154c4::t_afc3cbfad1de8d 95-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "39644f6917e5d68a67e42d8fd3f8731a92c7fdef",
+  "prompts": {},
+  "sessions": {
+    "s_9f6e9e632154c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94df2e1b-4541-4873-b074-5ea96fce8f02",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
