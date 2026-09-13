@@ -1,0 +1,19 @@
+openspec/incoming/backlog.md
+  s_2776f1a6640bff::t_639320105e9607 352-419
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4e7dc11742d5a91bc0d4de70557527df504ba67b",
+  "prompts": {},
+  "sessions": {
+    "s_2776f1a6640bff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaf8a44f-17c4-4808-8aac-9b4fb9fb065e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
