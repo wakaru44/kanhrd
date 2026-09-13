@@ -61,7 +61,7 @@ herdr uses.
 
 ## What a card's controls do
 
-![A card's move, split, rest and more-actions controls, with the move menu open on another tab, a new tab and a new workspace](./screenshots/card_actions.png)
+![A card's move, split, rest and more-actions controls, with the move menu open and `another tab` expanded over the other tabs of both workspaces](./screenshots/card_actions.png)
 
 Every card carries four controls, and each one says what it is:
 
@@ -124,7 +124,7 @@ Settings › clear parked columns removes them deliberately.
 
 ## Narrowing the board
 
-![The board with host chips, per-column chips and the group-by row above the status columns](./screenshots/desktop_board.png)
+![The board with host chips, per-column chips and the group-by row above the status columns, and a parked column beside them](./screenshots/desktop_board.png)
 
 Three chip rows sit above the board, all visible, none hidden in a menu.
 

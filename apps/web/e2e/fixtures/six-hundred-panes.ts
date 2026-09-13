@@ -82,9 +82,43 @@ export function buildSixHundredPanes(): Pane[] {
   return panes;
 }
 
-/** Small realistic slice — one workspace, one tab. Used for the populated-small state. */
+/**
+ * The ids `buildPopulatedSmall` serves, in board order.
+ *
+ * Chosen rather than sliced. The first six panes of the 600 all sit in one
+ * tab of one workspace, which makes every card's locator read
+ * `workspace 1 / main` and leaves the rail with a single row — a board that
+ * cannot show what the rail is for, what a second workspace looks like, or
+ * where a card could be moved TO. These six span two workspaces and three
+ * tabs on one host, and carry one pane of each status so no column is
+ * empty.
+ *
+ * `local-ws1-tab1-p1` stays in the set: `capture.spec.ts` deep-links to it
+ * for the terminal shot, and `terminal-flicker.spec.ts` drives the first
+ * pane of this list.
+ */
+const SMALL_PANE_IDS = [
+  'local-ws1-tab1-p1', // working, claude
+  'local-ws1-tab1-p5', // blocked, claude
+  'local-ws1-tab2-p6', // done, agent-less — the one the capture parks
+  'local-ws1-tab3-p3', // idle, gemini — a third tab, so a move has somewhere to go
+  'local-ws2-tab1-p3', // idle, claude — a SECOND workspace
+  'local-ws2-tab1-p8', // unknown, codex
+] as const;
+
+/**
+ * Small realistic slice: six panes across two workspaces and three tabs of
+ * `local`, one per status. Used for the populated-small state.
+ */
 export function buildPopulatedSmall(): Pane[] {
-  return buildSixHundredPanes().slice(0, 6);
+  const byId = new Map(buildSixHundredPanes().map((pane) => [pane.id, pane]));
+  return SMALL_PANE_IDS.map((id) => {
+    const pane = byId.get(id);
+    if (!pane) {
+      throw new Error(`populated-small names a pane the 600-pane fixture does not build: ${id}`);
+    }
+    return pane;
+  });
 }
 
 /** All panes owned by the given host — useful to reply to a scoped `pane.list`. */
