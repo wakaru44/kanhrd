@@ -92,8 +92,12 @@
   - [ ] Reserve defect (operator, 2026-09-13): terminal content and the
         cursor end up under the accessory bar. Round 3 probe: shell, view
         and terminal bottoms, viewport units, ruler below the bar.
-  - [ ] Still untested: Android with the probe (`occluded` 0), iPhone
-        address bar top or bottom, predictive text on or off, the installed
+  - [x] Predictive text (operator, 2026-09-13): on throughout every round
+        and every screenshot, and never implicated. Tested in use with it ON;
+        no off/on comparison was run, and nothing is sized for a
+        predictive-bar-absent case.
+  - [ ] Untested, not assumed: Android with the probe (`occluded` 0 expected,
+        not captured), iPhone address bar at top or bottom, the installed
         PWA, landscape.
   - [ ] Round 2: the fix chosen from round 1 (derived height, placement bug,
         or the documented iOS margin), verified on the same iPhone and

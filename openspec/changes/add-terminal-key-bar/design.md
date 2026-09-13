@@ -403,30 +403,18 @@ the bar once the viewport has stopped moving.
   event path produces; and it stops by the ceiling when nothing moves.
   `?keybar-nosettle` stays until the probes are removed.
 
-**The focus re-measure did not fix the original overlap.** Round 1 proposed
-it; both browsers place correctly without it. What did change is not yet
-named, and the candidates stand as follows:
-
-- `autocomplete`: ruled out. Round 1's readout 1 had the attribute absent
-  and the row visible.
-- **The readout itself:** only active with `?keybar-debug`. It adds renders
-  but never calls `place()`, so it cannot move the bar.
-- **Whether iOS scrolls the layout viewport after the keyboard opens:** the
-  strongest candidate.
-  - The timelines show `vv.resize` delivering intermediate values mid-animation
-    (`max` 364 and 361 against 298 and 289 at rest).
-  - Where iOS then slides the page to reveal the focused textarea, `vv.scroll`
-    events keep arriving and the bar converges.
-  - Whether iOS slides depends on where xterm's helper textarea sits (it
-    follows the cursor), so it depends on the pane's content, not on our code.
-  - If it does not slide, the last event can leave a mid-animation value and
-    a bar up to ~66px too low — a whole row, which matches the original
-    screenshot.
-- **What would distinguish that from a code regression:** a
-  `?keybar-debug&keybar-nosettle` capture whose timeline ends in a
-  `vv.resize` with `occluded` above the settled value and no `vv.scroll`
-  after it, with the row covered. Round 3 asks for that on a pane whose
-  cursor is already near the top of the terminal.
+**The original overlap is closed, not resolved.**
+- The operator's first screenshot showed Apple's accessory bar over the key
+  row.
+- That screenshot predates the probe, so there are no numbers to compare
+  against, and neither browser reproduces it now in either settle state.
+- The likely explanation is a capture taken mid-animation: the timelines show
+  the bar transiently wrong while the keyboard animates (`bar.b` 426 → 429 →
+  430 → 432 → 434).
+- That is about 8px against roughly 60px of overlap in the screenshot, so the
+  magnitude does not fully match.
+- No further device round is spent on it. The Chromium e2e assertion that
+  `marker.bottom == bar.bottom` guards the placement arithmetic.
 
 ### The terminal's reserve
 
