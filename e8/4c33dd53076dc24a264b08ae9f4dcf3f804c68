@@ -1,0 +1,23 @@
+apps/web/src/app/pane-detail/key-bar.spec.ts
+  s_9f6e9e632154c4::t_111e3a6ec2e3c0 151-167
+apps/web/src/app/pane-detail/key-bar.ts
+  s_9f6e9e632154c4::t_ead529d096b10a 135-141
+openspec/changes/add-terminal-key-bar/design.md
+  s_9f6e9e632154c4::t_e190858b3e440d 372-386,508
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e84c33dd53076dc24a264b08ae9f4dcf3f804c68",
+  "prompts": {},
+  "sessions": {
+    "s_9f6e9e632154c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94df2e1b-4541-4873-b074-5ea96fce8f02",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
