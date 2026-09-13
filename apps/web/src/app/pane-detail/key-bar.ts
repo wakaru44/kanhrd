@@ -17,6 +17,16 @@ import {
 } from './key-bar-cells';
 import { formatKeyBarSample, readKeyBarProbe } from './key-bar-probe';
 
+/**
+ * Consecutive unchanged frames that count as "the keyboard has stopped
+ * moving". A stability test, not a duration: it is ~130 ms at 60 Hz and ~65 ms
+ * at 120 Hz, and either is far longer than one frame of a moving animation.
+ */
+export const SETTLE_STABLE_FRAMES = 8;
+
+/** Upper bound on one settle pass, so it can never spin: well above any keyboard animation. */
+export const SETTLE_CEILING_MS = 2000;
+
 /** Termux's fallback long-press threshold (ExtraKeysView). */
 export const KEY_BAR_LONG_PRESS_MS = 400;
 
@@ -115,7 +125,7 @@ export class KeyBar {
   private pressedId: string | null = null;
   private longPressed = false;
   private destroyed = false;
-  private settleTimer: ReturnType<typeof setTimeout> | null = null;
+  private settleFrame: number | null = null;
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -124,25 +134,18 @@ export class KeyBar {
       const vvResize = on('vv.resize');
       const vvScroll = on('vv.scroll');
       const winResize = on('window.resize');
-      const settled = on('settle');
       const observed = on('observer');
       const vv = window.visualViewport;
       vv?.addEventListener('resize', vvResize);
       vv?.addEventListener('scroll', vvScroll);
       window.addEventListener('resize', winResize);
-      // `offsetTop` has been reported to stick after the keyboard closes on iOS;
-      // re-read once the dismissal animation has settled.
-      // Kept deliberately (task 6.4, round 2): iOS delivers mid-animation values in
-      // `vv.resize` (measured: occluded 364 during the animation, 298 at rest) and
-      // only sends a later event if it also slides the page to reveal the focused
-      // textarea. When it does not, nothing corrects the last stale value, so one
-      // re-read after the animation — 350 ms after focus moves either way — is
-      // the only moment we know the keyboard has settled. Cost: one placement.
+      // A settle pass after focus moves either way — the keyboard opening or
+      // closing. The visualViewport events are edge-driven and give no final-state
+      // guarantee: Safari's round-2 timeline flapped 320 → 0 → 320 → 0 → 320
+      // mid-animation, and if the last event lands on a wrong value nothing
+      // follows to correct it. Cheap insurance, not a measured fix (design.md).
       // TEMPORARY `?keybar-nosettle` disables it for device captures.
-      const settle = () => {
-        if (this.settleTimer !== null) clearTimeout(this.settleTimer);
-        this.settleTimer = setTimeout(settled, 350);
-      };
+      const settle = () => this.settle();
       if (!this.probeSwitches.noSettle) {
         document.addEventListener('focusout', settle);
         document.addEventListener('focusin', settle);
@@ -155,7 +158,7 @@ export class KeyBar {
       if (this.probeSwitches.debug) this.mountProbeMarker();
       destroyRef.onDestroy(() => {
         this.destroyed = true;
-        if (this.settleTimer !== null) clearTimeout(this.settleTimer);
+        if (this.settleFrame !== null) cancelAnimationFrame(this.settleFrame);
         vv?.removeEventListener('resize', vvResize);
         vv?.removeEventListener('scroll', vvScroll);
         window.removeEventListener('resize', winResize);
@@ -235,13 +238,57 @@ export class KeyBar {
 
   // --- placement ------------------------------------------------------------
 
-  private place(event: string): void {
-    if (this.destroyed) return;
+  /**
+   * Samples the occlusion once per frame until it has held still for
+   * `SETTLE_STABLE_FRAMES` frames after changing, then places the bar there.
+   *
+   * No fixed delay tuned to a keyboard animation Apple does not document: a
+   * slower device or a longer animation simply takes more frames, and a re-read
+   * can never land mid-animation because it waits for the value to stop moving.
+   * The bar is re-placed on every change it sees, so it tracks the animation
+   * even if no visualViewport event fires. If nothing changes (a hardware
+   * keyboard, Android, desktop), it stops at `SETTLE_CEILING_MS` and places
+   * once — the same value, a no-op.
+   */
+  private settle(): void {
+    if (this.settleFrame !== null) cancelAnimationFrame(this.settleFrame);
+    const started = performance.now();
+    let last = this.measureOccluded();
+    let changed = false;
+    let stableFrames = 0;
+    const tick = () => {
+      this.settleFrame = null;
+      if (this.destroyed) return;
+      const now = this.measureOccluded();
+      if (now !== last) {
+        last = now;
+        changed = true;
+        stableFrames = 0;
+        this.place('settle.move');
+      } else {
+        stableFrames++;
+      }
+      const settled = changed && stableFrames >= SETTLE_STABLE_FRAMES;
+      if (settled || performance.now() - started >= SETTLE_CEILING_MS) {
+        this.place('settle');
+        return;
+      }
+      this.settleFrame = requestAnimationFrame(tick);
+    };
+    this.settleFrame = requestAnimationFrame(tick);
+  }
+
+  private measureOccluded(): number {
     const vv = window.visualViewport;
-    const occluded = occludedBottom(
+    return occludedBottom(
       window.innerHeight,
       vv ? { height: vv.height, offsetTop: vv.offsetTop } : null
     );
+  }
+
+  private place(event: string): void {
+    if (this.destroyed) return;
+    const occluded = this.measureOccluded();
     this.occluded.set(occluded);
     const anchor = this.host.nativeElement.parentElement?.getBoundingClientRect();
     if (anchor) {

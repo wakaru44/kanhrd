@@ -369,20 +369,39 @@ report had the pill over the row.
   - Both halves of _act on pointerup, cancel pointerdown_ now rest on device
     evidence.
 
-**The focus re-measure is kept, deliberately.** It re-places the bar 350 ms
-after focus moves. Round 2 shows it was not needed in the samples taken, but
-also shows why it is still wanted:
+**The focus settle pass is kept, and settles by sampling** (operator
+decision, 2026-09-13). After focus moves either way, a settle pass re-places
+the bar once the viewport has stopped moving.
 
-- `vv.resize` delivers mid-animation occlusions: `max` 364 and 361 against
-  298 and 289 at rest.
-- The only thing that corrected them in those samples was iOS sliding the
-  page afterwards, which fires `vv.scroll`.
-- iOS slides only when the focused textarea is hidden, so a pane whose cursor
-  is already visible gets no later event. The stale-value gap is the one
-  WICG visual-viewport #79 describes ([WICG #79]).
-- It costs one placement per focus change.
-- A component test pins that it happens. `?keybar-nosettle` remains only as a
-  device switch until the probes are removed.
+- **Why keep it:** the visualViewport events are edge-driven and give no
+  final-state guarantee. Safari's round-2 timeline flapped 320 → 0 → 320 → 0
+  → 320 mid-animation. If the last event in such a run lands on a wrong value,
+  nothing follows to correct it, because the user has no reason to scroll.
+  Neither browser has been seen failing at rest, so this is insurance, not a
+  fix.
+- **Why not 350 ms:** the fixed delay it replaced was tuned to a keyboard
+  animation duration Apple does not document. Too short, and it re-measured
+  mid-animation and wrote a wrong value with nothing to correct it — the
+  failure it exists to prevent. Too long, and the operator sees a late jump.
+- **The rule:** sample the occlusion once per frame. The bar is re-placed on
+  every change the pass sees. The pass finishes once the value has changed at
+  least once and then held for `SETTLE_STABLE_FRAMES` (8) consecutive frames,
+  or at `SETTLE_CEILING_MS` (2 s) if it never changes.
+- **Why not the literal "two consecutive measurements agree":**
+  - The first two frames after `focusin` both read the pre-keyboard value, so
+    two agreeing samples can come before the keyboard has started moving.
+  - Chrome's timeline shows visualViewport values arriving in steps, several
+    frames apart, so two equal frames also occur mid-animation.
+  - Requiring a change first answers the first case. Eight frames — about
+    130 ms at 60 Hz, 65 ms at 120 Hz — answers the second.
+  - Neither number is an animation duration. The ceiling is only a bound so
+    a pass cannot spin.
+  - On Android, desktop, or a hardware keyboard nothing changes, and the pass
+    ends at the ceiling with one placement at the value the bar already has.
+- **Tests** (`key-bar.spec.ts`): it follows a flapping keyboard that fires no
+  events and rests where the viewport rests; it settles on the same value the
+  event path produces; and it stops by the ceiling when nothing moves.
+  `?keybar-nosettle` stays until the probes are removed.
 
 **The focus re-measure did not fix the original overlap.** Round 1 proposed
 it; both browsers place correctly without it. What did change is not yet

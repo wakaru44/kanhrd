@@ -1,6 +1,12 @@
 import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { KEY_BAR_LONG_PRESS_MS, KeyBar, occludedBottom } from './key-bar';
+import {
+  KEY_BAR_LONG_PRESS_MS,
+  KeyBar,
+  SETTLE_CEILING_MS,
+  SETTLE_STABLE_FRAMES,
+  occludedBottom,
+} from './key-bar';
 import { DEFAULT_KEY_BAR_CELLS, KeyBarModifiers, type KeyBarCell } from './key-bar-cells';
 
 @Component({
@@ -148,21 +154,73 @@ describe('KeyBar', () => {
     expect(host.reserve).toBeGreaterThan(0);
   });
 
-  it('re-measures once the keyboard animation has settled after focus moves', async () => {
-    // iOS can leave a mid-animation occlusion as its last visualViewport event;
-    // this re-read is what corrects it (design.md, "focus re-measure").
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    let placements = 0;
-    const counted = fixture.componentInstance;
-    const before = counted.reserve;
-    const bar = fixture.debugElement.children[0].children.find((d) => d.name === 'app-key-bar')!;
-    (bar.componentInstance as KeyBar).reserve.subscribe(() => placements++);
-    document.dispatchEvent(new FocusEvent('focusin'));
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    expect(placements).toBe(0);
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    expect(placements).toBe(1);
-    expect(counted.reserve).toBe(before);
+  describe('settle pass after focus moves', () => {
+    type FakeViewport = EventTarget & { height: number; offsetTop: number; scale: number };
+    let fake: FakeViewport;
+    let original: PropertyDescriptor | undefined;
+    const frames = (n: number) =>
+      new Promise<void>((resolve) => {
+        const step = (left: number) =>
+          left === 0 ? resolve() : requestAnimationFrame(() => step(left - 1));
+        step(n);
+      });
+    const bar = () => el().querySelector<HTMLElement>('app-key-bar')!;
+
+    beforeEach(() => {
+      original = Object.getOwnPropertyDescriptor(window, 'visualViewport');
+      fake = Object.assign(new EventTarget(), {
+        height: window.innerHeight,
+        offsetTop: 0,
+        scale: 1,
+      });
+      Object.defineProperty(window, 'visualViewport', { value: fake, configurable: true });
+    });
+
+    afterEach(() => {
+      if (original) Object.defineProperty(window, 'visualViewport', original);
+    });
+
+    it('follows a keyboard that animates with no visualViewport event, and stops where it rests', async () => {
+      document.dispatchEvent(new FocusEvent('focusin'));
+      // The keyboard animates in steps and flaps, as Safari's timeline did —
+      // and no resize/scroll event is dispatched at all.
+      for (const height of [0.9, 0.5, 1, 0.5, 0.6].map((f) => Math.round(window.innerHeight * f))) {
+        fake.height = height;
+        await frames(3);
+      }
+      await frames(SETTLE_STABLE_FRAMES + 4);
+      fixture.detectChanges();
+
+      const expected = occludedBottom(window.innerHeight, fake);
+      expect(expected).toBeGreaterThan(0);
+      expect(bar().style.transform).toBe(`translateY(${-expected}px)`);
+    });
+
+    it('settles on the same value the visualViewport events produce', async () => {
+      fake.height = Math.round(window.innerHeight * 0.55);
+      // The event path: the listeners bound at init run the same `place()`.
+      window.dispatchEvent(new Event('resize'));
+      fixture.detectChanges();
+      const byEvent = bar().style.transform;
+      expect(byEvent).not.toBe('translateY(0px)');
+
+      document.dispatchEvent(new FocusEvent('focusin'));
+      fake.height = Math.round(window.innerHeight * 0.7);
+      await frames(2);
+      fake.height = Math.round(window.innerHeight * 0.55);
+      await frames(SETTLE_STABLE_FRAMES + 4);
+      fixture.detectChanges();
+      expect(bar().style.transform).toBe(byEvent);
+    });
+
+    it('does not spin when nothing moves: it stops by the ceiling', async () => {
+      const raf = spyOn(window, 'requestAnimationFrame').and.callThrough();
+      document.dispatchEvent(new FocusEvent('focusin'));
+      await new Promise((resolve) => setTimeout(resolve, SETTLE_CEILING_MS + 300));
+      const calls = raf.calls.count();
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(raf.calls.count()).toBe(calls);
+    });
   });
 
   describe('occludedBottom', () => {
