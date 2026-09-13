@@ -14,6 +14,7 @@ import {
 import { ToastService } from '../state/toast.service';
 import { COPY, fill } from '../shared/copy';
 import { classifyInput } from './key-mapping';
+import { KeyBarModifiers, keyNameForCharacter } from './key-bar-cells';
 
 /**
  * xterm.js takes a font *string*, not a CSS custom property, so the
@@ -62,6 +63,12 @@ export interface PaneTerminalDeps {
   readonly terminalFontSize: Pick<TerminalFontSizeService, 'size'>;
   readonly terminalScrollback: Pick<TerminalScrollbackService, 'lines'>;
   readonly toast: Pick<ToastService, 'push'>;
+  /**
+   * The key bar's sticky modifiers, when the view has a key bar. An armed or
+   * locked modifier folds into the next key this terminal sends, whether it
+   * came from the bar or from the soft keyboard.
+   */
+  readonly keyBarModifiers?: Pick<KeyBarModifiers, 'active' | 'consume'>;
 }
 
 /**
@@ -95,6 +102,7 @@ export class PaneTerminal {
   private readonly terminalFontSize: PaneTerminalDeps['terminalFontSize'];
   private readonly terminalScrollback: PaneTerminalDeps['terminalScrollback'];
   private readonly toast: PaneTerminalDeps['toast'];
+  private readonly keyBarModifiers: PaneTerminalDeps['keyBarModifiers'];
 
   constructor(deps: PaneTerminalDeps) {
     this.ws = deps.ws;
@@ -102,6 +110,7 @@ export class PaneTerminal {
     this.terminalFontSize = deps.terminalFontSize;
     this.terminalScrollback = deps.terminalScrollback;
     this.toast = deps.toast;
+    this.keyBarModifiers = deps.keyBarModifiers;
   }
 
   // --- public view state ------------------------------------------------
@@ -375,6 +384,22 @@ export class PaneTerminal {
     this.handleInput(data);
   }
 
+  /**
+   * Sends a key bar cell's sequence of herdr key names as one
+   * `pane.send_keys`, through the same ordered queue as typing. Any active
+   * sticky modifier folds into the sequence's first key.
+   */
+  sendKeys(keys: readonly string[]): void {
+    const host = this.currentHost;
+    const id = this.currentId;
+    if (!host || !id || keys.length === 0) {
+      return;
+    }
+    const [first, ...rest] = keys;
+    const folded = [this.keyBarModifiers?.consume(first) ?? first, ...rest];
+    this.enqueueSend(() => this.ws.request(host, 'pane.send_keys', { pane_id: id, keys: folded }));
+  }
+
   /** Releases the terminal, the DOM listeners and the subscription. */
   dispose(): void {
     this.resizeObserver?.disconnect();
@@ -567,6 +592,11 @@ export class PaneTerminal {
     if (!host || !id) {
       return;
     }
+    const modifiers = this.keyBarModifiers;
+    if (modifiers && modifiers.active().length > 0 && data.length > 0) {
+      this.sendWithModifiers(host, id, data, modifiers);
+      return;
+    }
     const action = classifyInput(data);
     if (action.kind === 'keys' && action.keys) {
       const keys = action.keys;
@@ -581,6 +611,32 @@ export class PaneTerminal {
     }
     const text = action.text ?? '';
     this.enqueueSend(() => this.ws.request(host, 'pane.send_text', { pane_id: id, text }));
+  }
+
+  /**
+   * Typing while a sticky modifier is active. A mapped key (Enter, an arrow)
+   * or a single character becomes one modified key name; a longer chunk — a
+   * paste, an autocorrect replacement — takes the modifier on its first
+   * character only and sends the rest as text, in order.
+   */
+  private sendWithModifiers(
+    host: string,
+    id: string,
+    data: string,
+    modifiers: Pick<KeyBarModifiers, 'consume'>
+  ): void {
+    const action = classifyInput(data);
+    if (action.kind === 'keys' && action.keys && action.keys.length > 0) {
+      this.sendKeys(action.keys);
+      return;
+    }
+    const [first, ...rest] = Array.from(data);
+    const key = modifiers.consume(keyNameForCharacter(first));
+    this.enqueueSend(() => this.ws.request(host, 'pane.send_keys', { pane_id: id, keys: [key] }));
+    if (rest.length > 0) {
+      const text = rest.join('');
+      this.enqueueSend(() => this.ws.request(host, 'pane.send_text', { pane_id: id, text }));
+    }
   }
 
   // --- geometry ---------------------------------------------------------

@@ -436,6 +436,12 @@ control opens a menu.
 `LucideTriangleAlert` supersedes the deprecated `LucideAlertTriangle`;
 use the names in the table.
 
+Characters used as key labels on a keyboard surface — `esc`, `tab`,
+`ctrl`, `^B`, `↑ ↓ ← →` on the pane-detail key bar — are keycaps, not chrome
+glyphs, and are exempt from the rule below. A key is labelled with the
+character it sends; an icon there would also collide with the lucide arrows,
+which already mean back, split-right and split-down.
+
 HTML entity glyphs (`✎ × ⟶ ☾ ☀ ⚙ ☰`) and emoji are prohibited as UI
 chrome. The remaining `×` in `shared/keyboard-help-overlay.html` migrates
 to `LucideX`.

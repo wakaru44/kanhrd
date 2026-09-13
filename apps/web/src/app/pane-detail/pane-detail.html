@@ -6,7 +6,7 @@
   />
 }
 
-<div class="pane-detail">
+<div class="pane-detail" [style.--key-bar-reserve.px]="keyBarReserve()">
   <header class="detail-header">
     <a [routerLink]="backUrl" class="back">
       <svg lucideArrowLeft class="icon" aria-hidden="true"></svg>
@@ -160,4 +160,13 @@
       </div>
     </div>
   </div>
+
+  <app-key-bar
+    [cells]="keyBarCells"
+    [modifiers]="keyBarModifiers"
+    [expanded]="keyBar.expanded()"
+    (keys)="sendKeyBarKeys($event)"
+    (toggled)="keyBar.toggle()"
+    (reserve)="keyBarReserve.set($event)"
+  />
 </div>

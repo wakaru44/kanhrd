@@ -270,6 +270,12 @@
    * keeps it out of FitAddon's measurement — see `.terminal-wrap`.
    */
   padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  /*
+   * The key bar floats over the bottom of the view (and rides the soft
+   * keyboard). The terminal gives up exactly that much, so its last row is
+   * never behind either; `--key-bar-reserve` is measured by the bar.
+   */
+  padding-bottom: calc(var(--sp-4) + var(--key-bar-reserve));
 }
 
 .terminal-wrap {
@@ -466,6 +472,7 @@
   /* Narrower gutter at phone width: the terminal keeps its columns. */
   .detail-body {
     padding: var(--sp-2);
+    padding-bottom: calc(var(--sp-2) + var(--key-bar-reserve));
   }
 
   .detail-header .title-row {

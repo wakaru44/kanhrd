@@ -564,6 +564,19 @@ What this model does not do:
   visible without scrolling.
 - `keeping watch…` occupies the terminal area until the first frame; on
   failure it is replaced in place by retry + back.
+- A **key bar** sits at the bottom of the visual viewport on the pane-detail
+  route at every width: fixed, riding on top of the soft keyboard when it is
+  open and staying when it is dismissed. Its always-present strip is its
+  only toggle and, collapsed or not, its status line — it shows any latched
+  modifier, so a latch is never invisible. The expanded row holds keycaps
+  (`esc`, `ctrl`, `^B`, `tab`, arrows, `alt`), scrolls horizontally inside
+  itself where it does not fit, and never widens the page. Every key is
+  ≥ `--touch-target-min`; the strip draws shorter but its hit area reaches
+  the minimum by extending over the terminal's bottom edge. Tapping the bar
+  never moves focus off the terminal, and the terminal's box ends above the
+  bar and any keyboard under it. `ctrl` and `alt` latch for one key on tap,
+  lock on long-press, and show idle, armed and locked distinctly. `^B` is a
+  literal `ctrl+b` for the pane's program, not kanhrd's prefix.
 
 #### Settings
 
@@ -751,6 +764,23 @@ width` (already asserted).
   ≤ the control's bounding box top.
 - **31.** The terminal-theme `<select>`, the poll `<input>`, both density
   segments and the theme button are each ≥ 40 × 40.
+
+#### Assertions — key bar
+
+Asserted in `apps/web/e2e/key-bar.spec.ts` (mocked bridge, 390 × 844, touch)
+and `apps/web/e2e/key-bar-live.spec.ts` (live).
+
+- **40.** Every key's bounding box is ≥ 40 × 40, and a tap 36px above the
+  strip's visible bottom edge still toggles it.
+- **41.** `document.documentElement.scrollWidth <= clientWidth + 1` with the
+  row expanded, while the row itself scrolls horizontally.
+- **42.** The terminal container's bottom edge is at or above the bar's top,
+  expanded and collapsed.
+- **43.** Tapping a key sends `pane.send_keys` and xterm's helper textarea
+  keeps focus.
+- **44.** A tapped `ctrl` shows `armed`, the next typed key goes out as
+  `ctrl+<key>`, and `ctrl` shows `idle` again.
+- **45.** Keys sent from the bar arrive at the program in a live pane.
 
 #### Assertions — drawer
 

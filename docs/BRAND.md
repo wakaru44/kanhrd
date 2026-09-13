@@ -256,6 +256,7 @@ product copy and stay in the template.
 | `settings.clearTerminal`              | `terminal palette`                                                                                                                            |
 | `settings.clearTerminalFontSize`      | `terminal text size`                                                                                                                          |
 | `settings.clearTerminalScrollback`    | `terminal scrollback`                                                                                                                         |
+| `settings.clearTerminalKeyBar`        | `terminal key bar`                                                                                                                            |
 | `settings.clearKeyboard`              | `keyboard prefix`                                                                                                                             |
 | `settings.clearSwimlane`              | `board grouping`                                                                                                                              |
 | `settings.poll.unavailable`           | `n/a`                                                                                                                                         |

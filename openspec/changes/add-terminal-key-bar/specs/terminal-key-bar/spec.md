@@ -31,9 +31,9 @@ browser under the `kanhrd.*` namespace and SHALL be named in Settings'
 clear-local-data preview. There SHALL be no other control for showing the
 bar.
 
-The strip SHALL NOT be blank: it SHALL carry approved copy at rest, and SHALL
-show any armed or locked modifier, or an armed prefix, while the row is
-collapsed.
+The strip SHALL NOT be blank: at rest it SHALL show the keycaps the row
+holds, or maintainer-approved copy in their place, and it SHALL show any
+armed or locked modifier instead, whether or not the row is collapsed.
 
 #### Scenario: Expanding and remembering
 
@@ -50,14 +50,20 @@ collapsed.
 The bar SHALL render a list of cells supplied as data, never keys named in
 its template. A key cell SHALL hold an ordered sequence of herdr key names,
 and activating it SHALL send that sequence in one `pane.send_keys` through
-the terminal's existing ordered send queue. v1 SHALL supply a fixed list:
-`esc`, `tab`, `ctrl`, `alt`, the four arrows and a prefix cell, labelled with
-text glyphs and no icons.
+the terminal's existing ordered send queue. v1 SHALL supply a fixed list in
+the order `esc`, `ctrl`, `^B`, `tab`, `↑`, `↓`, `←`, `→`, `alt`, labelled with
+text glyphs and no icons. `^B` SHALL send a literal `ctrl+b` and SHALL NOT
+follow the resolved kanhrd prefix.
 
 #### Scenario: A cell sends its sequence
 
 - **WHEN** the operator taps the `esc` cell
 - **THEN** `pane.send_keys` is sent for the pane in view with the cell's key sequence, and no `pane.send_text` is sent
+
+#### Scenario: ^B ignores a rebound prefix
+
+- **WHEN** the effective kanhrd prefix is `Ctrl+Space` and the operator taps `^B`
+- **THEN** `pane.send_keys` carries `ctrl+b`
 
 #### Scenario: A composite cell sends every key in order
 
@@ -91,8 +97,9 @@ return to idle and locked ones stay locked. A latch SHALL NOT time out.
 ### Requirement: The bar never takes focus or gestures from the terminal
 
 Activating any cell or the strip SHALL NOT move focus away from the
-terminal, so an open soft keyboard stays open. Cells SHALL act on pointer
-down. A gesture that starts on the bar SHALL NOT scroll or refresh the page.
+terminal, so an open soft keyboard stays open. Cells SHALL act when the
+press is released, and a press that becomes a pan across the row SHALL send
+nothing. A gesture that starts on the bar SHALL NOT scroll or refresh the page.
 Every cell and the strip SHALL present a hit area of at least
 `--touch-target-min` in both dimensions, and the row SHALL NOT widen the
 page; where the cells do not fit, the row scrolls horizontally inside

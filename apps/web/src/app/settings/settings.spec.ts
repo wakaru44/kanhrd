@@ -234,7 +234,8 @@ describe('Settings', () => {
     // One row per kanhrd-owned setting the sweep clears — board grouping
     // rides the same `kanhrd.settings` key, so it is listed too, and the
     // parked columns are a `kanhrd.*` key of their own.
-    expect(modal?.querySelectorAll('.preview-row').length).toBe(8);
+    expect(modal?.querySelectorAll('.preview-row').length).toBe(9);
+    expect(modal?.textContent).toContain(COPY.settings.clearTerminalKeyBar);
     expect(modal?.textContent).toContain(COPY.settings.clearTerminalScrollback);
     expect(modal?.textContent).toContain(COPY.settings.clearParked);
     expect(modal?.textContent).toContain(COPY.settings.clearSwimlane);

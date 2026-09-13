@@ -382,6 +382,7 @@ export const COPY = {
     clearTerminal: 'terminal palette',
     clearTerminalFontSize: 'terminal text size',
     clearTerminalScrollback: 'terminal scrollback',
+    clearTerminalKeyBar: 'terminal key bar',
     clearKeyboard: 'keyboard prefix',
 
     poll: {

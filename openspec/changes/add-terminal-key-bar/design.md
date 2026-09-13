@@ -31,8 +31,7 @@ Three consequences:
 /** Every cell is data. The template renders a list of these; it never names a key. */
 type KeyBarCell =
   | { kind: 'keys'; id: string; label: string; keys: readonly string[] } // a sequence of herdr key names
-  | { kind: 'modifier'; id: string; label: string; modifier: 'ctrl' | 'alt' }
-  | { kind: 'prefix'; id: string }; // label derived from KeyboardService.prefix()
+  | { kind: 'modifier'; id: string; label: string; modifier: 'ctrl' | 'alt' };
 
 export const DEFAULT_KEY_BAR_CELLS: readonly KeyBarCell[] = [ /* v1's fixed list */ ];
 ```
@@ -47,9 +46,8 @@ export const DEFAULT_KEY_BAR_CELLS: readonly KeyBarCell[] = [ /* v1's fixed list
   and transport stay as they are.
 - `id` is stable, so a v2 list can be persisted and reordered, and tests
   address cells by id, not by label.
-- **If the operator rules the alternative in A,** the prefix cell becomes
-  `{ kind: 'keys', keys: ['ctrl+b'] }` and the `prefix` kind is dropped.
-  Nothing else in this design moves.
+- The model lives in `pane-detail/key-bar-cells.ts`; the bar is
+  `pane-detail/key-bar.ts`.
 
 ## Modifier state machine
 
@@ -76,26 +74,28 @@ locked` on long-press; `locked → idle` on tap. This is Termux's model
   outgoing input). It is not a root service: it is view state, and leaving the
   pane resets it to idle.
 
-## The prefix cell (if recommendation A is taken)
+## The `^B` cell — a literal Ctrl+B, and why it does not follow the prefix
 
-- **Label:** from `KeyboardService.prefix()`, rendered in keycap form
-  (`Ctrl+B` → `^B`, `Ctrl+Space` → `^␣`). The keycap form is copy, so it is
-  for the maintainer.
-- **Tapping it** asks `KeyboardService` to arm its chord from a new public
-  entry point.
-- **The next input runs through the chord.**
-  - While armed, a character from the soft keyboard is not sent to the pane.
-    `PaneTerminal` passes it to `KeyboardService` as a chord key.
-  - A bar cell pressed while armed does the same with its key.
-  - A key that matches no shortcut disarms, and nothing is sent to the pane.
-  - Needs a keydown-free dispatch path, because `handleKeydown` suppresses
-    everything while xterm's textarea is focused. iOS soft keyboards also
-    often report `keyCode 229` rather than a usable `key`.
-- **`CHORD_TIMEOUT_MS` (2 s)** is short for a thumb moving from the bar to the
-  soft keyboard. Recommended: an armed-from-the-bar chord has no timeout, like
-  a latch. Open for the maintainer.
-- **Never captured by kanhrd:** bar keys are socket requests, never DOM
-  events, so `KeyboardService.handleKeydown` never sees them.
+Operator ruling, 2026-09-13. The cell is `{ kind: 'keys', label: '^B',
+keys: ['ctrl+b'] }`. It sends Ctrl+B to whatever runs in the pane — tmux,
+vim, readline — and it deliberately does **not** follow
+`KeyboardService.prefix()`.
+
+Read this before "fixing" it to follow the prefix:
+
+- `pane.send_keys` reaches the pane's program, never herdr's own prefix
+  layer (measured above), so a cell that "sends the herdr prefix" cannot do
+  anything herdr-ish. It can only ever be a key for the program inside.
+- An operator who moved herdr's prefix — to `Ctrl+Space`, say — usually did
+  so to free `Ctrl+B` for tmux running inside a pane. A cell that followed
+  `prefix()` would send `Ctrl+Space` to that tmux, and take away exactly the
+  key they moved out of the way.
+
+kanhrd's own prefix shortcuts (next tab, next card, …) are a different
+thing. They are unreachable on a phone today, which is a real gap. It is
+recorded in `openspec/incoming/backlog.md` (_kanhrd's prefix shortcuts are
+unreachable from a phone_), and the bar is the natural surface for it. It is
+not this cell.
 
 ## Placement — the visual viewport
 
@@ -141,8 +141,15 @@ not shrink for the soft keyboard on iOS Safari, nor on Chrome Android since
 
 - **`preventDefault()` on `pointerdown`,** on every bar button and on the
   strip. Focus is pointerdown's default action, and by `click` it has already
-  moved and the keyboard has dismissed ([MDN HTMLElement.focus()]). Every
-  cell also fires on `pointerdown`, the way a keyboard acts on key-down.
+  moved and the keyboard has dismissed ([MDN HTMLElement.focus()]).
+- **Cells act on `pointerup`, not `pointerdown`.** The proposal said
+  pointerdown. The build changed it because the row scrolls horizontally at
+  phone width: a pan that starts on a key would otherwise send that key. A
+  pan fires `pointercancel`, which drops the press. Focus is still protected,
+  because it is the `pointerdown` default that is cancelled.
+- **Keyboard activation:** a `click` with `detail === 0` activates a key or
+  the strip, so the bar works without a pointer. A pointer's own trailing
+  `click` (`detail >= 1`) is ignored, since `pointerup` already acted.
 - **Every button is `type="button"`** and keeps its tab stop. `tabindex="-1"`
   is not the fix and would cost keyboard access.
 - **The bar is `touch-action: pan-x`.**
@@ -195,6 +202,39 @@ not shrink for the soft keyboard on iOS Safari, nor on Chrome Android since
 - **Real device, recorded honestly:** iPhone Safari, iPhone Chrome and the
   installed PWA — the keyboard-pinned position, the safe-area gap, focus
   retention. Playwright cannot raise a soft keyboard.
+
+## As built — provisional choices awaiting the maintainer
+
+The operator ruled that copy, the keycap form, accessible names, the
+three-state tokens and the strip height stay with the maintainer. The build
+needed something in each place, so it uses what already exists and invents
+no words and no tokens:
+
+- **Strip at rest:** the row's own keycaps, `esc ctrl ^B tab ↑ ↓ ← → alt`,
+  in `--font-mono` `--fs-caption` `--ink-mute`. It is not blank and it is
+  not a sentence. A maintainer-approved label can replace it in one place.
+- **Strip while latched:** the latched modifiers' keycaps, in their armed or
+  locked treatment.
+- **Accessible names:** a glyph key is named by the herdr key names it sends
+  (`up`, `ctrl+b`); modifiers use their visible text. `aria-pressed` is true
+  for both armed and locked, so a screen reader cannot yet tell the two
+  apart. That gap needs copy.
+- **Tokens:** the strip height is `--sp-5`.
+  - idle — the secondary button (`--paper-raised`, `--ink`, `--elev-3`)
+  - armed — `--fw-semi` with a 2px `--ochre-line` underline, the switcher's
+    selected treatment
+  - locked — armed plus the `--ochre-tint` wash
+  - The three differ in weight, underline and wash, not in colour alone.
+- **Clear-data row:** `settings.clearTerminalKeyBar` = `terminal key bar`.
+  It follows the list's approved noun-phrase pattern and is registered in
+  `docs/BRAND.md`.
+- **The strip's hit area:** a `::before` 40px tall, anchored to the strip's
+  bottom, reaching up over the terminal. **Cost:** roughly the terminal's
+  bottom 20px no longer takes taps or swipes. The operator set the visual
+  height and the guidelines set the hit area; the two are different
+  measurements (foreman ruling).
+- **`z-index: 30`:** above the terminal and the board chrome, below the
+  drawer (40/50) and modals (1000).
 
 ## Sources
 

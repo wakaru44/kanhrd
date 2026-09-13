@@ -7,6 +7,7 @@ import type { WsEvent } from '@kanhrd/schema';
 import { PaneTerminal } from './pane-terminal';
 import type { PaneTerminalDeps } from './pane-terminal';
 import { COPY } from '../shared/copy';
+import { KeyBarModifiers } from './key-bar-cells';
 
 /**
  * `PaneTerminal` is a plain class, so these are plain unit tests: no
@@ -772,6 +773,96 @@ describe('PaneTerminal', () => {
     expect(written.some((data) => data.includes('three'))).toBeFalse();
     expect(warn).toHaveBeenCalled();
     expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.read', jasmine.anything());
+  });
+
+  // --- the key bar: sequences and sticky modifiers ---------------------------
+
+  /** Builds with a key bar's modifiers wired in, attaches and loads the default pane. */
+  async function mountedWithKeyBar(): Promise<{ t: PaneTerminal; modifiers: KeyBarModifiers }> {
+    const modifiers = new KeyBarModifiers();
+    const deps: PaneTerminalDeps = {
+      ws: ws as unknown as PaneTerminalDeps['ws'],
+      terminalTheme: { theme },
+      terminalFontSize: { size: fontSize },
+      terminalScrollback: { lines: scrollback },
+      toast,
+      keyBarModifiers: modifiers,
+    };
+    term = new PaneTerminal(deps);
+    term.attach(el);
+    await term.load('laptop', 'pane-1');
+    await flushMicrotasks();
+    ws.request.calls.reset();
+    return { t: term, modifiers };
+  }
+
+  /** Every send-shaped request, in the order the queue issued them. */
+  function sends(): [string, unknown][] {
+    return ws.request.calls
+      .allArgs()
+      .filter(([, method]) => method === 'pane.send_keys' || method === 'pane.send_text')
+      .map(([, method, params]) => [method as string, params]);
+  }
+
+  it('sends a key bar sequence as one pane.send_keys', async () => {
+    const { t } = await mountedWithKeyBar();
+    t.sendKeys(['ctrl+b', 'c']);
+    await flushMicrotasks();
+    expect(sends()).toEqual([['pane.send_keys', { pane_id: 'pane-1', keys: ['ctrl+b', 'c'] }]]);
+  });
+
+  it('folds an armed ctrl into the next character typed, then releases it', async () => {
+    const { t, modifiers } = await mountedWithKeyBar();
+    modifiers.tap('ctrl');
+    t.send('c');
+    t.send('c');
+    await flushMicrotasks();
+    expect(sends()).toEqual([
+      ['pane.send_keys', { pane_id: 'pane-1', keys: ['ctrl+c'] }],
+      ['pane.send_text', { pane_id: 'pane-1', text: 'c' }],
+    ]);
+  });
+
+  it('folds modifiers into the first key of a sequence only', async () => {
+    const { t, modifiers } = await mountedWithKeyBar();
+    modifiers.lock('ctrl');
+    t.sendKeys(['up', 'down']);
+    await flushMicrotasks();
+    expect(sends()).toEqual([['pane.send_keys', { pane_id: 'pane-1', keys: ['ctrl+up', 'down'] }]]);
+    expect(modifiers.stateOf('ctrl')).toBe('locked');
+  });
+
+  it('gives a multi-character chunk the modifier on its first character only', async () => {
+    const { t, modifiers } = await mountedWithKeyBar();
+    modifiers.tap('alt');
+    t.send('xyz');
+    await flushMicrotasks();
+    expect(sends()).toEqual([
+      ['pane.send_keys', { pane_id: 'pane-1', keys: ['alt+x'] }],
+      ['pane.send_text', { pane_id: 'pane-1', text: 'yz' }],
+    ]);
+  });
+
+  it('modifies a mapped key typed on the keyboard, such as Enter', async () => {
+    const { t, modifiers } = await mountedWithKeyBar();
+    modifiers.tap('alt');
+    t.send('\r');
+    await flushMicrotasks();
+    expect(sends()).toEqual([['pane.send_keys', { pane_id: 'pane-1', keys: ['alt+Enter'] }]]);
+  });
+
+  it('sends nothing from the key bar before a pane is loaded', () => {
+    const modifiers = new KeyBarModifiers();
+    const t = new PaneTerminal({
+      ws: ws as unknown as PaneTerminalDeps['ws'],
+      terminalTheme: { theme },
+      terminalFontSize: { size: fontSize },
+      terminalScrollback: { lines: scrollback },
+      toast,
+      keyBarModifiers: modifiers,
+    });
+    t.sendKeys(['esc']);
+    expect(ws.request).not.toHaveBeenCalled();
   });
 
   // --- truncation: a state at the head of the buffer, never a toast --------

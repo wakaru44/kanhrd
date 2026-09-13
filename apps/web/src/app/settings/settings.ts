@@ -127,6 +127,7 @@ export class Settings {
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminal },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminalFontSize },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminalScrollback },
+    { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearTerminalKeyBar },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearKeyboard },
     { kind: COPY.settings.clearKindSetting, name: COPY.settings.clearParked },
   ];

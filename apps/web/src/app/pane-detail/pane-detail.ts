@@ -38,6 +38,9 @@ import { BoardReturnService } from '../state/board-return.service';
 import { CardSwitcher } from './card-switcher';
 import { TabStrip, stepTab, tabEntries, type TabEntry } from './tab-strip';
 import { PaneTerminal } from './pane-terminal';
+import { KeyBar } from './key-bar';
+import { DEFAULT_KEY_BAR_CELLS, KeyBarModifiers } from './key-bar-cells';
+import { TerminalKeyBarService } from '../state/terminal-key-bar.service';
 
 /**
  * The reliability states this view can be in. They are mutually exclusive
@@ -92,6 +95,7 @@ export function nextSiblingCard(siblings: readonly Pane[], currentId: string): P
     RenameModal,
     CardSwitcher,
     TabStrip,
+    KeyBar,
     LucideArrowLeft,
     LucidePencil,
     LucideSquareSplitHorizontal,
@@ -121,12 +125,20 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   private readonly terminalFontSize = inject(TerminalFontSizeService);
   private readonly terminalScrollback = inject(TerminalScrollbackService);
 
+  /** The key bar's sticky modifiers: this view's own state, dropped when the view is. */
+  protected readonly keyBarModifiers = new KeyBarModifiers();
+  protected readonly keyBarCells = DEFAULT_KEY_BAR_CELLS;
+  protected readonly keyBar = inject(TerminalKeyBarService);
+  /** Pixels kept clear at the view's bottom for the key bar and any soft keyboard under it. */
+  protected readonly keyBarReserve = signal(0);
+
   private readonly terminal = new PaneTerminal({
     ws: this.ws,
     terminalTheme: this.terminalTheme,
     terminalFontSize: this.terminalFontSize,
     terminalScrollback: this.terminalScrollback,
     toast: this.toast,
+    keyBarModifiers: this.keyBarModifiers,
   });
 
   protected readonly copy = COPY;
@@ -406,6 +418,11 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
         }),
       });
     }
+  }
+
+  /** A key bar cell: its sequence goes to the pane through the terminal's ordered queue. */
+  protected sendKeyBarKeys(keys: readonly string[]): void {
+    this.terminal.sendKeys(keys);
   }
 
   /** Failed state's only action: re-run the same load for the pane in the route. */
