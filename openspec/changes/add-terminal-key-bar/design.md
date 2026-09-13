@@ -265,6 +265,12 @@ These are two problems, kept apart.
 
 ### Round 1 results — Chrome on iOS, not Safari
 
+> **`focus.bottom` in every readout below is void.** It is the bottom of
+> xterm's helper textarea, and a local experiment showed xterm does not move
+> that textarea to the cursor between renders. It is not a cursor position.
+> Every reading taken from it in these rounds, by anyone, is withdrawn.
+> Nothing in the placement or reserve decisions rests on it.
+
 Both readouts were taken in **Chrome on iOS** (`CriOS/153.0.8010.24`,
 `iPhone OS 26_6_2`). The operator's original report was most likely Chrome as
 well. On iOS the accessory bar is drawn by the host app, so none of this is
