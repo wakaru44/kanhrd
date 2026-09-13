@@ -2,13 +2,15 @@ import { formatKeyBarSample, readKeyBarProbe } from './key-bar-probe';
 import { markHelperTextarea } from './pane-terminal';
 
 describe('key bar device probes (temporary, task 6.4)', () => {
-  it('is off unless the URL asks, and defaults autocomplete to off', () => {
-    expect(readKeyBarProbe('')).toEqual({ debug: false, autocomplete: 'off' });
-    expect(readKeyBarProbe('?keybar-debug=1')).toEqual({ debug: true, autocomplete: 'off' });
+  it('is off unless the URL asks, and leaves autocomplete absent by default', () => {
+    // `off` was tested on an iPhone and did not remove the AutoFill pill.
+    expect(readKeyBarProbe('')).toEqual({ debug: false, autocomplete: null });
+    expect(readKeyBarProbe('?keybar-debug=1')).toEqual({ debug: true, autocomplete: null });
   });
 
   it('can leave autocomplete absent, or set any value under test', () => {
     expect(readKeyBarProbe('?keybar-autocomplete=absent').autocomplete).toBeNull();
+    expect(readKeyBarProbe('?keybar-autocomplete=off').autocomplete).toBe('off');
     expect(readKeyBarProbe('?keybar-autocomplete=one-time-code').autocomplete).toBe(
       'one-time-code'
     );

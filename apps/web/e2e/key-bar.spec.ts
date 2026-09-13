@@ -223,14 +223,14 @@ test('the measurement readout and autocomplete switch appear only when the URL a
   await mockBridge(page);
   await openPane(page);
   await expect(page.locator('app-key-bar .probe')).toHaveCount(0);
-  await expect(page.locator('.xterm-helper-textarea')).toHaveAttribute('autocomplete', 'off');
+  expect(await page.locator('.xterm-helper-textarea').getAttribute('autocomplete')).toBeNull();
 
-  await page.goto(`/pane/local/${PANE}?keybar-debug=1&keybar-autocomplete=absent`);
+  await page.goto(`/pane/local/${PANE}?keybar-debug=1&keybar-autocomplete=off`);
   await page.waitForSelector('.xterm-rows');
   const probe = page.locator('app-key-bar .probe');
   await expect(probe).toContainText('vv.height');
-  await expect(probe).toContainText('autocomplete (absent)');
+  await expect(probe).toContainText('autocomplete off');
   const box = (await probe.boundingBox())!;
   expect(box.y).toBeLessThanOrEqual(1);
-  expect(await page.locator('.xterm-helper-textarea').getAttribute('autocomplete')).toBeNull();
+  await expect(page.locator('.xterm-helper-textarea')).toHaveAttribute('autocomplete', 'off');
 });

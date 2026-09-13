@@ -760,11 +760,12 @@ export class PaneTerminal {
 }
 
 /**
- * xterm 6.0.0 sets `autocapitalize`, `autocorrect` and `spellcheck` on its
- * helper textarea but not `autocomplete`, which leaves it a candidate for
- * Safari AutoFill — the passwords / card / contact pill iOS draws over the
- * key bar. `off` is the default under test on a device (add-terminal-key-bar
- * task 6.4); `null` leaves the attribute absent, for comparison.
+ * TEMPORARY (add-terminal-key-bar task 6.4). xterm 6.0.0 sets
+ * `autocapitalize`, `autocorrect` and `spellcheck` on its helper textarea but
+ * not `autocomplete`. Setting `autocomplete="off"` was tested on an iPhone
+ * (Chrome, iOS 26.6.2) and did NOT remove the AutoFill pill, so nothing is set
+ * by default any more; `?keybar-autocomplete=<value>` still sets one for a
+ * device experiment.
  */
 export function markHelperTextarea(el: HTMLElement, autocomplete: string | null): void {
   const textarea = el.querySelector('textarea');

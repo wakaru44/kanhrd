@@ -263,6 +263,57 @@ These are two problems, kept apart.
    API to hide the iOS input accessory view or its dismiss control. The fix
    is to stop colliding with it.
 
+### Round 1 results — Chrome on iOS, not Safari
+
+Both readouts were taken in **Chrome on iOS** (`CriOS/153.0.8010.24`,
+`iPhone OS 26_6_2`). The operator's original report was most likely Chrome as
+well. On iOS the accessory bar is drawn by the host app, so none of this is
+yet known to hold for Safari.
+
+| readout                    | innerHeight | vv.height | vv.offsetTop | occluded (max) | bar.top / bar.bottom | row.top | focus.bottom | autocomplete |
+| -------------------------- | ----------- | --------- | ------------ | -------------- | -------------------- | ------- | ------------ | ------------ |
+| 1 `&keybar-autocomplete=absent` | 745    | 434       | 0            | 311 (311)      | 369 / 434            | 390     | 879          | absent       |
+| 2 default (`off`)          | 745         | 434       | 83.3         | 228 (346)      | 369 / 434            | 390     | 324          | off          |
+
+**Rejected hypothesis: `autocomplete="off"` removes the AutoFill pill.** The
+pill (passwords, card, location) looked identical with the attribute absent
+and with `off`. The helper textarea is back to xterm's shipped state (no
+`autocomplete`), because the one reason to set it is gone.
+`?keybar-autocomplete=<value>` remains only as an experiment switch. No
+further attribute experiments are planned.
+
+**The readout lagged the placement — a probe bug, checked in code.**
+- In both readouts `bar.top`/`bar.bottom` are the same numbers under two
+  different `occluded`. The foreman's arithmetic showed readout 2's
+  `bar.bottom` is 83.3 short of `innerHeight − occluded`, exactly
+  `vv.offsetTop`.
+- The round-1 `sample()` read `getBoundingClientRect()` in the same call that
+  set `occluded`. The `[style.transform]` host binding only applies on the
+  next change-detection pass, so the rect was always one placement behind
+  the value printed beside it. Readout 2's numbers fit a bar last placed at
+  `occluded` 311.
+- The formula itself is consistent: `745 − (434 + 83.3) = 227.7`, which puts
+  the bar's bottom at 517.3, the visual viewport's bottom.
+- A second explanation was not ruled out in round 1: that iOS reports
+  `getBoundingClientRect` relative to the visual viewport rather than the
+  layout viewport, which alone would make `bar.bottom` 434 in both.
+- **What these numbers do not show:** whether the bar was misplaced. They
+  show only that the round-1 readout could not tell. Round 2's probe reads
+  after render and records the coordinate space.
+
+**What changed between the original report and round 1.** In round 1 the key
+row was fully visible and the AutoFill pill sat below it, where the original
+report had the pill over the row.
+- Only one change between `4fdf429` and `f133c44` affects placement: a
+  `focusin` listener that re-measures 350 ms after focus moves, i.e. after
+  the keyboard's opening animation.
+- It went in with the probe commit. It was not scoped or tested as a fix.
+- The likely reading: before it, the last visualViewport event during the
+  keyboard animation left a stale `occluded`, so the bar sat too low and
+  the pill covered it.
+- **Status:** a hypothesis. Round 2 tests it with a switch that disables
+  the re-measure, so a regression is detected by measurement, not rediscovered.
+
 ### What is unknown, and why this is a measurement
 
 No primary source states whether `visualViewport.height` on iOS Safari

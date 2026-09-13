@@ -5,8 +5,9 @@
  * the whole file is deleted once the rounds settle the fix.
  *
  *   ?keybar-debug=1                 on-screen readout of the viewport numbers
- *   ?keybar-autocomplete=absent     leave xterm's helper textarea unmarked
- *   ?keybar-autocomplete=<value>    set autocomplete to <value> (default: off)
+ *   ?keybar-autocomplete=<value>    set autocomplete to <value>; absent by default,
+ *                                   as xterm ships it (`off` was tested on iOS
+ *                                   and did not remove the AutoFill pill)
  */
 
 /** Reads the probe switches from a query string. Pure, so it is unit-tested. */
@@ -15,7 +16,7 @@ export function readKeyBarProbe(search: string): { debug: boolean; autocomplete:
   const requested = params.get('keybar-autocomplete');
   return {
     debug: params.has('keybar-debug'),
-    autocomplete: requested === 'absent' ? null : (requested ?? 'off'),
+    autocomplete: requested === null || requested === 'absent' ? null : requested,
   };
 }
 
