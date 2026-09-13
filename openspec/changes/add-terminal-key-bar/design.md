@@ -314,6 +314,32 @@ report had the pill over the row.
 - **Status:** a hypothesis. Round 2 tests it with a switch that disables
   the re-measure, so a regression is detected by measurement, not rediscovered.
 
+### Round 2 — a probe that can answer
+
+- **Sampled after render.** The readout is taken two animation frames after
+  each placement, and prints the `transform` actually on the bar.
+- **Coordinate space.** An untransformed zero-height element sits at the
+  layout viewport's `bottom: 0`. If `marker.bottom` equals `innerHeight`,
+  rects are layout-viewport relative. If it equals `innerHeight −
+  vv.offsetTop`, they are visual-viewport relative. Its padding also measures
+  `env(safe-area-inset-bottom)`.
+  - In desktop Chromium, `marker.bottom` and `bar.bottom` both read 844 at
+    844 × 390 (asserted in `e2e/key-bar.spec.ts`).
+- **A timeline.** The last eight placements, newest first, each with the
+  listener that caused it (`vv.resize`, `vv.scroll`, `window.resize`,
+  `settle`, `observer`, `init`) and the numbers it used. This answers
+  whether the scroll listener fires on iOS and in what order.
+- **A ruler.** Ticks every 16 CSS px above the bar's bottom edge, at the
+  right-hand side. Wherever Apple's bar reaches is read off a screenshot. That
+  is the one measurement nothing in the API exposes, and it decides whether a
+  fallback lift is measured or guessed.
+- **Extra numbers:** `clientHeight`, `outerHeight`, `screen.height`, and
+  whether the VirtualKeyboard API exists (expected absent: every iOS browser is
+  WebKit).
+- **`?keybar-nosettle=1`** turns off the re-measure after focus moves. It is
+  the controlled test for what changed between the original report and
+  round 1.
+
 ### What is unknown, and why this is a measurement
 
 No primary source states whether `visualViewport.height` on iOS Safari

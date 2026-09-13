@@ -233,4 +233,17 @@ test('the measurement readout and autocomplete switch appear only when the URL a
   const box = (await probe.boundingBox())!;
   expect(box.y).toBeLessThanOrEqual(1);
   await expect(page.locator('.xterm-helper-textarea')).toHaveAttribute('autocomplete', 'off');
+
+  // Round 2's readout is read after render: in Chromium the bar's rect, the
+  // transform it prints and the untransformed layout-bottom marker agree.
+  await expect(probe).toContainText('marker.bottom 844');
+  await expect(probe).toContainText('transform translateY(0px)');
+  await expect(probe).toContainText('bar.bottom 844');
+  await expect(probe).toContainText('settle on');
+  await expect(probe).toContainText('· init');
+  await expect(page.locator('app-key-bar .ruler .tick')).toHaveCount(11);
+
+  await page.goto(`/pane/local/${PANE}?keybar-debug=1&keybar-nosettle=1`);
+  await page.waitForSelector('.xterm-rows');
+  await expect(page.locator('app-key-bar .probe')).toContainText('settle off');
 });

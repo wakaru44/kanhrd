@@ -75,9 +75,15 @@
   - [ ] iPhone Safari (operator, 2026-09-13): FAILING. iOS's input
         accessory bar (AutoFill pill + dismiss button) is drawn over the key
         row; the strip is clear. iOS version not yet recorded.
-  - [ ] Round 1: the `?keybar-debug` readout and `?keybar-autocomplete` on
-        the iPhone, per the check list in the lane report — numbers with the
-        keyboard up and down, pill present and `off`.
+  - [x] Round 1 (operator, 2026-09-13, **Chrome on iOS 26.6.2, not
+        Safari**): `autocomplete="off"` does not remove the AutoFill pill
+        (rejected). The key row was fully visible with the pill below it. The
+        readout's bar rect lagged the placement by one render (a probe bug),
+        so round 1 cannot say whether the bar was placed right. Readouts in
+        `design.md`.
+  - [ ] Round 2: the fixed probe (read after render, coordinate marker,
+        event timeline, ruler, `?keybar-nosettle`) on iPhone **Safari** and
+        Chrome, and once on Android.
   - [ ] Round 2: the fix chosen from round 1 (derived height, placement bug,
         or the documented iOS margin), verified on the same iPhone and
         re-checked on Android.

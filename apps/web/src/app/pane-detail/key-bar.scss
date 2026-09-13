@@ -151,3 +151,25 @@
   word-break: break-all;
   pointer-events: none;
 }
+
+/* TEMPORARY (task 6.4): ticks measured up from the bar's bottom edge. */
+.ruler {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: var(--sp-10);
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.tick {
+  position: absolute;
+  right: 0;
+  padding-right: var(--sp-1);
+  border-bottom: 1px solid var(--status-blocked);
+  color: var(--status-blocked-ink);
+  background: var(--paper-raised);
+  font-size: var(--fs-caption);
+  line-height: 1;
+}

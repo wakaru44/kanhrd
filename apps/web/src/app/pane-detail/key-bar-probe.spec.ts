@@ -4,8 +4,12 @@ import { markHelperTextarea } from './pane-terminal';
 describe('key bar device probes (temporary, task 6.4)', () => {
   it('is off unless the URL asks, and leaves autocomplete absent by default', () => {
     // `off` was tested on an iPhone and did not remove the AutoFill pill.
-    expect(readKeyBarProbe('')).toEqual({ debug: false, autocomplete: null });
-    expect(readKeyBarProbe('?keybar-debug=1')).toEqual({ debug: true, autocomplete: null });
+    expect(readKeyBarProbe('')).toEqual({ debug: false, noSettle: false, autocomplete: null });
+    expect(readKeyBarProbe('?keybar-debug=1')).toEqual({
+      debug: true,
+      noSettle: false,
+      autocomplete: null,
+    });
   });
 
   it('can leave autocomplete absent, or set any value under test', () => {
@@ -39,6 +43,15 @@ describe('key bar device probes (temporary, task 6.4)', () => {
         focusedTag: 'textarea',
         focusedBottom: 300,
         autocomplete: 'off',
+        transform: 'translateY(-336px)',
+        markerBottom: 844,
+        safeAreaBottom: 34,
+        clientHeight: 844,
+        outerHeight: 844,
+        screenHeight: 844,
+        virtualKeyboard: false,
+        settle: true,
+        events: ['vv.resize occ 336 vv.h 508 off 0 bar.b 508'],
       },
       336
     );
@@ -46,5 +59,12 @@ describe('key bar device probes (temporary, task 6.4)', () => {
     expect(text).toContain('occluded 336  max 336');
     expect(text).toContain('bar.top 420  bar.bottom 508  row.top 448');
     expect(text).toContain('autocomplete off');
+    expect(text).toContain('transform translateY(-336px)');
+    expect(text).toContain('marker.bottom 844  safe-area.bottom 34');
+    expect(text).toContain('· vv.resize occ 336');
+  });
+
+  it('reads the no-settle switch', () => {
+    expect(readKeyBarProbe('?keybar-nosettle=1').noSettle).toBeTrue();
   });
 });

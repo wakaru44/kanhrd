@@ -47,4 +47,10 @@
 <!-- TEMPORARY (task 6.4): device measurement readout, only with ?keybar-debug. Data, not copy. -->
 @if (probe(); as readout) {
   <pre class="probe" [style.top.px]="probeTop()">{{ readout }}</pre>
+  <!-- Ticks in CSS px above the bar's bottom edge: where Apple's bar reaches reads off a screenshot. -->
+  <div class="ruler" aria-hidden="true">
+    @for (tick of rulerTicks; track tick) {
+      <span class="tick" [style.bottom.px]="tick">{{ tick }}</span>
+    }
+  </div>
 }

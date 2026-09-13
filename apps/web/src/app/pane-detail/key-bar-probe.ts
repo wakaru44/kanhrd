@@ -4,18 +4,25 @@
  * unless the page URL asks for it, so no operator sees it by accident, and
  * the whole file is deleted once the rounds settle the fix.
  *
- *   ?keybar-debug=1                 on-screen readout of the viewport numbers
+ *   ?keybar-debug=1                 on-screen readout of the viewport numbers, an
+ *                                   event timeline, and a ruler above the bar
+ *   ?keybar-nosettle=1              disable the re-measure after focus moves
  *   ?keybar-autocomplete=<value>    set autocomplete to <value>; absent by default,
  *                                   as xterm ships it (`off` was tested on iOS
  *                                   and did not remove the AutoFill pill)
  */
 
 /** Reads the probe switches from a query string. Pure, so it is unit-tested. */
-export function readKeyBarProbe(search: string): { debug: boolean; autocomplete: string | null } {
+export function readKeyBarProbe(search: string): {
+  debug: boolean;
+  noSettle: boolean;
+  autocomplete: string | null;
+} {
   const params = new URLSearchParams(search);
   const requested = params.get('keybar-autocomplete');
   return {
     debug: params.has('keybar-debug'),
+    noSettle: params.has('keybar-nosettle'),
     autocomplete: requested === null || requested === 'absent' ? null : requested,
   };
 }
@@ -33,6 +40,18 @@ export interface KeyBarSample {
   focusedTag: string;
   focusedBottom: number | null;
   autocomplete: string;
+  /** The transform actually on the bar when the rect was read. */
+  transform: string;
+  /** Bottom of an untransformed element fixed at bottom:0 — innerHeight means rects are layout-viewport relative. */
+  markerBottom: number | null;
+  safeAreaBottom: number | null;
+  clientHeight: number;
+  outerHeight: number;
+  screenHeight: number;
+  virtualKeyboard: boolean;
+  settle: boolean;
+  /** Most recent first: which listener placed the bar, and with what. */
+  events: readonly string[];
 }
 
 /** One line per number, stable order, so two screenshots compare line for line. Data, not copy. */
@@ -49,7 +68,12 @@ export function formatKeyBarSample(sample: KeyBarSample, maxOccluded: number): s
     `occluded ${n(sample.occluded)}  max ${n(maxOccluded)}`,
     `bar.top ${n(sample.barTop)}  bar.bottom ${n(sample.barBottom)}  row.top ${n(sample.rowTop)}`,
     `focus ${sample.focusedTag}  focus.bottom ${n(sample.focusedBottom)}`,
+    `transform ${sample.transform}`,
+    `marker.bottom ${n(sample.markerBottom)}  safe-area.bottom ${n(sample.safeAreaBottom)}`,
+    `clientHeight ${n(sample.clientHeight)}  outerHeight ${n(sample.outerHeight)}  screen.height ${n(sample.screenHeight)}`,
+    `virtualKeyboard ${sample.virtualKeyboard ? 'yes' : 'no'}  settle ${sample.settle ? 'on' : 'off'}`,
     `autocomplete ${sample.autocomplete}`,
+    ...sample.events.map((e) => `· ${e}`),
     navigator.userAgent,
   ].join('\n');
 }
