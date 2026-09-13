@@ -1,46 +1,5 @@
 # OpenSpec Incoming Backlog
 
-## Mobile terminal scroll and gesture ownership
-
-> **Note, 2026-09-13.** A fix for exactly this shipped in `92eea2f` on
-> 2026-09-10 at 09:55 — `touch-action: pan-x pinch-zoom` on the terminal
-> plus a `touchmove` handler calling `scrollLines` and `preventDefault`,
-> which is the iOS-correct mechanism (`overscroll-behavior-y: contain` is
-> not Baseline on Safari; WebKit bug 176454 is still open, so it would not
-> have worked). That commit says real-device confirmation on Chrome/iPhone,
-> Safari and installed-PWA mode was **still outstanding** — verified in
-> headless Chromium only. This entry was written at 11:27 the same day,
-> 92 minutes later. It is therefore unclear whether it records the problem
-> as still reproducing on a real device after the fix, or was written
-> without knowledge of it. **Settle that before treating this as a build:
-> if it still reproduces, the fix is incomplete and the investigation notes
-> below stand; if it does not, what remains is the device verification the
-> commit itself deferred.**
-
-**Problem**
-
-In Chrome on iPhone, terminal history cannot be navigated naturally by touch. The user currently must use the scrollbar or other touch UI controls, and a vertical boundary gesture can be interpreted by the browser as pull-to-refresh instead of remaining with the terminal.
-
-**Reproduction/current evidence**
-
-Reproduces every time in Chrome on iPhone: open the board, tap a pane card title, open the full-screen pane detail terminal, ensure enough output exists to scroll, then swipe vertically on the terminal output. Current observations are that the app shell uses a fixed viewport height with a scrollable main area, the mobile pane-detail and terminal wrappers suppress overflow, and xterm has scrollback enabled without app-level touch or vertical overscroll handling. These observations suggest where to investigate but do not yet establish the root cause. Safari and installed/PWA modes remain unverified.
-
-**Expected behavior**
-
-While the user interacts with terminal scrollback, the terminal owns vertical gestures and page pull-to-refresh does not steal them, including at the scroll boundary. Treat this as a mobile-web layout and interaction-design problem rather than merely adding a scrollbar.
-
-**Investigation/fix notes**
-
-Trace gesture ownership across the app shell, full-screen pane detail, terminal wrappers, and xterm viewport. Evaluate touch scrolling and overscroll containment together, preserving terminal input and surrounding board behavior. Do not assume any one observed layout rule is the complete cause.
-
-**Verification/acceptance criteria**
-
-- On Chrome on iPhone, repeated upward and downward swipes naturally navigate terminal history when sufficient scrollback exists.
-- At both scroll boundaries, continued vertical gestures do not trigger page pull-to-refresh while interacting with the terminal.
-- Terminal input and non-terminal board scrolling continue to work as intended.
-- Safari and installed/PWA behavior are explicitly tested and documented during the investigation.
-
----
 
 ## Parked columns are pinned right of the status columns
 
