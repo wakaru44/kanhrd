@@ -2,6 +2,21 @@
 
 ## Mobile terminal scroll and gesture ownership
 
+> **Note, 2026-09-13.** A fix for exactly this shipped in `92eea2f` on
+> 2026-09-10 at 09:55 — `touch-action: pan-x pinch-zoom` on the terminal
+> plus a `touchmove` handler calling `scrollLines` and `preventDefault`,
+> which is the iOS-correct mechanism (`overscroll-behavior-y: contain` is
+> not Baseline on Safari; WebKit bug 176454 is still open, so it would not
+> have worked). That commit says real-device confirmation on Chrome/iPhone,
+> Safari and installed-PWA mode was **still outstanding** — verified in
+> headless Chromium only. This entry was written at 11:27 the same day,
+> 92 minutes later. It is therefore unclear whether it records the problem
+> as still reproducing on a real device after the fix, or was written
+> without knowledge of it. **Settle that before treating this as a build:
+> if it still reproduces, the fix is incomplete and the investigation notes
+> below stand; if it does not, what remains is the device verification the
+> commit itself deferred.**
+
 **Problem**
 
 In Chrome on iPhone, terminal history cannot be navigated naturally by touch. The user currently must use the scrollbar or other touch UI controls, and a vertical boundary gesture can be interpreted by the browser as pull-to-refresh instead of remaining with the terminal.
