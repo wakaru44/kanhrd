@@ -9,6 +9,11 @@ SHELL       := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
 .DEFAULT_GOAL := help
 
+# Local bridge output. Run targets keep writing to the terminal and also keep
+# this file current so `make logs` can inspect a foreground or background run.
+LOG_DIR    ?= tmp/logs
+BRIDGE_LOG ?= $(LOG_DIR)/bridge.log
+
 # ---- tailscale binary auto-detection --------------------------------------
 # Prefer `tailscale` on PATH (Linux and macOS CLI-install). Fall back to the
 # macOS .app bundle location. Empty if neither exists — the
@@ -45,7 +50,16 @@ hooks: ## Install git-lfs filters and the pre-commit git hooks locally.
 ## Run (built once, no watch)
 .PHONY: run
 run: build-web build-bridge ## Build then run the bridge locally on 127.0.0.1:5173 (safe default).
-	node apps/bridge/dist/main.js
+	@mkdir -p "$(dir $(BRIDGE_LOG))"
+	node apps/bridge/dist/main.js 2>&1 | tee "$(BRIDGE_LOG)"
+
+.PHONY: logs
+logs: ## Tail the local bridge log written by the make run targets (override BRIDGE_LOG=path).
+	@test -f "$(BRIDGE_LOG)" || { \
+	  echo "no bridge log yet at $(BRIDGE_LOG); start one with make run" >&2; \
+	  exit 1; \
+	}
+	tail -n 100 -f "$(BRIDGE_LOG)"
 
 .PHONY: status
 status: ## Show the locally-run bridge process, if one is up.
@@ -63,8 +77,10 @@ restart: stop run ## Stop the running bridge, rebuild, and run it again in the f
 
 .PHONY: run-exposed
 run-exposed: build-web build-bridge ## Bind 0.0.0.0 for LAN / dev-through-Tailscale (exposes on EVERY interface including untrusted Wi-Fi — prefer run-tailscale on a laptop).
+	@mkdir -p "$(dir $(BRIDGE_LOG))"
 	node apps/bridge/dist/main.js --bind 0.0.0.0 --i-know-what-im-doing \
-	  --allowed-origin "http://$$(hostname -I 2>/dev/null | awk '{print $$1}' | grep . || ipconfig getifaddr en0):5173"
+	  --allowed-origin "http://$$(hostname -I 2>/dev/null | awk '{print $$1}' | grep . || ipconfig getifaddr en0):5173" \
+	  2>&1 | tee "$(BRIDGE_LOG)"
 
 .PHONY: _require-tailscale
 _require-tailscale: ## (internal) fail with a clear message if tailscale isn't installed.
@@ -77,16 +93,19 @@ _require-tailscale: ## (internal) fail with a clear message if tailscale isn't i
 
 .PHONY: run-tailscale
 run-tailscale: _require-tailscale build-web build-bridge ## Bind ONLY to the Tailscale interface IP (safer than 0.0.0.0 on a laptop).
-	node apps/bridge/dist/main.js --bind "$$($(TAILSCALE) ip -4 | head -n1)" --i-know-what-im-doing
+	@mkdir -p "$(dir $(BRIDGE_LOG))"
+	node apps/bridge/dist/main.js --bind "$$($(TAILSCALE) ip -4 | head -n1)" --i-know-what-im-doing 2>&1 | tee "$(BRIDGE_LOG)"
 
 .PHONY: run-tailscale-serve
 run-tailscale-serve: _require-tailscale build-web build-bridge ## Bridge stays loopback; `tailscale serve` fronts it with HTTPS via Tailscale certs. Ctrl+C to stop; `make tailoff` to remove.
 	@name=$$($(TAILSCALE) status --self=true --json | jq -r '.Self.DNSName' | sed 's/\.$$//') ; \
 	 echo "Starting bridge on loopback (5173) + Tailscale Serve fronting on https://$$name:5173" ; \
 	 $(TAILSCALE) serve --https 5173 --set-path=/ http://127.0.0.1:5173 & \
+	 mkdir -p "$(dir $(BRIDGE_LOG))" ; \
 	 node apps/bridge/dist/main.js \
 	   --allowed-origin "https://$$name:5173" \
-	   --allowed-origin "https://$$name"
+	   --allowed-origin "https://$$name" \
+	   2>&1 | tee "$(BRIDGE_LOG)"
 
 ## Dev (watch mode, hot reload)
 .PHONY: dev-web
@@ -97,8 +116,10 @@ dev-web: ## Angular dev server for the SPA with HMR (proxies /api and /ws to :51
 # the browser's origin at the bridge is the dev server's, not 5173's.
 .PHONY: dev-bridge
 dev-bridge: ## Bridge in watch mode (tsx watch — restarts on source change).
+	@mkdir -p "$(dir $(BRIDGE_LOG))"
 	pnpm --filter @kanhrd/bridge dev -- \
-	  --allowed-origin http://localhost:4200 --allowed-origin http://127.0.0.1:4200
+	  --allowed-origin http://localhost:4200 --allowed-origin http://127.0.0.1:4200 \
+	  2>&1 | tee "$(BRIDGE_LOG)"
 
 ## Build
 .PHONY: build
