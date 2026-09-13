@@ -452,3 +452,44 @@ latch-with-visible-state model and never takes focus from the terminal.
 - The key bar's `^B` still sends a literal Ctrl+B to the pane.
 - A hardware keyboard's prefix behaviour is unchanged.
 
+---
+
+## The app shell is 100vh, which on iOS is the large viewport
+
+**Problem**
+
+A latent layout property with no known symptom today. `apps/web/src/app/app.scss:14`
+sets the shell to `height: 100vh`. On iOS, `100vh` resolves to the large
+viewport — the height with the browser toolbars retracted — and not to
+`innerHeight` while toolbars are showing. So the shell, and every route
+inside it, can extend below the visible area by the toolbar height.
+
+**Reproduction/current evidence**
+
+No reproduced symptom. While building `add-terminal-key-bar`, this was the
+first suspect for the terminal's cursor sitting under iOS's accessory bar.
+It turned out not to be the cause: that defect disappeared after the key
+bar's settle rework, with the shell unchanged (see that change's design
+note). The underlying fact stands independently. Desktop Chromium cannot
+show it, because there `100vh` equals `innerHeight`.
+
+**Expected behavior**
+
+The shell's height matches the visible area on mobile browsers, so a
+bottom-anchored surface is not clipped or pushed under toolbars.
+
+**Investigation/fix notes**
+
+`100dvh` (dynamic viewport) is the candidate. It tracks toolbars; on iOS it
+does not track the soft keyboard. It changes Android's shell height whenever
+the URL bar shows. That is plausibly a fix there too, but it is unmeasured,
+and the change owes before/after measurement on both platforms. Its blast
+radius is every route, so it wants its own proposal.
+
+**Verification/acceptance criteria**
+
+- On an iPhone with toolbars shown, the shell's bottom equals the visible
+  area's bottom on the board and on pane detail.
+- On Android, the same check with the URL bar shown and hidden, measured
+  before and after.
+

@@ -68,43 +68,24 @@
 - [x] 6.3 Live e2e against the isolated session: `esc`, `↑` and armed
       `ctrl` + `←` arrive at the pane's program as `^[`, `^[[A`, `^[[1;5D`
       (`e2e/key-bar-live.spec.ts`).
-- [ ] 6.4 Real device. **Record what was tested, on which device and iOS or
-      Android version, and what was not.**
-  - [x] Android (operator, 2026-09-13): bar placement and keys reported
-        clean. Device, browser and Android version not yet recorded.
-  - [ ] iPhone Safari (operator, 2026-09-13): FAILING. iOS's input
-        accessory bar (AutoFill pill + dismiss button) is drawn over the key
-        row; the strip is clear. iOS version not yet recorded.
-  - [x] Round 1 (operator, 2026-09-13, **Chrome on iOS 26.6.2, not
-        Safari**): `autocomplete="off"` does not remove the AutoFill pill
-        (rejected). The key row was fully visible with the pill below it. The
-        readout's bar rect lagged the placement by one render (a probe bug),
-        so round 1 cannot say whether the bar was placed right. Readouts in
-        `design.md`.
-  - [x] Round 2 (operator, 2026-09-13): Chrome iOS 26.6.2 (settle on and
-        off) and Safari 26.6.1 (UA iPhone OS 18_7, settle off). The bar is
-        placed at the visual viewport's bottom in both. The row is clear of
-        the accessory bar. Chrome rects are visual-viewport relative; Safari's
-        coordinate space is undetermined. Neither needs the focus re-measure.
-  - [x] Focus retention (operator, 2026-09-13): iPhone, iOS 26.6.2, real
-        device, keyboard raised, tapping a visible cell — the keyboard stays
-        up. Browser not recorded.
-  - [ ] Reserve defect (operator, 2026-09-13): terminal content and the
-        cursor end up under the accessory bar. Round 3 probe: shell, view
-        and terminal bottoms, viewport units, ruler below the bar.
-  - [x] Predictive text (operator, 2026-09-13): on throughout every round
-        and every screenshot, and never implicated. Tested in use with it ON;
-        no off/on comparison was run, and nothing is sized for a
-        predictive-bar-absent case.
-  - [ ] Untested, not assumed: Android with the probe (`occluded` 0 expected,
-        not captured), iPhone address bar at top or bottom, the installed
-        PWA, landscape.
-  - [ ] Round 2: the fix chosen from round 1 (derived height, placement bug,
-        or the documented iOS margin), verified on the same iPhone and
-        re-checked on Android.
-  - [ ] Not yet tested: iPhone Chrome, the installed PWA, landscape, the
-        predictive-text bar, and the notched safe-area gap with the keyboard
-        closed.
-  - [ ] Remove `pane-detail/key-bar-probe.ts` and its hooks once the rounds
-        settle.
+- [x] 6.4 Real device, closed 2026-09-13 with exactly what was tested:
+  - **Tested on device: iPhone only.** Chrome iOS 26.6.2 (CriOS/153) and
+    Safari 26.6.1.
+    - Placement at the visual viewport's bottom, keyboard up and down, with
+      the focus settle on and off.
+    - The settle rework validated by the operator in both browsers.
+    - The terminal's cursor correctly spaced above the bar after that rework.
+    - Focus retained when tapping a key with the keyboard up (browser not
+      recorded).
+    - Predictive text in use, ON, throughout.
+  - **Rejected by measurement:** `autocomplete="off"` does not remove the
+    AutoFill pill.
+  - **Not tested, not assumed:**
+    - Android with `occluded` 0 (the operator reported Android clean before
+      the probes, without numbers);
+    - the installed PWA;
+    - landscape;
+    - the iPhone address bar at top or bottom;
+    - predictive text off.
+  - "Tested on both" means the two iPhone browsers above, not every platform.
 - [x] 6.5 Web tests, `pnpm -w typecheck`, `make lint`.

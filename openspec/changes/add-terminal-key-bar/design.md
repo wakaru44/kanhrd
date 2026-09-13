@@ -411,47 +411,43 @@ the bar once the viewport has stopped moving.
 
 **The original overlap is closed, not resolved.**
 - The operator's first screenshot showed Apple's accessory bar over the key
-  row.
-- That screenshot predates the probe, so there are no numbers to compare
-  against, and neither browser reproduces it now in either settle state.
-- The likely explanation is a capture taken mid-animation: the timelines show
-  the bar transiently wrong while the keyboard animates (`bar.b` 426 → 429 →
-  430 → 432 → 434).
-- That is about 8px against roughly 60px of overlap in the screenshot, so the
-  magnitude does not fully match.
-- No further device round is spent on it. The Chromium e2e assertion that
-  `marker.bottom == bar.bottom` guards the placement arithmetic.
+  row. It predates the probe, so there are no numbers to compare against.
+- Neither browser reproduced it later in either settle state.
+- The best candidate is the one the reserve outcome below points to: an
+  occlusion left stale at the end of the keyboard animation, which the
+  sampling settle pass now corrects.
+- A capture taken mid-animation was the earlier explanation. It fits in kind
+  (`bar.b` 426 → 434), but at about 8px against roughly 60px of overlap, not
+  in magnitude.
+- Neither explanation is proven.
 
-### The terminal's reserve
+### The terminal's reserve — resolved by the settle rework, cause inferred
 
-The operator reports that the terminal's last lines, the cursor included,
-end up under iOS's accessory bar. Round 2's Chrome screenshot shows terminal
-content below the key row.
-
-- **Checked locally:** in desktop Chromium with a faked 311px keyboard
-  (`window.visualViewport` replaced, `innerHeight` 745), the reserve works.
-  `--key-bar-reserve` is 376px, `.detail-body` pads 384px, and
-  `.terminal-container` ends at 352, above the bar's top at 369.
-  - The arithmetic of bar height plus occlusion is not the fault.
-  - That experiment also showed xterm's helper textarea does not track the
-    cursor between renders, so `focus.bottom` is not a cursor position. Its
-    use as one in earlier analysis is withdrawn.
-- **The lead:** the app shell is `height: 100vh` (`app.scss`). On iOS, `100vh`
-  is the large viewport, the height with browser toolbars retracted, which is
-  taller than `innerHeight` while they show. The reserve is measured from the
-  visual viewport, but the view it pads ends at `100vh`. The terminal would
-  therefore end below the bar's top by `100vh − innerHeight`. Desktop
-  Chromium, where `100vh = innerHeight`, cannot reproduce that.
-- **Round 3 measures it:** `shell.bottom`, `pane.bottom`, `terminal.bottom`
-  and `terminal.bottom − bar.top`, what `100vh/dvh/svh/lvh` resolve to, and
-  ruler ticks below the bar's bottom edge down to −96.
-- **Then, per the operator's approach:** reserve a band while the bar is
-  shown and the keyboard is up (`occluded > 0`, never on Android). Its size
-  is whatever round 3 shows is still intruding once the shell height is
-  accounted for, recorded with device, iOS version and browser.
-  - If the whole intrusion is `100vh − innerHeight`, the honest fix is the
-    shell height, and a band would only hide it.
-  - That argument goes to the foreman before either is built.
+- **The report:** the operator saw the terminal's last lines and cursor sit
+  under iOS's floating accessory bar, and round 2's Chrome screenshot showed
+  terminal content below the key row.
+- **The outcome:** after the sampling settle pass (`2cb3f5e`) landed, the
+  operator reports the cursor correctly spaced in both iPhone browsers. No
+  band was added and the shell was not changed.
+- **The inferred cause:** the bar emits `reserve` from the same `place()`
+  that positions it. An occlusion left stale at the end of the keyboard
+  animation would both misplace the bar and under-reserve the terminal, and
+  settling until the viewport stops moving fixes both at once.
+- **What supports it:**
+  - the symptom disappeared after one known change;
+  - in desktop Chromium with a faked 311px keyboard, the reserve arithmetic
+    is correct (terminal container ends at 352, bar top 369);
+  - Safari's timeline shows the occlusion flapping mid-animation, the stale
+    input this would need.
+- **What does not support it:** `terminal.bottom − bar.top` was never
+  captured on a device. The round-3 probe that reports it was removed unread,
+  so the inference rests on the symptom's disappearance, not on a
+  measurement.
+- **The lead that was not the cause:** the app shell is `height: 100vh`
+  (`apps/web/src/app/app.scss:14`), which on iOS is the large viewport, not
+  `innerHeight` while toolbars show. It was the first suspect for this
+  symptom and turned out not to be needed to explain it. It stays true as a
+  latent property of every route, recorded in the backlog as such.
 
 ### What is unknown, and why this is a measurement
 
