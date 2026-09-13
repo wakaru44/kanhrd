@@ -1,0 +1,20 @@
+Makefile
+  s_26967ebf1662f1::t_e19b4e8d4c1cce 12-16,53-62,80,83,96-97,104,119
+  s_26967ebf1662f1::t_c5fc635a20e419 82,107-108,121-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "752b236bd6c623b3f5ef0f2c09c4d99e32babb9e",
+  "prompts": {},
+  "sessions": {
+    "s_26967ebf1662f1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0889d-b5d7-74f3-9c51-027870ede854",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
