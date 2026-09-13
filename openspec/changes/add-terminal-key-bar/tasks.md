@@ -68,7 +68,22 @@
 - [x] 6.3 Live e2e against the isolated session: `esc`, `↑` and armed
       `ctrl` + `←` arrive at the pane's program as `^[`, `^[[A`, `^[[1;5D`
       (`e2e/key-bar-live.spec.ts`).
-- [ ] 6.4 Real device — iPhone Safari, iPhone Chrome, installed PWA:
-      keyboard-pinned position, safe-area gap, focus retained, no
-      pull-to-refresh from the bar. Recorded with what was and was not tested.
+- [ ] 6.4 Real device. **Record what was tested, on which device and iOS or
+      Android version, and what was not.**
+  - [x] Android (operator, 2026-09-13): bar placement and keys reported
+        clean. Device, browser and Android version not yet recorded.
+  - [ ] iPhone Safari (operator, 2026-09-13): FAILING. iOS's input
+        accessory bar (AutoFill pill + dismiss button) is drawn over the key
+        row; the strip is clear. iOS version not yet recorded.
+  - [ ] Round 1: the `?keybar-debug` readout and `?keybar-autocomplete` on
+        the iPhone, per the check list in the lane report — numbers with the
+        keyboard up and down, pill present and `off`.
+  - [ ] Round 2: the fix chosen from round 1 (derived height, placement bug,
+        or the documented iOS margin), verified on the same iPhone and
+        re-checked on Android.
+  - [ ] Not yet tested: iPhone Chrome, the installed PWA, landscape, the
+        predictive-text bar, and the notched safe-area gap with the keyboard
+        closed.
+  - [ ] Remove `pane-detail/key-bar-probe.ts` and its hooks once the rounds
+        settle.
 - [x] 6.5 Web tests, `pnpm -w typecheck`, `make lint`.

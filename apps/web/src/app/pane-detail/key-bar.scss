@@ -134,3 +134,20 @@
   outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
 }
+
+/* TEMPORARY (task 6.4): the ?keybar-debug readout, pinned to the visual viewport's top. */
+.probe {
+  position: fixed;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--paper-raised);
+  border-bottom: var(--elev-2);
+  color: var(--ink);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  white-space: pre-wrap;
+  word-break: break-all;
+  pointer-events: none;
+}

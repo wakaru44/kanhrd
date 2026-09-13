@@ -15,6 +15,7 @@ import { ToastService } from '../state/toast.service';
 import { COPY, fill } from '../shared/copy';
 import { classifyInput } from './key-mapping';
 import { KeyBarModifiers, keyNameForCharacter } from './key-bar-cells';
+import { readKeyBarProbe } from './key-bar-probe';
 
 /**
  * xterm.js takes a font *string*, not a CSS custom property, so the
@@ -206,6 +207,7 @@ export class PaneTerminal {
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(el);
+    markHelperTextarea(el, readKeyBarProbe(location.search).autocomplete);
     fitAddon.fit();
     term.onData((data) => this.handleInput(data));
 
@@ -754,5 +756,19 @@ export class PaneTerminal {
       return 0;
     }
     return screen.getBoundingClientRect().height / rows;
+  }
+}
+
+/**
+ * xterm 6.0.0 sets `autocapitalize`, `autocorrect` and `spellcheck` on its
+ * helper textarea but not `autocomplete`, which leaves it a candidate for
+ * Safari AutoFill — the passwords / card / contact pill iOS draws over the
+ * key bar. `off` is the default under test on a device (add-terminal-key-bar
+ * task 6.4); `null` leaves the attribute absent, for comparison.
+ */
+export function markHelperTextarea(el: HTMLElement, autocomplete: string | null): void {
+  const textarea = el.querySelector('textarea');
+  if (textarea && autocomplete !== null) {
+    textarea.setAttribute('autocomplete', autocomplete);
   }
 }

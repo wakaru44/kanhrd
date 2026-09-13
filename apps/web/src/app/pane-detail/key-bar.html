@@ -43,3 +43,8 @@
     }
   </div>
 }
+
+<!-- TEMPORARY (task 6.4): device measurement readout, only with ?keybar-debug. Data, not copy. -->
+@if (probe(); as readout) {
+  <pre class="probe" [style.top.px]="probeTop()">{{ readout }}</pre>
+}

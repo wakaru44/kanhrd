@@ -236,6 +236,84 @@ no words and no tokens:
 - **`z-index: 30`:** above the terminal and the board chrome, below the
   drawer (40/50) and modals (1000).
 
+## iOS device rounds (task 6.4)
+
+### What failed, 2026-09-13
+
+- **iPhone:** with the soft keyboard up, the bar is placed above the keyboard
+  and the strip's keycaps are visible. iOS Safari's own input accessory bar
+  is drawn over the key row, and several cells cannot be seen or reached. That
+  accessory bar is a white AutoFill pill (passwords, card and location icons)
+  plus the round keyboard-dismiss button.
+- **Android:** the operator reports it clean.
+
+These are two problems, kept apart.
+
+1. **The AutoFill pill** may be ours to remove. xterm 6.0.0 sets
+   `autocapitalize`, `autocorrect` and `spellcheck` on its helper textarea but
+   not `autocomplete`. What Safari honours is unverified:
+   - WebKit maps an element's autocomplete `off` state to the autofill field
+     name `off` ([WebKit Autofill.cpp], [WebKit aa8945d]). That does not show
+     the iOS accessory bar consults it.
+   - Developer reports say Safari's heuristics override `autocomplete="off"` on
+     some fields ([Apple forums 764041]).
+   - So `off` is an experiment, measured on the device, and not a fix
+     assumed from the attribute.
+2. **Apple's accessory bar itself** is not ours to remove. A web page has no
+   API to hide the iOS input accessory view or its dismiss control. The fix
+   is to stop colliding with it.
+
+### What is unknown, and why this is a measurement
+
+No primary source states whether `visualViewport.height` on iOS Safari
+excludes the accessory bar or only the keys. Two things point the same way
+without proving it:
+
+- the screenshot shows the strip clear and the row covered, so the overlap is
+  about one row high;
+- Apple's own report of iOS 26.0–26.0.1 notes that the autofill panel was
+  missing from the keyboard frame UIKit reported, fixed in 26.1
+  ([Apple forums 801685]).
+
+Neither is Safari's visual viewport, so neither is treated as fact here.
+
+### Round 1 — a measurement build
+
+Two URL switches, both off unless asked, both temporary
+(`pane-detail/key-bar-probe.ts`):
+
+- `?keybar-debug=1` — a readout pinned to the top of the visual viewport:
+  - `innerHeight`, `visualViewport.height / offsetTop / scale` and their
+    bottom;
+  - the computed `occluded`, and its maximum so far;
+  - the bar's and the row's top and bottom;
+  - the focused element and its bottom;
+  - the helper textarea's `autocomplete`, and the user agent.
+- `?keybar-autocomplete=absent|<value>` — leaves the helper textarea
+  unmarked, or sets it. The default in this build is `off`: harmless on
+  Android, and the first thing to test on iOS.
+
+### The fix that follows, depending on round 1
+
+- **If `vv.bottom` equals `bar.bottom` and Apple's bar still covers the
+  row:** the visual viewport does not exclude the accessory bar. The extra
+  height has to come from somewhere measurable. If nothing in the readout
+  moves with it, the fallback applies.
+- **If `bar.bottom` sits below `vv.bottom`:** the placement math is wrong on
+  iOS (`offsetTop`, scale, or the transformed containing block). That is a
+  bug in our code, fixed directly.
+- **The fallback, if the height cannot be derived:** while the keyboard is up
+  on a browser that does not resize the layout viewport (`occluded > 0`, which
+  is iOS and never Android under `interactive-widget=resizes-content`), the
+  bar lifts by a fixed margin.
+  - The margin is the largest accessory height measured across the rounds
+    (pill, predictive text, bare dismiss row), recorded here with the device
+    and iOS version it came from.
+  - The gate is the layout viewport not resizing, not the user agent, so
+    Android stays a no-op by construction.
+  - The cost, stated rather than hidden: on an iPhone with a shorter
+    accessory bar, a band of dead space opens between our bar and Apple's.
+
 ## Sources
 
 [ExtraKeysView.java]: https://github.com/termux/termux-app/blob/master/termux-shared/src/main/java/com/termux/shared/termux/extrakeys/ExtraKeysView.java
@@ -250,6 +328,10 @@ no words and no tokens:
 [MDN overscroll-behavior]: https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior
 [MDN touch-action]: https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action
 [browser-compat-data #24451]: https://github.com/mdn/browser-compat-data/issues/24451
+[WebKit Autofill.cpp]: https://github.com/WebKit/webkit/blob/main/Source/WebCore/html/Autofill.cpp
+[WebKit aa8945d]: https://github.com/WebKit/WebKit/commit/aa8945d7e8f05e48e56e2a49da697d8fe0e98122
+[Apple forums 764041]: https://developer.apple.com/forums/thread/764041
+[Apple forums 801685]: https://developer.apple.com/forums/thread/801685
 
 Termius iOS changelog (6.1.0 sticking modifiers, 6.3.0 Shift+Tab, 7.6.0
 hide-keyboard): <https://docs.termius.com/changelog/ios>

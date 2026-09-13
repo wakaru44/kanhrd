@@ -215,3 +215,22 @@ test('the expanded or collapsed choice survives a reload', async ({ page }) => {
     'collapsed'
   );
 });
+
+// TEMPORARY (task 6.4): the device-measurement probes, while they exist.
+test('the measurement readout and autocomplete switch appear only when the URL asks', async ({
+  page,
+}) => {
+  await mockBridge(page);
+  await openPane(page);
+  await expect(page.locator('app-key-bar .probe')).toHaveCount(0);
+  await expect(page.locator('.xterm-helper-textarea')).toHaveAttribute('autocomplete', 'off');
+
+  await page.goto(`/pane/local/${PANE}?keybar-debug=1&keybar-autocomplete=absent`);
+  await page.waitForSelector('.xterm-rows');
+  const probe = page.locator('app-key-bar .probe');
+  await expect(probe).toContainText('vv.height');
+  await expect(probe).toContainText('autocomplete (absent)');
+  const box = (await probe.boundingBox())!;
+  expect(box.y).toBeLessThanOrEqual(1);
+  expect(await page.locator('.xterm-helper-textarea').getAttribute('autocomplete')).toBeNull();
+});

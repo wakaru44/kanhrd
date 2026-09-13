@@ -1,0 +1,54 @@
+/**
+ * TEMPORARY device-measurement probes for the key bar's iOS rounds
+ * (openspec/changes/add-terminal-key-bar, task 6.4). Everything here is off
+ * unless the page URL asks for it, so no operator sees it by accident, and
+ * the whole file is deleted once the rounds settle the fix.
+ *
+ *   ?keybar-debug=1                 on-screen readout of the viewport numbers
+ *   ?keybar-autocomplete=absent     leave xterm's helper textarea unmarked
+ *   ?keybar-autocomplete=<value>    set autocomplete to <value> (default: off)
+ */
+
+/** Reads the probe switches from a query string. Pure, so it is unit-tested. */
+export function readKeyBarProbe(search: string): { debug: boolean; autocomplete: string | null } {
+  const params = new URLSearchParams(search);
+  const requested = params.get('keybar-autocomplete');
+  return {
+    debug: params.has('keybar-debug'),
+    autocomplete: requested === 'absent' ? null : (requested ?? 'off'),
+  };
+}
+
+/** What the readout shows: the raw numbers the occlusion math uses, and what they produced. */
+export interface KeyBarSample {
+  innerHeight: number;
+  vvHeight: number | null;
+  vvOffsetTop: number | null;
+  vvScale: number | null;
+  occluded: number;
+  barTop: number;
+  barBottom: number;
+  rowTop: number | null;
+  focusedTag: string;
+  focusedBottom: number | null;
+  autocomplete: string;
+}
+
+/** One line per number, stable order, so two screenshots compare line for line. Data, not copy. */
+export function formatKeyBarSample(sample: KeyBarSample, maxOccluded: number): string {
+  const n = (v: number | null) => (v === null ? '-' : String(Math.round(v * 10) / 10));
+  const vvBottom =
+    sample.vvHeight === null || sample.vvOffsetTop === null
+      ? null
+      : sample.vvHeight + sample.vvOffsetTop;
+  return [
+    `innerHeight ${n(sample.innerHeight)}`,
+    `vv.height ${n(sample.vvHeight)}  vv.offsetTop ${n(sample.vvOffsetTop)}  vv.scale ${n(sample.vvScale)}`,
+    `vv.bottom ${n(vvBottom)}`,
+    `occluded ${n(sample.occluded)}  max ${n(maxOccluded)}`,
+    `bar.top ${n(sample.barTop)}  bar.bottom ${n(sample.barBottom)}  row.top ${n(sample.rowTop)}`,
+    `focus ${sample.focusedTag}  focus.bottom ${n(sample.focusedBottom)}`,
+    `autocomplete ${sample.autocomplete}`,
+    navigator.userAgent,
+  ].join('\n');
+}

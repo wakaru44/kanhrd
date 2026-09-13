@@ -15,6 +15,7 @@ import {
   type KeyBarModifiers,
   type ModifierState,
 } from './key-bar-cells';
+import { formatKeyBarSample, readKeyBarProbe } from './key-bar-probe';
 
 /** Termux's fallback long-press threshold (ExtraKeysView). */
 export const KEY_BAR_LONG_PRESS_MS = 400;
@@ -79,6 +80,11 @@ export class KeyBar {
   readonly reserve = output<number>();
 
   protected readonly occluded = signal(0);
+  /** TEMPORARY (task 6.4): the `?keybar-debug` readout, or null when not asked for. */
+  protected readonly probe = signal<string | null>(null);
+  protected readonly probeTop = signal(0);
+  private readonly probeOn = readKeyBarProbe(location.search).debug;
+  private maxOccluded = 0;
   protected readonly left = signal<number | null>(null);
   protected readonly width = signal<number | null>(null);
 
@@ -119,6 +125,7 @@ export class KeyBar {
         this.settleTimer = setTimeout(place, 350);
       };
       document.addEventListener('focusout', settle);
+      document.addEventListener('focusin', settle);
       const observer = new ResizeObserver(place);
       observer.observe(this.host.nativeElement);
       const anchor = this.host.nativeElement.parentElement;
@@ -131,6 +138,7 @@ export class KeyBar {
         vv?.removeEventListener('scroll', place);
         window.removeEventListener('resize', place);
         document.removeEventListener('focusout', settle);
+        document.removeEventListener('focusin', settle);
         observer.disconnect();
         this.clearPress();
       });
@@ -217,6 +225,39 @@ export class KeyBar {
       this.width.set(anchor.width);
     }
     this.reserve.emit(this.host.nativeElement.getBoundingClientRect().height + occluded);
+    if (this.probeOn) this.sample(occluded);
+  }
+
+  /** TEMPORARY (task 6.4): records the numbers the occlusion math used, for a device screenshot. */
+  private sample(occluded: number): void {
+    const vv = window.visualViewport;
+    const bar = this.host.nativeElement.getBoundingClientRect();
+    const row = this.host.nativeElement.querySelector('.row')?.getBoundingClientRect() ?? null;
+    const focused = document.activeElement;
+    const textarea = document.querySelector('.xterm-helper-textarea');
+    this.maxOccluded = Math.max(this.maxOccluded, occluded);
+    // The bar is transformed, so the fixed readout's containing block is the bar itself:
+    // offset it by the bar's own top to pin it to the visual viewport's top edge.
+    this.probeTop.set((vv?.offsetTop ?? 0) - bar.top);
+    this.probe.set(
+      formatKeyBarSample(
+        {
+          innerHeight: window.innerHeight,
+          vvHeight: vv?.height ?? null,
+          vvOffsetTop: vv?.offsetTop ?? null,
+          vvScale: vv?.scale ?? null,
+          occluded,
+          barTop: bar.top,
+          barBottom: bar.bottom,
+          rowTop: row?.top ?? null,
+          focusedTag: focused ? focused.tagName.toLowerCase() : 'none',
+          focusedBottom:
+            focused && focused !== document.body ? focused.getBoundingClientRect().bottom : null,
+          autocomplete: textarea?.getAttribute('autocomplete') ?? '(absent)',
+        },
+        this.maxOccluded
+      )
+    );
   }
 }
 
