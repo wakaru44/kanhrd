@@ -369,6 +369,21 @@ report had the pill over the row.
   - Both halves of _act on pointerup, cancel pointerdown_ now rest on device
     evidence.
 
+**The focus re-measure is kept, deliberately.** It re-places the bar 350 ms
+after focus moves. Round 2 shows it was not needed in the samples taken, but
+also shows why it is still wanted:
+
+- `vv.resize` delivers mid-animation occlusions: `max` 364 and 361 against
+  298 and 289 at rest.
+- The only thing that corrected them in those samples was iOS sliding the
+  page afterwards, which fires `vv.scroll`.
+- iOS slides only when the focused textarea is hidden, so a pane whose cursor
+  is already visible gets no later event. The stale-value gap is the one
+  WICG visual-viewport #79 describes ([WICG #79]).
+- It costs one placement per focus change.
+- A component test pins that it happens. `?keybar-nosettle` remains only as a
+  device switch until the probes are removed.
+
 **The focus re-measure did not fix the original overlap.** Round 1 proposed
 it; both browsers place correctly without it. What did change is not yet
 named, and the candidates stand as follows:
@@ -490,6 +505,7 @@ Two URL switches, both off unless asked, both temporary
 [MDN overscroll-behavior]: https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior
 [MDN touch-action]: https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action
 [browser-compat-data #24451]: https://github.com/mdn/browser-compat-data/issues/24451
+[WICG #79]: https://github.com/WICG/visual-viewport/issues/79
 [WebKit Autofill.cpp]: https://github.com/WebKit/webkit/blob/main/Source/WebCore/html/Autofill.cpp
 [WebKit aa8945d]: https://github.com/WebKit/WebKit/commit/aa8945d7e8f05e48e56e2a49da697d8fe0e98122
 [Apple forums 764041]: https://developer.apple.com/forums/thread/764041

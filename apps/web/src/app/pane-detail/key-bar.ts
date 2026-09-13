@@ -132,9 +132,13 @@ export class KeyBar {
       window.addEventListener('resize', winResize);
       // `offsetTop` has been reported to stick after the keyboard closes on iOS;
       // re-read once the dismissal animation has settled.
-      // `focusin` too: it re-measures after the keyboard's opening animation.
-      // TEMPORARY `?keybar-nosettle` disables both, to test whether this is what
-      // fixed the row being covered on iOS (task 6.4, round 2).
+      // Kept deliberately (task 6.4, round 2): iOS delivers mid-animation values in
+      // `vv.resize` (measured: occluded 364 during the animation, 298 at rest) and
+      // only sends a later event if it also slides the page to reveal the focused
+      // textarea. When it does not, nothing corrects the last stale value, so one
+      // re-read after the animation — 350 ms after focus moves either way — is
+      // the only moment we know the keyboard has settled. Cost: one placement.
+      // TEMPORARY `?keybar-nosettle` disables it for device captures.
       const settle = () => {
         if (this.settleTimer !== null) clearTimeout(this.settleTimer);
         this.settleTimer = setTimeout(settled, 350);

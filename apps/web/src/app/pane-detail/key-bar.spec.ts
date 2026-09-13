@@ -148,6 +148,23 @@ describe('KeyBar', () => {
     expect(host.reserve).toBeGreaterThan(0);
   });
 
+  it('re-measures once the keyboard animation has settled after focus moves', async () => {
+    // iOS can leave a mid-animation occlusion as its last visualViewport event;
+    // this re-read is what corrects it (design.md, "focus re-measure").
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    let placements = 0;
+    const counted = fixture.componentInstance;
+    const before = counted.reserve;
+    const bar = fixture.debugElement.children[0].children.find((d) => d.name === 'app-key-bar')!;
+    (bar.componentInstance as KeyBar).reserve.subscribe(() => placements++);
+    document.dispatchEvent(new FocusEvent('focusin'));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(placements).toBe(0);
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(placements).toBe(1);
+    expect(counted.reserve).toBe(before);
+  });
+
   describe('occludedBottom', () => {
     it('is the keyboard height when the visual viewport shrank', () => {
       expect(occludedBottom(844, { height: 508, offsetTop: 0 })).toBe(336);
