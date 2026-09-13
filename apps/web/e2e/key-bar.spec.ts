@@ -241,7 +241,10 @@ test('the measurement readout and autocomplete switch appear only when the URL a
   await expect(probe).toContainText('bar.bottom 844');
   await expect(probe).toContainText('settle on');
   await expect(probe).toContainText('· init');
-  await expect(page.locator('app-key-bar .ruler .tick')).toHaveCount(11);
+  await expect(page.locator('app-key-bar .ruler .tick')).toHaveCount(17);
+  // Round 3: in Chromium 100vh is innerHeight, so the terminal ends above the bar.
+  await expect(probe).toContainText('100vh 844');
+  await expect(probe).toContainText('shell.bottom 844');
 
   await page.goto(`/pane/local/${PANE}?keybar-debug=1&keybar-nosettle=1`);
   await page.waitForSelector('.xterm-rows');

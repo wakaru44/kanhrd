@@ -81,9 +81,20 @@
         readout's bar rect lagged the placement by one render (a probe bug),
         so round 1 cannot say whether the bar was placed right. Readouts in
         `design.md`.
-  - [ ] Round 2: the fixed probe (read after render, coordinate marker,
-        event timeline, ruler, `?keybar-nosettle`) on iPhone **Safari** and
-        Chrome, and once on Android.
+  - [x] Round 2 (operator, 2026-09-13): Chrome iOS 26.6.2 (settle on and
+        off) and Safari 26.6.1 (UA iPhone OS 18_7, settle off). The bar is
+        placed at the visual viewport's bottom in both. The row is clear of
+        the accessory bar. Chrome rects are visual-viewport relative; Safari's
+        coordinate space is undetermined. Neither needs the focus re-measure.
+  - [x] Focus retention (operator, 2026-09-13): iPhone, iOS 26.6.2, real
+        device, keyboard raised, tapping a visible cell — the keyboard stays
+        up. Browser not recorded.
+  - [ ] Reserve defect (operator, 2026-09-13): terminal content and the
+        cursor end up under the accessory bar. Round 3 probe: shell, view
+        and terminal bottoms, viewport units, ruler below the bar.
+  - [ ] Still untested: Android with the probe (`occluded` 0), iPhone
+        address bar top or bottom, predictive text on or off, the installed
+        PWA, landscape.
   - [ ] Round 2: the fix chosen from round 1 (derived height, placement bug,
         or the documented iOS margin), verified on the same iPhone and
         re-checked on Android.

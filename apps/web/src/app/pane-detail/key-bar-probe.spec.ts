@@ -52,6 +52,10 @@ describe('key bar device probes (temporary, task 6.4)', () => {
         virtualKeyboard: false,
         settle: true,
         events: ['vv.resize occ 336 vv.h 508 off 0 bar.b 508'],
+        shellBottom: 900,
+        paneBottom: 900,
+        terminalBottom: 470,
+        units: { '100vh': 900, '100dvh': 844 },
       },
       336
     );
@@ -62,6 +66,9 @@ describe('key bar device probes (temporary, task 6.4)', () => {
     expect(text).toContain('transform translateY(-336px)');
     expect(text).toContain('marker.bottom 844  safe-area.bottom 34');
     expect(text).toContain('· vv.resize occ 336');
+    expect(text).toContain('shell.bottom 900  pane.bottom 900  terminal.bottom 470');
+    expect(text).toContain('terminal.bottom - bar.top 50');
+    expect(text).toContain('100vh 900  100dvh 844');
   });
 
   it('reads the no-settle switch', () => {

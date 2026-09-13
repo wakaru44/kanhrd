@@ -52,6 +52,12 @@ export interface KeyBarSample {
   settle: boolean;
   /** Most recent first: which listener placed the bar, and with what. */
   events: readonly string[];
+  /** Round 3: where the shell, the view and the terminal box end, in the same space as bar.top. */
+  shellBottom: number | null;
+  paneBottom: number | null;
+  terminalBottom: number | null;
+  /** What 100vh / 100dvh / 100svh / 100lvh resolve to, in CSS px. */
+  units: Readonly<Record<string, number>>;
 }
 
 /** One line per number, stable order, so two screenshots compare line for line. Data, not copy. */
@@ -68,6 +74,11 @@ export function formatKeyBarSample(sample: KeyBarSample, maxOccluded: number): s
     `occluded ${n(sample.occluded)}  max ${n(maxOccluded)}`,
     `bar.top ${n(sample.barTop)}  bar.bottom ${n(sample.barBottom)}  row.top ${n(sample.rowTop)}`,
     `focus ${sample.focusedTag}  focus.bottom ${n(sample.focusedBottom)}`,
+    `shell.bottom ${n(sample.shellBottom)}  pane.bottom ${n(sample.paneBottom)}  terminal.bottom ${n(sample.terminalBottom)}`,
+    `terminal.bottom - bar.top ${sample.terminalBottom === null ? '-' : n(sample.terminalBottom - sample.barTop)}`,
+    Object.entries(sample.units)
+      .map(([unit, px]) => `${unit} ${n(px)}`)
+      .join('  '),
     `transform ${sample.transform}`,
     `marker.bottom ${n(sample.markerBottom)}  safe-area.bottom ${n(sample.safeAreaBottom)}`,
     `clientHeight ${n(sample.clientHeight)}  outerHeight ${n(sample.outerHeight)}  screen.height ${n(sample.screenHeight)}`,

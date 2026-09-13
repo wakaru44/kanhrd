@@ -168,6 +168,12 @@
   right: 0;
   padding-right: var(--sp-1);
   border-bottom: 1px solid var(--status-blocked);
+
+  /* Below the bar's bottom edge: the tick's line marks its top instead. */
+  &.below {
+    border-bottom: none;
+    border-top: 1px solid var(--status-blocked);
+  }
   color: var(--status-blocked-ink);
   background: var(--paper-raised);
   font-size: var(--fs-caption);

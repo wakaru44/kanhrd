@@ -83,7 +83,11 @@ export class KeyBar {
   /** TEMPORARY (task 6.4): the `?keybar-debug` readout, or null when not asked for. */
   protected readonly probe = signal<string | null>(null);
   protected readonly probeTop = signal(0);
-  protected readonly rulerTicks = [0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160];
+  /** Ticks in CSS px from the bar's bottom edge: positive above it, negative below it (round 3). */
+  protected readonly rulerTicks = [
+    160, 144, 128, 112, 96, 80, 64, 48, 32, 16, 0, -16, -32, -48, -64, -80, -96,
+  ];
+  private probeUnits: Record<string, HTMLElement> = {};
   private readonly probeSwitches = readKeyBarProbe(location.search);
   private readonly probeEvents: string[] = [];
   private probeMarker: HTMLElement | null = null;
@@ -152,6 +156,7 @@ export class KeyBar {
         vv?.removeEventListener('scroll', vvScroll);
         window.removeEventListener('resize', winResize);
         this.probeMarker?.remove();
+        Object.values(this.probeUnits).forEach((el) => el.remove());
         document.removeEventListener('focusout', settle);
         document.removeEventListener('focusin', settle);
         observer.disconnect();
@@ -261,6 +266,16 @@ export class KeyBar {
       'position:fixed;left:0;bottom:0;width:1px;height:0;padding-bottom:env(safe-area-inset-bottom);pointer-events:none;';
     document.body.appendChild(marker);
     this.probeMarker = marker;
+    // What each viewport unit resolves to. On iOS `100vh` is the LARGE viewport
+    // (toolbars retracted), taller than innerHeight while toolbars show — and the
+    // app shell is `height: 100vh`.
+    for (const unit of ['100vh', '100dvh', '100svh', '100lvh']) {
+      const el = document.createElement('div');
+      el.setAttribute('aria-hidden', 'true');
+      el.style.cssText = `position:absolute;left:-9999px;top:0;width:1px;height:${unit};visibility:hidden;`;
+      document.body.appendChild(el);
+      this.probeUnits[unit] = el;
+    }
   }
 
   private sample(event: string, occluded: number): void {
@@ -302,6 +317,14 @@ export class KeyBar {
           virtualKeyboard: 'virtualKeyboard' in navigator,
           settle: !this.probeSwitches.noSettle,
           events: this.probeEvents,
+          shellBottom: document.querySelector('app-root')?.getBoundingClientRect().bottom ?? null,
+          paneBottom:
+            document.querySelector('.pane-detail')?.getBoundingClientRect().bottom ?? null,
+          terminalBottom:
+            document.querySelector('.terminal-container')?.getBoundingClientRect().bottom ?? null,
+          units: Object.fromEntries(
+            Object.entries(this.probeUnits).map(([unit, el]) => [unit, el.offsetHeight])
+          ),
         },
         this.maxOccluded
       )

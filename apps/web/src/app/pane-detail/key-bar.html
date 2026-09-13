@@ -50,7 +50,7 @@
   <!-- Ticks in CSS px above the bar's bottom edge: where Apple's bar reaches reads off a screenshot. -->
   <div class="ruler" aria-hidden="true">
     @for (tick of rulerTicks; track tick) {
-      <span class="tick" [style.bottom.px]="tick">{{ tick }}</span>
+      <span class="tick" [class.below]="tick < 0" [style.bottom.px]="tick">{{ tick }}</span>
     }
   </div>
 }

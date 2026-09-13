@@ -340,6 +340,91 @@ report had the pill over the row.
   the controlled test for what changed between the original report and
   round 1.
 
+### Round 2 results
+
+| browser (settle)                    | innerHeight | vv.height | vv.offsetTop | occluded (max) | bar.bottom | marker.bottom | transform          |
+| ----------------------------------- | ----------- | --------- | ------------ | -------------- | ---------- | ------------- | ------------------ |
+| Chrome iOS 26.6.2, CriOS/153 (on)   | 745         | 434       | 13           | 298 (364)      | 434        | 732           | translateY(-298px) |
+| Chrome iOS 26.6.2, CriOS/153 (off)  | 745         | 434       | 22           | 289 (361)      | 434        | 723           | translateY(-289px) |
+| Safari 26.6.1, UA iPhone OS 18_7 (off) | 775      | 455       | 0            | 320 (320)      | 455        | 775           | translateY(-320px) |
+
+- **Coordinate space.** On Chrome iOS, rects are relative to the visual
+  viewport: `marker.bottom = innerHeight − vv.offsetTop` in two samples
+  with different offsets (745 − 13 = 732, 745 − 22 = 723). `bar.bottom =
+  vv.height` therefore means the bar sits exactly at the visual viewport's
+  bottom. On Safari the space is **undetermined**: both samples had
+  `offsetTop` 0 or 1, where the two spaces read alike.
+- **Placement is correct at rest in both browsers.** Chrome without the
+  re-measure tracks the keyboard through `vv.scroll` alone: `bar.b` 426 →
+  429 → 430 → 432 → 434, briefly about 8px off mid-animation. Safari passes
+  without it after a 320/0 oscillation in `vv.resize`.
+- **The accessory bar no longer covers the row.** On the ruler, ticks 0–160
+  are visible in both browsers and Apple's bar sits below tick 0.
+- **Focus is retained.** On an iPhone (iOS 26.6.2, real device, browser not
+  recorded), with the keyboard raised, tapping a visible cell leaves the
+  keyboard up. `preventDefault()` on `pointerdown` protects focus in
+  practice, not only per MDN.
+  - The pan half of the pointerup decision is also observed: the row scrolls
+    horizontally in every screenshot without firing keys.
+  - Both halves of _act on pointerup, cancel pointerdown_ now rest on device
+    evidence.
+
+**The focus re-measure did not fix the original overlap.** Round 1 proposed
+it; both browsers place correctly without it. What did change is not yet
+named, and the candidates stand as follows:
+
+- `autocomplete`: ruled out. Round 1's readout 1 had the attribute absent
+  and the row visible.
+- **The readout itself:** only active with `?keybar-debug`. It adds renders
+  but never calls `place()`, so it cannot move the bar.
+- **Whether iOS scrolls the layout viewport after the keyboard opens:** the
+  strongest candidate.
+  - The timelines show `vv.resize` delivering intermediate values mid-animation
+    (`max` 364 and 361 against 298 and 289 at rest).
+  - Where iOS then slides the page to reveal the focused textarea, `vv.scroll`
+    events keep arriving and the bar converges.
+  - Whether iOS slides depends on where xterm's helper textarea sits (it
+    follows the cursor), so it depends on the pane's content, not on our code.
+  - If it does not slide, the last event can leave a mid-animation value and
+    a bar up to ~66px too low — a whole row, which matches the original
+    screenshot.
+- **What would distinguish that from a code regression:** a
+  `?keybar-debug&keybar-nosettle` capture whose timeline ends in a
+  `vv.resize` with `occluded` above the settled value and no `vv.scroll`
+  after it, with the row covered. Round 3 asks for that on a pane whose
+  cursor is already near the top of the terminal.
+
+### The terminal's reserve
+
+The operator reports that the terminal's last lines, the cursor included,
+end up under iOS's accessory bar. Round 2's Chrome screenshot shows terminal
+content below the key row.
+
+- **Checked locally:** in desktop Chromium with a faked 311px keyboard
+  (`window.visualViewport` replaced, `innerHeight` 745), the reserve works.
+  `--key-bar-reserve` is 376px, `.detail-body` pads 384px, and
+  `.terminal-container` ends at 352, above the bar's top at 369.
+  - The arithmetic of bar height plus occlusion is not the fault.
+  - That experiment also showed xterm's helper textarea does not track the
+    cursor between renders, so `focus.bottom` is not a cursor position. Its
+    use as one in earlier analysis is withdrawn.
+- **The lead:** the app shell is `height: 100vh` (`app.scss`). On iOS, `100vh`
+  is the large viewport, the height with browser toolbars retracted, which is
+  taller than `innerHeight` while they show. The reserve is measured from the
+  visual viewport, but the view it pads ends at `100vh`. The terminal would
+  therefore end below the bar's top by `100vh − innerHeight`. Desktop
+  Chromium, where `100vh = innerHeight`, cannot reproduce that.
+- **Round 3 measures it:** `shell.bottom`, `pane.bottom`, `terminal.bottom`
+  and `terminal.bottom − bar.top`, what `100vh/dvh/svh/lvh` resolve to, and
+  ruler ticks below the bar's bottom edge down to −96.
+- **Then, per the operator's approach:** reserve a band while the bar is
+  shown and the keyboard is up (`occluded > 0`, never on Android). Its size
+  is whatever round 3 shows is still intruding once the shell height is
+  accounted for, recorded with device, iOS version and browser.
+  - If the whole intrusion is `100vh − innerHeight`, the honest fix is the
+    shell height, and a band would only hide it.
+  - That argument goes to the foreman before either is built.
+
 ### What is unknown, and why this is a measurement
 
 No primary source states whether `visualViewport.height` on iOS Safari
