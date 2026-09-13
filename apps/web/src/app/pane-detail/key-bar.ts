@@ -15,7 +15,6 @@ import {
   type KeyBarModifiers,
   type ModifierState,
 } from './key-bar-cells';
-import { formatKeyBarSample, readKeyBarProbe } from './key-bar-probe';
 
 /**
  * Consecutive unchanged frames that count as "the keyboard has stopped
@@ -90,17 +89,6 @@ export class KeyBar {
   readonly reserve = output<number>();
 
   protected readonly occluded = signal(0);
-  /** TEMPORARY (task 6.4): the `?keybar-debug` readout, or null when not asked for. */
-  protected readonly probe = signal<string | null>(null);
-  protected readonly probeTop = signal(0);
-  /** Ticks in CSS px from the bar's bottom edge: positive above it, negative below it (round 3). */
-  protected readonly rulerTicks = [
-    160, 144, 128, 112, 96, 80, 64, 48, 32, 16, 0, -16, -32, -48, -64, -80, -96,
-  ];
-  private probeUnits: Record<string, HTMLElement> = {};
-  private readonly probeSwitches = readKeyBarProbe(location.search);
-  private readonly probeEvents: string[] = [];
-  private probeMarker: HTMLElement | null = null;
   private maxOccluded = 0;
   protected readonly left = signal<number | null>(null);
   protected readonly width = signal<number | null>(null);
@@ -130,40 +118,30 @@ export class KeyBar {
   constructor() {
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
-      const on = (event: string) => () => this.place(event);
-      const vvResize = on('vv.resize');
-      const vvScroll = on('vv.scroll');
-      const winResize = on('window.resize');
-      const observed = on('observer');
+      const place = () => this.place();
       const vv = window.visualViewport;
-      vv?.addEventListener('resize', vvResize);
-      vv?.addEventListener('scroll', vvScroll);
-      window.addEventListener('resize', winResize);
+      vv?.addEventListener('resize', place);
+      vv?.addEventListener('scroll', place);
+      window.addEventListener('resize', place);
       // A settle pass after focus moves either way — the keyboard opening or
       // closing. The visualViewport events are edge-driven and give no final-state
       // guarantee: Safari's round-2 timeline flapped 320 → 0 → 320 → 0 → 320
       // mid-animation, and if the last event lands on a wrong value nothing
       // follows to correct it. Cheap insurance, not a measured fix (design.md).
-      // TEMPORARY `?keybar-nosettle` disables it for device captures.
       const settle = () => this.settle();
-      if (!this.probeSwitches.noSettle) {
-        document.addEventListener('focusout', settle);
-        document.addEventListener('focusin', settle);
-      }
-      const observer = new ResizeObserver(observed);
+      document.addEventListener('focusout', settle);
+      document.addEventListener('focusin', settle);
+      const observer = new ResizeObserver(place);
       observer.observe(this.host.nativeElement);
       const anchor = this.host.nativeElement.parentElement;
       if (anchor) observer.observe(anchor);
-      this.place('init');
-      if (this.probeSwitches.debug) this.mountProbeMarker();
+      this.place();
       destroyRef.onDestroy(() => {
         this.destroyed = true;
         if (this.settleFrame !== null) cancelAnimationFrame(this.settleFrame);
-        vv?.removeEventListener('resize', vvResize);
-        vv?.removeEventListener('scroll', vvScroll);
-        window.removeEventListener('resize', winResize);
-        this.probeMarker?.remove();
-        Object.values(this.probeUnits).forEach((el) => el.remove());
+        vv?.removeEventListener('resize', place);
+        vv?.removeEventListener('scroll', place);
+        window.removeEventListener('resize', place);
         document.removeEventListener('focusout', settle);
         document.removeEventListener('focusin', settle);
         observer.disconnect();
@@ -264,13 +242,13 @@ export class KeyBar {
         last = now;
         changed = true;
         stableFrames = 0;
-        this.place('settle.move');
+        this.place();
       } else {
         stableFrames++;
       }
       const settled = changed && stableFrames >= SETTLE_STABLE_FRAMES;
       if (settled || performance.now() - started >= SETTLE_CEILING_MS) {
-        this.place('settle');
+        this.place();
         return;
       }
       this.settleFrame = requestAnimationFrame(tick);
@@ -286,7 +264,7 @@ export class KeyBar {
     );
   }
 
-  private place(event: string): void {
+  private place(): void {
     if (this.destroyed) return;
     const occluded = this.measureOccluded();
     this.occluded.set(occluded);
@@ -296,90 +274,6 @@ export class KeyBar {
       this.width.set(anchor.width);
     }
     this.reserve.emit(this.host.nativeElement.getBoundingClientRect().height + occluded);
-    if (this.probeSwitches.debug) {
-      // Read after the transform has rendered: a rect read here would describe the
-      // previous placement, which is what made round 1's readout lag.
-      requestAnimationFrame(() => requestAnimationFrame(() => this.sample(event, occluded)));
-    }
-  }
-
-  /** TEMPORARY (task 6.4): records the numbers the occlusion math used, for a device screenshot. */
-  /**
-   * TEMPORARY (task 6.4): an untransformed, zero-height element fixed at the layout
-   * viewport's bottom. Its rect answers which coordinate space iOS reports rects in
-   * (bottom = innerHeight means layout viewport), and its padding measures
-   * `env(safe-area-inset-bottom)`.
-   */
-  private mountProbeMarker(): void {
-    const marker = document.createElement('div');
-    marker.setAttribute('aria-hidden', 'true');
-    marker.style.cssText =
-      'position:fixed;left:0;bottom:0;width:1px;height:0;padding-bottom:env(safe-area-inset-bottom);pointer-events:none;';
-    document.body.appendChild(marker);
-    this.probeMarker = marker;
-    // What each viewport unit resolves to. On iOS `100vh` is the LARGE viewport
-    // (toolbars retracted), taller than innerHeight while toolbars show — and the
-    // app shell is `height: 100vh`.
-    for (const unit of ['100vh', '100dvh', '100svh', '100lvh']) {
-      const el = document.createElement('div');
-      el.setAttribute('aria-hidden', 'true');
-      el.style.cssText = `position:absolute;left:-9999px;top:0;width:1px;height:${unit};visibility:hidden;`;
-      document.body.appendChild(el);
-      this.probeUnits[unit] = el;
-    }
-  }
-
-  private sample(event: string, occluded: number): void {
-    if (this.destroyed) return;
-    const vv = window.visualViewport;
-    const bar = this.host.nativeElement.getBoundingClientRect();
-    const row = this.host.nativeElement.querySelector('.row')?.getBoundingClientRect() ?? null;
-    const focused = document.activeElement;
-    const textarea = document.querySelector('.xterm-helper-textarea');
-    this.maxOccluded = Math.max(this.maxOccluded, occluded);
-    this.probeEvents.unshift(
-      `${event} occ ${occluded} vv.h ${Math.round(vv?.height ?? -1)} off ${Math.round(vv?.offsetTop ?? -1)} bar.b ${Math.round(bar.bottom)}`
-    );
-    this.probeEvents.length = Math.min(this.probeEvents.length, 8);
-    // The bar is transformed, so the fixed readout's containing block is the bar itself:
-    // offset it by the bar's own top to pin it to the visual viewport's top edge.
-    this.probeTop.set((vv?.offsetTop ?? 0) - bar.top);
-    this.probe.set(
-      formatKeyBarSample(
-        {
-          innerHeight: window.innerHeight,
-          vvHeight: vv?.height ?? null,
-          vvOffsetTop: vv?.offsetTop ?? null,
-          vvScale: vv?.scale ?? null,
-          occluded,
-          barTop: bar.top,
-          barBottom: bar.bottom,
-          rowTop: row?.top ?? null,
-          focusedTag: focused ? focused.tagName.toLowerCase() : 'none',
-          focusedBottom:
-            focused && focused !== document.body ? focused.getBoundingClientRect().bottom : null,
-          autocomplete: textarea?.getAttribute('autocomplete') ?? '(absent)',
-          transform: this.host.nativeElement.style.transform || '(none)',
-          markerBottom: this.probeMarker?.getBoundingClientRect().bottom ?? null,
-          safeAreaBottom: this.probeMarker ? this.probeMarker.getBoundingClientRect().height : null,
-          clientHeight: document.documentElement.clientHeight,
-          outerHeight: window.outerHeight,
-          screenHeight: screen.height,
-          virtualKeyboard: 'virtualKeyboard' in navigator,
-          settle: !this.probeSwitches.noSettle,
-          events: this.probeEvents,
-          shellBottom: document.querySelector('app-root')?.getBoundingClientRect().bottom ?? null,
-          paneBottom:
-            document.querySelector('.pane-detail')?.getBoundingClientRect().bottom ?? null,
-          terminalBottom:
-            document.querySelector('.terminal-container')?.getBoundingClientRect().bottom ?? null,
-          units: Object.fromEntries(
-            Object.entries(this.probeUnits).map(([unit, el]) => [unit, el.offsetHeight])
-          ),
-        },
-        this.maxOccluded
-      )
-    );
   }
 }
 
