@@ -391,3 +391,64 @@ runs.
 - A seed that stops satisfying a precondition fails the suite rather than
   silently reducing its coverage.
 - `preflightReason` skips still work when no herdr is reachable.
+
+---
+
+## kanhrd's prefix shortcuts are unreachable from a phone
+
+**Problem**
+
+On a phone the operator cannot use any of kanhrd's own prefix shortcuts:
+next or previous tab, next card, the card switcher, help. They mirror herdr's
+navigation in the web UI, and a phone is where that navigation is missed most.
+
+**Reproduction/current evidence**
+
+Open a pane on a phone and tap the terminal to raise the soft keyboard. The
+prefix cannot be pressed as a chord, and even from a hardware keyboard it
+would not arm: `KeyboardService.handleKeydown`
+(`apps/web/src/app/state/keyboard.service.ts`) treats any key while xterm's
+helper textarea is focused as typing, and disarms the chord so that Ctrl+B
+reaches the terminal. That rule is right for a hardware keyboard and leaves a
+touch user with no path at all.
+
+Two facts shape a fix, found while building `add-terminal-key-bar`:
+
+- The dispatch needs a path that does not depend on a DOM `keydown`. iOS soft
+  keyboards commonly report `keyCode 229` (IME composition) instead of a
+  usable `key`, and the character arrives only as xterm's `onData`.
+- Sending the prefix to the pane does not help. A key sent through
+  `pane.send_keys` reaches the program in the pane, never herdr's prefix
+  layer (measured against an isolated herdr session). That is why the key
+  bar's `^B` is a literal Ctrl+B for tmux, vim and readline, and not this.
+
+**Expected behavior**
+
+From a phone, the operator can arm kanhrd's prefix and run a prefix shortcut
+without a hardware keyboard, and without taking Ctrl+B away from the program
+in the pane.
+
+**Investigation/fix notes**
+
+The pane-detail key bar is the natural surface: it already owns a
+latch-with-visible-state model and never takes focus from the terminal.
+
+- A bar cell labelled from `KeyboardService.prefix()` could arm the chord
+  through a new public entry point.
+- While armed, `PaneTerminal` would route the next `onData` character, or
+  bar key, to `KeyboardService` as the chord key instead of sending it to
+  the pane. A key that matches no shortcut disarms and sends nothing.
+- `CHORD_TIMEOUT_MS` (2 s) is short for a thumb moving from the bar to the
+  soft keyboard. A chord armed from the bar probably wants no timeout, like
+  the bar's modifier latch.
+- The cell's label and state are copy and tokens for the maintainer.
+- This needs its own proposal. It adds a second cell kind that is an app
+  action rather than a key sequence.
+
+**Verification/acceptance criteria**
+
+- On a phone, with the soft keyboard up, the operator arms the prefix and
+  the next key runs the matching kanhrd shortcut; nothing reaches the pane.
+- The key bar's `^B` still sends a literal Ctrl+B to the pane.
+- A hardware keyboard's prefix behaviour is unchanged.
+
