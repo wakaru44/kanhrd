@@ -349,3 +349,71 @@ silently pinned to 1000.
   actually serve, rather than a hardcoded constant.
 - A truncated buffer continues to say so; absent beats wrong, and a
   truncation that looks like a short session is wrong.
+
+---
+
+## e2e specs skip themselves when the seeded session is too thin
+
+**Problem**
+
+Nearly half the e2e suite guards itself with a runtime `test.skip`, and a
+large share of those guards are data-shape preconditions rather than
+capability or environment checks. On a fresh isolated session — the normal
+starting condition since `add-test-herdr-isolation` — the seeded world is
+thin enough that those preconditions routinely fail, so the specs report as
+skipped rather than run. A green suite with five or six silent skips looks
+the same as a green suite that exercised everything.
+
+**Reproduction/current evidence**
+
+72 `test` blocks across `apps/web/e2e/*.spec.ts`, 32 conditional
+`test.skip` calls in 12 files. Two classes:
+
+- **Environment guards**, which are correct and should stay:
+  `test.skip(!!preflightReason, ...)` when no herdr is reachable.
+- **Data-shape guards**, which are the problem:
+  `count < 2, 'needs at least 2 tabs in the rail to observe next-tab
+  advancing'`; `count < 2, 'fewer than two visible status columns —
+  nothing to swipe to'`; `before < 2, 'need at least two visible statuses
+  to hide one and still have a page'`; `count < 1, 'no tabs in the rail to
+  click'`; `!hostName, 'could not read host name from first card'`.
+
+The `Escape closes the plus-menu` spec is a worked example: it skips
+whenever the run's host has not advertised a create capability, which is a
+fresh session's normal state. Its contract is covered by unit tests, so
+there is no hole — but the e2e is dead weight on most runs, and nothing
+reports that it never ran.
+
+The same root cause was just found and fixed one layer over, in the capture
+fixture: `buildPopulatedSmall()` was `buildSixHundredPanes().slice(0, 6)`,
+six panes in one tab of one workspace, which made the board unable to
+demonstrate the rail, a second workspace, or a move destination
+(`31e38ff`). The live e2e seed has the same thinness with the same
+consequence.
+
+**Expected behavior**
+
+A spec that cannot run says so as a failure of the seed, not as a quiet
+skip; or the seed is rich enough that the precondition holds and the spec
+runs.
+
+**Investigation/fix notes**
+
+- Seed the integration session the way `31e38ff` chose the capture fixture:
+  deliberately, with at least two workspaces, several tabs and one pane per
+  `agent_status`, so the data-shape guards are satisfied by construction.
+- Then decide, per guard, whether it should remain a `skip` or become a
+  hard failure. A precondition the seed is supposed to guarantee is a
+  broken seed when it fails, not an untestable environment.
+- Keep the `preflightReason` environment guards exactly as they are; those
+  are the documented no-herdr path and are not this problem.
+- Report skip counts in CI output so a rise in skips is visible rather than
+  buried under a green tick.
+
+**Verification/acceptance criteria**
+
+- The number of data-shape skips on a normal isolated run is zero, or each
+  surviving one is justified in the spec.
+- A seed that stops satisfying a precondition fails the suite rather than
+  silently reducing its coverage.
+- `preflightReason` skips still work when no herdr is reachable.
