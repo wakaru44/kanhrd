@@ -91,7 +91,7 @@ export interface PaneTerminalDeps {
  * `applyFontSize`. Initial values are still read here, once, in `attach()`:
  * the `Terminal` constructor needs them before any effect has run.
  *
- * The surface is small (`attach` / `load` / `retry` / `send` / `dispose` /
+ * The surface is small (`attach` / `load` / `retry` / `send` / `end` / `dispose` /
  * `applyTheme` / `applyFontSize` / `applyScrollback` plus four readonly signals) and everything
  * else — the fit convergence loop, the touch scroll engine, snapshot
  * painting, the send queue, the subscription lifecycle — is private to it.
@@ -127,6 +127,12 @@ export class PaneTerminal {
   private readonly hasContent = signal(false);
   /** True while a live `pane.subscribe_output` is confirmed for the pane in view. */
   private readonly subscribed = signal(false);
+  /**
+   * True once the owner has said the pane in view no longer exists (`end()`).
+   * Nothing is read, subscribed or sent for that pane again; loading a
+   * different pane clears it.
+   */
+  private ended = false;
 
   /** Revision id of the most recent frame, from `pane.read`/`pane.output`. */
   readonly revision: Signal<number | null> = this.revisionSignal.asReadonly();
@@ -279,9 +285,10 @@ export class PaneTerminal {
    * that lands after the pane has moved on is discarded.
    */
   async load(host: string, id: string): Promise<void> {
-    if (!this.term) {
+    if (!this.term || (this.ended && !this.isStale(host, id))) {
       return;
     }
+    this.ended = false;
     this.currentHost = host;
     this.currentId = id;
     this.teardownSubscription();
@@ -333,7 +340,9 @@ export class PaneTerminal {
           // costs ~3 KB/s instead of ~63-86 KB/s. See `rebuildSnapshot`.
           delta: true,
         });
-        if (this.isStale(host, id)) {
+        // Moved on, or ended while the subscribe was in flight: either way
+        // this subscription has no one to feed and must not keep a poll alive.
+        if (this.isStale(host, id) || this.ended) {
           if (sub) {
             void this.ws.request(host, 'pane.unsubscribe_output', {
               subscription_id: sub.subscription_id,
@@ -392,12 +401,27 @@ export class PaneTerminal {
   sendKeys(keys: readonly string[]): void {
     const host = this.currentHost;
     const id = this.currentId;
-    if (!host || !id || keys.length === 0) {
+    if (this.ended || !host || !id || keys.length === 0) {
       return;
     }
     const [first, ...rest] = keys;
     const folded = [this.keyBarModifiers?.consume(first) ?? first, ...rest];
     this.enqueueSend(() => this.ws.request(host, 'pane.send_keys', { pane_id: id, keys: folded }));
+  }
+
+  /**
+   * The pane in view has ended: its session is gone from herdr. The output
+   * subscription is dropped — which is what ends the bridge's poll loop for
+   * it — and input, reloads and retries for that pane are refused from here
+   * on. Whatever already rendered stays in the buffer: the last frame is the
+   * operator's to read. Loading a different pane lifts it.
+   */
+  end(): void {
+    if (this.ended) {
+      return;
+    }
+    this.ended = true;
+    this.teardownSubscription();
   }
 
   /** Releases the terminal, the DOM listeners and the subscription. */
@@ -589,7 +613,7 @@ export class PaneTerminal {
   private handleInput(data: string): void {
     const host = this.currentHost;
     const id = this.currentId;
-    if (!host || !id) {
+    if (this.ended || !host || !id) {
       return;
     }
     const modifiers = this.keyBarModifiers;

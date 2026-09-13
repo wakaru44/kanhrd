@@ -38,7 +38,8 @@ ended. It is the "the UI freezes" report from the other side.
 
 ## Decisions this needs from a maintainer
 
-These are not decided here, and nothing is built until they are.
+All five were decided by the maintainer on 2026-09-13; `design.md` records
+the answers and the reasoning.
 
 1. **Copy.** None exists. At least a state line, keyed under `state.*`
    beside `state.stale` and `state.unavailable`. `docs/BRAND.md` puts this
@@ -50,9 +51,9 @@ These are not decided here, and nothing is built until they are.
    agent's last output is often the reason they opened the pane — but it is
    a design call, and it must not read as `stale — reconnecting`, which
    promises a reconnection that will not come.
-3. **Icon.** None of the twenty icons in `docs/DESIGN-SYSTEM.md` names an
+3. **Icon.** None of the twenty-one icons in `docs/DESIGN-SYSTEM.md` names an
    ended session. `LucideUnplug` means a lost host and would mislead. Either
-   the state has no icon, or a twenty-first is added to the design system
+   the state has no icon, or a twenty-second is added to the design system
    first.
 4. **Actions.** `back to the board` at minimum. Whether it also offers the
    next card in the tab (the top bar already has one) is open. It must not

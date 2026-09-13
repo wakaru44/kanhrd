@@ -112,6 +112,7 @@
     <div class="terminal-wrap">
       <div
         class="terminal-container"
+        [class.inert]="viewState() === 'gone'"
         #terminalContainer
         role="group"
         [attr.aria-label]="title()"
@@ -145,6 +146,18 @@
               <p class="state-line">
                 <svg lucideUnplug class="icon" aria-hidden="true"></svg>
                 {{ copy.state.unavailable }}
+              </p>
+              <div class="state-actions">
+                <a [routerLink]="backUrl" class="state-back">{{ copy.nav.backToBoard }}</a>
+              </div>
+            </div>
+          }
+          @case ('gone') {
+            <!-- The last frame stays readable underneath, dimmed. Nothing to retry. -->
+            <div class="terminal-state terminal-gone">
+              <p class="state-line">
+                <svg lucideSunset class="icon" aria-hidden="true"></svg>
+                {{ copy.state.gone }}
               </p>
               <div class="state-actions">
                 <a [routerLink]="backUrl" class="state-back">{{ copy.nav.backToBoard }}</a>

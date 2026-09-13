@@ -324,6 +324,15 @@
   overscroll-behavior-y: contain;
   background: var(--paper);
   font-family: var(--font-mono);
+
+  /*
+   * Gone: the session ended and this is its last frame. Full contrast would
+   * read as a live terminal, so the container itself is dimmed — no layer
+   * over it. Instant, like every status change.
+   */
+  &.inert {
+    opacity: var(--opacity-inert);
+  }
 }
 
 .terminal-status {

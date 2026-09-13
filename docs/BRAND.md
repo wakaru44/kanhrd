@@ -175,6 +175,7 @@ product copy and stay in the template.
 | `loading.retry`                       | `try again`                                                                                                                                   |
 | `state.stale`                         | `stale — reconnecting`                                                                                                                        |
 | `state.unavailable`                   | `this host is out of sight.`                                                                                                                  |
+| `state.gone`                          | `the session ended. this is the last thing it said.`                                                                                          |
 | `terminal.truncated`                  | `herdr sent the last {lines} lines. history above this line was not sent.`                                                                    |
 | `terminal.truncatedRaise`             | `raise scrollback in settings.`                                                                                                               |
 | `nav.backToBoard`                     | `back to the board`                                                                                                                           |

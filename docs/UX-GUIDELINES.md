@@ -191,15 +191,16 @@ follows these rules:
 
 Five states are distinct and none of them may be faked:
 
-| State                                   | What the user sees                                                                                                            |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Loading                                 | static skeleton columns; `finding hosts…`. The no-hosts state never renders before discovery finishes.                        |
-| Empty (no hosts configured)             | setup instructions: `kanhrd.config.yaml` snippet, bridge command, operating-guide link                                        |
-| Empty (host connected, nothing running) | `this host is quiet…`, plus a create action **only if** the capability is advertised                                          |
-| Empty (filters/scope match nothing)     | `nothing matches these filters.` + a clear action. Never setup instructions.                                                  |
-| Stale / disconnected                    | existing content stays visible, marked with `LucideUnplug` and `stale — reconnecting`; connection-dependent actions are gated |
-| Failed                                  | loading is replaced by a visible retry (`LucideRefreshCw`) and a back path                                                    |
-| Unavailable / not found                 | `that workspace is no longer here.` + recovery. Never silently falling back to a previous scope.                              |
+| State                                   | What the user sees                                                                                                                                                                                  |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Loading                                 | static skeleton columns; `finding hosts…`. The no-hosts state never renders before discovery finishes.                                                                                              |
+| Empty (no hosts configured)             | setup instructions: `kanhrd.config.yaml` snippet, bridge command, operating-guide link                                                                                                              |
+| Empty (host connected, nothing running) | `this host is quiet…`, plus a create action **only if** the capability is advertised                                                                                                                |
+| Empty (filters/scope match nothing)     | `nothing matches these filters.` + a clear action. Never setup instructions.                                                                                                                        |
+| Stale / disconnected                    | existing content stays visible, marked with `LucideUnplug` and `stale — reconnecting`; connection-dependent actions are gated                                                                       |
+| Gone (pane detail)                      | the session ended: the last frame stays, dimmed to `--opacity-inert`, with `LucideSunset`, `the session ended. this is the last thing it said.` and a back path; no retry, no input, no live stream |
+| Failed                                  | loading is replaced by a visible retry (`LucideRefreshCw`) and a back path                                                                                                                          |
+| Unavailable / not found                 | `that workspace is no longer here.` + recovery. Never silently falling back to a previous scope.                                                                                                    |
 
 One failed host never blanks healthy hosts. A single host disconnect never
 destroys already-rendered content.

@@ -31,6 +31,7 @@ import {
   LucidePencil,
   LucideSquareSplitHorizontal,
   LucideRefreshCw,
+  LucideSunset,
   LucideTriangleAlert,
   LucideUnplug,
 } from '../shared/icons';
@@ -48,11 +49,13 @@ import { TerminalKeyBarService } from '../state/terminal-key-bar.service';
  * states tell the truth"). `stale` and `unavailable` never blank the
  * terminal: whatever already rendered stays on screen underneath.
  *
- * All but `unavailable` come straight from `PaneTerminal.state()`; host
- * connectivity is the only one this view knows about and the terminal does
- * not.
+ * All but `unavailable` and `gone` come straight from `PaneTerminal.state()`;
+ * host connectivity and the pane's presence in the store are what this view
+ * knows about and the terminal does not. `gone` keeps the last frame too,
+ * dimmed so it cannot be mistaken for a live terminal.
  */
-export type PaneViewState = 'loading' | 'failed' | 'unavailable' | 'stale' | 'empty' | 'live';
+export type PaneViewState =
+  'loading' | 'failed' | 'unavailable' | 'gone' | 'stale' | 'empty' | 'live';
 
 /**
  * The next card in the tab after `currentId`, wrapping past the last —
@@ -100,6 +103,7 @@ export function nextSiblingCard(siblings: readonly Pane[], currentId: string): P
     LucidePencil,
     LucideSquareSplitHorizontal,
     LucideRefreshCw,
+    LucideSunset,
     LucideTriangleAlert,
     LucideUnplug,
   ],
@@ -269,6 +273,27 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     return entry ? entry.connected : true;
   });
 
+  /**
+   * The route key whose pane this view has seen in the store while its host
+   * was connected. Absence alone proves nothing — a cold deep link has not
+   * had its host's `pane.list` yet — so a pane only counts as gone once it
+   * was here first. Keyed by route so moving to another pane starts over.
+   */
+  private readonly seenKey = signal<string | null>(null);
+
+  /**
+   * The pane's session has ended: seen in the store for a connected host,
+   * then removed from it (herdr's `pane.closed`, or the one the bridge
+   * synthesizes from `pane.list`). A disconnected host never drops panes
+   * from the store, and outranks this anyway, so a lost host stays
+   * `unavailable`. herdr never reuses a closed pane's id, so a later pane
+   * under the same key cannot be a different session resurfacing.
+   */
+  private readonly gone = computed(() => {
+    const key = paneKey(this.host(), this.id());
+    return this.seenKey() === key && this.pane() === undefined;
+  });
+
   /** Flips true once the terminal container exists, so the load effect below has something to write into. */
   private readonly viewReady = signal(false);
 
@@ -304,9 +329,12 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
    * laid over the top: a host the bridge has marked disconnected outranks
    * everything else.
    */
-  protected readonly viewState = computed<PaneViewState>(() =>
-    this.hostInSight() ? this.terminal.state() : 'unavailable'
-  );
+  protected readonly viewState = computed<PaneViewState>(() => {
+    if (!this.hostInSight()) {
+      return 'unavailable';
+    }
+    return this.gone() ? 'gone' : this.terminal.state();
+  });
 
   constructor() {
     // One handler for "which card is next", shared with `prefix + o` and
@@ -347,6 +375,28 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       untracked(() => {
         void this.terminal.load(host, id);
       });
+    });
+
+    // Remember that the pane in the route was present while its host was in
+    // sight — the precondition for ever calling it gone.
+    effect(() => {
+      const key = paneKey(this.host(), this.id());
+      const present = this.pane() !== undefined && this.hostInSight();
+      untracked(() => {
+        if (present) {
+          this.seenKey.set(key);
+        } else if (this.seenKey() !== key) {
+          this.seenKey.set(null);
+        }
+      });
+    });
+
+    // Gone is final for this pane: stop the live stream, so the bridge's
+    // poll loop for it ends, and stop relaying input.
+    effect(() => {
+      if (this.viewState() === 'gone') {
+        untracked(() => this.terminal.end());
+      }
     });
 
     // The terminal's appearance follows the app's settings, driven from

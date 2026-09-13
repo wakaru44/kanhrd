@@ -202,6 +202,7 @@ export const COPY = {
   state: {
     stale: 'stale — reconnecting',
     unavailable: 'this host is out of sight.',
+    gone: 'the session ended. this is the last thing it said.',
   },
   nav: {
     backToBoard: 'back to the board',

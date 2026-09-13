@@ -357,6 +357,7 @@ describe('PaneDetail', () => {
   let fixture: ComponentFixture<PaneDetail>;
   let paramMap$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let hosts: WritableSignal<HostSummary[]>;
+  let panes: WritableSignal<ReadonlyMap<string, Pane>>;
 
   /** DOM-level view of the reliability state, asserted through the markup rather than a protected signal. */
   function stateEl(selector: string): Element | null {
@@ -366,6 +367,7 @@ describe('PaneDetail', () => {
   beforeEach(async () => {
     ws = new FakeWsClient();
     hosts = signal<HostSummary[]>([{ name: 'laptop', connected: true }]);
+    panes = signal<ReadonlyMap<string, Pane>>(new Map());
     paramMap$ = new BehaviorSubject(convertToParamMap({ host: 'laptop', id: 'pane-1' }));
 
     await TestBed.configureTestingModule({
@@ -376,7 +378,7 @@ describe('PaneDetail', () => {
         {
           provide: PanesStore,
           useValue: {
-            panesSignal: () => new Map(),
+            panesSignal: () => panes(),
             // The bar draws herdr's tab level from this (add-pane-tab-hierarchy).
             tabsSignal: () => new Map(),
             capabilitiesSignal: () => new Map(),
@@ -624,6 +626,138 @@ describe('PaneDetail', () => {
     fixture.detectChanges();
 
     expect(stateEl('.terminal-unavailable')).toBeNull();
+  });
+
+  // --- gone: the pane was here, for a connected host, and has left the store.
+
+  const PANE_1: Pane = {
+    id: 'pane-1',
+    host: 'laptop',
+    workspace: { id: 'w1', name: 'kanhrd' },
+    tab: { id: 't1', name: 'main' },
+    agent_status: 'done',
+  };
+
+  /** Mounts with pane-1 in the store and live, then removes it the way `pane.closed` does. */
+  async function mountThenClose(): Promise<void> {
+    panes.set(new Map([['laptop:pane-1', PANE_1]]));
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+    panes.set(new Map());
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+  }
+
+  it('reports a pane that ends while open as gone, with a back path and no retry', async () => {
+    await mountThenClose();
+
+    const gone = stateEl('.terminal-gone');
+    expect(gone?.textContent).toContain(COPY.state.gone);
+    expect(gone?.querySelector('svg[lucideSunset]')).not.toBeNull();
+    expect(gone?.querySelector('a.state-back')?.textContent).toContain(COPY.nav.backToBoard);
+    expect(stateEl('button.retry')).toBeNull();
+    expect(stateEl('.stale-marker')).toBeNull();
+    expect(stateEl('.terminal-unavailable')).toBeNull();
+  });
+
+  it('keeps the last frame, dimmed on the terminal container itself', async () => {
+    await mountThenClose();
+
+    const container = stateEl('.terminal-container');
+    expect(container?.classList).toContain('inert');
+    expect(container?.querySelector('.xterm')).not.toBeNull();
+  });
+
+  it('unsubscribes the output stream on entering gone', async () => {
+    await mountThenClose();
+
+    expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.unsubscribe_output', {
+      subscription_id: 'sub-1',
+    });
+  });
+
+  it('does not re-read a gone pane when the socket reconnects', async () => {
+    await mountThenClose();
+    ws.request.calls.reset();
+
+    ws.connected.set(false);
+    fixture.detectChanges();
+    ws.connected.set(true);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(ws.request).not.toHaveBeenCalledWith('laptop', 'pane.read', jasmine.anything());
+    expect(stateEl('.terminal-gone')).not.toBeNull();
+  });
+
+  it('shows loading, not gone, for a cold deep link before the host has been listed', async () => {
+    ws.connected.set(false);
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(stateEl('.terminal-loading')).not.toBeNull();
+    expect(stateEl('.terminal-gone')).toBeNull();
+  });
+
+  it('never calls a pane gone that was never in the store', async () => {
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(stateEl('.terminal-gone')).toBeNull();
+    expect(ws.request).not.toHaveBeenCalledWith(
+      'laptop',
+      'pane.unsubscribe_output',
+      jasmine.anything()
+    );
+  });
+
+  it('shows unavailable, not gone, when the host disconnects and its panes leave the store', async () => {
+    panes.set(new Map([['laptop:pane-1', PANE_1]]));
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    hosts.set([{ name: 'laptop', connected: false }]);
+    fixture.detectChanges();
+    panes.set(new Map());
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(stateEl('.terminal-unavailable')?.textContent).toContain(COPY.state.unavailable);
+    expect(stateEl('.terminal-gone')).toBeNull();
+    expect(stateEl('.terminal-container')?.classList).not.toContain('inert');
+  });
+
+  it('starts over when the route moves to another pane', async () => {
+    await mountThenClose();
+    ws.request.calls.reset();
+
+    panes.set(new Map([['laptop:pane-2', { ...PANE_1, id: 'pane-2' }]]));
+    paramMap$.next(convertToParamMap({ host: 'laptop', id: 'pane-2' }));
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(stateEl('.terminal-gone')).toBeNull();
+    expect(stateEl('.terminal-container')?.classList).not.toContain('inert');
+    expect(ws.request).toHaveBeenCalledWith(
+      'laptop',
+      'pane.read',
+      jasmine.objectContaining({
+        pane_id: 'pane-2',
+      })
+    );
   });
 
   // --- keyboard: the terminal owns its keys.

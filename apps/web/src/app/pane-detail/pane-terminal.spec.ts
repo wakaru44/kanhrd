@@ -517,6 +517,94 @@ describe('PaneTerminal', () => {
     });
   });
 
+  // --- end(): the pane's session is gone
+
+  it('end() unsubscribes the output stream once', async () => {
+    const t = await mounted();
+    ws.request.calls.reset();
+
+    t.end();
+    t.end();
+
+    const unsubscribes = ws.request.calls
+      .allArgs()
+      .filter(([, method]) => method === 'pane.unsubscribe_output');
+    expect(unsubscribes).toEqual([
+      ['laptop', 'pane.unsubscribe_output', { subscription_id: 'sub-1' }],
+    ]);
+  });
+
+  it('end() refuses typing and key bar sends for the ended pane', async () => {
+    const onData = captureOnData();
+    const t = await mounted();
+    t.end();
+    ws.request.calls.reset();
+
+    onData()?.('\r');
+    onData()?.('hi');
+    t.send('x');
+    t.sendKeys(['esc']);
+    await flushMicrotasks();
+
+    expect(ws.request).not.toHaveBeenCalledWith('laptop', 'pane.send_text', jasmine.anything());
+    expect(ws.request).not.toHaveBeenCalledWith('laptop', 'pane.send_keys', jasmine.anything());
+  });
+
+  it('end() refuses a reload or retry of the ended pane, and keeps its last frame', async () => {
+    const t = await mounted();
+    t.end();
+    ws.request.calls.reset();
+
+    t.retry();
+    await t.load('laptop', 'pane-1');
+    await flushMicrotasks();
+
+    expect(ws.request).not.toHaveBeenCalled();
+    expect(t.revision()).toBe(1);
+  });
+
+  it('end() drops a subscription that lands after it', async () => {
+    const sub = deferred<{ subscription_id: string }>();
+    ws.request.and.callFake((_host: string, method: string) => {
+      if (method === 'pane.read') return Promise.resolve(readResult('hello'));
+      if (method === 'pane.subscribe_output') return sub.promise;
+      return Promise.resolve({});
+    });
+    const t = build();
+    t.attach(el);
+    const loading = t.load('laptop', 'pane-1');
+    await flushMicrotasks();
+
+    t.end();
+    sub.resolve({ subscription_id: 'sub-late' });
+    await loading;
+    await flushMicrotasks();
+
+    expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.unsubscribe_output', {
+      subscription_id: 'sub-late',
+    });
+    ws.request.calls.reset();
+    emitOutput('late frame', 'sub-late');
+    expect(t.revision()).toBe(1);
+  });
+
+  it('loading a different pane lifts end()', async () => {
+    const onData = captureOnData();
+    const t = await mounted();
+    t.end();
+
+    await t.load('laptop', 'pane-2');
+    await flushMicrotasks();
+    ws.request.calls.reset();
+    onData()?.('hi');
+    await flushMicrotasks();
+
+    expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.send_text', {
+      pane_id: 'pane-2',
+      text: 'hi',
+    });
+  });
+
   it('falls back to send_text, with a warning, for control bytes it cannot map', async () => {
     const warnSpy = spyOn(console, 'warn');
     const onData = captureOnData();

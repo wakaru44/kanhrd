@@ -173,6 +173,11 @@ contrast-measured; see _Accessibility_.
   uses the primary accent with honest copy.
 - `--ink-disabled` marks disabled controls only. An enabled muted action
   is `--ink-mute`. Loading is never expressed by dimming.
+- `--opacity-inert` (`0.45`, both themes) marks content that can no
+  longer change — the last frame of a pane whose session has ended. It is
+  `opacity` on the surface itself, never a translucent layer laid over it:
+  the thing that is inert is the thing that looks inert. `--paper-scrim`
+  is not borrowed for this; it is a backdrop behind a raised surface.
 
 ## Typography
 
@@ -414,8 +419,9 @@ purpose:
 | `LucideUnplug`                | `svg[lucideUnplug]`                | disconnected host, stale marker                     |
 | `LucideGalleryHorizontal`     | `svg[lucideGalleryHorizontal]`     | card switcher on the terminal bar                   |
 | `LucideSquareSplitHorizontal` | `svg[lucideSquareSplitHorizontal]` | next-card button on the terminal bar                |
+| `LucideSunset`                | `svg[lucideSunset]`                | pane whose session has ended (gone state)           |
 
-Twenty-one icons. Adding a twenty-second is a change to this document first.
+Twenty-two icons. Adding a twenty-third is a change to this document first.
 
 The last two were added by maintainer decision D4 (2026-09-10, see
 `openspec/changes/add-terminal-top-bar`). `LucideSquareSplitHorizontal`
@@ -431,6 +437,14 @@ another tab or workspace is. It stays visually distinct from the straight
 which matters, because cards genuinely ARE draggable into parked columns,
 so a four-way `LucideMove` cross would have promised dragging where the
 control opens a menu.
+
+`LucideSunset` was added by maintainer decision (2026-09-13, see
+`openspec/changes/add-pane-gone-state`). A sunset is a natural close
+rather than a failure, which is what an ended session is, in the care
+register the brand asks for. `LucideMoonStar` was rejected for colliding
+with `LucideMoon`, the sumi theme toggle; `LucideUnplug` already means an
+unreachable host; `LucideArchive` implies the session is filed and
+retrievable.
 
 `LucideMoreHorizontal` is an alias of `LucideEllipsis` and
 `LucideTriangleAlert` supersedes the deprecated `LucideAlertTriangle`;
