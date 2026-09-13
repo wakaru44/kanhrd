@@ -89,9 +89,9 @@ export function buildSixHundredPanes(): Pane[] {
  * tab of one workspace, which makes every card's locator read
  * `workspace 1 / main` and leaves the rail with a single row — a board that
  * cannot show what the rail is for, what a second workspace looks like, or
- * where a card could be moved TO. These six span two workspaces and three
+ * where a card could be moved TO. These six span two workspaces and four
  * tabs on one host, and carry one pane of each status so no column is
- * empty.
+ * empty — and so a card's move menu has real tabs to offer.
  *
  * `local-ws1-tab1-p1` stays in the set: `capture.spec.ts` deep-links to it
  * for the terminal shot, and `terminal-flicker.spec.ts` drives the first
@@ -101,13 +101,13 @@ const SMALL_PANE_IDS = [
   'local-ws1-tab1-p1', // working, claude
   'local-ws1-tab1-p5', // blocked, claude
   'local-ws1-tab2-p6', // done, agent-less — the one the capture parks
-  'local-ws1-tab3-p3', // idle, gemini — a third tab, so a move has somewhere to go
+  'local-ws1-tab3-p3', // idle, gemini — a third tab of ws1, so a move has somewhere to go
   'local-ws2-tab1-p3', // idle, claude — a SECOND workspace
   'local-ws2-tab1-p8', // unknown, codex
 ] as const;
 
 /**
- * Small realistic slice: six panes across two workspaces and three tabs of
+ * Small realistic slice: six panes across two workspaces and four tabs of
  * `local`, one per status. Used for the populated-small state.
  */
 export function buildPopulatedSmall(): Pane[] {
