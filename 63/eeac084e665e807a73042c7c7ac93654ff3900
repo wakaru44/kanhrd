@@ -1,0 +1,33 @@
+apps/web/e2e/key-bar.spec.ts
+  s_9f6e9e632154c4::t_3ae60deb9867d3 236-248
+apps/web/src/app/pane-detail/key-bar-probe.spec.ts
+  s_9f6e9e632154c4::t_1946a7c821f533 7-12,46-54,62-68
+apps/web/src/app/pane-detail/key-bar-probe.ts
+  s_9f6e9e632154c4::t_fd5cdbab14d34b 7-9,16-20,25,43-54,71-74,76
+apps/web/src/app/pane-detail/key-bar.html
+  s_9f6e9e632154c4::t_5b641a5c2d2950 50-55
+apps/web/src/app/pane-detail/key-bar.scss
+  s_9f6e9e632154c4::t_d59521b9078508 154-175
+apps/web/src/app/pane-detail/key-bar.ts
+  s_9f6e9e632154c4::t_14cb841e55fd74 86-89,119-124,126-128,131-133,136,138-142,146-147,151-154,229,243-247,251-267,274-277,296-304
+openspec/changes/add-terminal-key-bar/design.md
+  s_9f6e9e632154c4::t_73ca67a8841f74 317-342
+openspec/changes/add-terminal-key-bar/tasks.md
+  s_9f6e9e632154c4::t_a8f1a628ff4a64 78-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "63eeac084e665e807a73042c7c7ac93654ff3900",
+  "prompts": {},
+  "sessions": {
+    "s_9f6e9e632154c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94df2e1b-4541-4873-b074-5ea96fce8f02",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
