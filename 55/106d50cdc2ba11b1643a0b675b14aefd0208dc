@@ -1,0 +1,19 @@
+openspec/specs/pane-gone-state/spec.md
+  s_2776f1a6640bff::t_01f23af830086d 1-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "55106d50cdc2ba11b1643a0b675b14aefd0208dc",
+  "prompts": {},
+  "sessions": {
+    "s_2776f1a6640bff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aaf8a44f-17c4-4808-8aac-9b4fb9fb065e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
