@@ -38,15 +38,18 @@ lab imports is part of the application's initial bundle.
 ### Requirement: The dependency arrow points into labs only
 
 Code under `apps/web/src/app/labs/` MAY import any product code. Product code
-— every source file under `apps/web/src/` outside `labs/`, with the single
-exception of the route table's lazy `loadComponent` import — SHALL NOT import
-from `labs/`. A unit test SHALL fail the suite when a product file does.
+— every module reachable from `apps/web/src/main.ts` through relative
+imports without passing through `labs/` — SHALL NOT import from `labs/`, by
+static import, re-export, side-effect import or dynamic import. The single
+exception is the route table's lazy `loadComponent` import. A unit test SHALL
+walk that graph and fail the suite when a product module imports `labs/`,
+naming the module and the specifier.
 
 #### Scenario: A product file imports a lab
 
-- **WHEN** a product source file outside `labs/` imports a module under
-  `labs/`, other than the route table's `loadComponent` call
-- **THEN** the unit test suite fails, naming the file
+- **WHEN** a product module outside `labs/` imports a module under `labs/`,
+  other than the route table's `loadComponent` call
+- **THEN** the unit test suite fails, naming the module and the specifier
 
 ### Requirement: A lab says it is a lab
 
