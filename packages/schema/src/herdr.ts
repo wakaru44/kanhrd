@@ -297,6 +297,16 @@ export interface Pane {
     repo_name: string;
     checkout_path: string;
     is_linked_worktree: boolean;
+    /**
+     * `true` when the bridge can serve this checkout's files: the host is
+     * not configured `files: false`, and the pane's `cwd` and this
+     * `checkout_path` both exist on the BRIDGE's filesystem with the `cwd`
+     * inside the checkout. Absent otherwise — notably for a host reached
+     * through an SSH socket tunnel, whose paths live on another machine.
+     * A hint for showing the file panel, not an authorization: the
+     * `repo.*` / `file.read` methods re-check on every call.
+     */
+    files_local?: boolean;
   };
   agent_status: AgentStatus;
   /**

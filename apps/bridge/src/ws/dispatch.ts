@@ -11,6 +11,8 @@ import type {
   WsResponse,
 } from '@kanhrd/schema';
 import { HerdrRequestError } from '../herdr/client.js';
+import { RepoFileError } from '../files/errors.js';
+import { DEFAULT_REPO_FILE_LIMITS } from '../files/reader.js';
 import { HostUnavailableError } from '../herdr/hosts.js';
 
 /** Just enough of `HostRuntime` for dispatch to route tier-1 + tier-2 + tier-3 methods. */
@@ -49,6 +51,12 @@ export interface DispatchHost {
   ): Promise<BridgeMethodResult['workspace.rename']>;
   workspaceClose(params: { workspace_id: string; close_group?: boolean }): Promise<void>;
 
+  // --- Repo file reads ----------------------------------------------------
+  repoStatus(params: BridgeMethodParams['repo.status']): Promise<BridgeMethodResult['repo.status']>;
+  repoTree(params: BridgeMethodParams['repo.tree']): Promise<BridgeMethodResult['repo.tree']>;
+  fileRead(params: BridgeMethodParams['file.read']): Promise<BridgeMethodResult['file.read']>;
+  repoDiff(params: BridgeMethodParams['repo.diff']): Promise<BridgeMethodResult['repo.diff']>;
+
   /** Bridge-process-local, cached — see `HostRuntime.getHostKeybinds()` doc. */
   getHostKeybinds(): NonNullable<BridgeCapabilities['hostKeybinds']>;
 }
@@ -81,6 +89,7 @@ const CAPABILITIES: BridgeCapabilities = {
   paneRename: true,
   tabCrud: true,
   workspaceCrud: true,
+  repoFiles: DEFAULT_REPO_FILE_LIMITS,
 };
 
 export interface DispatchContext {
@@ -114,6 +123,10 @@ function withHostKeybinds(base: BridgeCapabilities, hosts: DispatchHostSource): 
     return base;
   }
   return { ...base, hostKeybinds: primary.getHostKeybinds() };
+}
+
+function invalid(id: string, host: string, message: string): WsResponse {
+  return { id, host, ok: false, error: { code: 'invalid_params', message } };
 }
 
 /**
@@ -356,6 +369,44 @@ export async function dispatch(request: WsRequest, ctx: DispatchContext): Promis
         await runtime.workspaceClose(params);
         return { id, host, ok: true, data: {} };
       }
+
+      // --- Repo file reads ------------------------------------------------
+
+      case 'repo.status': {
+        const params = request.params as BridgeMethodParams['repo.status'] | undefined;
+        if (typeof params?.pane_id !== 'string' || params.pane_id === '') {
+          return invalid(id, host, 'missing pane_id');
+        }
+        const data = await runtime.repoStatus({ pane_id: params.pane_id });
+        return { id, host, ok: true, data };
+      }
+      case 'repo.tree': {
+        const params = request.params as BridgeMethodParams['repo.tree'] | undefined;
+        if (typeof params?.pane_id !== 'string' || params.pane_id === '') {
+          return invalid(id, host, 'missing pane_id');
+        }
+        if (params.path !== undefined && typeof params.path !== 'string') {
+          return invalid(id, host, 'path must be a string');
+        }
+        const treeParams: BridgeMethodParams['repo.tree'] = { pane_id: params.pane_id };
+        if (params.path !== undefined) treeParams.path = params.path;
+        const data = await runtime.repoTree(treeParams);
+        return { id, host, ok: true, data };
+      }
+      case 'file.read':
+      case 'repo.diff': {
+        const params = request.params as BridgeMethodParams['file.read'] | undefined;
+        if (typeof params?.pane_id !== 'string' || params.pane_id === '') {
+          return invalid(id, host, 'missing pane_id');
+        }
+        if (typeof params.path !== 'string') return invalid(id, host, 'missing path');
+        const pathParams = { pane_id: params.pane_id, path: params.path };
+        const data =
+          method === 'file.read'
+            ? await runtime.fileRead(pathParams)
+            : await runtime.repoDiff(pathParams);
+        return { id, host, ok: true, data };
+      }
       default:
         return {
           id,
@@ -365,6 +416,9 @@ export async function dispatch(request: WsRequest, ctx: DispatchContext): Promis
         };
     }
   } catch (err) {
+    if (err instanceof RepoFileError) {
+      return { id, host, ok: false, error: { code: err.code, message: err.message } };
+    }
     if (err instanceof HostUnavailableError) {
       return { id, host, ok: false, error: { code: err.code, message: err.message } };
     }

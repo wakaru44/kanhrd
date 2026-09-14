@@ -29,6 +29,18 @@ describe('expandHome', () => {
 });
 
 describe('loadConfig', () => {
+  it('keeps a host files flag and refuses a non-boolean one', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'kanhrd-config-files-'));
+    const good = join(dir, 'good.yaml');
+    writeFileSync(good, 'hosts:\n  - name: alpaca01\n    socket: /tmp/a.sock\n    files: false\n');
+    expect(loadConfig({ configPath: good }).hosts).toEqual([
+      { name: 'alpaca01', socket: '/tmp/a.sock', files: false },
+    ]);
+    const bad = join(dir, 'bad.yaml');
+    writeFileSync(bad, 'hosts:\n  - name: alpaca01\n    socket: /tmp/a.sock\n    files: "no"\n');
+    expect(() => loadConfig({ configPath: bad })).toThrow(/files must be true or false/);
+  });
+
   it('falls back to built-in defaults when no config file is present', () => {
     const config = loadConfig({ configPath: '/nonexistent/kanhrd.config.yaml' });
 

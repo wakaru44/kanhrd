@@ -46,7 +46,7 @@ refuse with `path_outside_checkout`:
 - any path containing a `..` segment or a NUL byte;
 - any path whose real path, after resolving every symlink, is not the
   checkout's real path or inside it;
-- any path whose first segment, before or after resolution, is `.git`.
+- any path with a `.git` segment, before or after resolution.
 
 A path that does not exist SHALL be `not_found`, after its nearest existing
 ancestor has passed the same real-path check.

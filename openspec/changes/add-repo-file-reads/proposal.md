@@ -65,3 +65,4 @@ The panel itself is another change.
 - `apps/bridge/src/config.ts` — per-host `files: false`.
 - `apps/bridge/src/herdr/hosts.ts`, `project.ts`, `ws/dispatch.ts` — wiring.
 - `docs/OPERATING.md` — the `files: false` host key and the local-only rule.
+- `docs/THREAT-MODEL.md` — checkout contents as an asset.

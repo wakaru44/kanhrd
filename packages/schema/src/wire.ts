@@ -121,7 +121,13 @@ export type BridgeMethod =
   | 'tab.move'
   | 'workspace.create'
   | 'workspace.rename'
-  | 'workspace.close';
+  | 'workspace.close'
+  // --- Repo file reads (read-only, local-only). See the `repo-file-reads`
+  // capability spec. Present only when `BridgeCapabilities.repoFiles` is.
+  | 'repo.status'
+  | 'repo.tree'
+  | 'file.read'
+  | 'repo.diff';
 
 /**
  * Per-method params, keyed the same way as `BridgeMethod`. `host` is never
@@ -252,7 +258,91 @@ export interface BridgeMethodParams {
    * instead (see CONTRACT-TIER3.md section 6).
    */
   'workspace.close': { workspace_id: string; close_group?: boolean };
+
+  // --- Repo file reads ----------------------------------------------------
+  //
+  // Every method is keyed by `pane_id`: the bridge resolves the checkout
+  // from the pane herdr reports at call time, so a client can never name a
+  // directory. `path` is always checkout-relative with `/` separators —
+  // absolute paths, `..` segments, `.git` and symlinks whose real target
+  // leaves the checkout are refused with `path_outside_checkout`.
+
+  /** Porcelain status of the pane's checkout. Poll it; the bridge never pushes status. */
+  'repo.status': { pane_id: string };
+  /** One directory level. Omitted or `""` `path` is the checkout root. */
+  'repo.tree': { pane_id: string; path?: string };
+  /** One regular file, capped at `repoFiles.fileReadMaxBytes`. */
+  'file.read': { pane_id: string; path: string };
+  /** One path, working tree vs `HEAD`. */
+  'repo.diff': { pane_id: string; path: string };
 }
+
+/**
+ * One of git's porcelain-v2 `XY` letters: `.` unmodified, `M` modified,
+ * `T` type changed, `A` added, `D` deleted, `R` renamed, `C` copied,
+ * `U` updated but unmerged, `?` untracked.
+ */
+export type RepoStatusCode = '.' | 'M' | 'T' | 'A' | 'D' | 'R' | 'C' | 'U' | '?';
+
+export interface RepoStatusEntry {
+  /** Checkout-relative, `/`-separated. An untracked directory ends in `/`. */
+  path: string;
+  kind: 'changed' | 'renamed' | 'unmerged' | 'untracked';
+  /** Staged side. `?` for untracked. */
+  index: RepoStatusCode;
+  /** Working-tree side. `?` for untracked. */
+  worktree: RepoStatusCode;
+  /** The path before the rename or copy. Present only on `renamed`. */
+  orig_path?: string;
+}
+
+export interface RepoTreeEntry {
+  name: string;
+  /** Checkout-relative, `/`-separated — pass it straight back as a `path`. */
+  path: string;
+  /** The entry itself, not its target: a symlink is `symlink` wherever it points. */
+  type: 'file' | 'directory' | 'symlink' | 'other';
+  /** Bytes. Present only for `file`. */
+  size?: number;
+  /** Whether git's ignore rules exclude it. */
+  ignored: boolean;
+}
+
+interface FileReadCommon {
+  path: string;
+  size: number;
+  /** Epoch ms, the file's own mtime. Cheap change detection for a poller. */
+  mtime_ms: number;
+}
+
+/**
+ * Text is always UTF-8. A file with a NUL in its first 8000 bytes, or that
+ * is not valid UTF-8, is `binary: true` and carries no content — never
+ * mojibake.
+ */
+export type FileReadResult =
+  | (FileReadCommon & { binary: false; encoding: 'utf-8'; content: string })
+  | (FileReadCommon & { binary: true });
+
+export type RepoDiffChange =
+  'modified' | 'added' | 'deleted' | 'type_changed' | 'untracked' | 'ignored' | 'unchanged';
+
+/**
+ * Error `code`s the four repo file methods answer with, besides the
+ * envelope-wide `invalid_params` / `unknown_host` / `host_unavailable`.
+ */
+export type RepoFileErrorCode =
+  | 'pane_not_found'
+  | 'no_checkout'
+  | 'files_not_local'
+  | 'path_outside_checkout'
+  | 'not_found'
+  | 'not_a_file'
+  | 'not_a_directory'
+  | 'file_too_large'
+  | 'not_a_repository'
+  | 'git_unavailable'
+  | 'git_failed';
 
 /** Bridge-reported feature set. Result of `"bridge.capabilities"`. */
 export interface BridgeCapabilities {
@@ -301,6 +391,24 @@ export interface BridgeCapabilities {
     /** Human-readable display string, e.g. `"Ctrl+B"`, `"Ctrl+Space"`, `"F12"`. */
     prefix: string;
     source: 'herdr-api' | 'herdr-cli' | 'config-file' | 'default';
+  };
+  /**
+   * Present when this bridge implements `repo.status` / `repo.tree` /
+   * `file.read` / `repo.diff`; omitted entirely otherwise. Bridge-level:
+   * whether a given PANE can be served is `Pane.project.files_local`, and
+   * the methods re-check it on every call.
+   */
+  repoFiles?: {
+    /** How often a client should poll `repo.status` — the `pane.list` poll cadence. */
+    statusPollIntervalMs: number;
+    /** `file.read` refuses larger files with `file_too_large`. */
+    fileReadMaxBytes: number;
+    /** `repo.diff` output is cut at this many bytes, with `truncated: true`. */
+    diffMaxBytes: number;
+    /** `repo.tree` returns at most this many entries, with `truncated: true`. */
+    treeMaxEntries: number;
+    /** `repo.status` returns at most this many entries, with `truncated: true`. */
+    statusMaxEntries: number;
   };
 }
 
@@ -367,6 +475,41 @@ export interface BridgeMethodResult {
   'workspace.rename': { workspace: WorkspaceSummary };
   /** Empty on success, same rationale as `pane.close`/`tab.close` — rely on the paired `workspace.closed` event(s); see CONTRACT-TIER3.md section 6 for how many you get when `close_group: true`. */
   'workspace.close': Record<string, never>;
+
+  // --- Repo file reads ----------------------------------------------------
+
+  'repo.status': {
+    /** The checkout's real path on the bridge's machine. */
+    checkout_path: string;
+    /** `null` when HEAD is detached. */
+    branch: string | null;
+    /** Commit id. `null` when the branch has no commit yet. */
+    head: string | null;
+    /** Present only when the branch tracks an upstream. */
+    upstream?: string;
+    /** Present with `upstream`. */
+    ahead?: number;
+    behind?: number;
+    entries: RepoStatusEntry[];
+    truncated: boolean;
+  };
+  'repo.tree': {
+    /** The listed directory, checkout-relative; `""` is the root. */
+    path: string;
+    /** Directories first, then everything else; each group by name. `.git` omitted. */
+    entries: RepoTreeEntry[];
+    truncated: boolean;
+  };
+  'file.read': FileReadResult;
+  'repo.diff': {
+    path: string;
+    change: RepoDiffChange;
+    /** A binary change carries an empty `diff`. */
+    binary: boolean;
+    /** Unified diff; `""` when unchanged, ignored or binary. */
+    diff: string;
+    truncated: boolean;
+  };
 }
 
 /**

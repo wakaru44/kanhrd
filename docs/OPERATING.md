@@ -200,6 +200,23 @@ local — that's the point of the hub-bridge design
 socket read fails and that host shows as offline on the board; nothing
 about the cloud hub or other hosts is affected.
 
+A tunnelled host gets no file panel. `repo.status`, `repo.tree`, `file.read`
+and `repo.diff` read the pane's checkout with the bridge's own filesystem, so
+the bridge serves them only when the pane's working directory and checkout
+exist on the bridge's machine and git there agrees they are one checkout;
+every other pane answers `files_not_local`. The same holds for a bridge in a
+container that does not mount the checkout at the path herdr reports. If a
+tunnelled host's paths also exist on the bridge's machine — two machines
+with the same layout — the bridge cannot tell them apart, so switch its
+files off:
+
+```yaml
+hosts:
+  - name: laptop
+    socket: /home/kanhrd/sockets/laptop.sock
+    files: false
+```
+
 ## 4. Docker (laptop, no host Node toolchain)
 
 The same placement as recipe 1, packaged: `make docker-up` from the repo

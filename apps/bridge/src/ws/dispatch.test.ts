@@ -6,6 +6,7 @@ import {
   type DispatchHost,
   type DispatchHostSource,
 } from './dispatch.js';
+import { RepoFileError } from '../files/errors.js';
 import { HerdrRequestError } from '../herdr/client.js';
 import { HostUnavailableError } from '../herdr/hosts.js';
 
@@ -56,6 +57,32 @@ function noopHost(overrides: Partial<DispatchHost> = {}): DispatchHost {
       Promise.resolve({ workspace: SAMPLE_WORKSPACE, tab: SAMPLE_TAB, pane: SAMPLE_PANE }),
     workspaceRename: () => Promise.resolve({ workspace: SAMPLE_WORKSPACE }),
     workspaceClose: () => Promise.resolve(),
+    repoStatus: () =>
+      Promise.resolve({
+        checkout_path: '/r',
+        branch: 'main',
+        head: null,
+        entries: [],
+        truncated: false,
+      }),
+    repoTree: () => Promise.resolve({ path: '', entries: [], truncated: false }),
+    fileRead: () =>
+      Promise.resolve({
+        path: 'a',
+        size: 0,
+        mtime_ms: 0,
+        binary: false,
+        encoding: 'utf-8',
+        content: '',
+      }),
+    repoDiff: () =>
+      Promise.resolve({
+        path: 'a',
+        change: 'unchanged',
+        binary: false,
+        diff: '',
+        truncated: false,
+      }),
     getHostKeybinds: () => ({ prefix: 'Ctrl+B', source: 'default' }),
     ...overrides,
   };
@@ -167,6 +194,13 @@ describe('dispatch', () => {
         paneRename: true,
         tabCrud: true,
         workspaceCrud: true,
+        repoFiles: {
+          statusPollIntervalMs: 5000,
+          fileReadMaxBytes: 1048576,
+          diffMaxBytes: 1048576,
+          treeMaxEntries: 2000,
+          statusMaxEntries: 5000,
+        },
         hostKeybinds: { prefix: 'Ctrl+B', source: 'default' },
       },
     });
@@ -727,5 +761,67 @@ describe('dispatch', () => {
       expect(response.error.code).toBe('workspace_group_close_required');
       expect(response.error.message).toMatch(/close_group/);
     }
+  });
+
+  describe('repo file reads', () => {
+    function hostWith(overrides: Partial<DispatchHost>): DispatchHostSource {
+      const host = noopHost(overrides);
+      return { get: (name) => (name === 'local' ? host : undefined), list: () => [host] };
+    }
+
+    it('routes each method to the host with only the params it defines', async () => {
+      const repoStatus = vi.fn(noopHost().repoStatus);
+      const repoTree = vi.fn(noopHost().repoTree);
+      const fileRead = vi.fn(noopHost().fileRead);
+      const repoDiff = vi.fn(noopHost().repoDiff);
+      const ctx = baseCtx({ hosts: hostWith({ repoStatus, repoTree, fileRead, repoDiff }) });
+      const call = (method: WsRequest['method'], params: unknown) =>
+        dispatch({ id: 'f', host: 'local', method, params } as WsRequest, ctx);
+
+      expect((await call('repo.status', { pane_id: 'p1', extra: 1 })).ok).toBe(true);
+      expect((await call('repo.tree', { pane_id: 'p1' })).ok).toBe(true);
+      expect((await call('repo.tree', { pane_id: 'p1', path: 'src' })).ok).toBe(true);
+      expect((await call('file.read', { pane_id: 'p1', path: 'a' })).ok).toBe(true);
+      expect((await call('repo.diff', { pane_id: 'p1', path: 'a' })).ok).toBe(true);
+
+      expect(repoStatus).toHaveBeenCalledWith({ pane_id: 'p1' });
+      expect(repoTree.mock.calls).toEqual([[{ pane_id: 'p1' }], [{ pane_id: 'p1', path: 'src' }]]);
+      expect(fileRead).toHaveBeenCalledWith({ pane_id: 'p1', path: 'a' });
+      expect(repoDiff).toHaveBeenCalledWith({ pane_id: 'p1', path: 'a' });
+    });
+
+    it('rejects missing or mistyped params as invalid_params', async () => {
+      const ctx = baseCtx({ hosts: hostWith({}) });
+      const code = async (method: WsRequest['method'], params: unknown) => {
+        const response = await dispatch(
+          { id: 'f', host: 'local', method, params } as WsRequest,
+          ctx
+        );
+        return response.ok ? 'ok' : response.error.code;
+      };
+      expect(await code('repo.status', {})).toBe('invalid_params');
+      expect(await code('repo.tree', { pane_id: 'p1', path: 7 })).toBe('invalid_params');
+      expect(await code('file.read', { pane_id: 'p1' })).toBe('invalid_params');
+      expect(await code('repo.diff', { path: 'a' })).toBe('invalid_params');
+    });
+
+    it('passes a RepoFileError code through verbatim', async () => {
+      const ctx = baseCtx({
+        hosts: hostWith({
+          fileRead: () =>
+            Promise.reject(new RepoFileError('files_not_local', 'the pane is on another machine')),
+        }),
+      });
+      const response = await dispatch(
+        { id: 'f', host: 'local', method: 'file.read', params: { pane_id: 'p1', path: 'a' } },
+        ctx
+      );
+      expect(response).toEqual({
+        id: 'f',
+        host: 'local',
+        ok: false,
+        error: { code: 'files_not_local', message: 'the pane is on another machine' },
+      });
+    });
   });
 });
