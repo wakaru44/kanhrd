@@ -1,0 +1,234 @@
+<app-lab-frame [name]="labName">
+  <div labControls class="lab-controls">
+    <button
+      type="button"
+      class="lab-disclosure"
+      [attr.aria-expanded]="controlsOpen()"
+      aria-controls="lab-questions"
+      (click)="controlsOpen.set(!controlsOpen())"
+    >
+      <svg lucideChevronRight class="icon" [class.open]="controlsOpen()" aria-hidden="true"></svg>
+      questions
+    </button>
+
+    @if (controlsOpen()) {
+      <div id="lab-questions" class="questions">
+        <div class="question" data-question="key-bar">
+          <span class="q-label">q1 · key bar while the panel has focus</span>
+          <div class="segmented" role="radiogroup" aria-label="key bar while the panel has focus">
+            @for (mode of ['keep', 'auto-collapse']; track mode) {
+              <button
+                type="button"
+                role="radio"
+                class="segment"
+                [class.active]="keyBarMode() === mode"
+                [attr.aria-checked]="keyBarMode() === mode"
+                [attr.data-value]="mode"
+                (click)="keyBarMode.set($any(mode))"
+              >
+                {{ mode }}
+              </button>
+            }
+          </div>
+          <span class="q-readout">panel focus {{ panelFocused() ? 'yes' : 'no' }} · last keys {{ lastKeys() }}</span>
+        </div>
+
+        <div class="question" data-question="split">
+          <span class="q-label">q2 · split ratio</span>
+          <div class="segmented" role="radiogroup" aria-label="split ratio">
+            @for (mode of ['remembered', 'fixed']; track mode) {
+              <button
+                type="button"
+                role="radio"
+                class="segment"
+                [class.active]="splitMode() === mode"
+                [attr.aria-checked]="splitMode() === mode"
+                [attr.data-value]="mode"
+                (click)="setSplitMode($any(mode))"
+              >
+                {{ mode }}
+              </button>
+            }
+          </div>
+          <span class="q-readout" data-readout="ratio">
+            {{ axis() }} · terminal {{ (ratio() * 100).toFixed(0) }}% · panel {{ ((1 - ratio()) * 100).toFixed(0) }}%
+            @if (splitMode() === 'remembered') {
+              <button type="button" class="q-link" (click)="resetRemembered()">forget</button>
+            }
+          </span>
+        </div>
+
+        <span class="q-readout">
+          panel {{ panelOpen() ? panelWidth() + ' wide · ' + bodyLayout() : 'collapsed' }}
+        </span>
+      </div>
+    }
+  </div>
+
+  <div class="pane-detail" [style.--key-bar-reserve.px]="keyBarReserve()">
+    <header class="detail-header">
+      <a routerLink="/" class="back">
+        <svg lucideArrowLeft class="icon" aria-hidden="true"></svg>
+        <span>{{ copy.nav.backToBoard }}</span>
+      </a>
+      <p class="breadcrumb">operator / agents</p>
+      <h1 class="pane-title">wire the file panel</h1>
+      <span class="host-seal">studio</span>
+
+      <div class="meta-strip">
+        <span class="status"><span class="status-dot" aria-hidden="true"></span>working</span>
+        <!-- The panel IS this repo, so its control sits on the repo name's trailing edge. -->
+        <span class="repo">
+          <span class="repo-name">{{ repoName }}</span>
+          <button
+            type="button"
+            class="panel-toggle"
+            data-panel-toggle
+            [attr.aria-expanded]="panelOpen()"
+            aria-controls="file-panel"
+            [attr.aria-label]="'files in ' + repoName"
+            [title]="'files in ' + repoName"
+            (click)="togglePanel()"
+          >
+            <svg lucideChevronRight class="icon" [class.open]="panelOpen()" aria-hidden="true"></svg>
+            files
+          </button>
+        </span>
+        <span class="checkout-path">{{ checkoutPath }}</span>
+        <span>w6:p3</span>
+      </div>
+    </header>
+
+    <div class="detail-body">
+      <div class="split" #split [attr.data-axis]="axis()" [class.dragging]="dragging()">
+        <div
+          class="terminal-wrap"
+          role="group"
+          aria-label="terminal stand-in"
+          [style.flex-grow]="panelOpen() ? ratio() : 1"
+          (pointerdown)="panelFocused.set(false)"
+          (focusin)="panelFocused.set(false)"
+        >
+          <pre class="terminal-lines">
+&gt; read apps/web/src/app/pane-detail/pane-detail.ts
+  wrote apps/web/src/app/pane-detail/pane-detail.ts (+18 -3)
+  created docs/how-to/file-panel.md
+&gt; pnpm --filter &#64;kanhrd/web test
+  TOTAL: 912 SUCCESS
+</pre
+          >
+          <label class="prompt">
+            <span aria-hidden="true">$</span>
+            <input class="prompt-input" type="text" autocomplete="off" autocapitalize="off" aria-label="terminal input stand-in" />
+          </label>
+        </div>
+
+        @if (panelOpen()) {
+          <div
+            class="splitter"
+            role="separator"
+            tabindex="0"
+            data-splitter
+            [attr.aria-orientation]="axis() === 'hbox' ? 'vertical' : 'horizontal'"
+            aria-label="resize the file panel"
+            [attr.aria-valuenow]="(ratio() * 100).toFixed(0)"
+            aria-valuemin="20"
+            aria-valuemax="80"
+            (pointerdown)="onSplitterDown($event)"
+            (pointermove)="onSplitterMove($event)"
+            (pointerup)="onSplitterUp()"
+            (pointercancel)="onSplitterUp()"
+            (keydown)="onSplitterKey($event)"
+          ></div>
+
+          <section
+            #panel
+            id="file-panel"
+            class="file-panel"
+            aria-label="files"
+            [style.flex-grow]="1 - ratio()"
+            (pointerdown)="panelFocused.set(true)"
+            (focusin)="panelFocused.set(true)"
+          >
+            <form class="goto" (submit)="submitGoto($event)">
+              <input
+                class="goto-input"
+                type="text"
+                inputmode="url"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                placeholder="paste a path"
+                aria-label="go to path"
+                [value]="goto()"
+                (input)="onGotoInput($event)"
+              />
+              <button type="submit" class="goto-open">open</button>
+              @if (gotoError(); as error) {
+                <p class="goto-error" role="alert">{{ error }}</p>
+              }
+            </form>
+
+            <div class="panel-body" [attr.data-layout]="bodyLayout()">
+              @if (bodyLayout() === 'single') {
+                <div class="segmented surfaces" role="tablist" aria-label="panel surface">
+                  @for (s of ['browser', 'viewer']; track s) {
+                    <button
+                      type="button"
+                      role="tab"
+                      class="segment"
+                      [class.active]="surface() === s"
+                      [attr.aria-selected]="surface() === s"
+                      [attr.data-surface]="s"
+                      (click)="surface.set($any(s))"
+                    >
+                      {{ s === 'browser' ? 'files' : (selectedFile()?.name ?? 'viewer') }}
+                    </button>
+                  }
+                </div>
+              }
+              @if (bodyLayout() === 'side-by-side' || surface() === 'browser') {
+                <app-file-browser
+                  class="browser"
+                  [root]="tree"
+                  [expanded]="expanded()"
+                  [selected]="selected()"
+                  (toggled)="toggleDir($event)"
+                  (opened)="openFile($event)"
+                />
+              }
+              @if (bodyLayout() === 'side-by-side' || surface() === 'viewer') {
+                <app-file-viewer
+                  class="viewer"
+                  [path]="selected()"
+                  [file]="selectedFile()"
+                  [mode]="viewerMode()"
+                  (modeChange)="viewerMode.set($event)"
+                />
+              }
+            </div>
+
+            <p class="status-line" data-status-line>
+              @if (selectedFile(); as f) {
+                <span [attr.data-git]="f.git">{{ f.git }}</span>
+                <span>{{ f.lines.length }} lines</span>
+                <span>{{ f.type }}</span>
+              } @else {
+                <span>{{ repoSummary() }}</span>
+              }
+            </p>
+          </section>
+        }
+      </div>
+    </div>
+
+    <app-key-bar
+      [cells]="keyBarCells"
+      [modifiers]="keyBarModifiers"
+      [expanded]="keyBarExpanded()"
+      (keys)="onKeyBarKeys($event)"
+      (toggled)="toggleKeyBar()"
+      (reserve)="keyBarReserve.set($event)"
+    />
+  </div>
+</app-lab-frame>

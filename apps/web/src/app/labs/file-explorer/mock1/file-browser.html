@@ -1,0 +1,28 @@
+<ul class="tree" role="tree" aria-label="files">
+  @for (row of rows(); track row.path) {
+    <li role="none">
+      <button
+        type="button"
+        class="entry"
+        role="treeitem"
+        [attr.data-path]="row.path"
+        [attr.data-git]="row.node.git"
+        [attr.aria-expanded]="row.node.kind === 'dir' ? row.open : null"
+        [attr.aria-selected]="row.path === selected()"
+        [class.selected]="row.path === selected()"
+        [style.--depth]="row.depth"
+        (click)="activate(row)"
+      >
+        @if (row.node.kind === 'dir') {
+          <svg lucideChevronRight class="icon disclosure" [class.open]="row.open" aria-hidden="true"></svg>
+        } @else {
+          <span class="disclosure-gap" aria-hidden="true"></span>
+        }
+        <span class="name" [class.dir]="row.node.kind === 'dir'">{{ row.node.name }}</span>
+        @if (letter[row.node.git]; as l) {
+          <span class="git">{{ l }}</span>
+        }
+      </button>
+    </li>
+  }
+</ul>

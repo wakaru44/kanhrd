@@ -1,0 +1,62 @@
+/*
+ * Lab frame — tokens only, like any product surface.
+ *
+ * The band has no documented treatment in docs/DESIGN-SYSTEM.md (flagged in
+ * add-labs-surface). It borrows the key bar's "locked" wash: `--ochre-tint`
+ * behind `--ink`, a 2px `--ochre-line` rule underneath, and a mono tag —
+ * loud enough that no screenshot of it reads as product chrome, built from
+ * nothing the product does not already have.
+ */
+
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.lab-band {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+  padding: var(--sp-1) var(--sp-3);
+  background: var(--ochre-tint);
+  border-block-end: 2px solid var(--ochre-line);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+}
+
+.lab-tag {
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  font-weight: var(--fw-semi);
+}
+
+.lab-name {
+  font-weight: var(--fw-medium);
+}
+
+.lab-disclaimer {
+  color: var(--ink-soft);
+}
+
+.lab-slot {
+  flex: 1 1 100%;
+  min-width: 0;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.lab-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}

@@ -1,0 +1,447 @@
+/*
+ * The mock's fake pane-detail — tokens only, even in a lab. The header and
+ * body mirror pane-detail.scss closely enough to judge against; nothing
+ * here is imported from it (a parent stylesheet cannot reach a lab anyway).
+ */
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex: none;
+  stroke: currentColor;
+  transition: transform var(--motion-fast) var(--ease-out);
+
+  &.open {
+    transform: rotate(90deg);
+  }
+}
+
+/* ---- lab band controls ---- */
+.lab-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+}
+
+.lab-disclosure,
+.q-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: var(--sp-6);
+  padding: 0 var(--sp-1);
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.q-link {
+  text-decoration: underline;
+}
+
+.questions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-4);
+}
+
+.question {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--sp-2);
+}
+
+.segmented {
+  display: flex;
+  gap: var(--sp-1);
+}
+
+/* Selection is weight plus an ochre underline, as in shared/_controls.scss. */
+.segment {
+  flex: none;
+  min-height: var(--sp-8);
+  padding: 0 var(--sp-2);
+  border: 0;
+  border-block-end: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-mute);
+  font: inherit;
+  font-size: var(--fs-small);
+  cursor: pointer;
+
+  &.active {
+    color: var(--ink);
+    font-weight: var(--fw-semi);
+    border-block-end-color: var(--ochre-line);
+  }
+}
+
+.questions .segment {
+  font-size: var(--fs-caption);
+}
+
+.q-readout {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- fake pane detail ---- */
+.pane-detail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  font-family: var(--font-ui);
+  color: var(--ink);
+}
+
+.detail-header {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: var(--elev-2);
+  background: var(--paper-sunk);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semi);
+}
+
+.breadcrumb {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--ink-mute);
+}
+
+.pane-title {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.host-seal {
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--ochre-line);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-soft);
+}
+
+.meta-strip {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  color: var(--ink-mute);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--font-ui);
+  color: var(--status-working-ink);
+}
+
+.status-dot {
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: var(--radius-pill);
+  background: var(--status-working);
+}
+
+.repo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  color: var(--ink-soft);
+}
+
+/* Visible on first render, at the repo name's trailing edge. */
+.panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 0 var(--sp-2);
+  border: var(--elev-3);
+  border-radius: var(--radius-md);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+
+  &[aria-expanded='true'] {
+    border-color: var(--ochre-line);
+  }
+}
+
+.checkout-path {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.detail-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: var(--sp-2);
+  padding-bottom: calc(var(--sp-2) + var(--key-bar-reserve));
+}
+
+.split {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+
+  &[data-axis='vbox'] {
+    flex-direction: column;
+  }
+
+  &.dragging {
+    user-select: none;
+  }
+}
+
+.terminal-wrap,
+.file-panel {
+  flex-basis: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  min-height: 0;
+  border: var(--elev-1);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.terminal-wrap {
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-2);
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+
+.terminal-lines {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  overflow: auto;
+  font: inherit;
+  color: var(--ink-soft);
+}
+
+.prompt {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--ink);
+}
+
+.prompt-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--sp-8);
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-lead);
+  outline: none;
+}
+
+/* Draws a hairline; its hit area is a full touch target. */
+.splitter {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sp-3);
+  touch-action: none;
+  cursor: col-resize;
+
+  &::before {
+    content: '';
+    width: 2px;
+    height: var(--sp-8);
+    border-radius: var(--radius-pill);
+    background: var(--rule-control);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0 calc((var(--touch-target-min) - var(--sp-3)) / -2);
+  }
+
+  [data-axis='vbox'] > & {
+    width: auto;
+    height: var(--sp-3);
+    cursor: row-resize;
+
+    &::before {
+      width: var(--sp-8);
+      height: 2px;
+    }
+
+    &::after {
+      inset: calc((var(--touch-target-min) - var(--sp-3)) / -2) 0;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+  }
+}
+
+/* ---- the panel: goto / body / status ---- */
+.file-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-sunk);
+}
+
+.goto {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+  padding: var(--sp-2);
+  border-block-end: var(--elev-1);
+}
+
+.goto-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--sp-8);
+  padding: 0 var(--sp-2);
+  border: var(--elev-3);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  /* iOS zooms a focused input set below 16px; --fs-lead keeps the page still. */
+  font-size: var(--fs-lead);
+}
+
+.goto-open {
+  min-height: var(--sp-8);
+  padding: 0 var(--sp-3);
+  border: var(--elev-3);
+  border-radius: var(--radius-md);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font: inherit;
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+}
+
+.goto-error {
+  flex: 1 0 100%;
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--status-blocked-ink);
+}
+
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+
+  &[data-layout='side-by-side'] {
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+
+    .browser {
+      border-inline-end: var(--elev-1);
+    }
+  }
+}
+
+.surfaces {
+  border-block-end: var(--elev-1);
+
+  .segment {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.status-line {
+  flex: none;
+  display: flex;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: var(--sp-1) var(--sp-2);
+  border-block-start: var(--elev-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-mute);
+
+  [data-git='modified'] {
+    color: var(--ochre-ink);
+  }
+
+  [data-git='untracked'] {
+    color: var(--status-blocked-ink);
+  }
+}
+
+:where(a, button, input):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .back,
+  .panel-toggle,
+  .goto-open,
+  .goto-input,
+  .segment,
+  .lab-disclosure {
+    min-height: var(--touch-target-min);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon {
+    transition: none;
+  }
+}
