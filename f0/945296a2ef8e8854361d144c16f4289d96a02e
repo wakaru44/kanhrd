@@ -1,0 +1,27 @@
+openspec/changes/add-repo-file-reads/README.md
+  s_8c1e017e408d78::t_919fa1acc3d0a3 1-3
+openspec/changes/add-repo-file-reads/proposal.md
+  s_8c1e017e408d78::t_9e2ad3589e9e77 1-67
+openspec/changes/add-repo-file-reads/tasks.md
+  s_8c1e017e408d78::t_b8ef77c95a62d8 1-34
+openspec/changes/add-repo-file-reads/.openspec.yaml
+  s_8c1e017e408d78::t_919fa1acc3d0a3 1-2
+openspec/changes/add-repo-file-reads/specs/repo-file-reads/spec.md
+  s_8c1e017e408d78::t_4770f3d764f268 1-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f0945296a2ef8e8854361d144c16f4289d96a02e",
+  "prompts": {},
+  "sessions": {
+    "s_8c1e017e408d78": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf2cb2cc-b3da-4340-ac01-f135f6e7609d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
