@@ -14,6 +14,25 @@ import { ToastService } from './toast.service';
 const INITIAL_BACKOFF_MS = 500;
 const MAX_BACKOFF_MS = 30_000;
 
+/**
+ * A bridge response frame that carried `ok: false`. The `message` is the
+ * bridge's own, quoted verbatim and never rewritten (docs/BRAND.md); `code`
+ * is the machine-readable half, so a caller can tell `files_not_local` from
+ * `not_found` without parsing prose.
+ *
+ * `message` on the Error keeps the `"<code>: <message>"` shape callers and
+ * toasts already render, so adding the field changed nothing for them.
+ */
+export class BridgeError extends Error {
+  constructor(
+    readonly code: string,
+    readonly bridgeMessage: string
+  ) {
+    super(`${code}: ${bridgeMessage}`);
+    this.name = 'BridgeError';
+  }
+}
+
 interface PendingRequest {
   resolve: (value: unknown) => void;
   reject: (reason: Error) => void;
@@ -157,7 +176,7 @@ export class WsClient {
       if (msg.ok) {
         pending.resolve(msg.data);
       } else {
-        pending.reject(new Error(`${msg.error.code}: ${msg.error.message}`));
+        pending.reject(new BridgeError(msg.error.code, msg.error.message));
       }
       return;
     }
