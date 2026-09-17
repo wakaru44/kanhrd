@@ -1,0 +1,149 @@
+@if (path(); as p) {
+  <div class="viewer-head">
+    <span class="path" [title]="p">{{ p }}</span>
+    <div class="segmented" role="tablist" [attr.aria-label]="copy.files.viewer">
+      @for (m of modes(); track m) {
+        <button
+          type="button"
+          role="tab"
+          class="segment"
+          [class.active]="m === effectiveMode()"
+          [attr.aria-selected]="m === effectiveMode()"
+          [attr.data-mode]="m"
+          (click)="modeChange.emit(m)"
+        >
+          {{ modeLabels[m] }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="viewer-body" tabindex="0" [attr.data-mode]="effectiveMode()">
+    <!--
+      A file the bridge would not send is a fact about the FILE, not about
+      the mode being looked at, so it is stated above whatever the mode
+      renders. A binary file falls back to `diff` (the bridge still reports
+      the change), and without this it would say nothing about being binary
+      at all.
+    -->
+    @let state = content();
+    @if (state.kind === 'binary') {
+      <p class="nothing">
+        {{ copy.files.binary }}
+        <span class="readout">{{ state.size }} bytes</span>
+      </p>
+    } @else if (state.kind === 'too-large') {
+      <p class="nothing">
+        {{ copy.files.tooLarge }}
+        <span class="readout">{{ state.reason }}</span>
+      </p>
+    } @else if (state.kind === 'gone') {
+      <p class="nothing">{{ copy.files.pathGone }}</p>
+    } @else if (state.kind === 'failed') {
+      <p class="nothing failure" role="alert">
+        <svg lucideTriangleAlert class="icon" aria-hidden="true"></svg>
+        {{ failure(state.reason) }}
+      </p>
+    }
+
+    @if (effectiveMode() === 'diff') {
+      @let d = diff();
+      @if (d.kind === 'loading') {
+        <p class="nothing">{{ copy.files.loading }}</p>
+      } @else if (d.kind === 'gone') {
+        <p class="nothing">{{ copy.files.pathGone }}</p>
+      } @else if (d.kind === 'failed') {
+        <p class="nothing failure" role="alert">
+          <svg lucideTriangleAlert class="icon" aria-hidden="true"></svg>
+          {{ failure(d.reason) }}
+        </p>
+      } @else if (d.kind === 'diff') {
+        @if (d.binary) {
+          <p class="nothing">{{ copy.files.binary }}</p>
+        } @else if (d.lines.length === 0) {
+          <p class="nothing">{{ copy.files.noChanges }}</p>
+        } @else {
+          <ol class="code diff">
+            @for (line of d.lines; track $index) {
+              <li [attr.data-kind]="line.kind">
+                <span class="ln">{{ diffMarker[line.kind] }}</span
+                ><span class="tx">{{ line.text }}</span>
+              </li>
+            }
+          </ol>
+          @if (d.truncated) {
+            <p class="note">{{ copy.files.diffTruncated }}</p>
+          }
+        }
+      }
+    } @else {
+      @let c = content();
+      @if (c.kind === 'loading') {
+        <p class="nothing">{{ copy.files.loading }}</p>
+      } @else if (c.kind === 'text' && effectiveMode() === 'source') {
+        <ol class="code">
+          @for (line of c.lines; track $index) {
+            <li><span class="ln">{{ $index + 1 }}</span><span class="tx">{{ line }}</span></li>
+          }
+        </ol>
+      } @else if (c.kind === 'text' && effectiveMode() === 'rendered') {
+        <article class="rendered">
+          @for (block of blocks(); track $index) {
+            @switch (block.kind) {
+              @case ('heading') {
+                <p class="h" [attr.data-level]="block.level">
+                  <ng-container *ngTemplateOutlet="inline; context: { $implicit: block.inline }" />
+                </p>
+              }
+              @case ('paragraph') {
+                <p>
+                  <ng-container *ngTemplateOutlet="inline; context: { $implicit: block.inline }" />
+                </p>
+              }
+              @case ('list') {
+                @if (block.ordered) {
+                  <ol>
+                    @for (item of block.items; track $index) {
+                      <li>
+                        <ng-container *ngTemplateOutlet="inline; context: { $implicit: item }" />
+                      </li>
+                    }
+                  </ol>
+                } @else {
+                  <ul>
+                    @for (item of block.items; track $index) {
+                      <li>
+                        <ng-container *ngTemplateOutlet="inline; context: { $implicit: item }" />
+                      </li>
+                    }
+                  </ul>
+                }
+              }
+              @case ('code') {
+                <pre>{{ block.text }}</pre>
+              }
+            }
+          }
+        </article>
+      }
+    }
+  </div>
+} @else {
+  <p class="nothing">{{ copy.files.pick }}</p>
+}
+
+<ng-template #inline let-parts>
+  @for (part of parts; track $index) {
+    @switch (part.kind) {
+      @case ('code') {
+        <code>{{ part.text }}</code>
+      }
+      @case ('strong') {
+        <strong>{{ part.text }}</strong>
+      }
+      @default {
+        {{ part.text }}
+      }
+    }
+  }
+</ng-template>

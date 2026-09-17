@@ -1,0 +1,140 @@
+@if (gate() === 'ready') {
+  <form class="goto" (submit)="submitGoto($event)">
+    <input
+      class="goto-input"
+      type="text"
+      inputmode="url"
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      [attr.placeholder]="copy.files.gotoPlaceholder"
+      [attr.aria-label]="copy.files.goto"
+      [value]="goto()"
+      (input)="onGotoInput($event)"
+    />
+    <button type="submit" class="goto-open">{{ copy.files.gotoSubmit }}</button>
+    @if (gotoError(); as error) {
+      <p class="goto-error" role="alert">{{ error }}</p>
+    }
+  </form>
+
+  <div class="panel-body" [attr.data-layout]="layout()">
+    @if (layout() === 'single') {
+      <div class="segmented surfaces" role="tablist" [attr.aria-label]="copy.files.surface">
+        <button
+          type="button"
+          role="tab"
+          class="segment"
+          data-surface="browser"
+          [class.active]="surface() === 'browser'"
+          [attr.aria-selected]="surface() === 'browser'"
+          (click)="surface.set('browser')"
+        >
+          {{ copy.files.label }}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="segment"
+          data-surface="viewer"
+          [class.active]="surface() === 'viewer'"
+          [attr.aria-selected]="surface() === 'viewer'"
+          (click)="surface.set('viewer')"
+        >
+          {{ selected() ?? copy.files.viewer }}
+        </button>
+      </div>
+    }
+
+    @if (layout() === 'side-by-side' || surface() === 'browser') {
+      <app-file-tree
+        class="browser"
+        [rows]="rows()"
+        [selected]="selected()"
+        (toggled)="toggleDir($event)"
+        (opened)="openFile($event)"
+      />
+    }
+    @if (layout() === 'side-by-side' || surface() === 'viewer') {
+      <app-file-view
+        class="viewer"
+        [path]="selected()"
+        [content]="content()"
+        [diff]="diff()"
+        [mode]="viewerMode()"
+        (modeChange)="viewerMode.set($event)"
+      />
+    }
+  </div>
+
+  <p class="status-line" data-status-line aria-live="polite">
+    @if (summary(); as s) {
+      @if (s.branch; as branch) {
+        <span class="branch">{{ branch }}</span>
+      }
+      <!-- git's own words for git's own states, and counts: data readouts, not product copy. -->
+      <span [attr.data-git]="selectedGit()">
+        @if (selected()) {
+          {{ selectedGit() }}
+        } @else {
+          {{ s.modified }} modified · {{ s.untracked }} untracked
+        }
+      </span>
+      @if (s.truncated) {
+        <span class="cut">{{ copy.files.statusTruncated }}</span>
+      }
+    } @else if (statusError() === null) {
+      <span>{{ copy.files.loading }}</span>
+    }
+    @if (statusStale()) {
+      <span class="stale">
+        <svg lucideUnplug class="icon" aria-hidden="true"></svg>
+        {{ copy.files.statusStale }}
+      </span>
+    }
+  </p>
+} @else {
+  <!--
+    One stated reason, never an empty tree. Each of these is a fact the
+    bridge reported (or the pane itself carries); none of them is retried
+    behind the operator's back.
+  -->
+  <div class="panel-state" role="status">
+    @switch (gate()) {
+      @case ('no-repo') {
+        <p class="state-line">{{ copy.files.noRepo }}</p>
+        <p class="state-body">{{ copy.files.noRepoBody }}</p>
+      }
+      @case ('not-local') {
+        <p class="state-line">{{ copy.files.notLocal }}</p>
+        <p class="state-body">{{ notLocalBody() }}</p>
+      }
+      @case ('not-a-repo') {
+        <p class="state-line">{{ copy.files.notARepo }}</p>
+        <div class="state-actions">
+          <button type="button" class="retry" (click)="retry()">
+            <svg lucideRefreshCw class="icon" aria-hidden="true"></svg>
+            {{ copy.loading.retry }}
+          </button>
+        </div>
+      }
+      @case ('git-missing') {
+        <p class="state-line">{{ copy.files.gitMissing }}</p>
+      }
+      @case ('checkout-gone') {
+        <p class="state-line">{{ copy.files.checkoutGone }}</p>
+      }
+    }
+  </div>
+}
+
+@if (statusError(); as reason) {
+  <p class="panel-failure" role="alert">
+    <svg lucideTriangleAlert class="icon" aria-hidden="true"></svg>
+    <span>{{ statusFailure() }}</span>
+    <button type="button" class="retry" (click)="retry()">
+      <svg lucideRefreshCw class="icon" aria-hidden="true"></svg>
+      {{ copy.loading.retry }}
+    </button>
+  </p>
+}

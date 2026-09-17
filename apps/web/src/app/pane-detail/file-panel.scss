@@ -1,0 +1,234 @@
+:host {
+  /* The panel's own box: the split binds `flex-grow`, this owns the rest. */
+  display: flex;
+  flex-direction: column;
+  flex-basis: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: var(--elev-1);
+  border-radius: var(--radius-md);
+  background: var(--paper-sunk);
+}
+
+.goto {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+  padding: var(--sp-2);
+  border-block-end: var(--elev-1);
+}
+
+.goto-input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--sp-8);
+  padding: 0 var(--sp-2);
+  border: var(--elev-3);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  /* iOS zooms a focused input set below 16px; --fs-lead keeps the page still. */
+  font-size: var(--fs-lead);
+}
+
+.goto-open {
+  min-height: var(--sp-8);
+  padding: 0 var(--sp-3);
+  border: var(--elev-3);
+  border-radius: var(--radius-md);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font: inherit;
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+}
+
+.goto-error {
+  flex: 1 0 100%;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  color: var(--status-blocked-ink);
+  overflow-wrap: anywhere;
+}
+
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+
+  /* The panel's own width, not the viewport's, decides this. */
+  &[data-layout='side-by-side'] {
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+
+    .browser {
+      border-inline-end: var(--elev-1);
+    }
+  }
+}
+
+.segmented {
+  display: flex;
+  gap: var(--sp-1);
+}
+
+/* Selection is weight plus an ochre underline, as in shared/_controls.scss. */
+.segment {
+  min-height: var(--sp-8);
+  padding: 0 var(--sp-2);
+  border: 0;
+  border-block-end: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-mute);
+  font: inherit;
+  font-size: var(--fs-small);
+  cursor: pointer;
+
+  &.active {
+    color: var(--ink);
+    font-weight: var(--fw-semi);
+    border-block-end-color: var(--ochre-line);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+}
+
+.surfaces {
+  border-block-end: var(--elev-1);
+
+  .segment {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    /* A path in the tab: the tail identifies it, so the head is what is cut. */
+    direction: rtl;
+  }
+}
+
+.status-line {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--sp-3);
+  margin: 0;
+  padding: var(--sp-1) var(--sp-2);
+  border-block-start: var(--elev-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  color: var(--ink-mute);
+
+  [data-git='modified'] {
+    color: var(--ochre-ink);
+  }
+
+  [data-git='untracked'] {
+    color: var(--status-blocked-ink);
+  }
+}
+
+.branch {
+  color: var(--ink-soft);
+}
+
+.stale,
+.cut {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--font-ui);
+}
+
+/* One stated reason instead of the panel's body. */
+.panel-state {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
+  font-family: var(--font-ui);
+}
+
+.state-line {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink);
+}
+
+.state-body {
+  margin: 0;
+  max-width: var(--content-max-width);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--ink-mute);
+}
+
+.state-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.panel-failure {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-2);
+  margin: 0;
+  padding: var(--sp-2);
+  border-block-start: var(--elev-1);
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  color: var(--status-blocked-ink);
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: var(--sp-8);
+  padding: 0 var(--sp-3);
+  border: var(--elev-3);
+  border-radius: var(--radius-md);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font: inherit;
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+}
+
+.icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex: none;
+  stroke: currentColor;
+}
+
+:where(button, input):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .goto-input,
+  .goto-open,
+  .segment,
+  .retry {
+    min-height: var(--touch-target-min);
+  }
+}

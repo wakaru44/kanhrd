@@ -2,15 +2,16 @@ import { WritableSignal, provideZonelessChangeDetection, signal } from '@angular
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, Subject, of } from 'rxjs';
-import type { HostSummary, Pane, WsEvent } from '@kanhrd/schema';
+import type { BridgeCapabilities, HostSummary, Pane, WsEvent } from '@kanhrd/schema';
 import { Terminal } from '@xterm/xterm';
 import type { ITheme } from '@xterm/xterm';
 import { PaneDetail, nextSiblingCard } from './pane-detail';
+import { SPLIT_STORAGE_KEY, loadSplit } from './file-panel-split';
 import { TerminalThemeService } from '../state/terminal-theme.service';
 import { TerminalFontSizeService } from '../state/terminal-font-size.service';
 import { TerminalScrollbackService } from '../state/terminal-scrollback.service';
 import { BoardReturnService } from '../state/board-return.service';
-import { COPY } from '../shared/copy';
+import { COPY, fill } from '../shared/copy';
 import { PanesStore } from '../state/panes.store';
 import { WsClient } from '../state/ws-client';
 
@@ -660,7 +661,10 @@ describe('PaneDetail', () => {
     expect(gone?.querySelector('a.state-back')?.textContent).toContain(COPY.nav.backToBoard);
     // A caption under the frame, not a panel over it.
     expect(stateEl('.terminal-status .terminal-gone')).toBeNull();
-    expect(stateEl('.terminal-wrap + .gone-slot > .terminal-gone')).not.toBeNull();
+    // The terminal now shares `.split` with the file panel, so the caption
+    // follows that whole box rather than the terminal element itself.
+    expect(stateEl('.split > .terminal-wrap')).not.toBeNull();
+    expect(stateEl('.split + .gone-slot > .terminal-gone')).not.toBeNull();
     expect(stateEl('button.retry')).toBeNull();
     expect(stateEl('.stale-marker')).toBeNull();
     expect(stateEl('.terminal-unavailable')).toBeNull();
@@ -1009,5 +1013,164 @@ describe('PaneDetail terminal settings', () => {
     await flushMicrotasks();
 
     expect(settingsWs.request).not.toHaveBeenCalledWith('laptop', 'pane.read', jasmine.anything());
+  });
+});
+
+/**
+ * The file panel's one visible affordance, and the split it opens.
+ *
+ * Three conditions decide whether the toggle exists at all, and the wrong
+ * answer to any of them is a control that cannot work (a bridge with no file
+ * methods) or a question the operator cannot ask (a pane with no checkout,
+ * where "there is no repository" is the answer they opened it for).
+ */
+describe('PaneDetail file panel toggle', () => {
+  const CHECKOUT = '/home/op/src/kanhrd';
+
+  const repoFiles = {
+    statusPollIntervalMs: 2000,
+    fileReadMaxBytes: 1_048_576,
+    diffMaxBytes: 262_144,
+    treeMaxEntries: 1000,
+    statusMaxEntries: 1000,
+  };
+
+  async function render(options: {
+    project?: Pane['project'];
+    files?: boolean;
+  }): Promise<{ el: HTMLElement; fixture: ComponentFixture<PaneDetail> }> {
+    const panes = new Map<string, Pane>([
+      [
+        'laptop:pane-1',
+        {
+          id: 'pane-1',
+          host: 'laptop',
+          workspace: { id: 'w1', name: 'kanhrd' },
+          tab: { id: 't1', name: 'main' },
+          agent_status: 'working',
+          ...(options.project ? { project: options.project } : {}),
+        },
+      ],
+    ]);
+    const capabilities = new Map<string, BridgeCapabilities>([
+      [
+        'laptop',
+        {
+          tier: 3,
+          terminal: true,
+          paneResize: false,
+          paneGraphics: false,
+          outputPollIntervalMs: 1000,
+          ...(options.files === false ? {} : { repoFiles }),
+        } as BridgeCapabilities,
+      ],
+    ]);
+
+    await TestBed.configureTestingModule({
+      imports: [PaneDetail],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WsClient, useValue: new FakeWsClient() },
+        {
+          provide: PanesStore,
+          useValue: {
+            panesSignal: () => panes,
+            tabsSignal: () => new Map(),
+            capabilitiesSignal: () => capabilities,
+            hostsSignal: () => [{ name: 'laptop', connected: true }],
+          },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { paramMap: of(convertToParamMap({ host: 'laptop', id: 'pane-1' })) },
+        },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    return { el: fixture.nativeElement as HTMLElement, fixture };
+  }
+
+  // The remembered split is real browser storage; a leaked value would
+  // decide the next test's starting ratio.
+  beforeEach(() => localStorage.removeItem(SPLIT_STORAGE_KEY));
+  afterEach(() => {
+    localStorage.removeItem(SPLIT_STORAGE_KEY);
+    TestBed.resetTestingModule();
+  });
+
+  const project: NonNullable<Pane['project']> = {
+    repo_name: 'kanhrd',
+    checkout_path: CHECKOUT,
+    is_linked_worktree: false,
+    files_local: true,
+  };
+
+  it('sits at the repo name’s trailing edge, visible and collapsed on first render', async () => {
+    const { el } = await render({ project });
+
+    const toggle = el.querySelector<HTMLButtonElement>('.meta-strip .repo [data-panel-toggle]');
+    expect(toggle).not.toBeNull();
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle?.getAttribute('aria-label')).toBe(fill(COPY.files.toggleIn, { repo: 'kanhrd' }));
+    // Collapsed by default: no panel, and no splitter to drag.
+    expect(el.querySelector('app-file-panel')).toBeNull();
+    expect(el.querySelector('[data-splitter]')).toBeNull();
+  });
+
+  it('opens the panel and the splitter together', async () => {
+    const { el, fixture } = await render({ project });
+
+    el.querySelector<HTMLButtonElement>('[data-panel-toggle]')!.click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('app-file-panel')).not.toBeNull();
+    const splitter = el.querySelector('[data-splitter]');
+    expect(splitter).not.toBeNull();
+    expect(splitter?.getAttribute('role')).toBe('separator');
+    expect(splitter?.getAttribute('tabindex')).toBe('0');
+    expect(el.querySelector('[data-panel-toggle]')?.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('renders no toggle at all on a bridge with no file methods', async () => {
+    const { el } = await render({ project, files: false });
+
+    expect(el.querySelector('[data-panel-toggle]')).toBeNull();
+    // ...and the provenance rows are unaffected.
+    expect(el.querySelector('.meta-strip .repo-name')?.textContent?.trim()).toBe('kanhrd');
+  });
+
+  it('still offers the toggle on a pane with no checkout, where absence is the answer', async () => {
+    const { el } = await render({});
+
+    const toggle = el.querySelector<HTMLButtonElement>('.meta-strip [data-panel-toggle]');
+    expect(toggle).not.toBeNull();
+    expect(toggle?.getAttribute('aria-label')).toBe(COPY.files.label);
+  });
+
+  it('keeps the key bar exactly as it was while the panel is open', async () => {
+    const { el, fixture } = await render({ project });
+
+    const before = el.querySelector('app-key-bar')?.outerHTML;
+    el.querySelector<HTMLButtonElement>('[data-panel-toggle]')!.click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('app-key-bar')?.outerHTML).toBe(before);
+  });
+
+  it('steps the split with the keyboard and remembers where it landed', async () => {
+    const { el, fixture } = await render({ project });
+    el.querySelector<HTMLButtonElement>('[data-panel-toggle]')!.click();
+    fixture.detectChanges();
+
+    const splitter = el.querySelector('[data-splitter]') as HTMLElement;
+    const before = Number(splitter.getAttribute('aria-valuenow'));
+    splitter.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    fixture.detectChanges();
+
+    const after = Number(el.querySelector('[data-splitter]')!.getAttribute('aria-valuenow'));
+    expect(after).toBe(before + 5);
+    expect(loadSplit().hbox).toBeCloseTo(after / 100, 5);
   });
 });

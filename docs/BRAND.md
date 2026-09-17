@@ -178,6 +178,37 @@ product copy and stay in the template.
 | `state.gone`                          | `the session ended. this is the last thing it said.`                                                                                          |
 | `terminal.truncated`                  | `herdr sent the last {lines} lines. history above this line was not sent.`                                                                    |
 | `terminal.truncatedRaise`             | `raise scrollback in settings.`                                                                                                               |
+| `files.label`                         | `files`                                                                                                                                       |
+| `files.toggleIn`                      | `files in {repo}`                                                                                                                             |
+| `files.viewer`                        | `viewer`                                                                                                                                      |
+| `files.modeSource`                    | `source`                                                                                                                                      |
+| `files.modeDiff`                      | `diff`                                                                                                                                        |
+| `files.modeRendered`                  | `rendered`                                                                                                                                    |
+| `files.pick`                          | `pick a file, or paste a path above.`                                                                                                         |
+| `files.loading`                       | `reading…`                                                                                                                                    |
+| `files.noRepo`                        | `no repository here.`                                                                                                                         |
+| `files.noRepoBody`                    | `this pane isn't in a git checkout, so there is nothing to read.`                                                                             |
+| `files.notLocal`                      | `these files are on another machine.`                                                                                                         |
+| `files.notLocalBody`                  | `the bridge reads checkouts on its own filesystem only, and {host} is not on it.`                                                             |
+| `files.notARepo`                      | `this checkout is no longer a git repository.`                                                                                                |
+| `files.gitMissing`                    | `no git on the machine running the bridge.`                                                                                                   |
+| `files.checkoutGone`                  | `this pane and its checkout are gone.`                                                                                                        |
+| `files.failed`                        | `couldn't read it. the bridge said: {reason}`                                                                                                 |
+| `files.statusStale`                   | `stale — last seen state`                                                                                                                     |
+| `files.binary`                        | `binary file. nothing to read here.`                                                                                                          |
+| `files.tooLarge`                      | `too big to read.`                                                                                                                            |
+| `files.pathGone`                      | `gone from the checkout.`                                                                                                                     |
+| `files.noChanges`                     | `no changes against head.`                                                                                                                    |
+| `files.treeTruncated`                 | `the bridge stopped listing here.`                                                                                                            |
+| `files.statusTruncated`               | `the bridge stopped counting here.`                                                                                                           |
+| `files.diffTruncated`                 | `the bridge cut this diff short.`                                                                                                             |
+| `files.ignored`                       | `ignored`                                                                                                                                     |
+| `files.goto`                          | `go to path`                                                                                                                                  |
+| `files.gotoPlaceholder`               | `paste a path`                                                                                                                                |
+| `files.gotoSubmit`                    | `open`                                                                                                                                        |
+| `files.gotoMissing`                   | `not in {repo}: {path}`                                                                                                                       |
+| `files.resize`                        | `resize the file panel`                                                                                                                       |
+| `files.surface`                       | `panel surface`                                                                                                                               |
 | `nav.backToBoard`                     | `back to the board`                                                                                                                           |
 | `nav.settings`                        | `settings`                                                                                                                                    |
 | `nav.toggleNav`                       | `toggle navigation`                                                                                                                           |

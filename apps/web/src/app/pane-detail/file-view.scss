@@ -1,0 +1,224 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.viewer-head {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--sp-2);
+  padding: 0 var(--sp-2);
+  border-block-end: var(--elev-1);
+}
+
+/* The tail of a path is what identifies it, so the ellipsis goes at the head. */
+.path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: start;
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-mute);
+}
+
+.segmented {
+  flex: none;
+  display: flex;
+  gap: var(--sp-1);
+}
+
+/* Selection is weight plus an ochre underline, as in shared/_controls.scss. */
+.segment {
+  flex: none;
+  min-height: var(--sp-8);
+  padding: 0 var(--sp-2);
+  border: 0;
+  border-block-end: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-mute);
+  font: inherit;
+  font-size: var(--fs-small);
+  cursor: pointer;
+
+  &.active {
+    color: var(--ink);
+    font-weight: var(--fw-semi);
+    border-block-end-color: var(--ochre-line);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+}
+
+.viewer-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--paper);
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+}
+
+.code {
+  margin: 0;
+  padding: var(--sp-2) 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--ink);
+  width: max-content;
+  min-width: 100%;
+
+  li {
+    display: flex;
+    white-space: pre;
+  }
+}
+
+.ln {
+  flex: none;
+  min-width: var(--sp-8);
+  padding: 0 var(--sp-2);
+  text-align: end;
+  color: var(--ink-mute);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.tx {
+  padding-inline-end: var(--sp-3);
+}
+
+/* Diff: the +/- column carries the meaning; colour only repeats it. */
+.diff {
+  [data-kind='added'] {
+    color: var(--status-done-ink);
+    background: var(--paper-sunk);
+  }
+
+  [data-kind='removed'] {
+    color: var(--status-blocked-ink);
+    background: var(--paper-sunk);
+  }
+
+  [data-kind='hunk'] {
+    color: var(--status-idle-ink);
+    margin-block: var(--sp-1);
+  }
+
+  [data-kind='meta'] {
+    color: var(--ink-mute);
+  }
+}
+
+.rendered {
+  padding: var(--sp-3) var(--sp-4);
+  max-width: var(--content-max-width);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink);
+
+  p,
+  ul,
+  ol,
+  pre {
+    margin: 0 0 var(--sp-3);
+  }
+
+  ul,
+  ol {
+    padding-inline-start: var(--sp-6);
+  }
+
+  .h {
+    font-weight: var(--fw-semi);
+    font-size: var(--fs-h3);
+    line-height: var(--lh-h3);
+
+    &[data-level='1'] {
+      font-size: var(--fs-h2);
+      line-height: var(--lh-h2);
+    }
+  }
+
+  code,
+  pre {
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    background: var(--paper-sunk);
+    border-radius: var(--radius-sm);
+  }
+
+  code {
+    padding: 0 var(--sp-1);
+  }
+
+  pre {
+    padding: var(--sp-2) var(--sp-3);
+    overflow-x: auto;
+  }
+
+  strong {
+    font-weight: var(--fw-semi);
+  }
+}
+
+.nothing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-2);
+  margin: 0;
+  padding: var(--sp-4);
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  color: var(--ink-mute);
+
+  &.failure {
+    color: var(--status-blocked-ink);
+  }
+}
+
+/* A byte count or the bridge's own sentence: data, set apart from the copy. */
+.readout {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  margin: 0;
+  padding: var(--sp-1) var(--sp-4) var(--sp-3);
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  color: var(--ink-mute);
+}
+
+.icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex: none;
+  stroke: currentColor;
+}
+
+@media (pointer: coarse) {
+  .segment {
+    min-height: var(--touch-target-min);
+  }
+}

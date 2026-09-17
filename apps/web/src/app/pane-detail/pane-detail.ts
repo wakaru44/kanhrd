@@ -1,6 +1,7 @@
 import {
   AfterViewInit,
   Component,
+  DestroyRef,
   ElementRef,
   OnDestroy,
   ViewChild,
@@ -28,6 +29,7 @@ import { paneTitle } from '../util/pane-title';
 import { KeyboardService } from '../state/keyboard.service';
 import {
   LucideArrowLeft,
+  LucideChevronRight,
   LucidePencil,
   LucideSquareSplitHorizontal,
   LucideRefreshCw,
@@ -42,6 +44,10 @@ import { PaneTerminal } from './pane-terminal';
 import { KeyBar } from './key-bar';
 import { DEFAULT_KEY_BAR_CELLS, KeyBarModifiers } from './key-bar-cells';
 import { TerminalKeyBarService } from '../state/terminal-key-bar.service';
+import { RepoFilesService } from '../state/repo-files.service';
+import { FilePanel } from './file-panel';
+import { SplitHandle } from './split-handle';
+import { SPLIT_STEP, clampSplit, loadSplit, saveSplit, type SplitAxis } from './file-panel-split';
 
 /**
  * The reliability states this view can be in. They are mutually exclusive
@@ -99,7 +105,10 @@ export function nextSiblingCard(siblings: readonly Pane[], currentId: string): P
     CardSwitcher,
     TabStrip,
     KeyBar,
+    FilePanel,
+    SplitHandle,
     LucideArrowLeft,
+    LucideChevronRight,
     LucidePencil,
     LucideSquareSplitHorizontal,
     LucideRefreshCw,
@@ -418,6 +427,17 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       untracked(() => this.terminal.applyFontSize(size));
     });
 
+    // The split's axis follows the device's orientation: the panel goes
+    // beside the terminal in landscape and under it in portrait. Each axis
+    // keeps its own remembered ratio, so rotating never inherits the other
+    // one's number.
+    if (typeof matchMedia === 'function') {
+      const portrait = matchMedia('(orientation: portrait)');
+      const onChange = () => this.splitAxis.set(readSplitAxis());
+      portrait.addEventListener('change', onChange);
+      inject(DestroyRef).onDestroy(() => portrait.removeEventListener('change', onChange));
+    }
+
     // Depth is part of the request, not the rendering, so a change re-reads
     // the pane in view. `applyScrollback` ignores the depth the pane is
     // already loaded at, which is every run of this effect but a real change.
@@ -479,4 +499,97 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
   protected retry(): void {
     this.terminal.retry();
   }
+
+  // --- the file panel -----------------------------------------------------
+  //
+  // A read-only view of the checkout the agent is working in, beside its
+  // terminal. Its layout is the one settled on the device in
+  // `/labs/file-explorer/mock1`: collapsed by default, one visible toggle in
+  // the meta strip, a draggable split remembered per axis, and a key bar
+  // that keeps its place while the panel has focus.
+
+  private readonly repoFiles = inject(RepoFilesService);
+
+  /**
+   * Whether this pane's bridge implements the file methods at all. A tier-1
+   * or older bridge advertises no `repoFiles`, and a control that cannot
+   * work does not appear (docs/UX-GUIDELINES.md, "Visible affordances").
+   */
+  protected readonly filesSupported = computed(
+    () => this.repoFiles.capability(this.host()) !== null
+  );
+
+  protected readonly filePanelOpen = signal(false);
+
+  /** Names what the toggle acts on; a pane with no checkout has nothing to name. */
+  protected readonly filesToggleLabel = computed(() => {
+    const repo = this.project()?.repo_name;
+    return repo ? fill(COPY.files.toggleIn, { repo }) : COPY.files.label;
+  });
+
+  /**
+   * A lost host or an ended session stops the panel asking for more, without
+   * taking away what it already read.
+   */
+  protected readonly filePanelPaused = computed(
+    () => this.viewState() === 'unavailable' || this.viewState() === 'gone'
+  );
+
+  protected readonly splitAxis = signal<SplitAxis>(readSplitAxis());
+  private readonly splits = signal<Record<SplitAxis, number>>(loadSplit());
+  /** The TERMINAL's share; the panel gets the rest. */
+  protected readonly splitRatio = computed(() => this.splits()[this.splitAxis()]);
+  protected readonly splitDragging = signal(false);
+  protected readonly splitPercent = computed(() => (this.splitRatio() * 100).toFixed(0));
+
+  private readonly splitEl = viewChild<ElementRef<HTMLElement>>('split');
+
+  protected toggleFilePanel(): void {
+    this.filePanelOpen.set(!this.filePanelOpen());
+  }
+
+  protected onSplitterDown(): void {
+    this.splitDragging.set(true);
+  }
+
+  protected onSplitterMove(event: PointerEvent): void {
+    if (!this.splitDragging()) {
+      return;
+    }
+    const rect = this.splitEl()?.nativeElement.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) {
+      return;
+    }
+    const ratio =
+      this.splitAxis() === 'hbox'
+        ? (event.clientX - rect.left) / rect.width
+        : (event.clientY - rect.top) / rect.height;
+    this.setSplitRatio(ratio);
+  }
+
+  protected onSplitterUp(): void {
+    if (!this.splitDragging()) {
+      return;
+    }
+    this.splitDragging.set(false);
+    saveSplit(this.splits());
+  }
+
+  /** A keyboard step is committed immediately: there is no drag to end. */
+  protected onSplitterStep(direction: 1 | -1): void {
+    this.setSplitRatio(this.splitRatio() + direction * SPLIT_STEP);
+    saveSplit(this.splits());
+  }
+
+  private setSplitRatio(ratio: number): void {
+    const axis = this.splitAxis();
+    this.splits.update((splits) => ({ ...splits, [axis]: clampSplit(ratio) }));
+  }
+}
+
+/** Portrait stacks the panel under the terminal; landscape puts it beside. */
+function readSplitAxis(): SplitAxis {
+  return typeof matchMedia === 'function' && matchMedia('(orientation: portrait)').matches
+    ? 'vbox'
+    : 'hbox';
 }

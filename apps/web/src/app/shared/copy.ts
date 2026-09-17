@@ -400,6 +400,50 @@ export const COPY = {
     truncated: 'herdr sent the last {lines} lines. history above this line was not sent.',
     truncatedRaise: 'raise scrollback in settings.',
   },
+  /**
+   * The read-only file panel in pane detail. Every state here is a fact the
+   * bridge reported, never a guess: `notLocal` is the answer for every host
+   * whose filesystem the bridge does not share, and it says which machine
+   * reads the files rather than implying the panel is broken.
+   *
+   * Sizes, entry counts, line numbers, paths and git letters are data
+   * readouts and stay in the template.
+   */
+  files: {
+    /** The toggle, the panel's own name, and the browser surface are one word with one home. */
+    label: 'files',
+    /** The toggle's accessible name when the pane has a repo to name. */
+    toggleIn: 'files in {repo}',
+    viewer: 'viewer',
+    modeSource: 'source',
+    modeDiff: 'diff',
+    modeRendered: 'rendered',
+    pick: 'pick a file, or paste a path above.',
+    loading: 'reading…',
+    noRepo: 'no repository here.',
+    noRepoBody: "this pane isn't in a git checkout, so there is nothing to read.",
+    notLocal: 'these files are on another machine.',
+    notLocalBody: 'the bridge reads checkouts on its own filesystem only, and {host} is not on it.',
+    notARepo: 'this checkout is no longer a git repository.',
+    gitMissing: 'no git on the machine running the bridge.',
+    checkoutGone: 'this pane and its checkout are gone.',
+    failed: "couldn't read it. the bridge said: {reason}",
+    statusStale: 'stale — last seen state',
+    binary: 'binary file. nothing to read here.',
+    tooLarge: 'too big to read.',
+    pathGone: 'gone from the checkout.',
+    noChanges: 'no changes against head.',
+    treeTruncated: 'the bridge stopped listing here.',
+    statusTruncated: 'the bridge stopped counting here.',
+    diffTruncated: 'the bridge cut this diff short.',
+    ignored: 'ignored',
+    goto: 'go to path',
+    gotoPlaceholder: 'paste a path',
+    gotoSubmit: 'open',
+    gotoMissing: 'not in {repo}: {path}',
+    resize: 'resize the file panel',
+    surface: 'panel surface',
+  },
   notShipped: 'not yet.',
 } as const;
 

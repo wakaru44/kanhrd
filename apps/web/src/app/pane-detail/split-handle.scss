@@ -1,0 +1,49 @@
+:host {
+  flex: none;
+  display: flex;
+}
+
+/* Draws a hairline; its hit area reaches a full touch target on either side. */
+.handle {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sp-3);
+  touch-action: none;
+  cursor: col-resize;
+
+  &::before {
+    content: '';
+    width: 2px;
+    height: var(--sp-8);
+    border-radius: var(--radius-pill);
+    background: var(--rule-control);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0 calc((var(--touch-target-min) - var(--sp-3)) / -2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+  }
+}
+
+:host-context([data-axis='vbox']) .handle {
+  width: auto;
+  height: var(--sp-3);
+  cursor: row-resize;
+
+  &::before {
+    width: var(--sp-8);
+    height: 2px;
+  }
+
+  &::after {
+    inset: calc((var(--touch-target-min) - var(--sp-3)) / -2) 0;
+  }
+}

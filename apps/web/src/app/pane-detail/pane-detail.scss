@@ -196,6 +196,41 @@
     color: var(--ink-mute);
   }
 
+  /* The repo name and the panel's toggle are one unit, like the title and its pencil. */
+  .repo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    min-width: 0;
+  }
+
+  /* Visible on first render; open is an ochre edge, not a colour swap. */
+  .panel-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    min-height: var(--sp-6);
+    padding: 0 var(--sp-2);
+    border: var(--elev-3);
+    border-radius: var(--radius-md);
+    background: var(--paper-raised);
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+
+    &[aria-expanded='true'] {
+      border-color: var(--ochre-line);
+    }
+
+    .icon {
+      transition: transform var(--motion-fast) var(--ease-out);
+
+      &.open {
+        transform: rotate(90deg);
+      }
+    }
+  }
+
   .status {
     display: inline-flex;
     align-items: center;
@@ -277,6 +312,29 @@
    * never behind either; `--key-bar-reserve` is measured by the bar.
    */
   padding-bottom: calc(var(--sp-4) + var(--key-bar-reserve));
+}
+
+/*
+ * The terminal and the file panel share the body. The axis follows the
+ * device's orientation (beside in landscape, under in portrait) and the
+ * ratio is bound inline, per axis, remembered by `file-panel-split.ts`.
+ * With the panel closed the terminal takes the whole box and the splitter
+ * is not rendered at all.
+ */
+.split {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+
+  &[data-axis='vbox'] {
+    flex-direction: column;
+  }
+
+  /* A drag must not select the terminal's text under the pointer. */
+  &.dragging {
+    user-select: none;
+  }
 }
 
 .terminal-wrap {
@@ -531,5 +589,17 @@
   .detail-header .crumb-workspace,
   .detail-header .crumb-sep {
     display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .panel-toggle {
+    min-height: var(--touch-target-min);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-toggle .icon {
+    transition: none;
   }
 }
