@@ -32,11 +32,27 @@ omit the field entirely otherwise.
 
 No file method SHALL create, modify, move or delete any file, including
 git's own index and lock files. Git SHALL be run with optional locks disabled.
-There SHALL be no write method in this capability.
+Disabling optional locks is necessary but NOT sufficient: git's porcelain
+`diff` refreshes the index's stat cache and writes `.git/index` without
+consulting `--no-optional-locks` or `GIT_OPTIONAL_LOCKS`, so `repo.diff`
+SHALL use the `diff-index` plumbing for tracked paths rather than the
+porcelain. There SHALL be no write method in this capability.
 
 #### Scenario: Status does not touch the index
 
 - **WHEN** `repo.status` runs against a checkout whose index is stale
+- **THEN** the index file's modification time is unchanged afterwards
+
+#### Scenario: Diffing a tracked file saved without an edit does not touch the index
+
+- **WHEN** a tracked file's content still matches `HEAD` but its modification
+  time is newer than the index's, and `repo.diff` runs against that file
+- **THEN** the index file's modification time is unchanged afterwards
+
+#### Scenario: Listing and reading do not touch the index
+
+- **WHEN** `repo.tree` or `file.read` runs against a checkout whose index is
+  stale
 - **THEN** the index file's modification time is unchanged afterwards
 
 ### Requirement: Paths are confined to the checkout
@@ -186,7 +202,10 @@ binary, diff, truncated }` where `change` is one of `modified`, `added`,
 is a unified diff of the working tree against `HEAD` (against the empty tree
 when the branch has no commit). An untracked, non-ignored file SHALL be
 diffed against the empty file. An ignored or unchanged path SHALL carry an
-empty `diff`. A binary change SHALL carry `binary: true` and an empty
+empty `diff`. A tracked file whose stat no longer matches the index but whose
+content still matches `HEAD` SHALL be `unchanged` with an empty `diff`, and
+the bridge SHALL reach that answer from the diff itself rather than by
+refreshing the index. A binary change SHALL carry `binary: true` and an empty
 `diff`. A diff longer than `diffMaxBytes` SHALL be cut at a line boundary
 with `truncated: true`. A deleted file SHALL be diffable although it no
 longer exists on disk.
@@ -200,4 +219,10 @@ longer exists on disk.
 
 - **WHEN** a tracked file has been removed from the working tree
 - **THEN** `change` is `deleted` and `diff` shows every line removed
+
+#### Scenario: A tracked file saved without an edit
+
+- **WHEN** a client diffs a tracked file whose modification time is newer
+  than the index's but whose content still matches `HEAD`
+- **THEN** `change` is `unchanged` and `diff` is empty
 

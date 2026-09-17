@@ -271,6 +271,11 @@ export class RepoFileReader {
    * (porcelain `git diff <tree>` is a wrapper over it) and has no such step,
    * so a read stays a read on the operator's own checkout.
    *
+   * The cost of dropping the porcelain is that `diff-index` answers a
+   * stat-only difference as a modification instead of quietly refreshing it
+   * away; this method resolves that from the patch itself (no hunks, same
+   * content) rather than by writing to the repository.
+   *
    * The untracked case uses `git diff --no-index`, which compares two paths
    * with no repository index in play at all.
    */
@@ -350,6 +355,14 @@ export class RepoFileReader {
     }
     if (!text.includes('\n@@ ') && /^Binary files .* differ$/m.test(text)) {
       result.binary = true;
+      return result;
+    }
+    // `diff-index` answers from the index's STAT cache, so a tracked file
+    // saved without an edit comes back as a modification with an empty patch.
+    // Porcelain `git diff` hides that by refreshing the cache — which writes
+    // `.git/index`. The patch is the honest answer: no hunks, same content.
+    if (change === 'modified' && text === '' && !output.truncated) {
+      result.change = 'unchanged';
       return result;
     }
     result.diff = text;

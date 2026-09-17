@@ -299,6 +299,19 @@ describe('repo.diff', () => {
     expect(await reader.diff(repo, 'README.md')).toMatchObject({ change: 'unchanged', diff: '' });
   });
 
+  it('calls a tracked file saved without an edit unchanged, not modified', async () => {
+    // Its stat no longer matches the index, but its content still matches
+    // HEAD. The answer is `unchanged` — and reaching it must not refresh the
+    // index; see "a read never writes the repository".
+    const ahead = new Date(Date.now() + 10_000);
+    utimesSync(join(repo, 'with space.txt'), ahead, ahead);
+    expect(await reader.diff(repo, 'with space.txt')).toMatchObject({
+      change: 'unchanged',
+      diff: '',
+      binary: false,
+    });
+  });
+
   it('marks a binary change binary with no diff text', async () => {
     writeFileSync(join(repo, 'image.png'), Buffer.from([0x89, 0, 1, 2, 3]));
     try {
