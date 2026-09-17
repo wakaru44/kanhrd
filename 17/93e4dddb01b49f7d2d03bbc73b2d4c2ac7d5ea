@@ -1,0 +1,28 @@
+openspec/changes/add-pane-file-panel/specs/pane-file-panel/spec.md
+  s_843edf1ad71a78::t_201d0277cc65d7 1-219
+openspec/changes/add-pane-file-panel/tasks.md
+  s_843edf1ad71a78::t_b9b8f17cbadeb3 5,7,11,13,18,20,22,24,26,31,34,36,38,42-43,48,51,53-55
+  s_843edf1ad71a78::t_201d0277cc65d7 1-4,6,8-10,12,14-17,19,21,23,25,27-30,32-33,35,37,39-41,44-47,49-50,52,56
+openspec/changes/add-pane-file-panel/README.md
+  s_843edf1ad71a78::t_201d0277cc65d7 1-3
+openspec/changes/add-pane-file-panel/proposal.md
+  s_843edf1ad71a78::t_201d0277cc65d7 1-62
+openspec/changes/add-pane-file-panel/.openspec.yaml
+  s_843edf1ad71a78::t_201d0277cc65d7 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "1793e4dddb01b49f7d2d03bbc73b2d4c2ac7d5ea",
+  "prompts": {},
+  "sessions": {
+    "s_843edf1ad71a78": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19d80e2a-c4af-4ae7-a6c0-62288609b7c9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
