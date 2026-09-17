@@ -1,0 +1,26 @@
+apps/bridge/src/files/git.ts
+  s_ff8a98353bc500::t_21f1c7248004fc 32-35
+apps/bridge/src/files/reader.ts
+  s_ff8a98353bc500::t_689074a0dd8114 287,293,339
+  s_ff8a98353bc500::t_21f1c7248004fc 263-276
+  s_ff8a98353bc500::t_93c2c9bd0e6787 285
+apps/bridge/src/files/reader.test.ts
+  s_ff8a98353bc500::t_a03b31bb63106c 11,339-385
+  s_ff8a98353bc500::t_83b2ac48350df9 386
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "08169e682383ff24c4af291d07e0358683a4c1c2",
+  "prompts": {},
+  "sessions": {
+    "s_ff8a98353bc500": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7e29d08e-f8a1-47d9-acc8-8e966d495266",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
