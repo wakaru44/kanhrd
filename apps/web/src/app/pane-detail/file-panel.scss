@@ -138,8 +138,26 @@
   }
 }
 
+/* Leads the status line: the panel exists for this checkout, at this ref. */
 .branch {
-  color: var(--ink-soft);
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-1);
+  min-width: 0;
+  color: var(--ink);
+  font-weight: var(--fw-semi);
+
+  /* No branch name to give — the commit is the answer, and it recedes. */
+  &.detached {
+    color: var(--ink-soft);
+    font-weight: var(--fw-regular);
+  }
+}
+
+.head,
+.tracking {
+  color: var(--ink-mute);
+  font-weight: var(--fw-regular);
 }
 
 .stale,

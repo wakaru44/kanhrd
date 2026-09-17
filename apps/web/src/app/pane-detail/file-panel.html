@@ -69,8 +69,35 @@
 
   <p class="status-line" data-status-line aria-live="polite">
     @if (summary(); as s) {
+      <!--
+        Which checkout, and where in it. The panel only exists for a
+        repository, so this leads the line rather than trailing it: a branch
+        name, or — on a detached HEAD, where git has no name to give — the
+        commit, in git's own phrasing. One of the two is always there; a
+        blank here would be the panel declining to say where it is reading.
+      -->
       @if (s.branch; as branch) {
-        <span class="branch">{{ branch }}</span>
+        <span class="branch" data-branch>
+          {{ branch }}
+          @if (s.head; as head) {
+            <span class="head">{{ head }}</span>
+          }
+        </span>
+      } @else if (s.head; as head) {
+        <span class="branch detached" data-branch>detached at {{ head }}</span>
+      } @else {
+        <!-- A branch with no commit yet: named nowhere, so say that much. -->
+        <span class="branch detached" data-branch>no commit yet</span>
+      }
+      @if (s.ahead || s.behind) {
+        <span class="tracking">
+          @if (s.ahead) {
+            ahead {{ s.ahead }}
+          }
+          @if (s.behind) {
+            behind {{ s.behind }}
+          }
+        </span>
       }
       <!-- git's own words for git's own states, and counts: data readouts, not product copy. -->
       <span [attr.data-git]="selectedGit()">

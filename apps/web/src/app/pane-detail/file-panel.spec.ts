@@ -280,6 +280,97 @@ describe('pane-detail/file-panel', () => {
     expect(el.querySelector('[data-path="a.ts"]')).not.toBeNull();
   });
 
+  // --- which checkout, and where in it -----------------------------------
+  //
+  // The panel only exists for a repository, so it always says which ref it
+  // is reading. A blank where the branch goes would be the panel declining
+  // to answer the one question its own existence implies.
+
+  it('leads the status line with the branch and the commit', async () => {
+    const el = await mount(project(true));
+    const branch = el.querySelector('[data-branch]');
+
+    expect(branch?.textContent).toContain('agent/lane-c');
+    expect(branch?.textContent).toContain('abc1234');
+  });
+
+  it('shortens the commit rather than printing the whole object id', async () => {
+    fake.statusResult = ok({
+      checkout_path: '/r',
+      branch: 'main',
+      head: '0123456789abcdef0123456789abcdef01234567',
+      entries: [],
+      truncated: false,
+    });
+    const el = await mount(project(true));
+
+    expect(el.querySelector('[data-branch]')?.textContent).toContain('0123456');
+    expect(text(el)).not.toContain('0123456789abcdef');
+  });
+
+  it('names the commit on a detached head, where git has no branch to give', async () => {
+    fake.statusResult = ok({
+      checkout_path: '/r',
+      branch: null,
+      head: 'deadbee1234',
+      entries: [],
+      truncated: false,
+    });
+    const el = await mount(project(true));
+
+    const branch = el.querySelector('[data-branch]');
+    expect(branch).not.toBeNull();
+    expect(branch?.textContent).toContain('detached at');
+    expect(branch?.textContent).toContain('deadbee');
+  });
+
+  it('still says something on a branch with no commit yet', async () => {
+    fake.statusResult = ok({
+      checkout_path: '/r',
+      branch: null,
+      head: null,
+      entries: [],
+      truncated: false,
+    });
+    const el = await mount(project(true));
+
+    expect(el.querySelector('[data-branch]')?.textContent).toContain('no commit yet');
+  });
+
+  it('reports how far the branch has drifted from its upstream', async () => {
+    fake.statusResult = ok({
+      checkout_path: '/r',
+      branch: 'main',
+      head: 'abc1234',
+      upstream: 'origin/main',
+      ahead: 2,
+      behind: 1,
+      entries: [],
+      truncated: false,
+    });
+    const el = await mount(project(true));
+
+    const tracking = el.querySelector('.tracking')?.textContent ?? '';
+    expect(tracking).toContain('ahead 2');
+    expect(tracking).toContain('behind 1');
+  });
+
+  it('says nothing about tracking on a branch level with its upstream', async () => {
+    fake.statusResult = ok({
+      checkout_path: '/r',
+      branch: 'main',
+      head: 'abc1234',
+      upstream: 'origin/main',
+      ahead: 0,
+      behind: 0,
+      entries: [],
+      truncated: false,
+    });
+    const el = await mount(project(true));
+
+    expect(el.querySelector('.tracking')).toBeNull();
+  });
+
   // --- the repo changing under the panel ---------------------------------
 
   it('keeps the last good status and marks it, rather than blanking it', async () => {

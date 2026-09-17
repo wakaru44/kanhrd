@@ -50,6 +50,7 @@ interface DirState {
 interface StatusView {
   readonly branch: string | null;
   readonly head: string | null;
+  readonly upstream: string | null;
   readonly ahead: number | null;
   readonly behind: number | null;
   readonly entries: readonly RepoStatusEntry[];
@@ -166,7 +167,21 @@ export class FilePanel {
         modified++;
       }
     }
-    return { branch: status.branch, modified, untracked, truncated: status.truncated };
+    return {
+      branch: status.branch,
+      /**
+       * The commit, short. It is the whole of the answer on a detached
+       * HEAD, where there is no branch name to show, and the check against
+       * the branch's own tip everywhere else.
+       */
+      head: status.head === null ? null : status.head.slice(0, 7),
+      upstream: status.upstream,
+      ahead: status.ahead,
+      behind: status.behind,
+      modified,
+      untracked,
+      truncated: status.truncated,
+    };
   });
 
   // ---- tree --------------------------------------------------------------
@@ -361,6 +376,7 @@ export class FilePanel {
     this.status.set({
       branch: data.branch,
       head: data.head,
+      upstream: data.upstream ?? null,
       ahead: data.ahead ?? null,
       behind: data.behind ?? null,
       entries: data.entries,

@@ -52,8 +52,14 @@ test('the panel opens on the pane’s own checkout and reads it', async ({ app }
   // `.git` is never listed.
   await expect(panel.locator('[data-path=".git"]')).toHaveCount(0);
 
-  // `repo.status` reached the status line: a real branch name.
-  await expect(panel.locator('[data-status-line] .branch')).not.toBeEmpty({ timeout: 10_000 });
+  // `repo.status` reached the status line: the real ref this pane is on.
+  const branch = panel.locator('[data-status-line] [data-branch]');
+  await expect(branch).toBeVisible({ timeout: 10_000 });
+  // Whatever branch the run happens to sit on, it is THIS repository's.
+  const head = (await import('node:child_process'))
+    .execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' })
+    .trim();
+  await expect(branch).toContainText(head === 'HEAD' ? 'detached at' : head);
 });
 
 test('a directory is listed only when it is opened, one level at a time', async ({ app }) => {
