@@ -1,0 +1,43 @@
+apps/bridge/src/files/reader.ts
+  s_ff8a98353bc500::t_5213057f1d52b2 274-278
+  s_ff8a98353bc500::t_763f2c414c8388 360-367
+apps/bridge/src/files/reader.test.ts
+  s_ff8a98353bc500::t_754e126901475c 302-314
+openspec/changes/fix-repo-diff-index-write/proposal.md
+  s_843edf1ad71a78::t_7669ba037ee2ae 1-58
+openspec/changes/fix-repo-diff-index-write/.openspec.yaml
+  s_ff8a98353bc500::t_400ae0ccfa274a 1-2
+openspec/changes/fix-repo-diff-index-write/README.md
+  s_ff8a98353bc500::t_400ae0ccfa274a 1-3
+openspec/specs/repo-file-reads/spec.md
+  s_ff8a98353bc500::t_c03bf8e0edda38 35-39,46-57,205-208,223-227
+  s_ff8a98353bc500::t_4d6c85e95e4d2a 228
+openspec/changes/fix-repo-diff-index-write/specs/repo-file-reads/spec.md
+  s_843edf1ad71a78::t_7669ba037ee2ae 1-60
+openspec/changes/fix-repo-diff-index-write/tasks.md
+  s_843edf1ad71a78::t_7669ba037ee2ae 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bb8bb7cc20d2cd8c75b05429d64e1108c8759164",
+  "prompts": {},
+  "sessions": {
+    "s_843edf1ad71a78": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19d80e2a-c4af-4ae7-a6c0-62288609b7c9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    },
+    "s_ff8a98353bc500": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7e29d08e-f8a1-47d9-acc8-8e966d495266",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
