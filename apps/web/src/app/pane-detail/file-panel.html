@@ -18,8 +18,43 @@
     }
   </form>
 
-  <div class="panel-body" [attr.data-layout]="layout()">
-    @if (layout() === 'single') {
+  <!--
+    The tree's own bar. The collapse control persists so there is a way
+    back; the filter lives WITH the tree and goes away with it, because a
+    filter over a list that is not on screen is a setting with no subject.
+  -->
+  <div class="tree-bar">
+    <button
+      type="button"
+      class="tree-toggle"
+      data-tree-toggle
+      [attr.aria-expanded]="treeOpen()"
+      aria-controls="file-tree"
+      (click)="toggleTree()"
+    >
+      <svg lucideChevronRight class="icon" [class.open]="treeOpen()" aria-hidden="true"></svg>
+      {{ copy.files.tree }}
+    </button>
+
+    @if (treeOpen()) {
+      <button
+        type="button"
+        class="filter-toggle"
+        data-changed-filter
+        [class.active]="changedOnly()"
+        [attr.aria-pressed]="changedOnly()"
+        (click)="toggleChangedOnly()"
+      >
+        <svg lucideFileDiff class="icon" aria-hidden="true"></svg>
+        {{ copy.files.changedOnly }}
+      </button>
+      <!-- A count, not copy: how many rows the filter has to show. -->
+      <span class="changed-count" data-changed-count>{{ changedCount() }}</span>
+    }
+  </div>
+
+  <div class="panel-body" [attr.data-layout]="treeOpen() ? layout() : 'viewer-only'">
+    @if (treeOpen() && layout() === 'single') {
       <div class="segmented surfaces" role="tablist" [attr.aria-label]="copy.files.surface">
         <button
           type="button"
@@ -46,16 +81,27 @@
       </div>
     }
 
-    @if (layout() === 'side-by-side' || surface() === 'browser') {
-      <app-file-tree
-        class="browser"
-        [rows]="rows()"
-        [selected]="selected()"
-        (toggled)="toggleDir($event)"
-        (opened)="openFile($event)"
-      />
+    @if (treeOpen() && (layout() === 'side-by-side' || surface() === 'browser')) {
+      @if (filteredEmpty()) {
+        <!-- An empty result, with the next step rather than a blank column. -->
+        <div class="tree-empty" id="file-tree" role="status">
+          <p class="state-line">{{ copy.files.nothingChanged }}</p>
+          <button type="button" class="retry" data-show-every-file (click)="showEveryFile()">
+            {{ copy.files.showEveryFile }}
+          </button>
+        </div>
+      } @else {
+        <app-file-tree
+          id="file-tree"
+          class="browser"
+          [rows]="rows()"
+          [selected]="selected()"
+          (toggled)="toggleDir($event)"
+          (opened)="openFile($event)"
+        />
+      }
     }
-    @if (layout() === 'side-by-side' || surface() === 'viewer') {
+    @if (!treeOpen() || layout() === 'side-by-side' || surface() === 'viewer') {
       <app-file-view
         class="viewer"
         [path]="selected()"

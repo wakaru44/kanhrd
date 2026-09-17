@@ -11,7 +11,13 @@ import {
 } from '@angular/core';
 import type { Pane, RepoStatusEntry, RepoTreeEntry } from '@kanhrd/schema';
 import { COPY, fill } from '../shared/copy';
-import { LucideRefreshCw, LucideTriangleAlert, LucideUnplug } from '../shared/icons';
+import {
+  LucideChevronRight,
+  LucideFileDiff,
+  LucideRefreshCw,
+  LucideTriangleAlert,
+  LucideUnplug,
+} from '../shared/icons';
 import { RepoFilesService, type RepoFilesErrorCode } from '../state/repo-files.service';
 import { parseUnifiedDiff } from './file-diff';
 import { FileTree, type TreeGit, type TreeRow } from './file-tree';
@@ -97,7 +103,15 @@ export function gitByPath(entries: readonly RepoStatusEntry[]): Map<string, Tree
  */
 @Component({
   selector: 'app-file-panel',
-  imports: [FileTree, FileView, LucideRefreshCw, LucideTriangleAlert, LucideUnplug],
+  imports: [
+    FileTree,
+    FileView,
+    LucideChevronRight,
+    LucideFileDiff,
+    LucideRefreshCw,
+    LucideTriangleAlert,
+    LucideUnplug,
+  ],
   templateUrl: './file-panel.html',
   styleUrl: './file-panel.scss',
 })
@@ -189,7 +203,33 @@ export class FilePanel {
   private readonly dirs = signal<ReadonlyMap<string, DirState>>(new Map());
   private readonly expanded = signal<ReadonlySet<string>>(new Set(['']));
 
+  /**
+   * Whether the tree shares the panel at all. Collapsing it gives the whole
+   * panel to the viewer, at every width — the operator reading a long diff
+   * wants the columns, not the file list they already used.
+   */
+  protected readonly treeOpen = signal(true);
+
+  /**
+   * Show only what git reports against HEAD. This is the question the panel
+   * exists for — what did the agent touch — so it is one toggle, not a menu.
+   *
+   * Filtered, the tree is a FLAT list straight from `repo.status`: a changed
+   * file three directories down is the thing being looked for, and making
+   * the operator expand their way to it would be the tree's answer, not the
+   * filter's. It also costs no `repo.tree` call at all.
+   */
+  protected readonly changedOnly = signal(false);
+
+  /** Entries git reports as changed or untracked, deepest path last. */
+  private readonly changedEntries = computed(() =>
+    [...(this.status()?.entries ?? [])].sort((a, b) => a.path.localeCompare(b.path))
+  );
+
   protected readonly rows = computed<readonly TreeRow[]>(() => {
+    if (this.changedOnly()) {
+      return this.changedRows();
+    }
     const dirs = this.dirs();
     const expanded = this.expanded();
     const git = this.git();
@@ -243,6 +283,67 @@ export class FilePanel {
     walk('', 0);
     return rows;
   });
+
+  /**
+   * The filtered list. git's trailing `/` on an untracked directory is what
+   * says it is one; the full path is the row's label, because a bare
+   * basename in a flat list names nothing.
+   */
+  private changedRows(): readonly TreeRow[] {
+    const git = this.git();
+    const rows: TreeRow[] = this.changedEntries().map((entry) => {
+      const path = entry.path.replace(/\/$/, '');
+      return {
+        kind: 'entry' as const,
+        path,
+        name: path,
+        type: entry.path.endsWith('/') ? ('directory' as const) : ('file' as const),
+        depth: 0,
+        open: false,
+        loading: false,
+        ignored: false,
+        git: git.get(path) ?? 'modified',
+      };
+    });
+    if (this.status()?.truncated) {
+      rows.push({
+        kind: 'note',
+        id: 'status:truncated',
+        depth: 0,
+        text: COPY.files.statusTruncated,
+      });
+    }
+    return rows;
+  }
+
+  /** How many rows the filter is showing — the count beside its toggle. */
+  protected readonly changedCount = computed(() => this.changedEntries().length);
+
+  /**
+   * A clean repo with the filter on is an empty RESULT, not an empty panel:
+   * it gets a stated reason and the way out of it
+   * (docs/UX-GUIDELINES.md, "empty states are next steps").
+   */
+  protected readonly filteredEmpty = computed(
+    () => this.changedOnly() && this.status() !== null && this.changedCount() === 0
+  );
+
+  protected toggleTree(): void {
+    this.treeOpen.set(!this.treeOpen());
+  }
+
+  protected toggleChangedOnly(): void {
+    this.changedOnly.set(!this.changedOnly());
+  }
+
+  /** Leaving the filter for the tree reveals whatever was selected in it. */
+  protected async showEveryFile(): Promise<void> {
+    this.changedOnly.set(false);
+    const path = this.selected();
+    if (path) {
+      await this.reveal(path);
+    }
+  }
 
   // ---- viewer ------------------------------------------------------------
 
@@ -333,6 +434,8 @@ export class FilePanel {
     this.goto.set('');
     this.gotoError.set(null);
     this.surface.set('browser');
+    this.treeOpen.set(true);
+    this.changedOnly.set(false);
   }
 
   /**
@@ -423,6 +526,19 @@ export class FilePanel {
   // ---- interactions ------------------------------------------------------
 
   protected toggleDir(path: string): void {
+    // In the flat filtered list there is nothing to expand in place: an
+    // untracked directory is a row there, and opening it means going back to
+    // the tree at that directory.
+    if (this.changedOnly()) {
+      this.changedOnly.set(false);
+      void this.reveal(path).then(() => {
+        this.expanded.update((set) => new Set(set).add(path));
+        if (!this.dirs().has(path)) {
+          void this.loadDir(path);
+        }
+      });
+      return;
+    }
     const open = this.expanded().has(path);
     this.expanded.update((set) => {
       const next = new Set(set);

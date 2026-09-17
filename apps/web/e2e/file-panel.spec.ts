@@ -154,6 +154,61 @@ test('the split is draggable by keyboard and survives a reload', async ({ app })
   });
 });
 
+test('the tree collapses away, taking its filter and leaving the viewer', async ({ app }) => {
+  await openPane(app);
+  await app.locator('[data-panel-toggle]').click();
+  const panel = app.locator('app-file-panel');
+  await expect(panel.locator('[data-path="apps"]')).toBeVisible({ timeout: 10_000 });
+  await expect(panel.locator('[data-changed-filter]')).toBeVisible();
+
+  await panel.locator('[data-tree-toggle]').click();
+
+  await expect(panel.locator('app-file-tree')).toHaveCount(0);
+  await expect(panel.locator('[data-changed-filter]')).toHaveCount(0);
+  await expect(panel.locator('app-file-view')).toBeVisible();
+  // The way back is still there.
+  await expect(panel.locator('[data-tree-toggle]')).toHaveAttribute('aria-expanded', 'false');
+
+  await panel.locator('[data-tree-toggle]').click();
+  await expect(panel.locator('app-file-tree')).toBeVisible();
+});
+
+test('the changed filter shows exactly what git reports, and agrees on the count', async ({
+  app,
+}) => {
+  await openPane(app);
+  await app.locator('[data-panel-toggle]').click();
+  const panel = app.locator('app-file-panel');
+  await expect(panel.locator('[data-path="apps"]')).toBeVisible({ timeout: 10_000 });
+
+  // git's own answer for this checkout, resolved the way repo.status does.
+  const porcelain = (await import('node:child_process'))
+    .execSync('git status --porcelain=v2 -z --untracked-files=normal', { encoding: 'buffer' })
+    .toString('utf8');
+  const expected = porcelain.split('\0').filter((line) => /^[12u?] /.test(line)).length;
+
+  await expect(panel.locator('[data-changed-count]')).toHaveText(String(expected));
+
+  await panel.locator('[data-changed-filter]').click();
+  await expect(panel.locator('[data-changed-filter]')).toHaveAttribute('aria-pressed', 'true');
+
+  if (expected === 0) {
+    // A clean checkout is an empty RESULT, with the way out of it.
+    await expect(panel.locator('[data-show-every-file]')).toBeVisible();
+  } else {
+    const rows = panel.locator('app-file-tree [data-path]');
+    await expect(rows).toHaveCount(expected);
+    // Flat, and every row is something git named — never a clean directory.
+    await expect(panel.locator('[data-path="apps"]')).toHaveCount(0);
+    await panel
+      .locator('[data-show-every-file]')
+      .or(panel.locator('[data-changed-filter]'))
+      .first()
+      .click();
+    await expect(panel.locator('[data-path="apps"]')).toBeVisible();
+  }
+});
+
 test('the key bar keeps its place while the panel has focus', async ({ app }) => {
   await openPane(app);
   const keyBar = app.locator('app-key-bar');

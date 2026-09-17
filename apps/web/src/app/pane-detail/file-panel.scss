@@ -56,6 +56,59 @@
   overflow-wrap: anywhere;
 }
 
+/* The tree's collapse control, its filter, and the filter's count. */
+.tree-bar {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border-block-end: var(--elev-1);
+  font-size: var(--fs-caption);
+}
+
+.tree-toggle,
+.filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: var(--sp-6);
+  padding: 0 var(--sp-2);
+  border: var(--elev-3);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ink);
+  }
+}
+
+.tree-toggle .icon {
+  transition: transform var(--motion-fast) var(--ease-out);
+
+  &.open {
+    transform: rotate(90deg);
+  }
+}
+
+/* A pressed filter is a filled chip, not a colour swap on the label. */
+.filter-toggle.active {
+  border-color: var(--ochre-line);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font-weight: var(--fw-semi);
+}
+
+.changed-count {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-mute);
+}
+
 .panel-body {
   flex: 1;
   min-height: 0;
@@ -67,10 +120,27 @@
     grid-template-rows: minmax(0, 1fr);
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
 
-    .browser {
+    .browser,
+    .tree-empty {
       border-inline-end: var(--elev-1);
     }
   }
+
+  /* Tree collapsed: the viewer has the panel, at every width. */
+  &[data-layout='viewer-only'] {
+    grid-template-rows: minmax(0, 1fr);
+  }
+}
+
+.tree-empty {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
+  font-family: var(--font-ui);
 }
 
 .segmented {

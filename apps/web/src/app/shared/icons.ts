@@ -1,5 +1,6 @@
 import {
   LucideArrowDown,
+  LucideFileDiff,
   LucideArrowLeft,
   LucideArrowRight,
   LucideCheck,
@@ -24,7 +25,7 @@ import {
 } from '@lucide/angular';
 
 /**
- * The app's icon set: the twenty-two `@lucide/angular` components pinned by
+ * The app's icon set: the twenty-three `@lucide/angular` components pinned by
  * the icon list in `docs/DESIGN-SYSTEM.md`. Components import from here,
  * never from `@lucide/angular` directly, so the sanctioned set is one
  * import away and one grep wide.
@@ -81,6 +82,8 @@ export {
   LucideSquareSplitHorizontal,
   /** pane whose session has ended — `svg[lucideSunset]` */
   LucideSunset,
+  /** changed-files-only filter in the file panel — `svg[lucideFileDiff]` */
+  LucideFileDiff,
 };
 
 /**
@@ -111,12 +114,13 @@ export const KANHRD_ICONS = [
   LucideGalleryHorizontal,
   LucideSquareSplitHorizontal,
   LucideSunset,
+  LucideFileDiff,
 ] as const;
 
 /**
- * The set is twenty-two icons. A twenty-third is a change to
+ * The set is twenty-three icons. A twenty-fourth is a change to
  * `docs/DESIGN-SYSTEM.md` first — this line breaks the build until the
  * count here is deliberately updated to match.
  */
-const ICON_COUNT: 22 = KANHRD_ICONS.length;
+const ICON_COUNT: 23 = KANHRD_ICONS.length;
 void ICON_COUNT;

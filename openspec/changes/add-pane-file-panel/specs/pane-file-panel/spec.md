@@ -105,6 +105,62 @@ short list.
 - **THEN** it is listed as a directory, marked ignored, and its contents are
   requested only if the operator expands it
 
+### Requirement: The tree collapses, and the filter goes with it
+
+The panel SHALL offer a control that collapses the tree at any width, giving
+the whole panel body to the viewer, and SHALL keep that control on screen
+while collapsed so the tree can be brought back. The changed-only filter
+SHALL be rendered only while the tree is, because a filter over a list that
+is not on screen is a setting with no subject; collapsing SHALL NOT reset
+what the filter was set to.
+
+#### Scenario: Collapsing with the filter on
+
+- **WHEN** the operator turns the filter on and then collapses the tree
+- **THEN** the tree, the filter control and its count are all gone, the
+  viewer has the panel, and re-opening the tree shows the filter still on
+
+### Requirement: One toggle shows only what git reports
+
+The panel SHALL offer a single toggle that narrows the tree to the paths
+`repo.status` reports as changed or untracked, marked `LucideFileDiff`, with
+a count of the rows it has to show beside it. Filtered, the panel SHALL
+render a FLAT list of those paths, each labelled with its whole
+checkout-relative path, and SHALL issue no `repo.tree` request to build it.
+A filtered row for a directory SHALL return the operator to the tree at that
+directory rather than expanding in place.
+
+#### Scenario: The filter costs no request
+
+- **WHEN** the operator turns the filter on
+- **THEN** the rows come from the status already polled, and no further
+  `repo.tree` call is made
+
+#### Scenario: A changed file three directories down
+
+- **WHEN** `repo.status` reports `apps/web/src/app/x.ts` as modified
+- **THEN** the filtered list holds one row labelled with that whole path,
+  with no directories to expand on the way to it
+
+### Requirement: A clean repo with the filter on is an empty result
+
+When the filter is on, a status has landed and it named nothing, the panel
+SHALL state that nothing changed and SHALL offer the control that leaves the
+filter — never an empty tree, and never the message before the first status
+has arrived.
+
+#### Scenario: A clean checkout
+
+- **WHEN** the operator turns the filter on against a checkout with no
+  changes
+- **THEN** the panel says nothing changed and offers a control that shows
+  every file again
+
+#### Scenario: Status has not landed yet
+
+- **WHEN** the filter is on and no `repo.status` has succeeded
+- **THEN** the panel does not claim that nothing changed
+
 ### Requirement: Git state is a letter and a colour, never a colour alone
 
 Every entry the panel marks as changed or untracked SHALL carry a text

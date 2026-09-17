@@ -37,20 +37,32 @@
       focus; no second reserve mechanism.
 - [x] 3.4 Panel stops polling on collapse, destroy, `unavailable` and `gone`.
 
-## 4. Copy
+## 4. The tree bar
 
-- [x] 4.1 Every new string in `shared/copy.ts` under a `files` group.
-- [x] 4.2 The same strings, byte-for-byte, in the approved-copy table in
+- [x] 4.1 A collapse control for the tree, at any width, persisting while
+      collapsed; the viewer takes the whole body.
+- [x] 4.2 A changed-only filter marked `LucideFileDiff`, with a count,
+      rendered only while the tree is and never reset by collapsing.
+- [x] 4.3 Filtered, a flat list from `repo.status` with whole paths and no
+      `repo.tree` call; a directory row returns to the tree there.
+- [x] 4.4 A clean repo with the filter on states it and offers the way out.
+- [x] 4.5 `LucideFileDiff` added to `icons.ts`, its spec counts and the
+      `docs/DESIGN-SYSTEM.md` icon table, with the rationale.
+
+## 5. Copy
+
+- [x] 5.1 Every new string in `shared/copy.ts` under a `files` group.
+- [x] 5.2 The same strings, byte-for-byte, in the approved-copy table in
       `docs/BRAND.md`.
 
-## 5. Gates
+## 6. Gates
 
-- [x] 5.1 Unit specs: split maths, markdown blocks, the service's error
+- [x] 6.1 Unit specs: split maths, markdown blocks, the service's error
       mapping, the tree's lazy expansion, each panel state, the toggle's
       three conditions.
-- [x] 5.2 Style lint: the new components join the population; no raw hex,
+- [x] 6.2 Style lint: the new components join the population; no raw hex,
       px or rem.
-- [x] 5.3 Labs boundary still clean — nothing product imports `labs/`.
-- [x] 5.4 e2e against an isolated `kanhrd-test-*` session on port 5273.
-- [x] 5.5 `make build`, typecheck, web + bridge unit tests,
+- [x] 6.3 Labs boundary still clean — nothing product imports `labs/`.
+- [x] 6.4 e2e against an isolated `kanhrd-test-*` session on port 5273.
+- [x] 6.5 `make build`, typecheck, web + bridge unit tests,
       `pre-commit run --all-files`, `openspec validate --strict`.

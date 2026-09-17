@@ -181,6 +181,10 @@ product copy and stay in the template.
 | `files.label`                         | `files`                                                                                                                                       |
 | `files.toggleIn`                      | `files in {repo}`                                                                                                                             |
 | `files.viewer`                        | `viewer`                                                                                                                                      |
+| `files.tree`                          | `tree`                                                                                                                                        |
+| `files.changedOnly`                   | `changed`                                                                                                                                     |
+| `files.nothingChanged`                | `nothing changed in this checkout.`                                                                                                           |
+| `files.showEveryFile`                 | `show every file`                                                                                                                             |
 | `files.modeSource`                    | `source`                                                                                                                                      |
 | `files.modeDiff`                      | `diff`                                                                                                                                        |
 | `files.modeRendered`                  | `rendered`                                                                                                                                    |

@@ -280,6 +280,172 @@ describe('pane-detail/file-panel', () => {
     expect(el.querySelector('[data-path="a.ts"]')).not.toBeNull();
   });
 
+  // --- the tree's collapse control, and the changed-only filter ----------
+
+  function changedStatus() {
+    return ok({
+      checkout_path: '/r',
+      branch: 'main',
+      head: 'abc1234',
+      entries: [
+        {
+          path: 'apps/web/src/app/pane-detail/file-panel.ts',
+          kind: 'changed',
+          index: '.',
+          worktree: 'M',
+        },
+        { path: 'docs/BRAND.md', kind: 'changed', index: 'M', worktree: '.' },
+        { path: 'scratch/', kind: 'untracked', index: '?', worktree: '?' },
+      ] as RepoStatusEntry[],
+      truncated: false,
+    });
+  }
+
+  function click(el: HTMLElement, selector: string) {
+    el.querySelector<HTMLButtonElement>(selector)!.click();
+    fixture.detectChanges();
+  }
+
+  it('shows the tree expanded, with the filter off and a live count', async () => {
+    fake.statusResult = changedStatus();
+    fake.treeResults.set(
+      '',
+      ok({ path: '', entries: [entry('apps', 'directory')], truncated: false })
+    );
+    const el = await mount(project(true));
+
+    expect(el.querySelector('[data-tree-toggle]')?.getAttribute('aria-expanded')).toBe('true');
+    expect(el.querySelector('[data-changed-filter]')?.getAttribute('aria-pressed')).toBe('false');
+    expect(el.querySelector('[data-changed-count]')?.textContent?.trim()).toBe('3');
+    expect(el.querySelector('app-file-tree')).not.toBeNull();
+  });
+
+  it('collapsing the tree gives the panel to the viewer and takes the filter with it', async () => {
+    fake.statusResult = changedStatus();
+    const el = await mount(project(true));
+
+    click(el, '[data-tree-toggle]');
+
+    expect(el.querySelector('[data-tree-toggle]')?.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelector('app-file-tree')).toBeNull();
+    // The filter is a setting with no subject once the list is gone.
+    expect(el.querySelector('[data-changed-filter]')).toBeNull();
+    expect(el.querySelector('[data-changed-count]')).toBeNull();
+    // ...and the viewer is there at this width, which showed one surface before.
+    expect(el.querySelector('app-file-view')).not.toBeNull();
+    expect(el.querySelector('[data-surface="browser"]')).toBeNull();
+    // The way back is still on screen.
+    expect(el.querySelector('[data-tree-toggle]')).not.toBeNull();
+  });
+
+  it('hides the filter whichever way it was set when the tree goes', async () => {
+    fake.statusResult = changedStatus();
+    const el = await mount(project(true));
+
+    click(el, '[data-changed-filter]');
+    expect(el.querySelector('[data-changed-filter]')?.getAttribute('aria-pressed')).toBe('true');
+
+    click(el, '[data-tree-toggle]');
+    expect(el.querySelector('[data-changed-filter]')).toBeNull();
+
+    // Re-opening restores the tree with the filter still on: the toggle
+    // hides the control, it does not silently reset what it was set to.
+    click(el, '[data-tree-toggle]');
+    expect(el.querySelector('[data-changed-filter]')?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('filters to a flat list of what git reports, and asks for no directory', async () => {
+    fake.statusResult = changedStatus();
+    fake.treeResults.set(
+      '',
+      ok({ path: '', entries: [entry('apps', 'directory')], truncated: false })
+    );
+    const el = await mount(project(true));
+    const treeCallsBefore = fake.treeCalls.length;
+
+    click(el, '[data-changed-filter]');
+
+    const rows = [...el.querySelectorAll('[data-path]')].map((r) => r.getAttribute('data-path'));
+    expect(rows).toEqual([
+      'apps/web/src/app/pane-detail/file-panel.ts',
+      'docs/BRAND.md',
+      'scratch',
+    ]);
+    // The whole path is the label: a bare basename names nothing in a flat list.
+    expect(el.textContent).toContain('apps/web/src/app/pane-detail/file-panel.ts');
+    // Straight from repo.status — not one extra tree request.
+    expect(fake.treeCalls.length).toBe(treeCallsBefore);
+  });
+
+  it('keeps the git letter on a filtered row, so it is not colour alone', async () => {
+    fake.statusResult = changedStatus();
+    const el = await mount(project(true));
+    click(el, '[data-changed-filter]');
+
+    expect(el.querySelector('[data-path="docs/BRAND.md"]')?.textContent).toContain('M');
+    expect(el.querySelector('[data-path="scratch"]')?.textContent).toContain('U');
+  });
+
+  it('states an empty result on a clean repo, with the way out of it', async () => {
+    const el = await mount(project(true));
+    click(el, '[data-changed-filter]');
+
+    expect(text(el)).toContain(COPY.files.nothingChanged);
+    const out = el.querySelector<HTMLButtonElement>('[data-show-every-file]');
+    expect(out?.textContent).toContain(COPY.files.showEveryFile);
+    // Not a blank column: the tree is not rendered empty behind the message.
+    expect(el.querySelector('app-file-tree')).toBeNull();
+
+    out!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-changed-filter]')?.getAttribute('aria-pressed')).toBe('false');
+    expect(el.querySelector('app-file-tree')).not.toBeNull();
+  });
+
+  it('does not claim an empty result before the first status has landed', async () => {
+    fake.statusResult = err('git_failed', 'not yet');
+    const el = await mount(project(true));
+    click(el, '[data-changed-filter]');
+
+    expect(text(el)).not.toContain(COPY.files.nothingChanged);
+  });
+
+  it('says so when the filtered list is the part the bridge would count', async () => {
+    fake.statusResult = ok({
+      checkout_path: '/r',
+      branch: 'main',
+      head: 'abc1234',
+      entries: [{ path: 'a.ts', kind: 'changed', index: '.', worktree: 'M' }] as RepoStatusEntry[],
+      truncated: true,
+    });
+    const el = await mount(project(true));
+    click(el, '[data-changed-filter]');
+
+    expect(text(el)).toContain(COPY.files.statusTruncated);
+  });
+
+  it('opening a filtered directory row goes back to the tree at that directory', async () => {
+    fake.statusResult = changedStatus();
+    fake.treeResults.set(
+      '',
+      ok({ path: '', entries: [entry('scratch', 'directory')], truncated: false })
+    );
+    fake.treeResults.set(
+      'scratch',
+      ok({ path: 'scratch', entries: [entry('n.txt', 'file')], truncated: false })
+    );
+    const el = await mount(project(true));
+    click(el, '[data-changed-filter]');
+
+    el.querySelector<HTMLButtonElement>('[data-path="scratch"]')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-changed-filter]')?.getAttribute('aria-pressed')).toBe('false');
+    expect(fake.treeCalls).toContain('scratch');
+  });
+
   // --- which checkout, and where in it -----------------------------------
   //
   // The panel only exists for a repository, so it always says which ref it

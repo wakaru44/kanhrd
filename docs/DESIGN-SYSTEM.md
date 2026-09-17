@@ -420,6 +420,7 @@ purpose:
 | `LucideGalleryHorizontal`     | `svg[lucideGalleryHorizontal]`     | card switcher on the terminal bar                   |
 | `LucideSquareSplitHorizontal` | `svg[lucideSquareSplitHorizontal]` | next-card button on the terminal bar                |
 | `LucideSunset`                | `svg[lucideSunset]`                | pane whose session has ended (gone state)           |
+| `LucideFileDiff`              | `svg[lucideFileDiff]`              | changed-files-only filter in the file panel         |
 
 Twenty-two icons. Adding a twenty-third is a change to this document first.
 
@@ -437,6 +438,13 @@ another tab or workspace is. It stays visually distinct from the straight
 which matters, because cards genuinely ARE draggable into parked columns,
 so a four-way `LucideMove` cross would have promised dragging where the
 control opens a menu.
+
+`LucideFileDiff` was added by maintainer decision (2026-09-17, for the
+file panel's changed-only filter). It is the only glyph in the set that
+names a _diff_, which is what the filter selects on — the paths
+`repo.status` reports against HEAD. `LucideFilter`'s funnel was rejected for
+saying only that a list is filtered, without saying by what; `LucideGitCompare`
+reads as an action on two refs rather than a state of this one.
 
 `LucideSunset` was added by maintainer decision (2026-09-13, see
 `openspec/changes/add-pane-gone-state`). A sunset is a natural close

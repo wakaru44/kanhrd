@@ -415,6 +415,11 @@ export const COPY = {
     /** The toggle's accessible name when the pane has a repo to name. */
     toggleIn: 'files in {repo}',
     viewer: 'viewer',
+    /** The tree's own collapse control, and the filter that narrows it. */
+    tree: 'tree',
+    changedOnly: 'changed',
+    nothingChanged: 'nothing changed in this checkout.',
+    showEveryFile: 'show every file',
     modeSource: 'source',
     modeDiff: 'diff',
     modeRendered: 'rendered',
