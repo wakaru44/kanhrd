@@ -29,7 +29,10 @@ const TIMEOUT_MS = 15_000;
  * Global options on every invocation. Each one exists to keep a READ a read:
  *
  *   - `--no-optional-locks` (plus `GIT_OPTIONAL_LOCKS=0`): `git status`
- *     otherwise refreshes and rewrites the index;
+ *     otherwise refreshes and rewrites the index. It does NOT cover every
+ *     command: `git diff` refreshes the index behind its own back and never
+ *     consults the flag, so the diff path uses the `diff-index` plumbing
+ *     instead — see `RepoFileReader.diff`;
  *   - `--literal-pathspecs` (added per call, see `literalPathspecs`): a file
  *     named `:(glob)*` is that file, not magic;
  *   - `core.fsmonitor=false`: a repository's own config can name an fsmonitor

@@ -8,6 +8,7 @@ import {
   symlinkSync,
   truncateSync,
   unlinkSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -249,18 +250,6 @@ describe('repo.status', () => {
     ]);
   });
 
-  it('does not rewrite the index', async () => {
-    // Touching a tracked file makes the index stale; a status that refreshed
-    // it would write `.git/index`.
-    writeFileSync(join(repo, 'with space.txt'), 'spaced\n');
-    const before = statSync(join(repo, '.git', 'index')).mtimeMs;
-    await new Promise((r) => setTimeout(r, 20));
-    await reader.status(repo);
-    await reader.diff(repo, 'with space.txt');
-    await reader.tree(repo, '');
-    expect(statSync(join(repo, '.git', 'index')).mtimeMs).toBe(before);
-  });
-
   it('says not_a_repository outside git', async () => {
     const plain = join(sandbox, 'plain');
     mkdirSync(plain, { recursive: true });
@@ -345,5 +334,53 @@ describe('repo.diff', () => {
   it('refuses a missing path and a directory', async () => {
     expect(await refusal(reader.diff(repo, 'never-existed.txt'))).toBe('not_found');
     expect(await refusal(reader.diff(repo, 'src'))).toBe('not_a_file');
+  });
+});
+
+describe('a read never writes the repository', () => {
+  // The trap: a TRACKED file whose content still matches HEAD but whose mtime
+  // is newer. git's stat cache is stale, so porcelain `git diff` "helpfully"
+  // refreshes it and writes `.git/index` — on the operator's own checkout,
+  // while their agents are working in it.
+  //
+  // Setting the mtime forward rather than rewriting the file puts it outside
+  // git's racy-timestamp window, which is what made this fire on roughly one
+  // run in two instead of every run. Each method is asserted on its own so a
+  // regression names the culprit instead of only saying "something wrote".
+  const index = join(repo, '.git', 'index');
+
+  async function leavesTheIndexAlone(call: () => Promise<unknown>): Promise<void> {
+    writeFileSync(join(repo, 'with space.txt'), 'spaced\n');
+    const ahead = new Date(Date.now() + 10_000);
+    utimesSync(join(repo, 'with space.txt'), ahead, ahead);
+    const before = statSync(index).mtimeMs;
+    await call();
+    expect(statSync(index).mtimeMs).toBe(before);
+  }
+
+  it('repo.status leaves the index alone', async () => {
+    await leavesTheIndexAlone(() => reader.status(repo));
+  });
+
+  it('repo.diff leaves the index alone on the stale-stat file itself', async () => {
+    await leavesTheIndexAlone(async () => {
+      expect(await reader.diff(repo, 'with space.txt')).toMatchObject({ change: 'unchanged' });
+    });
+  });
+
+  it('repo.diff leaves the index alone for a modified file', async () => {
+    await leavesTheIndexAlone(() => reader.diff(repo, 'src/app.ts'));
+  });
+
+  it('repo.diff leaves the index alone for an untracked file', async () => {
+    await leavesTheIndexAlone(() => reader.diff(repo, 'new.txt'));
+  });
+
+  it('repo.tree leaves the index alone', async () => {
+    await leavesTheIndexAlone(() => reader.tree(repo, ''));
+  });
+
+  it('file.read leaves the index alone', async () => {
+    await leavesTheIndexAlone(() => reader.read(repo, 'with space.txt'));
   });
 });

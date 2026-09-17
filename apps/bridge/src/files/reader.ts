@@ -260,6 +260,20 @@ export class RepoFileReader {
     }
   }
 
+  /**
+   * Tracked changes go through the `diff-index` PLUMBING, not `git diff`.
+   *
+   * `git diff` ends by refreshing the index's stat cache and writing
+   * `.git/index` whenever a path's stat no longer matches but its content
+   * does — a tracked file saved without a change is exactly that. That write
+   * is not guarded by `--no-optional-locks` or `GIT_OPTIONAL_LOCKS=0`; git
+   * never consults them there. `diff-index` produces byte-identical output
+   * (porcelain `git diff <tree>` is a wrapper over it) and has no such step,
+   * so a read stays a read on the operator's own checkout.
+   *
+   * The untracked case uses `git diff --no-index`, which compares two paths
+   * with no repository index in play at all.
+   */
   async diff(root: string, path: string): Promise<BridgeMethodResult['repo.diff']> {
     const target = confinePath(root, path);
     if (target.rel === '') throw new RepoFileError('not_a_file', 'the checkout root is not a file');
@@ -268,14 +282,15 @@ export class RepoFileReader {
     }
 
     const base = await this.baseTree(root);
+    // `diff-index`, not `diff`: see this method's doc comment.
     const nameStatus = await this.git(root, [
-      'diff',
-      base,
+      'diff-index',
       '--name-status',
       '-z',
       '--no-renames',
       '--no-ext-diff',
       '--no-textconv',
+      base,
       '--',
       target.rel,
     ]);
@@ -321,7 +336,7 @@ export class RepoFileReader {
     } else {
       output = await this.git(
         root,
-        ['diff', base, ...diffFlags, '--', target.rel],
+        ['diff-index', '--patch', ...diffFlags, base, '--', target.rel],
         undefined,
         this.limits.diffMaxBytes
       );
