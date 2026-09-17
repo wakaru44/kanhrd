@@ -1,0 +1,82 @@
+apps/web/src/app/pane-detail/file-panel-split.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 1-67
+apps/web/src/app/pane-detail/file-tree.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 1-67
+apps/web/src/app/shared/copy.ts
+  s_843edf1ad71a78::t_f83d419d84e791 426
+  s_843edf1ad71a78::t_201d0277cc65d7 403-425,427-446
+apps/web/src/app/pane-detail/split-handle.scss
+  s_843edf1ad71a78::t_201d0277cc65d7 1-49
+apps/web/src/app/pane-detail/pane-detail.html
+  s_843edf1ad71a78::t_201d0277cc65d7 96-122,124-143,158-159,211-231
+  s_843edf1ad71a78::t_1ec8870bd8ea35 232-233
+apps/web/src/app/pane-detail/file-diff.spec.ts
+  s_843edf1ad71a78::t_f6863745b27143 18
+  s_843edf1ad71a78::t_201d0277cc65d7 1-17,19-58
+apps/web/src/app/pane-detail/file-view.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 1-108
+apps/web/src/app/pane-detail/file-tree.html
+  s_843edf1ad71a78::t_201d0277cc65d7 1-42
+apps/web/src/app/pane-detail/file-panel-split.spec.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 1-74
+apps/web/src/app/pane-detail/markdown-blocks.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 1-82
+apps/web/src/app/pane-detail/pane-detail.spec.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 5,9,14,664-667,1018-1115,1117-1171,1173-1174
+  s_843edf1ad71a78::t_1ec8870bd8ea35 1175-1176
+  s_843edf1ad71a78::t_f83d419d84e791 1116,1172
+apps/web/src/app/shared/style-lint.spec.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 11-14,116-119,157
+apps/web/src/app/pane-detail/file-view.scss
+  s_843edf1ad71a78::t_201d0277cc65d7 1-224
+apps/web/src/app/pane-detail/split-handle.html
+  s_843edf1ad71a78::t_201d0277cc65d7 1-16
+apps/web/src/app/pane-detail/pane-detail.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 4,32,47-49,108-109,111,430-440,502-567,569-594
+  s_843edf1ad71a78::t_1ec8870bd8ea35 568
+  s_843edf1ad71a78::t_f83d419d84e791 50
+apps/web/src/app/pane-detail/pane-detail.scss
+  s_843edf1ad71a78::t_1ec8870bd8ea35 604-605
+  s_843edf1ad71a78::t_201d0277cc65d7 199-233,317-339,594-603
+apps/web/src/app/pane-detail/file-diff.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 1-57,63-66
+  s_843edf1ad71a78::t_f6863745b27143 58-62
+apps/web/src/app/pane-detail/file-panel.spec.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 1-121,123-185,191-242,247-336
+  s_843edf1ad71a78::t_f6863745b27143 122,186-190,243-246
+docs/BRAND.md
+  s_843edf1ad71a78::t_201d0277cc65d7 181-211
+apps/web/src/app/pane-detail/split-handle.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 1-49
+apps/web/src/app/pane-detail/file-view.html
+  s_843edf1ad71a78::t_201d0277cc65d7 1-149
+apps/web/src/app/pane-detail/file-panel.scss
+  s_843edf1ad71a78::t_201d0277cc65d7 1-234
+apps/web/src/app/pane-detail/file-panel.html
+  s_843edf1ad71a78::t_201d0277cc65d7 1-140
+apps/web/e2e/file-panel.spec.ts
+  s_843edf1ad71a78::t_164c6b5228f8d1 121-125,139-141
+  s_843edf1ad71a78::t_70afea8c10034d 1-120,126-138,142-145,149-162
+  s_843edf1ad71a78::t_f6863745b27143 146-148
+apps/web/src/app/pane-detail/file-tree.scss
+  s_843edf1ad71a78::t_201d0277cc65d7 1-128
+apps/web/src/app/pane-detail/file-panel.ts
+  s_843edf1ad71a78::t_f6863745b27143 30,61,477
+  s_843edf1ad71a78::t_201d0277cc65d7 1-29,31-60,62-476,478-555
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a003e5e23baecfaab57a30a99a38b6d6dcdd1b23",
+  "prompts": {},
+  "sessions": {
+    "s_843edf1ad71a78": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19d80e2a-c4af-4ae7-a6c0-62288609b7c9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
