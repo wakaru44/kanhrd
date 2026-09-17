@@ -1,0 +1,21 @@
+openspec/specs/labs-surface/spec.md
+  s_e655c6279951d4::t_493a905188d333 1-136
+openspec/specs/repo-file-reads/spec.md
+  s_e655c6279951d4::t_493a905188d333 1-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "edccbe4c18c01c162f22f1322eba16d7cff9ce32",
+  "prompts": {},
+  "sessions": {
+    "s_e655c6279951d4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c68c3ef5-5bd2-4c2f-8035-77b0af7dd73b",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
