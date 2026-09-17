@@ -1,0 +1,27 @@
+apps/web/src/app/state/ws-client.spec.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 1-16,18-26
+  s_843edf1ad71a78::t_01bc1690bb1656 17
+apps/web/src/app/state/repo-files.service.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 1-23,26-98
+  s_843edf1ad71a78::t_01bc1690bb1656 24-25
+apps/web/src/app/state/repo-files.service.spec.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 1-138
+apps/web/src/app/state/ws-client.ts
+  s_843edf1ad71a78::t_201d0277cc65d7 17-35,179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ad76215e69bca1bf1b8e7540c6854caa1f3553c8",
+  "prompts": {},
+  "sessions": {
+    "s_843edf1ad71a78": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19d80e2a-c4af-4ae7-a6c0-62288609b7c9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Wakaru Himura <wakaru44@gmail.com>"
+    }
+  }
+}
