@@ -42,6 +42,18 @@ help: ## Show this help.
 install: ## Install workspace dependencies (pnpm --frozen-lockfile).
 	pnpm install --frozen-lockfile
 
+.PHONY: install-herdr
+install-herdr: ## Install herdr with the official installer (skips if present; FORCE=1 reinstalls).
+	@if command -v herdr >/dev/null 2>&1 && [ -z "$(FORCE)" ]; then \
+	  printf 'herdr already installed: %s\n' "$$(herdr --version)"; \
+	  printf 're-run with FORCE=1 to reinstall.\n'; \
+	else \
+	  curl -fsSL https://herdr.dev/install.sh | sh; \
+	  command -v herdr >/dev/null 2>&1 \
+	    || { printf 'herdr is not on PATH after install; open a new shell or add its bin dir\n' >&2; exit 1; }; \
+	  herdr --version; \
+	fi
+
 .PHONY: hooks
 hooks: ## Install git-lfs filters and the pre-commit git hooks locally.
 	git lfs install --local --force
