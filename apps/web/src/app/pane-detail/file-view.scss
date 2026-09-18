@@ -126,59 +126,6 @@
   }
 }
 
-.rendered {
-  padding: var(--sp-3) var(--sp-4);
-  max-width: var(--content-max-width);
-  font-family: var(--font-ui);
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
-  color: var(--ink);
-
-  p,
-  ul,
-  ol,
-  pre {
-    margin: 0 0 var(--sp-3);
-  }
-
-  ul,
-  ol {
-    padding-inline-start: var(--sp-6);
-  }
-
-  .h {
-    font-weight: var(--fw-semi);
-    font-size: var(--fs-h3);
-    line-height: var(--lh-h3);
-
-    &[data-level='1'] {
-      font-size: var(--fs-h2);
-      line-height: var(--lh-h2);
-    }
-  }
-
-  code,
-  pre {
-    font-family: var(--font-mono);
-    font-size: var(--fs-small);
-    background: var(--paper-sunk);
-    border-radius: var(--radius-sm);
-  }
-
-  code {
-    padding: 0 var(--sp-1);
-  }
-
-  pre {
-    padding: var(--sp-2) var(--sp-3);
-    overflow-x: auto;
-  }
-
-  strong {
-    font-weight: var(--fw-semi);
-  }
-}
-
 .nothing {
   display: flex;
   flex-wrap: wrap;

@@ -206,6 +206,9 @@ product copy and stay in the template.
 | `files.treeTruncated`                 | `the bridge stopped listing here.`                                                                                                            |
 | `files.statusTruncated`               | `the bridge stopped counting here.`                                                                                                           |
 | `files.diffTruncated`                 | `the bridge cut this diff short.`                                                                                                             |
+| `files.renderedTruncated`             | `rendered the first {lines} lines. the rest is in source.`                                                                                    |
+| `files.imageRemote`                   | `remote image. not loaded.`                                                                                                                   |
+| `files.imageLocal`                    | `image in the checkout. the bridge can't send it yet.`                                                                                        |
 | `files.ignored`                       | `ignored`                                                                                                                                     |
 | `files.goto`                          | `go to path`                                                                                                                                  |
 | `files.gotoPlaceholder`               | `paste a path`                                                                                                                                |

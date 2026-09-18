@@ -88,6 +88,11 @@
                 "glob": "**/*.ts",
                 "input": "src",
                 "output": "__sources__"
+              },
+              {
+                "glob": "**/*.html",
+                "input": "src",
+                "output": "__sources__"
               }
             ],
             "styles": ["src/styles.scss"]

@@ -1,10 +1,9 @@
-import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import type { RepoDiffChange } from '@kanhrd/schema';
 import { COPY, fill } from '../shared/copy';
 import { LucideTriangleAlert } from '../shared/icons';
 import type { DiffLine } from './file-diff';
-import { parseMarkdown } from './markdown-blocks';
+import { MarkdownView } from './markdown/markdown-view';
 
 export type ViewerMode = 'source' | 'diff' | 'rendered';
 
@@ -64,7 +63,7 @@ const DIFF_MARKER: Record<DiffLine['kind'], string> = {
  */
 @Component({
   selector: 'app-file-view',
-  imports: [NgTemplateOutlet, LucideTriangleAlert],
+  imports: [LucideTriangleAlert, MarkdownView],
   templateUrl: './file-view.html',
   styleUrl: './file-view.scss',
 })
@@ -74,6 +73,8 @@ export class FileView {
   readonly diff = input.required<FileDiff>();
   readonly mode = input.required<ViewerMode>();
   readonly modeChange = output<ViewerMode>();
+  /** A checkout path a link in the rendered view named. */
+  readonly pathSelect = output<string>();
 
   protected readonly copy = COPY;
   protected readonly diffMarker = DIFF_MARKER;
@@ -99,9 +100,13 @@ export class FileView {
     return modes.includes(this.mode()) ? this.mode() : modes[0];
   });
 
-  protected readonly blocks = computed(() => {
+  /**
+   * The file as one string, for the renderer. Only ever read inside the
+   * `rendered` branch, so a source or diff view never joins the lines.
+   */
+  protected readonly text = computed(() => {
     const content = this.content();
-    return content.kind === 'text' && content.renderable ? parseMarkdown(content.lines) : [];
+    return content.kind === 'text' ? content.lines.join('\n') : '';
   });
 
   protected readonly failure = (reason: string) => fill(COPY.files.failed, { reason });

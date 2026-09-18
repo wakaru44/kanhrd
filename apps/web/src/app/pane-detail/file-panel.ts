@@ -634,7 +634,20 @@ export class FilePanel {
    */
   protected async submitGoto(event: Event): Promise<void> {
     event.preventDefault();
-    const path = normalizeRepoPath(this.goto());
+    await this.openPath(normalizeRepoPath(this.goto()));
+  }
+
+  /**
+   * A relative link in the rendered view named a file. Following it is the
+   * same act as picking that file in the tree — it stays in the panel, the
+   * URL does not move, and a path that is not there says so where the goto
+   * field's failures already say it.
+   */
+  protected async followPath(path: string): Promise<void> {
+    await this.openPath(normalizeRepoPath(path));
+  }
+
+  private async openPath(path: string): Promise<void> {
     if (!path) {
       return;
     }

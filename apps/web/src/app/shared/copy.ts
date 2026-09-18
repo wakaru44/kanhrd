@@ -441,6 +441,11 @@ export const COPY = {
     treeTruncated: 'the bridge stopped listing here.',
     statusTruncated: 'the bridge stopped counting here.',
     diffTruncated: 'the bridge cut this diff short.',
+    /** The rendered view stops at a byte cap; `source` still has the whole file. */
+    renderedTruncated: 'rendered the first {lines} lines. the rest is in source.',
+    /** An image is never fetched — these two say which reason applies. */
+    imageRemote: 'remote image. not loaded.',
+    imageLocal: "image in the checkout. the bridge can't send it yet.",
     ignored: 'ignored',
     goto: 'go to path',
     gotoPlaceholder: 'paste a path',

@@ -1,0 +1,206 @@
+/* Hairlines over shadows, tokens over values — docs/DESIGN-SYSTEM.md. */
+.md {
+  padding: var(--sp-3) var(--sp-4);
+  max-width: var(--content-max-width);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink);
+
+  p,
+  ul,
+  ol,
+  pre,
+  blockquote,
+  .table-scroll {
+    margin: 0 0 var(--sp-3);
+  }
+
+  ul,
+  ol {
+    padding-inline-start: var(--sp-6);
+  }
+
+  li > ul,
+  li > ol,
+  li > p {
+    margin-block: 0 var(--sp-1);
+  }
+
+  .h {
+    font-weight: var(--fw-semi);
+    font-size: var(--fs-h3);
+    line-height: var(--lh-h3);
+
+    &[data-level='1'] {
+      font-size: var(--fs-h2);
+      line-height: var(--lh-h2);
+    }
+
+    &[data-level='4'],
+    &[data-level='5'],
+    &[data-level='6'] {
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
+      color: var(--ink-soft);
+    }
+  }
+
+  code,
+  pre {
+    font-family: var(--font-mono);
+    font-size: var(--fs-small);
+    background: var(--paper-sunk);
+    border-radius: var(--radius-sm);
+  }
+
+  code {
+    padding: 0 var(--sp-1);
+  }
+
+  pre {
+    padding: var(--sp-2) var(--sp-3);
+    overflow-x: auto;
+
+    code {
+      padding: 0;
+      background: none;
+    }
+  }
+
+  /* Raw HTML from the file. Set apart so it reads as quoted source. */
+  pre.raw {
+    border-inline-start: 2px solid var(--rule-strong);
+  }
+
+  strong {
+    font-weight: var(--fw-semi);
+  }
+
+  blockquote {
+    padding-inline-start: var(--sp-3);
+    border-inline-start: 2px solid var(--rule-strong);
+    color: var(--ink-soft);
+  }
+
+  hr {
+    margin: var(--sp-4) 0;
+    border: 0;
+    border-block-start: var(--elev-1);
+  }
+
+  li.task {
+    list-style: none;
+    margin-inline-start: calc(var(--sp-5) * -1);
+
+    input {
+      margin-inline-end: var(--sp-2);
+      accent-color: var(--ochre);
+    }
+  }
+
+  .footnotes {
+    font-size: var(--fs-small);
+    color: var(--ink-soft);
+  }
+
+  .fnref {
+    font-size: var(--fs-caption);
+    color: var(--ochre-ink);
+  }
+}
+
+/* A wide table scrolls itself rather than widening the panel. */
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+
+th,
+td {
+  padding: var(--sp-1) var(--sp-2);
+  border: var(--elev-1);
+  text-align: start;
+  vertical-align: top;
+
+  &[data-align='center'] {
+    text-align: center;
+  }
+
+  &[data-align='right'] {
+    text-align: end;
+  }
+}
+
+th {
+  font-weight: var(--fw-semi);
+  background: var(--paper-sunk);
+}
+
+/* Links: ochre, underlined — an affordance that survives a colour-blind reader. */
+.link {
+  color: var(--ochre-ink);
+  text-decoration: underline;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* A refused destination: the text stays, and the URL is shown, not hidden. */
+.inert {
+  color: var(--ink-soft);
+  text-decoration: line-through;
+}
+
+.readout {
+  margin-inline-start: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-mute);
+  word-break: break-all;
+}
+
+/* An image is a stated fact about a file that was not fetched. */
+.image {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--sp-1);
+  padding: 0 var(--sp-1);
+  border: var(--elev-1);
+  border-radius: var(--radius-sm);
+  background: var(--paper-sunk);
+
+  .label {
+    font-size: var(--fs-caption);
+    color: var(--ink-mute);
+  }
+
+  .alt {
+    font-size: var(--fs-small);
+  }
+}
+
+.note {
+  margin: 0;
+  padding: var(--sp-1) var(--sp-4) var(--sp-3);
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  color: var(--ink-mute);
+}

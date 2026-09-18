@@ -87,63 +87,26 @@
           }
         </ol>
       } @else if (c.kind === 'text' && effectiveMode() === 'rendered') {
-        <article class="rendered">
-          @for (block of blocks(); track $index) {
-            @switch (block.kind) {
-              @case ('heading') {
-                <p class="h" [attr.data-level]="block.level">
-                  <ng-container *ngTemplateOutlet="inline; context: { $implicit: block.inline }" />
-                </p>
-              }
-              @case ('paragraph') {
-                <p>
-                  <ng-container *ngTemplateOutlet="inline; context: { $implicit: block.inline }" />
-                </p>
-              }
-              @case ('list') {
-                @if (block.ordered) {
-                  <ol>
-                    @for (item of block.items; track $index) {
-                      <li>
-                        <ng-container *ngTemplateOutlet="inline; context: { $implicit: item }" />
-                      </li>
-                    }
-                  </ol>
-                } @else {
-                  <ul>
-                    @for (item of block.items; track $index) {
-                      <li>
-                        <ng-container *ngTemplateOutlet="inline; context: { $implicit: item }" />
-                      </li>
-                    }
-                  </ul>
-                }
-              }
-              @case ('code') {
-                <pre>{{ block.text }}</pre>
-              }
-            }
-          }
-        </article>
+        <!--
+          The markdown parser is behind this `@defer`, and only behind it:
+          `unified` and the remark stack land in a chunk that is fetched the
+          first time a markdown file is rendered, so the board never pays for
+          a parser it has no use for.
+        -->
+        @defer (on immediate) {
+          <app-markdown-view
+            [source]="text()"
+            [path]="path()"
+            (pathSelect)="pathSelect.emit($event)"
+          />
+        } @placeholder {
+          <p class="nothing">{{ copy.files.loading }}</p>
+        } @loading {
+          <p class="nothing">{{ copy.files.loading }}</p>
+        }
       }
     }
   </div>
 } @else {
   <p class="nothing">{{ copy.files.pick }}</p>
 }
-
-<ng-template #inline let-parts>
-  @for (part of parts; track $index) {
-    @switch (part.kind) {
-      @case ('code') {
-        <code>{{ part.text }}</code>
-      }
-      @case ('strong') {
-        <strong>{{ part.text }}</strong>
-      }
-      @default {
-        {{ part.text }}
-      }
-    }
-  }
-</ng-template>

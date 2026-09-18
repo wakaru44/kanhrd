@@ -109,6 +109,7 @@
         [diff]="diff()"
         [mode]="viewerMode()"
         (modeChange)="viewerMode.set($event)"
+        (pathSelect)="followPath($event)"
       />
     }
   </div>

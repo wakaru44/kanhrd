@@ -1,0 +1,209 @@
+<article class="md">
+  <ng-container *ngTemplateOutlet="blockList; context: { $implicit: doc().blocks }" />
+  @if (doc().truncated) {
+    <p class="note">{{ truncatedNote() }}</p>
+  }
+</article>
+
+<!--
+  Blocks, recursively: a blockquote and a list item hold blocks of their own,
+  so the template calls itself rather than flattening the document.
+-->
+<ng-template #blockList let-list>
+  @for (block of list; track $index) {
+    @let custom = rendererFor(block);
+    @if (custom) {
+      <!-- A registered renderer — mermaid, an SVG view — takes the block whole. -->
+      <ng-container *ngComponentOutlet="custom.component; inputs: inputsFor(block)" />
+    } @else {
+      @switch (block.kind) {
+        @case ('heading') {
+          <!--
+            A heading in a file the operator is READING is not a heading of
+            the application's document, so it does not join the page outline.
+          -->
+          <p class="h" [attr.data-level]="block.depth">
+            <ng-container *ngTemplateOutlet="inlineList; context: { $implicit: block.children }" />
+          </p>
+        }
+        @case ('paragraph') {
+          <p>
+            <ng-container *ngTemplateOutlet="inlineList; context: { $implicit: block.children }" />
+          </p>
+        }
+        @case ('blockquote') {
+          <blockquote>
+            <ng-container *ngTemplateOutlet="blockList; context: { $implicit: block.children }" />
+          </blockquote>
+        }
+        @case ('list') {
+          @if (block.ordered) {
+            <ol [attr.start]="block.start">
+              <ng-container
+                *ngTemplateOutlet="listItems; context: { $implicit: block.items }"
+              />
+            </ol>
+          } @else {
+            <ul>
+              <ng-container
+                *ngTemplateOutlet="listItems; context: { $implicit: block.items }"
+              />
+            </ul>
+          }
+        }
+        @case ('code') {
+          <pre [attr.data-lang]="block.lang || null"><code>{{ block.text }}</code></pre>
+        }
+        @case ('table') {
+          <div class="table-scroll">
+            <table>
+              @if (block.head.length) {
+                <thead>
+                  <tr>
+                    @for (cell of block.head; track $index) {
+                      <th [attr.data-align]="block.align[$index]">
+                        <ng-container
+                          *ngTemplateOutlet="inlineList; context: { $implicit: cell }"
+                        />
+                      </th>
+                    }
+                  </tr>
+                </thead>
+              }
+              <tbody>
+                @for (row of block.rows; track $index) {
+                  <tr>
+                    @for (cell of row; track $index) {
+                      <td [attr.data-align]="block.align[$index]">
+                        <ng-container
+                          *ngTemplateOutlet="inlineList; context: { $implicit: cell }"
+                        />
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        @case ('rule') {
+          <hr />
+        }
+        @case ('html') {
+          <!--
+            Raw HTML from the file, PRINTED. Interpolation is the whole of the
+            defence and the whole of the feature: the operator sees exactly
+            what the file says, and the browser makes nothing of it.
+          -->
+          <pre class="raw"><code>{{ block.text }}</code></pre>
+        }
+        @case ('footnotes') {
+          <hr />
+          <ol class="footnotes">
+            @for (note of block.items; track note.label) {
+              <li>
+                <ng-container
+                  *ngTemplateOutlet="blockList; context: { $implicit: note.children }"
+                />
+              </li>
+            }
+          </ol>
+        }
+      }
+    }
+  }
+</ng-template>
+
+<ng-template #listItems let-items>
+  @for (item of items; track $index) {
+    <li [class.task]="item.checked !== null">
+      @if (item.checked !== null) {
+        <input type="checkbox" disabled [checked]="item.checked" />
+      }
+      <ng-container *ngTemplateOutlet="blockList; context: { $implicit: item.children }" />
+    </li>
+  }
+</ng-template>
+
+<ng-template #inlineList let-parts>
+  @for (part of parts; track $index) {
+    @switch (part.kind) {
+      @case ('code') {
+        <code>{{ part.text }}</code>
+      }
+      @case ('emphasis') {
+        <em>
+          <ng-container *ngTemplateOutlet="inlineList; context: { $implicit: part.children }" />
+        </em>
+      }
+      @case ('strong') {
+        <strong>
+          <ng-container *ngTemplateOutlet="inlineList; context: { $implicit: part.children }" />
+        </strong>
+      }
+      @case ('delete') {
+        <s>
+          <ng-container *ngTemplateOutlet="inlineList; context: { $implicit: part.children }" />
+        </s>
+      }
+      @case ('break') {
+        <br />
+      }
+      @case ('link') {
+        @switch (part.link.to) {
+          @case ('path') {
+            <!--
+              A link to another file in the checkout opens it in the panel.
+              A button, not an anchor: nothing navigates, the URL does not
+              change, and the control does not lie about being a location.
+            -->
+            <button type="button" class="link in-repo" (click)="follow(part.link.path)">
+              <ng-container
+                *ngTemplateOutlet="inlineList; context: { $implicit: part.children }"
+              />
+            </button>
+          }
+          @case ('mail') {
+            <a class="link" [href]="part.link.href">
+              <ng-container
+                *ngTemplateOutlet="inlineList; context: { $implicit: part.children }"
+              />
+            </a>
+          }
+          @default {
+            <a class="link" [href]="part.link.href" target="_blank" rel="noopener noreferrer">
+              <ng-container
+                *ngTemplateOutlet="inlineList; context: { $implicit: part.children }"
+              />
+            </a>
+          }
+        }
+      }
+      @case ('image') {
+        <!-- Never an `img`: nothing here starts a request for the file's URL. -->
+        <span class="image">
+          <span class="label">{{ imageNote(part.at) }}</span>
+          @if (part.alt) {
+            <span class="alt">{{ part.alt }}</span>
+          }
+          <span class="readout">{{ part.src }}</span>
+        </span>
+      }
+      @case ('inert') {
+        <!--
+          A destination the allowlist refused. The text renders, and the
+          destination beside it — a link that quietly does nothing would hide
+          the one fact the operator needs.
+        -->
+        <span class="inert">{{ part.text }}</span
+        ><span class="readout">{{ part.raw }}</span>
+      }
+      @case ('footnoteRef') {
+        <sup class="fnref">{{ part.index }}</sup>
+      }
+      @default {
+        {{ part.text }}
+      }
+    }
+  }
+</ng-template>

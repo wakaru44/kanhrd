@@ -221,3 +221,44 @@ test('the key bar keeps its place while the panel has focus', async ({ app }) =>
 
   expect(await keyBar.boundingBox()).toEqual(before);
 });
+
+test('a markdown file renders as a document, and its links stay inside the panel', async ({
+  app,
+}) => {
+  await openPane(app);
+  await app.locator('[data-panel-toggle]').click();
+  const panel = app.locator('app-file-panel');
+  await expect(panel.locator('[data-path="apps"]')).toBeVisible({ timeout: 10_000 });
+
+  // This repository's own brand doc: tables, links, code, nested lists. It
+  // is the corpus the renderer exists for, not a fixture written to pass.
+  await panel.locator('input[aria-label="go to path"]').fill('docs/BRAND.md');
+  await panel.locator('button.goto-open').click();
+
+  const viewer = panel.locator('app-file-view');
+  await expect(viewer).toContainText('docs/BRAND.md', { timeout: 10_000 });
+  await viewer.locator('[data-mode="rendered"]').click();
+
+  // The parser is in a lazily loaded chunk, so the view arrives a tick late.
+  const markdown = viewer.locator('app-markdown-view');
+  await expect(markdown).toBeVisible({ timeout: 10_000 });
+
+  // The copy table renders as a table, which is the whole point of the change.
+  await expect(markdown.locator('table th').first()).toBeVisible();
+  await expect(markdown.locator('table td').first()).toBeVisible();
+
+  // Nothing was made from the file's text that could fetch or run.
+  await expect(markdown.locator('img')).toHaveCount(0);
+  await expect(markdown.locator('script')).toHaveCount(0);
+
+  // An external link leaves the tab it opens unable to reach back.
+  const external = markdown.locator('a[href^="https://"]').first();
+  await expect(external).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(external).toHaveAttribute('target', '_blank');
+
+  // A relative link to a sibling doc opens it here, without moving the URL.
+  const url = app.url();
+  await markdown.locator('button.in-repo').first().click();
+  await expect(viewer).toContainText('docs/DESIGN-SYSTEM.md', { timeout: 10_000 });
+  expect(app.url()).toBe(url);
+});
