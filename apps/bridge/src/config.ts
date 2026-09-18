@@ -6,6 +6,13 @@ import { parse as parseYaml } from 'yaml';
 export interface HostConfig {
   name: string;
   socket: string;
+  /**
+   * `false` refuses every repo file method for this host's panes. Omitted
+   * means the local-only gate decides (see `files/gate.ts`). For a tunnelled
+   * host whose paths happen to exist on the bridge's machine as well, the
+   * gate cannot tell the two machines apart; this is the operator's switch.
+   */
+  files?: boolean;
 }
 
 export interface BridgeConfig {
@@ -184,10 +191,12 @@ export function loadConfig(overrides: CliOverrides = {}): BridgeConfig {
     bind: overrides.bind ?? fileConfig?.bind ?? DEFAULT_CONFIG.bind,
     port: overrides.port ?? fileConfig?.port ?? DEFAULT_CONFIG.port,
     spaDir: overrides.spaDir ?? fileConfig?.spaDir ?? DEFAULT_CONFIG.spaDir,
-    hosts: (fileConfig?.hosts ?? DEFAULT_CONFIG.hosts).map((host) => ({
-      ...host,
-      socket: expandHome(host.socket),
-    })),
+    hosts: (fileConfig?.hosts ?? DEFAULT_CONFIG.hosts).map((host) => {
+      if (host.files !== undefined && typeof host.files !== 'boolean') {
+        throw new Error(`host "${host.name}": files must be true or false`);
+      }
+      return { ...host, socket: expandHome(host.socket) };
+    }),
     // A non-empty CLI list replaces the file's, like every other override.
     allowedOrigins:
       overrides.allowedOrigins && overrides.allowedOrigins.length > 0

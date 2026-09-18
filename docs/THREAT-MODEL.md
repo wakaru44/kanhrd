@@ -38,6 +38,12 @@ The browser never talks to herdr directly.
   snapshots: source code, file paths, command history, whatever secrets the
   operator has echoed or a tool has printed, and the full text of agent
   conversations, including prompts and any credentials pasted into them.
+- **Checkout contents.** `file.read`, `repo.tree`, `repo.diff` and
+  `repo.status` return any file inside a pane's git checkout, up to 1 MiB,
+  including untracked and ignored files such as `.env`. They are confined to
+  the checkout (no `..`, no absolute paths, no symlink escapes, no `.git`)
+  and served only for checkouts on the bridge's own machine, but within that
+  they answer whoever can reach `/ws`.
 - **Session lifecycle.** `pane.close`, `tab.close` and `workspace.close`
   destroy real state. A closed pane's scrollback is gone and its process is
   terminated; closing a linked-worktree workspace detaches that worktree.

@@ -196,6 +196,41 @@
     color: var(--ink-mute);
   }
 
+  /* The repo name and the panel's toggle are one unit, like the title and its pencil. */
+  .repo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    min-width: 0;
+  }
+
+  /* Visible on first render; open is an ochre edge, not a colour swap. */
+  .panel-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    min-height: var(--sp-6);
+    padding: 0 var(--sp-2);
+    border: var(--elev-3);
+    border-radius: var(--radius-md);
+    background: var(--paper-raised);
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+
+    &[aria-expanded='true'] {
+      border-color: var(--ochre-line);
+    }
+
+    .icon {
+      transition: transform var(--motion-fast) var(--ease-out);
+
+      &.open {
+        transform: rotate(90deg);
+      }
+    }
+  }
+
   .status {
     display: inline-flex;
     align-items: center;
@@ -261,6 +296,7 @@
 .detail-body {
   flex: 1;
   display: flex;
+  flex-direction: column;
   min-height: 0;
   min-width: 0;
   /*
@@ -270,12 +306,42 @@
    * keeps it out of FitAddon's measurement — see `.terminal-wrap`.
    */
   padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  /*
+   * The key bar floats over the bottom of the view (and rides the soft
+   * keyboard). The terminal gives up exactly that much, so its last row is
+   * never behind either; `--key-bar-reserve` is measured by the bar.
+   */
+  padding-bottom: calc(var(--sp-4) + var(--key-bar-reserve));
+}
+
+/*
+ * The terminal and the file panel share the body. The axis follows the
+ * device's orientation (beside in landscape, under in portrait) and the
+ * ratio is bound inline, per axis, remembered by `file-panel-split.ts`.
+ * With the panel closed the terminal takes the whole box and the splitter
+ * is not rendered at all.
+ */
+.split {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+
+  &[data-axis='vbox'] {
+    flex-direction: column;
+  }
+
+  /* A drag must not select the terminal's text under the pointer. */
+  &.dragging {
+    user-select: none;
+  }
 }
 
 .terminal-wrap {
   position: relative;
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   /*
    * The terminal's breathing room lives here, not on
@@ -318,6 +384,15 @@
   overscroll-behavior-y: contain;
   background: var(--paper);
   font-family: var(--font-mono);
+
+  /*
+   * Gone: the session ended and this is its last frame. Full contrast would
+   * read as a live terminal, so the container itself is dimmed — no layer
+   * over it. Instant, like every status change.
+   */
+  &.inert {
+    opacity: var(--opacity-inert);
+  }
 }
 
 .terminal-status {
@@ -388,6 +463,37 @@
 
   to {
     opacity: 1;
+  }
+}
+
+/*
+ * Gone: a caption on the frozen output, under a divider below its last row.
+ * In flow, outside `.terminal-wrap`, so FitAddon measures the space that is
+ * left: the terminal loses rows, never columns, and xterm gives those rows
+ * up from the top — the last line stays in view (design.md, "Placement").
+ */
+.gone-slot:empty {
+  display: none;
+}
+
+.terminal-gone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: var(--elev-1);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink-soft);
+
+  .state-line {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: 0;
   }
 }
 
@@ -466,6 +572,7 @@
   /* Narrower gutter at phone width: the terminal keeps its columns. */
   .detail-body {
     padding: var(--sp-2);
+    padding-bottom: calc(var(--sp-2) + var(--key-bar-reserve));
   }
 
   .detail-header .title-row {
@@ -482,5 +589,17 @@
   .detail-header .crumb-workspace,
   .detail-header .crumb-sep {
     display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .panel-toggle {
+    min-height: var(--touch-target-min);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-toggle .icon {
+    transition: none;
   }
 }

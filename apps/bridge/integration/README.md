@@ -70,6 +70,8 @@ connectivity.test.ts  A. lifecycle + connectivity (HTTP)
 ws-methods.test.ts    B. WebSocket protocol methods
 ordering.test.ts      C. ordering guarantees (the two round-1 blocker bugs)
 lifecycle.test.ts     D. tier-3 pane/tab/workspace lifecycle CRUD + events
+pane-destinations.test.ts
+                      F. creation destinations and pane.move's cascade
 ```
 
 `fixtures/herdr-cli.ts` is a deliberate re-implementation, not an import, of
@@ -117,3 +119,4 @@ See the top-level lane report for the full table; the essentials:
 | C1 (burst-send ordering)                              | VALIDATION-TIER2.md round-1 Finding B / round-2 re-verification (`ndl-2r-5akbmkaherr` scramble)                                 |
 | C2 (live-update polling)                              | VALIDATION-TIER2.md round-1 Finding A / round-2 re-verification (stuck-at-zero `revision`, content-hash fallback)               |
 | D1-D2 (tab CRUD + events)                             | VALIDATION-TIER3.md's manual tab-CRUD smoke (only static-reviewed there, blocked by the connectivity bug)                       |
+| F1-F3 (destinations + move cascade)                   | openspec `add-pane-destinations` task 5.2 — herdr semantics the SPA rests on and no unit test can prove                         |

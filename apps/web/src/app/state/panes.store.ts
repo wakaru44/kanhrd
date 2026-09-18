@@ -850,39 +850,52 @@ export class PanesStore {
       });
     });
 
-    this.ws.events$.pipe(takeUntilDestroyed()).subscribe((evt) => {
-      const current: LifecycleState = {
-        panes: this.panesSignal(),
-        workspaces: this.workspacesSignal(),
-        tabs: this.tabsSignal(),
-      };
-      // The exit rule runs BEFORE the event is applied: it needs the status
-      // the pane is leaving, which only the pre-event map still has. No new
-      // subscription and no extra request — this is the same
-      // `pane.agent_status_changed` frame the board already receives for
-      // every card on every connected host.
-      if (evt.event === 'pane.agent_status_changed') {
-        const payload = evt.payload as BridgeEventPayload['pane.agent_status_changed'];
-        const key = paneKey(payload.host, payload.id);
-        const previous = current.panes.get(key)?.agent_status;
-        if (previous !== undefined) {
-          this.parked.applyAgentStatusChanged(key, previous, payload.agent_status);
-        }
-      }
-      const next = applyLifecycleEvent(current, evt);
-      if (next.panes !== current.panes) {
-        this.releaseDroppedPanes(current.panes, next.panes);
-        this.panesSignal.set(next.panes);
-      }
-      if (next.workspaces !== current.workspaces) {
-        this.workspacesSignal.set(next.workspaces);
-      }
-      if (next.tabs !== current.tabs) {
-        this.tabsSignal.set(next.tabs);
-      }
-    });
+    this.ws.events$.pipe(takeUntilDestroyed()).subscribe((evt) => this.applyFrame(evt));
 
     this.ws.connect();
+  }
+
+  /**
+   * Applies one lifecycle frame to the three maps as a unit, and commits
+   * whichever of them the reducer actually changed.
+   *
+   * Every bridge event goes through here, and so does the local echo of a
+   * `pane.move` this client performed (`movePane`) — a move's cascade
+   * (`closed_tab_id` / `closed_workspace_id`, and the tab or workspace a
+   * move CREATES) is the same reconciliation whether it came from this
+   * board or another herdr client, and there is exactly one implementation
+   * of it (`applyLifecycleEvent`'s `pane.moved` case).
+   */
+  private applyFrame(evt: WsEvent): void {
+    const current: LifecycleState = {
+      panes: this.panesSignal(),
+      workspaces: this.workspacesSignal(),
+      tabs: this.tabsSignal(),
+    };
+    // The exit rule runs BEFORE the event is applied: it needs the status
+    // the pane is leaving, which only the pre-event map still has. No new
+    // subscription and no extra request — this is the same
+    // `pane.agent_status_changed` frame the board already receives for
+    // every card on every connected host.
+    if (evt.event === 'pane.agent_status_changed') {
+      const payload = evt.payload as BridgeEventPayload['pane.agent_status_changed'];
+      const key = paneKey(payload.host, payload.id);
+      const previous = current.panes.get(key)?.agent_status;
+      if (previous !== undefined) {
+        this.parked.applyAgentStatusChanged(key, previous, payload.agent_status);
+      }
+    }
+    const next = applyLifecycleEvent(current, evt);
+    if (next.panes !== current.panes) {
+      this.releaseDroppedPanes(current.panes, next.panes);
+      this.panesSignal.set(next.panes);
+    }
+    if (next.workspaces !== current.workspaces) {
+      this.workspacesSignal.set(next.workspaces);
+    }
+    if (next.tabs !== current.tabs) {
+      this.tabsSignal.set(next.tabs);
+    }
   }
 
   toggleHost(host: string): void {
@@ -1006,6 +1019,30 @@ export class PanesStore {
     const result = await this.ws.request(host, 'pane.split', params);
     if (result) {
       this.panesSignal.update((panes) => applyPaneCreated(panes, result.pane));
+    }
+    return result;
+  }
+
+  /**
+   * Reparents a pane into another tab, a new tab, or a new workspace
+   * (herdr's `PaneMoveDestination` union, mirrored verbatim on the wire).
+   *
+   * Unlike every other action here, the result is NOT a plain upsert: a
+   * move can close the tab it left behind, close that tab's workspace with
+   * it, and create the tab or workspace it moved into. Rather than grow a
+   * second reconciliation for the acting client, the result is replayed as
+   * the `pane.moved` frame it is — through `applyFrame`, the same path the
+   * broadcast from another client takes.
+   *
+   * `changed: false` (with herdr's `reason`) means nothing moved, so
+   * nothing is applied. The caller is the one that has to say so; a no-op
+   * reported as a success is the failure mode this guards.
+   */
+  async movePane(host: string, params: BridgeMethodParams['pane.move']) {
+    const result = await this.ws.request(host, 'pane.move', params);
+    if (result?.changed) {
+      const { changed: _changed, reason: _reason, ...moved } = result;
+      this.applyFrame({ host, event: 'pane.moved', payload: moved });
     }
     return result;
   }

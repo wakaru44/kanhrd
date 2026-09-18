@@ -109,6 +109,36 @@ function cardCloseButton(card: Locator): Locator {
   return card.locator('.card-action.close');
 }
 
+/**
+ * Clicks a card action and waits for the dialog it opens, retrying until the
+ * dialog is actually there.
+ *
+ * Two things make a single click unreliable here, neither of them a defect
+ * in the app:
+ *
+ * 1. The board is a horizontally scrolling strip, and this suite's session
+ *    seeds bare shells — every pane is `unknown`, so every card sits in the
+ *    LAST status column, which begins past the right edge of the 1280px
+ *    chromium viewport. Playwright calls the button visible (it has a box
+ *    and is not hidden) and its click scrolls the strip, but the click lands
+ *    at the coordinates measured before that scroll.
+ * 2. A card's height changes shortly after it appears, as the bridge starts
+ *    reporting `status_since` and the meta row gains its duration readout.
+ *    A card below one that grows moves down by a row — measured here at
+ *    ~16px, more than half the 26px button — so the click lands beside it.
+ *
+ * Both are ordinary live-board behaviour: an operator scrolls the strip and
+ * does not click in the same millisecond a row reflows. Retrying the
+ * scroll-and-click until the dialog appears is the honest way to say that.
+ */
+async function clickCardAction(page: Page, action: Locator): Promise<void> {
+  await expect(async () => {
+    await action.scrollIntoViewIfNeeded();
+    await action.click();
+    await expect(modal(page)).toHaveCount(1, { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
+}
+
 /** A rail row's overflow-menu trigger — rail row actions are never hover-revealed. */
 function rowMenuTrigger(row: Locator): Locator {
   return row.locator('.row-menu-trigger');
@@ -211,19 +241,25 @@ test('card split and close affordances are visible on first render, no hover', a
   const actions = cardActions(card);
   // The hover-reveal (`.card-actions { opacity: 0; pointer-events: none }`)
   // is deleted: actions render at --ink-mute and lift on hover/focus
-  // (docs/UX-GUIDELINES.md, "Visible affordances"). The split control also
-  // split in two: `.split-right` and `.split-down`.
+  // (docs/UX-GUIDELINES.md, "Visible affordances").
+  //
+  // The row is move / split / rest / dots, and every one of them carries a
+  // text label in its accessible name — the two split directions live
+  // inside the split menu now, each with its word, rather than as a pair of
+  // unlabelled direction arrows on the row.
   await expect(actions).toBeVisible();
   await expect(actions).toHaveCSS('opacity', '1');
-  await expect(actions.locator('.card-action.split-right')).toHaveCount(1);
-  await expect(actions.locator('.card-action.split-down')).toHaveCount(1);
+  await expect(actions.locator('.card-action.split')).toHaveCount(1);
   await expect(actions.locator('.card-action.close')).toHaveCount(1);
+  for (const control of await actions.locator('.card-action').all()) {
+    expect(await control.getAttribute('aria-label')).toBeTruthy();
+  }
 
   // The overflow trigger is visible at every density, including comfortable
   // on a fine pointer. It used to be the compact/touch path only, and this
   // spec asserted `display: none` here — but that rule never shipped, and
   // since f6763bf the menu carries `rename`, which has NO inline control
-  // (the always-visible row is split-right / split-down / close). Hiding the
+  // (the always-visible row is move / split / rest). Hiding the
   // trigger on desktop would leave pane rename with no path at all, which
   // docs/UX-GUIDELINES.md "Visible affordances" forbids. The mobile project
   // still asserts the touch path (mobile.spec.ts, criteria 5 and 6).
@@ -363,7 +399,7 @@ test("closing a pane's card shows a danger-styled confirmation; cancel keeps it,
     const targetCard = app.locator('.card', { hasText: name });
     await expect(targetCard).toHaveCount(1, { timeout: 3_000 });
 
-    await cardCloseButton(targetCard).click();
+    await clickCardAction(app, cardCloseButton(targetCard));
 
     await expect(modalTitle(app)).toHaveText(COPY.confirm.closePane);
     await expect(modalConfirm(app)).toBeVisible();
@@ -376,7 +412,7 @@ test("closing a pane's card shows a danger-styled confirmation; cancel keeps it,
     await expect(app.locator('.card', { hasText: name })).toHaveCount(1);
 
     // Now actually confirm — safe, this is a throwaway tab/pane.
-    await cardCloseButton(targetCard).click();
+    await clickCardAction(app, cardCloseButton(targetCard));
     await modalConfirm(app).click();
 
     await expect(app.locator('.card', { hasText: name })).toHaveCount(0, { timeout: 3_000 });

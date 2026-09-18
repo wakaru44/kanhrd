@@ -1,9 +1,11 @@
 import {
   LucideArrowDown,
+  LucideFileDiff,
   LucideArrowLeft,
   LucideArrowRight,
   LucideCheck,
   LucideChevronRight,
+  LucideCornerUpRight,
   LucideCopy,
   LucideGalleryHorizontal,
   LucideInfo,
@@ -16,13 +18,14 @@ import {
   LucideSettings,
   LucideSquareSplitHorizontal,
   LucideSun,
+  LucideSunset,
   LucideTriangleAlert,
   LucideUnplug,
   LucideX,
 } from '@lucide/angular';
 
 /**
- * The app's icon set: the twenty `@lucide/angular` components pinned by
+ * The app's icon set: the twenty-three `@lucide/angular` components pinned by
  * the icon list in `docs/DESIGN-SYSTEM.md`. Components import from here,
  * never from `@lucide/angular` directly, so the sanctioned set is one
  * import away and one grep wide.
@@ -53,6 +56,8 @@ export {
   LucideArrowRight,
   /** split down — `svg[lucideArrowDown]` */
   LucideArrowDown,
+  /** move a pane to another tab or workspace — `svg[lucideCornerUpRight]` */
+  LucideCornerUpRight,
   /** back to board — `svg[lucideArrowLeft]` */
   LucideArrowLeft,
   /** rail disclosure, scope breadcrumb — `svg[lucideChevronRight]` */
@@ -75,6 +80,10 @@ export {
   LucideGalleryHorizontal,
   /** next card in this tab — `svg[lucideSquareSplitHorizontal]` */
   LucideSquareSplitHorizontal,
+  /** pane whose session has ended — `svg[lucideSunset]` */
+  LucideSunset,
+  /** changed-files-only filter in the file panel — `svg[lucideFileDiff]` */
+  LucideFileDiff,
 };
 
 /**
@@ -92,6 +101,7 @@ export const KANHRD_ICONS = [
   LucidePencil,
   LucideArrowRight,
   LucideArrowDown,
+  LucideCornerUpRight,
   LucideArrowLeft,
   LucideChevronRight,
   LucideMoreHorizontal,
@@ -103,12 +113,14 @@ export const KANHRD_ICONS = [
   LucideUnplug,
   LucideGalleryHorizontal,
   LucideSquareSplitHorizontal,
+  LucideSunset,
+  LucideFileDiff,
 ] as const;
 
 /**
- * The set is twenty icons. A twenty-first is a change to
+ * The set is twenty-three icons. A twenty-fourth is a change to
  * `docs/DESIGN-SYSTEM.md` first — this line breaks the build until the
  * count here is deliberately updated to match.
  */
-const ICON_COUNT: 20 = KANHRD_ICONS.length;
+const ICON_COUNT: 23 = KANHRD_ICONS.length;
 void ICON_COUNT;

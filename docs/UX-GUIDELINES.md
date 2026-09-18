@@ -139,10 +139,35 @@ never comes to rest among the status columns. (Shipped in
 `openspec/changes/archive/2026-09-12-add-parked-column-reorder`.)
 
 The board never calls `pane.move` to change a status — `pane.move`'s
-destination is a tab or workspace. Relocating a pane between tabs or
-workspaces is a separate feature with its own destination, capability,
-keyboard, error and reconciliation requirements; it is not part of this
-redesign, and the UI must not hint that it exists.
+destination is a tab or workspace, and nothing on the board may set a
+status.
+
+Relocating a pane between tabs or workspaces is its own operation, and it
+follows these rules:
+
+- **`move to` and `park in` never share a menu.** A move reparents the
+  pane on the host, can close the tab it left behind, and every other
+  herdr client sees it. Parking groups a card in a column held in this
+  browser and changes nothing anywhere else. One verb over two operations
+  with opposite blast radii is how an operator moves a pane on a
+  colleague's machine when they meant to tidy their own board.
+- **The move control is rendered only where `capabilities.paneMove` is
+  true** — not disabled, not hidden behind a failure.
+- **Its destinations are herdr's three**, the `PaneMoveDestination` union:
+  another tab, a new tab, a new workspace. A parked column is never among
+  them.
+- **The tab the pane is already in is not offered.** herdr answers that
+  with `changed: false, reason: "same_tab"`, and an option that cannot do
+  anything is not an option.
+- **A refused move is not a failed one.** `pane.move` answers a no-op with
+  a SUCCESSFUL response carrying `changed: false` and a reason.
+  `same_tab` says nothing at all; `zoomed_tab` names the obstacle the
+  operator can clear. Neither wears the failure wording, and neither
+  quotes a `{reason}` — the reason is a discriminant, not herdr's prose.
+- **A move's cascade is reconciled through the same purge** the board runs
+  for `tab.closed` / `workspace.closed`. Moving the last pane out of a tab
+  closes it, and possibly its workspace; there is one reconciliation path
+  for that, not a second one for the acting client.
 
 ### Feedback surface
 
@@ -166,15 +191,16 @@ redesign, and the UI must not hint that it exists.
 
 Five states are distinct and none of them may be faked:
 
-| State                                   | What the user sees                                                                                                            |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Loading                                 | static skeleton columns; `finding hosts…`. The no-hosts state never renders before discovery finishes.                        |
-| Empty (no hosts configured)             | setup instructions: `kanhrd.config.yaml` snippet, bridge command, operating-guide link                                        |
-| Empty (host connected, nothing running) | `this host is quiet…`, plus a create action **only if** the capability is advertised                                          |
-| Empty (filters/scope match nothing)     | `nothing matches these filters.` + a clear action. Never setup instructions.                                                  |
-| Stale / disconnected                    | existing content stays visible, marked with `LucideUnplug` and `stale — reconnecting`; connection-dependent actions are gated |
-| Failed                                  | loading is replaced by a visible retry (`LucideRefreshCw`) and a back path                                                    |
-| Unavailable / not found                 | `that workspace is no longer here.` + recovery. Never silently falling back to a previous scope.                              |
+| State                                   | What the user sees                                                                                                                                                                                                                                         |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Loading                                 | static skeleton columns; `finding hosts…`. The no-hosts state never renders before discovery finishes.                                                                                                                                                     |
+| Empty (no hosts configured)             | setup instructions: `kanhrd.config.yaml` snippet, bridge command, operating-guide link                                                                                                                                                                     |
+| Empty (host connected, nothing running) | `this host is quiet…`, plus a create action **only if** the capability is advertised                                                                                                                                                                       |
+| Empty (filters/scope match nothing)     | `nothing matches these filters.` + a clear action. Never setup instructions.                                                                                                                                                                               |
+| Stale / disconnected                    | existing content stays visible, marked with `LucideUnplug` and `stale — reconnecting`; connection-dependent actions are gated                                                                                                                              |
+| Gone (pane detail)                      | the session ended: the last frame stays, dimmed to `--opacity-inert`, captioned beneath its last row (never centred over it) with `LucideSunset`, `the session ended. this is the last thing it said.` and a back path; no retry, no input, no live stream |
+| Failed                                  | loading is replaced by a visible retry (`LucideRefreshCw`) and a back path                                                                                                                                                                                 |
+| Unavailable / not found                 | `that workspace is no longer here.` + recovery. Never silently falling back to a previous scope.                                                                                                                                                           |
 
 One failed host never blanks healthy hosts. A single host disconnect never
 destroys already-rendered content.
@@ -182,6 +208,15 @@ destroys already-rendered content.
 Pane detail shows `keeping watch…` until its first frame, then the
 terminal. Failure replaces it with retry + back, never a permanent
 pulse.
+
+A terminal buffer herdr cut short is a reliability state too. When
+`pane.read` or `pane.output` carries `truncated: true`, the buffer's first
+line says so — `terminal.truncated`, naming herdr and the line count, with
+`terminal.truncatedRaise` appended only while a deeper scrollback setting
+would bring more back. It is written into the buffer in faint text, where
+the missing history would be, and re-written on every full repaint; it is
+never a toast, and it goes on the first complete snapshot. A truncated
+buffer that looks like a short session is wrong, not absent.
 
 ### Destructive confirmations
 
@@ -300,8 +335,9 @@ resolve to something else.
 The rule governs **scope**, not arrangement. A short, closed list of
 per-browser preferences stays out of the URL and therefore does not
 travel with a shared link: the status filter chips (`kanhrd.filters`),
-board density, terminal palette and text size, the keybind prefix
-(`kanhrd.keyboard`), and user-defined columns (`kanhrd.parked-columns`).
+board density, terminal palette, text size and scrollback depth, the
+keybind prefix (`kanhrd.keyboard`), and user-defined columns
+(`kanhrd.parked-columns`).
 Each is a view preference the recipient is entitled to their own answer
 to; none changes _which_ cards a link resolves to. Anything that selects
 which entities are shown belongs in the URL. (Maintainer decision Q5,
@@ -529,6 +565,19 @@ What this model does not do:
   visible without scrolling.
 - `keeping watch…` occupies the terminal area until the first frame; on
   failure it is replaced in place by retry + back.
+- A **key bar** sits at the bottom of the visual viewport on the pane-detail
+  route at every width: fixed, riding on top of the soft keyboard when it is
+  open and staying when it is dismissed. Its always-present strip is its
+  only toggle and, collapsed or not, its status line — it shows any latched
+  modifier, so a latch is never invisible. The expanded row holds keycaps
+  (`esc`, `ctrl`, `^B`, `tab`, arrows, `alt`), scrolls horizontally inside
+  itself where it does not fit, and never widens the page. Every key is
+  ≥ `--touch-target-min`; the strip draws shorter but its hit area reaches
+  the minimum by extending over the terminal's bottom edge. Tapping the bar
+  never moves focus off the terminal, and the terminal's box ends above the
+  bar and any keyboard under it. `ctrl` and `alt` latch for one key on tap,
+  lock on long-press, and show idle, armed and locked distinctly. `^B` is a
+  literal `ctrl+b` for the pane's program, not kanhrd's prefix.
 
 #### Settings
 
@@ -716,6 +765,23 @@ width` (already asserted).
   ≤ the control's bounding box top.
 - **31.** The terminal-theme `<select>`, the poll `<input>`, both density
   segments and the theme button are each ≥ 40 × 40.
+
+#### Assertions — key bar
+
+Asserted in `apps/web/e2e/key-bar.spec.ts` (mocked bridge, 390 × 844, touch)
+and `apps/web/e2e/key-bar-live.spec.ts` (live).
+
+- **40.** Every key's bounding box is ≥ 40 × 40, and a tap 36px above the
+  strip's visible bottom edge still toggles it.
+- **41.** `document.documentElement.scrollWidth <= clientWidth + 1` with the
+  row expanded, while the row itself scrolls horizontally.
+- **42.** The terminal container's bottom edge is at or above the bar's top,
+  expanded and collapsed.
+- **43.** Tapping a key sends `pane.send_keys` and xterm's helper textarea
+  keeps focus.
+- **44.** A tapped `ctrl` shows `armed`, the next typed key goes out as
+  `ctrl+<key>`, and `ctrl` shows `idle` again.
+- **45.** Keys sent from the bar arrive at the program in a live pane.
 
 #### Assertions — drawer
 

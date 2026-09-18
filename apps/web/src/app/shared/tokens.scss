@@ -157,6 +157,9 @@
   --elev-2: 1px solid var(--rule-strong); /* hover */
   --elev-3: 1px solid var(--rule-control); /* enabled control boundary */
 
+  /* inert — content that can no longer change; opacity on the surface itself, never a layer */
+  --opacity-inert: 0.45; /* last frame of a pane whose session has ended */
+
   /* motion */
   --motion-fast: 90ms; /* hover, focus, border colour change */
   --motion-med: 180ms; /* modal open, toast enter/leave */

@@ -1,7 +1,7 @@
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import type { TabSummary, WorkspaceSummary } from '@kanhrd/schema';
+import type { Pane, TabSummary, WorkspaceSummary } from '@kanhrd/schema';
 import { Rail } from './rail';
 import { COPY } from '../shared/copy';
 import { PanesStore, paneKey } from '../state/panes.store';
@@ -20,6 +20,14 @@ const WORKSPACE: WorkspaceSummary = { id: 'w1', host: 'local', name: 'kanhrd' };
 const OTHER_WORKSPACE: WorkspaceSummary = { id: 'w2', host: 'local', name: 'sidecar' };
 const TAB: TabSummary = { id: 't1', host: 'local', workspace: { id: 'w1' }, name: 'editor' };
 const OTHER_TAB: TabSummary = { id: 't2', host: 'local', workspace: { id: 'w1' }, name: 'logs' };
+/** One pane in `TAB`, so `new card in this tab` has a `target_pane_id` to name. */
+const PANE: Pane = {
+  id: 'p1',
+  host: 'local',
+  workspace: { id: 'w1', name: 'kanhrd' },
+  tab: { id: 't1', name: 'editor' },
+  agent_status: 'idle',
+};
 
 class FakeStore {
   readonly workspacesSignal = signal(
@@ -37,6 +45,7 @@ class FakeStore {
   readonly capabilitiesSignal = signal(
     new Map([['local', { workspaceCrud: true, tabCrud: true }]])
   );
+  readonly panesSignal = signal(new Map([[paneKey(PANE.host, PANE.id), PANE]]));
   readonly tabFilterSignal = signal<{ host: string; tabId: string } | null>(null);
   readonly scopeSignal = signal<{ host: string; workspaceId: string; tabId: string | null } | null>(
     null
@@ -57,6 +66,7 @@ class FakeStore {
   renameTab = jasmine.createSpy('renameTab').and.resolveTo(undefined);
   closeWorkspace = jasmine.createSpy('closeWorkspace').and.resolveTo(undefined);
   closeTab = jasmine.createSpy('closeTab').and.resolveTo(undefined);
+  splitPane = jasmine.createSpy('splitPane').and.resolveTo(undefined);
 }
 
 /** Stand-in for the real `matchMedia`, so the 900px crossing is drivable. */
@@ -524,6 +534,46 @@ describe('Rail', () => {
     await clickMenuItem('.workspace-row', 1);
     expect(fixture.nativeElement.querySelector('.modal-body.refusal')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.modal-actions .btn.danger')).toBeNull();
+  });
+
+  // --- creating in a row that IS the destination --------------------------
+  //
+  // openspec `add-pane-destinations` task 1.4: a tab row needs no picker.
+
+  it('a tab row offers opening a card in it, naming that tab’s own pane as the split target', async () => {
+    store.capabilitiesSignal.set(
+      new Map([['local', { workspaceCrud: true, tabCrud: true, paneCreate: true }]])
+    );
+    await settle();
+
+    await clickMenuItem('.tab-row', 0);
+
+    expect(store.splitPane).toHaveBeenCalledWith('local', {
+      direction: 'right',
+      workspace_id: 'w1',
+      target_pane_id: 'p1',
+    });
+  });
+
+  it('a host that can split panes but not manage tabs still gets the tab row’s menu', async () => {
+    store.capabilitiesSignal.set(
+      new Map([['local', { workspaceCrud: false, tabCrud: false, paneCreate: true }]])
+    );
+    await settle();
+
+    const items = Array.from(
+      fixture.nativeElement.querySelectorAll('.tab-row .row-menu-trigger')
+    ) as HTMLElement[];
+    expect(items.length).withContext('the menu is not gated on tabCrud alone').toBeGreaterThan(0);
+  });
+
+  it('a tier-1 host offers no tab row menu at all', async () => {
+    store.capabilitiesSignal.set(
+      new Map([['local', { workspaceCrud: false, tabCrud: false, paneCreate: false }]])
+    );
+    await settle();
+
+    expect(fixture.nativeElement.querySelector('.tab-row .row-menu-trigger')).toBeNull();
   });
 
   // --- host seal ---------------------------------------------------------

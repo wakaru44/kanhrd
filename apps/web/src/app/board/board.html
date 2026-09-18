@@ -22,6 +22,9 @@
       <button
         type="button"
         class="plus-button"
+        #plusTrigger
+        aria-haspopup="menu"
+        [attr.aria-expanded]="plusMenuOpen()"
         [title]="copy.create.menu"
         [attr.aria-label]="copy.create.menu"
         (click)="togglePlusMenu()"
@@ -29,15 +32,42 @@
         <svg lucidePlus class="icon"></svg>
       </button>
       @if (plusMenuOpen()) {
-        <div class="plus-menu">
-          @if (newPaneAvailable()) {
-            <button type="button" (click)="newPane()">{{ copy.create.pane }}</button>
-          }
-          @if (newTabAvailable()) {
-            <button type="button" (click)="newTab()">{{ copy.create.tab }}</button>
-          }
-          @if (newWorkspaceAvailable()) {
-            <button type="button" (click)="newWorkspace()">{{ copy.create.workspace }}</button>
+        <!--
+          One menu, one keyboard contract. When a creation has more than one
+          place it could land and the board carries no scope to answer with,
+          the three actions are replaced by the destination list rather than
+          joined by a second popover — the question is the menu now, and
+          there is nothing else to press until it is answered.
+        -->
+        <div
+          class="plus-menu"
+          role="menu"
+          #plusMenu
+          [attr.aria-label]="copy.create.menu"
+          (keydown)="onPlusMenuKeydown($event)"
+        >
+          @if (pendingCreate()) {
+            <app-destination-picker
+              [level]="pendingLevel()"
+              [capability]="pendingCapability()"
+              (chosen)="onDestinationChosen($event)"
+            />
+          } @else {
+            @if (newPaneAvailable()) {
+              <button type="button" role="menuitem" (click)="newPane()">
+                {{ copy.create.pane }}
+              </button>
+            }
+            @if (newTabAvailable()) {
+              <button type="button" role="menuitem" (click)="newTab()">
+                {{ copy.create.tab }}
+              </button>
+            }
+            @if (newWorkspaceAvailable()) {
+              <button type="button" role="menuitem" (click)="newWorkspace()">
+                {{ copy.create.workspace }}
+              </button>
+            }
           }
         </div>
       }

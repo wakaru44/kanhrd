@@ -83,6 +83,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*.ts",
+                "input": "src",
+                "output": "__sources__"
               }
             ],
             "styles": ["src/styles.scss"]

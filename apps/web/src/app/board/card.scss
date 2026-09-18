@@ -476,11 +476,21 @@ a.card-open::after {
  * one step so the list reads as belonging to the item above it; no border,
  * no fill — the menu already has its own edge.
  */
-.park-destinations {
+.park-destinations,
+.move-destinations {
   display: flex;
   flex-direction: column;
 
   > button {
     padding-left: var(--sp-5);
   }
+}
+
+/*
+ * The destination list under `another tab` is one step deeper again: it
+ * belongs to that item, not to `move to…` above it. The component owns its
+ * own indent (shared/destination-picker.scss); this adds the second step.
+ */
+.move-destinations app-destination-picker .destination-picker > button {
+  padding-left: var(--sp-6);
 }

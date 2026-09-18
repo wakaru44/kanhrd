@@ -1,0 +1,97 @@
+@if (file(); as f) {
+  <div class="viewer-head">
+    <span class="path" [title]="path()">{{ path() }}</span>
+    <div class="segmented" role="tablist" aria-label="view">
+      @for (m of modes(); track m) {
+        <button
+          type="button"
+          role="tab"
+          class="segment"
+          [class.active]="m === effectiveMode()"
+          [attr.aria-selected]="m === effectiveMode()"
+          [attr.data-mode]="m"
+          (click)="modeChange.emit(m)"
+        >
+          {{ m }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="viewer-body" tabindex="0" [attr.data-mode]="effectiveMode()">
+    @switch (effectiveMode()) {
+      @case ('source') {
+        <ol class="code">
+          @for (line of f.lines; track $index) {
+            <li><span class="ln">{{ $index + 1 }}</span><span class="tx">{{ line }}</span></li>
+          }
+        </ol>
+      }
+      @case ('diff') {
+        @if (diff().length === 0) {
+          <p class="nothing">no changes against HEAD</p>
+        } @else {
+          <ol class="code diff">
+            @for (line of diff(); track $index) {
+              <li [attr.data-kind]="line.kind">
+                <span class="ln">{{ diffMarker[line.kind] }}</span><span class="tx">{{ line.text }}</span>
+              </li>
+            }
+          </ol>
+        }
+      }
+      @case ('rendered') {
+        <article class="rendered">
+          @for (block of blocks(); track $index) {
+            @switch (block.kind) {
+              @case ('heading') {
+                <p class="h" [attr.data-level]="block.level">
+                  <ng-container *ngTemplateOutlet="inline; context: { $implicit: block.inline }" />
+                </p>
+              }
+              @case ('paragraph') {
+                <p><ng-container *ngTemplateOutlet="inline; context: { $implicit: block.inline }" /></p>
+              }
+              @case ('list') {
+                @if (block.ordered) {
+                  <ol>
+                    @for (item of block.items; track $index) {
+                      <li><ng-container *ngTemplateOutlet="inline; context: { $implicit: item }" /></li>
+                    }
+                  </ol>
+                } @else {
+                  <ul>
+                    @for (item of block.items; track $index) {
+                      <li><ng-container *ngTemplateOutlet="inline; context: { $implicit: item }" /></li>
+                    }
+                  </ul>
+                }
+              }
+              @case ('code') {
+                <pre>{{ block.text }}</pre>
+              }
+            }
+          }
+        </article>
+      }
+    }
+  </div>
+} @else {
+  <p class="nothing">pick a file, or paste a path above</p>
+}
+
+<ng-template #inline let-parts>
+  @for (part of parts; track $index) {
+    @switch (part.kind) {
+      @case ('code') {
+        <code>{{ part.text }}</code>
+      }
+      @case ('strong') {
+        <strong>{{ part.text }}</strong>
+      }
+      @default {
+        {{ part.text }}
+      }
+    }
+  }
+</ng-template>

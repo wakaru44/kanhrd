@@ -54,8 +54,21 @@ export const COPY = {
     renameFieldLabel: 'card name',
     renameSave: 'save',
     renameClear: 'clear name',
+    /**
+     * The action row's two menu triggers. Neither word is a new one: the
+     * approved-copy table already says *split right* / *split down* and
+     * *move to…*, so the control that opens each list says the word its
+     * items already say — the same reasoning `create.menu` follows for the
+     * `+` button.
+     */
+    split: 'split',
     splitRight: 'split right',
     splitDown: 'split down',
+    /** Opens the herdr destinations below. `park in…` is a different operation and a different menu. */
+    move: 'move to…',
+    moveExistingTab: 'another tab',
+    moveNewTab: 'a new tab',
+    moveNewWorkspace: 'a new workspace',
     /** Opens the list of parked columns, plus `park.newColumn`. The ellipsis is the promise of that list. */
     park: 'park in…',
     unpark: 'unpark',
@@ -125,10 +138,39 @@ export const COPY = {
     createTabFailed: "couldn't open a tab. herdr said: {reason}",
     createWorkspaceFailed: "couldn't open a workspace. herdr said: {reason}",
     renameFailed: "couldn't rename. herdr said: {reason}",
+    moveFailed: "couldn't move {name}. herdr said: {reason}",
+    /**
+     * herdr refusing a move it could not perform. Not a `{reason}` slot and
+     * not one of the `*Failed` strings above: `pane.move` answers a no-op
+     * with a SUCCESSFUL response carrying `changed: false` and a
+     * `PaneMoveReason` discriminant — `zoomed_tab` is a token, not prose, so
+     * there is nothing of herdr's to quote. The other reason, `same_tab`,
+     * has no string at all: the operator asked for where the card already
+     * is, and saying nothing is better than saying something wrong.
+     */
+    moveZoomed: "couldn't move it. the tab it's in is zoomed - unzoom it first.",
     liveUpdatesUnavailable: 'no live updates for this card. herdr said: {reason}',
     working: 'working…',
     /** The dismiss control on a toast itself. */
     dismiss: 'dismiss',
+  },
+  /**
+   * The filter bar's group labels. The bar is one wrapping row of three
+   * groups now, so the row break no longer says which chips are which: a
+   * host chip and a status-column chip are the same outlined chip with the
+   * same 8px dot, and only a word tells them apart. The group-by row had
+   * this from the start ("so the chips are not left to explain
+   * themselves"); the other two groups get the same treatment.
+   *
+   * `hosts` is deliberately the same word Settings uses for its section.
+   * That is not drift: herdr's objects use herdr's words on every surface
+   * (docs/BRAND.md, vocabulary). `columns` covers both kinds on the board —
+   * the status columns and the operator's parked ones — so it is not
+   * `status columns`, which would be a lie about half the chips.
+   */
+  filter: {
+    hosts: 'hosts',
+    columns: 'columns',
   },
   /**
    * The board's swimlane grouping. `groupBy` labels the control; the rest
@@ -160,6 +202,7 @@ export const COPY = {
   state: {
     stale: 'stale — reconnecting',
     unavailable: 'this host is out of sight.',
+    gone: 'the session ended. this is the last thing it said.',
   },
   nav: {
     backToBoard: 'back to the board',
@@ -219,6 +262,13 @@ export const COPY = {
   create: {
     /** Accessible name of the `+` trigger. */
     menu: 'open',
+    /**
+     * The destination list's own label, used wherever a creation has more
+     * than one place it could land and the board has no scope to answer
+     * with. A question the control asks, so it is bare — the list below it
+     * is the answer.
+     */
+    where: 'where',
     pane: 'open a card',
     tab: 'open a tab',
     workspace: 'open a workspace',
@@ -287,6 +337,10 @@ export const COPY = {
       'one palette for every open terminal — cards are told apart by title, host seal and status, never by terminal colour.',
     terminalTheme: 'colour theme',
     terminalFontSize: 'text size',
+    terminalScrollback: 'scrollback',
+    /** `{max}` is herdr's measured line ceiling, from the same constant that caps the control. */
+    terminalScrollbackNote:
+      'lines of history each terminal asks herdr for. herdr sends at most {max}.',
 
     runtime: 'runtime',
     runtimeNote:
@@ -328,12 +382,72 @@ export const COPY = {
     clearAppearance: 'theme and density',
     clearTerminal: 'terminal palette',
     clearTerminalFontSize: 'terminal text size',
+    clearTerminalScrollback: 'terminal scrollback',
+    clearTerminalKeyBar: 'terminal key bar',
     clearKeyboard: 'keyboard prefix',
 
     poll: {
       unavailable: 'n/a',
       unit: 'ms',
     },
+  },
+  /**
+   * Lines the terminal writes into its own buffer. `truncated` is the first
+   * line of a buffer herdr cut short; `truncatedRaise` follows it only below
+   * herdr's ceiling, where a deeper setting would bring more history back.
+   */
+  terminal: {
+    truncated: 'herdr sent the last {lines} lines. history above this line was not sent.',
+    truncatedRaise: 'raise scrollback in settings.',
+  },
+  /**
+   * The read-only file panel in pane detail. Every state here is a fact the
+   * bridge reported, never a guess: `notLocal` is the answer for every host
+   * whose filesystem the bridge does not share, and it says which machine
+   * reads the files rather than implying the panel is broken.
+   *
+   * Sizes, entry counts, line numbers, paths and git letters are data
+   * readouts and stay in the template.
+   */
+  files: {
+    /** The toggle, the panel's own name, and the browser surface are one word with one home. */
+    label: 'files',
+    /** The toggle's accessible name when the pane has a repo to name. */
+    toggleIn: 'files in {repo}',
+    viewer: 'viewer',
+    /** The tree's own collapse control, and the filter that narrows it. */
+    tree: 'tree',
+    changedOnly: 'changed',
+    nothingChanged: 'nothing changed in this checkout.',
+    showEveryFile: 'show every file',
+    modeSource: 'source',
+    modeDiff: 'diff',
+    modeRendered: 'rendered',
+    pick: 'pick a file, or paste a path above.',
+    loading: 'reading…',
+    noRepo: 'no repository here.',
+    noRepoBody: "this pane isn't in a git checkout, so there is nothing to read.",
+    notLocal: 'these files are on another machine.',
+    notLocalBody: 'the bridge reads checkouts on its own filesystem only, and {host} is not on it.',
+    notARepo: 'this checkout is no longer a git repository.',
+    gitMissing: 'no git on the machine running the bridge.',
+    checkoutGone: 'this pane and its checkout are gone.',
+    failed: "couldn't read it. the bridge said: {reason}",
+    statusStale: 'stale — last seen state',
+    binary: 'binary file. nothing to read here.',
+    tooLarge: 'too big to read.',
+    pathGone: 'gone from the checkout.',
+    noChanges: 'no changes against head.',
+    treeTruncated: 'the bridge stopped listing here.',
+    statusTruncated: 'the bridge stopped counting here.',
+    diffTruncated: 'the bridge cut this diff short.',
+    ignored: 'ignored',
+    goto: 'go to path',
+    gotoPlaceholder: 'paste a path',
+    gotoSubmit: 'open',
+    gotoMissing: 'not in {repo}: {path}',
+    resize: 'resize the file panel',
+    surface: 'panel surface',
   },
   notShipped: 'not yet.',
 } as const;

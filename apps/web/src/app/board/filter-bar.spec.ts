@@ -207,6 +207,64 @@ describe('FilterBar group-by row', () => {
  * is choosing to see is columns — a parked card must never be hidden by the
  * status it happens to carry.
  */
+describe('FilterBar layout', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [FilterBar],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: PanesStore, useValue: new FakePanesStore() },
+        { provide: WsClient, useValue: {} },
+      ],
+    }).compileComponents();
+  });
+
+  it('is a wrapping row of groups, not a stack of rows', () => {
+    // The bar used to be `flex-direction: column`, which spent three fixed
+    // 40px rows on content that needs one line at desktop width: the first
+    // card sat 342px down a 1280x800 laptop. The responsive behaviour is
+    // this composition alone — a wrapping row of wrapping groups — so there
+    // is no media query to keep in step, and no viewport here can prove it
+    // (karma's is permanently narrow). What is asserted is the contract:
+    // put `column` back and this fails.
+    const fixture = TestBed.createComponent(FilterBar);
+    fixture.detectChanges();
+    const bar = (fixture.nativeElement as HTMLElement).querySelector('.filter-bar')!;
+    const group = bar.querySelector('.chip-row')!;
+
+    const barStyle = getComputedStyle(bar);
+    expect(barStyle.display).toBe('flex');
+    expect(barStyle.flexDirection).withContext('groups share a line').toBe('row');
+    expect(barStyle.flexWrap).withContext('and wrap as units when they cannot').toBe('wrap');
+
+    const groupStyle = getComputedStyle(group);
+    expect(groupStyle.flexWrap).withContext('chips wrap inside their group').toBe('wrap');
+  });
+
+  it('names every group, because the chips cannot tell each other apart', () => {
+    // A host chip and a status-column chip are the same outlined chip with
+    // the same 8px dot. While the groups sat on separate rows the row break
+    // said which was which; sharing a line, only the label does.
+    const fixture = TestBed.createComponent(FilterBar);
+    fixture.detectChanges();
+    const groups = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.chip-row'));
+
+    expect(groups.length).toBe(3);
+    expect(groups.map((g) => g.querySelector('.row-label')?.textContent?.trim())).toEqual([
+      COPY.filter.hosts,
+      COPY.filter.columns,
+      COPY.swimlane.groupBy,
+    ]);
+    // The label is the group's accessible name too, not decoration.
+    for (const group of groups) {
+      expect(group.getAttribute('role')).toBe('group');
+      expect(group.getAttribute('aria-label')).toBe(
+        group.querySelector('.row-label')!.textContent!.trim()
+      );
+    }
+  });
+});
+
 describe('FilterBar parked-column chips', () => {
   let fixture: ComponentFixture<FilterBar>;
   let store: FakePanesStore;

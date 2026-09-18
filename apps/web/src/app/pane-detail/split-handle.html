@@ -1,0 +1,16 @@
+<div
+  class="handle"
+  role="separator"
+  tabindex="0"
+  data-splitter
+  [attr.aria-orientation]="axis() === 'hbox' ? 'vertical' : 'horizontal'"
+  [attr.aria-label]="copy.files.resize"
+  [attr.aria-valuenow]="percent()"
+  aria-valuemin="20"
+  aria-valuemax="80"
+  (pointerdown)="onDown($event)"
+  (pointermove)="moved.emit($event)"
+  (pointerup)="released.emit()"
+  (pointercancel)="released.emit()"
+  (keydown)="onKey($event)"
+></div>

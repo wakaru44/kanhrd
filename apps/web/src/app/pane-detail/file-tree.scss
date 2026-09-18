@@ -1,0 +1,128 @@
+:host {
+  display: block;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.tree {
+  margin: 0;
+  padding: var(--sp-1) 0;
+  list-style: none;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  width: 100%;
+  min-height: var(--sp-8);
+  /* One --sp-4 step per level: enough to read the nesting at phone width. */
+  padding: 0 var(--sp-2) 0 calc(var(--sp-2) + var(--sp-4) * var(--depth, 0));
+  border: 0;
+  border-inline-start: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ink);
+  }
+
+  &.selected {
+    color: var(--ink);
+    font-weight: var(--fw-semi);
+    border-inline-start-color: var(--ochre-line);
+    background: var(--paper-raised);
+  }
+
+  &[data-git='modified'] {
+    .name,
+    .git {
+      color: var(--ochre-ink);
+    }
+  }
+
+  &[data-git='untracked'] {
+    .name,
+    .git {
+      color: var(--status-blocked-ink);
+    }
+  }
+
+  /* An ignored entry recedes; the word beside it is what states the fact. */
+  &[data-git='clean'] .flag ~ .name,
+  .flag {
+    color: var(--ink-mute);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+}
+
+.icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex: none;
+  stroke: currentColor;
+}
+
+.disclosure {
+  transition: transform var(--motion-fast) var(--ease-out);
+
+  &.open {
+    transform: rotate(90deg);
+  }
+}
+
+.disclosure-gap {
+  flex: none;
+  width: var(--icon-sm);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flag,
+.git {
+  flex: none;
+}
+
+.git {
+  font-weight: var(--fw-semi);
+}
+
+/* A caption under a level's entries: a cut listing, an empty directory, a
+   failed expansion. Never activatable, so it is not a button. */
+.note {
+  margin: 0;
+  padding: var(--sp-1) var(--sp-2) var(--sp-1)
+    calc(var(--sp-2) + var(--icon-sm) + var(--sp-1) + var(--sp-4) * var(--depth, 0));
+  font-family: var(--font-ui);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  color: var(--ink-mute);
+}
+
+@media (pointer: coarse) {
+  .entry {
+    min-height: var(--touch-target-min);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosure {
+    transition: none;
+  }
+}

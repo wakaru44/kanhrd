@@ -59,6 +59,38 @@ any other chord, leave the terminal first.
 Tabs move with prefix + `n` / `p` / `l` and prefix + `0`…`9`, the same keys
 herdr uses.
 
+## What a card's controls do
+
+![A card's move, split, rest and more-actions controls, with the move menu open and `another tab` expanded over the other tabs of both workspaces](./screenshots/card_actions.png)
+
+Every card carries four controls, and each one says what it is:
+
+- **move to…** opens a menu of the three places herdr can send a pane:
+  **another tab**, **a new tab**, **a new workspace**. This changes herdr,
+  so every other herdr client sees it — and moving the last pane out of a
+  tab closes that tab, and its workspace with it if that was the last tab.
+- **split** opens **split right** and **split down**. The new pane lands in
+  this card's own tab, beside it.
+- **rest** ends the session, after asking. The terminal and anything
+  running in it stop, and it cannot be undone.
+- **more actions** carries all of the above with their words, plus
+  **rename card** and **park in…**.
+
+A control you cannot see is one the host cannot do: where herdr does not
+advertise moving panes, there is no move control at all rather than a
+dead one.
+
+Below 900px, and in compact density, the four fold into the single
+**more actions** trigger.
+
+**Moving is not parking.** `move to…` reparents the pane on the host;
+`park in…` groups the card in a column held in this browser and changes
+nothing anywhere else. They are deliberately different menus.
+
+If herdr declines a move you will be told why — a tab that is zoomed has
+to be unzoomed first. Asking to move a card into the tab it is already in
+is not offered at all.
+
 ## Parking cards in columns of your own
 
 The five status columns are herdr's reading of each pane and are read-only.
@@ -92,7 +124,7 @@ Settings › clear parked columns removes them deliberately.
 
 ## Narrowing the board
 
-![The board with host chips, per-column chips and the group-by row above the status columns](./screenshots/desktop_board.png)
+![The board with host chips, per-column chips and the group-by row above the status columns, and a parked column beside them](./screenshots/desktop_board.png)
 
 Three chip rows sit above the board, all visible, none hidden in a menu.
 

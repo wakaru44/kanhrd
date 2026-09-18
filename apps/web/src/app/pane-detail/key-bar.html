@@ -1,0 +1,45 @@
+<!--
+  The strip is the bar's own toggle and, collapsed or not, its status line:
+  at rest it reads as the keycaps the row holds; while a modifier is latched
+  it shows that modifier in its armed or locked treatment instead, so a latch
+  is never invisible.
+-->
+<button
+  type="button"
+  class="strip"
+  [attr.aria-expanded]="expanded()"
+  aria-controls="key-bar-row"
+  (pointerdown)="onPointerDown($event, null)"
+  (pointerup)="onPointerUp($event, null)"
+  (pointercancel)="onPointerCancel()"
+  (click)="onClick($event, null)"
+>
+  @if (latched().length > 0) {
+    @for (cell of latched(); track cell.id) {
+      <span class="latch" [attr.data-state]="stateOfModifier(cell.modifier)">{{ cell.label }}</span>
+    }
+  } @else {
+    <span class="readout">{{ readout() }}</span>
+  }
+</button>
+
+@if (expanded()) {
+  <div class="row" id="key-bar-row">
+    @for (cell of cells(); track cell.id) {
+      <button
+        type="button"
+        class="key"
+        [attr.data-cell]="cell.id"
+        [attr.data-state]="stateOf(cell)"
+        [attr.aria-pressed]="stateOf(cell) === null ? null : stateOf(cell) !== 'idle'"
+        [attr.aria-label]="nameOf(cell)"
+        (pointerdown)="onPointerDown($event, cell)"
+        (pointerup)="onPointerUp($event, cell)"
+        (pointercancel)="onPointerCancel()"
+        (click)="onClick($event, cell)"
+      >
+        {{ cell.label }}
+      </button>
+    }
+  </div>
+}

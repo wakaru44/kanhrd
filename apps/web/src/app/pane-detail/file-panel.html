@@ -1,0 +1,213 @@
+@if (gate() === 'ready') {
+  <form class="goto" (submit)="submitGoto($event)">
+    <input
+      class="goto-input"
+      type="text"
+      inputmode="url"
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      [attr.placeholder]="copy.files.gotoPlaceholder"
+      [attr.aria-label]="copy.files.goto"
+      [value]="goto()"
+      (input)="onGotoInput($event)"
+    />
+    <button type="submit" class="goto-open">{{ copy.files.gotoSubmit }}</button>
+    @if (gotoError(); as error) {
+      <p class="goto-error" role="alert">{{ error }}</p>
+    }
+  </form>
+
+  <!--
+    The tree's own bar. The collapse control persists so there is a way
+    back; the filter lives WITH the tree and goes away with it, because a
+    filter over a list that is not on screen is a setting with no subject.
+  -->
+  <div class="tree-bar">
+    <button
+      type="button"
+      class="tree-toggle"
+      data-tree-toggle
+      [attr.aria-expanded]="treeOpen()"
+      aria-controls="file-tree"
+      (click)="toggleTree()"
+    >
+      <svg lucideChevronRight class="icon" [class.open]="treeOpen()" aria-hidden="true"></svg>
+      {{ copy.files.tree }}
+    </button>
+
+    @if (treeOpen()) {
+      <button
+        type="button"
+        class="filter-toggle"
+        data-changed-filter
+        [class.active]="changedOnly()"
+        [attr.aria-pressed]="changedOnly()"
+        (click)="toggleChangedOnly()"
+      >
+        <svg lucideFileDiff class="icon" aria-hidden="true"></svg>
+        {{ copy.files.changedOnly }}
+      </button>
+      <!-- A count, not copy: how many rows the filter has to show. -->
+      <span class="changed-count" data-changed-count>{{ changedCount() }}</span>
+    }
+  </div>
+
+  <div class="panel-body" [attr.data-layout]="treeOpen() ? layout() : 'viewer-only'">
+    @if (treeOpen() && layout() === 'single') {
+      <div class="segmented surfaces" role="tablist" [attr.aria-label]="copy.files.surface">
+        <button
+          type="button"
+          role="tab"
+          class="segment"
+          data-surface="browser"
+          [class.active]="surface() === 'browser'"
+          [attr.aria-selected]="surface() === 'browser'"
+          (click)="surface.set('browser')"
+        >
+          {{ copy.files.label }}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="segment"
+          data-surface="viewer"
+          [class.active]="surface() === 'viewer'"
+          [attr.aria-selected]="surface() === 'viewer'"
+          (click)="surface.set('viewer')"
+        >
+          {{ selected() ?? copy.files.viewer }}
+        </button>
+      </div>
+    }
+
+    @if (treeOpen() && (layout() === 'side-by-side' || surface() === 'browser')) {
+      @if (filteredEmpty()) {
+        <!-- An empty result, with the next step rather than a blank column. -->
+        <div class="tree-empty" id="file-tree" role="status">
+          <p class="state-line">{{ copy.files.nothingChanged }}</p>
+          <button type="button" class="retry" data-show-every-file (click)="showEveryFile()">
+            {{ copy.files.showEveryFile }}
+          </button>
+        </div>
+      } @else {
+        <app-file-tree
+          id="file-tree"
+          class="browser"
+          [rows]="rows()"
+          [selected]="selected()"
+          (toggled)="toggleDir($event)"
+          (opened)="openFile($event)"
+        />
+      }
+    }
+    @if (!treeOpen() || layout() === 'side-by-side' || surface() === 'viewer') {
+      <app-file-view
+        class="viewer"
+        [path]="selected()"
+        [content]="content()"
+        [diff]="diff()"
+        [mode]="viewerMode()"
+        (modeChange)="viewerMode.set($event)"
+      />
+    }
+  </div>
+
+  <p class="status-line" data-status-line aria-live="polite">
+    @if (summary(); as s) {
+      <!--
+        Which checkout, and where in it. The panel only exists for a
+        repository, so this leads the line rather than trailing it: a branch
+        name, or — on a detached HEAD, where git has no name to give — the
+        commit, in git's own phrasing. One of the two is always there; a
+        blank here would be the panel declining to say where it is reading.
+      -->
+      @if (s.branch; as branch) {
+        <span class="branch" data-branch>
+          {{ branch }}
+          @if (s.head; as head) {
+            <span class="head">{{ head }}</span>
+          }
+        </span>
+      } @else if (s.head; as head) {
+        <span class="branch detached" data-branch>detached at {{ head }}</span>
+      } @else {
+        <!-- A branch with no commit yet: named nowhere, so say that much. -->
+        <span class="branch detached" data-branch>no commit yet</span>
+      }
+      @if (s.ahead || s.behind) {
+        <span class="tracking">
+          @if (s.ahead) {
+            ahead {{ s.ahead }}
+          }
+          @if (s.behind) {
+            behind {{ s.behind }}
+          }
+        </span>
+      }
+      <!-- git's own words for git's own states, and counts: data readouts, not product copy. -->
+      <span [attr.data-git]="selectedGit()">
+        @if (selected()) {
+          {{ selectedGit() }}
+        } @else {
+          {{ s.modified }} modified · {{ s.untracked }} untracked
+        }
+      </span>
+      @if (s.truncated) {
+        <span class="cut">{{ copy.files.statusTruncated }}</span>
+      }
+    } @else if (statusError() === null) {
+      <span>{{ copy.files.loading }}</span>
+    }
+    @if (statusStale()) {
+      <span class="stale">
+        <svg lucideUnplug class="icon" aria-hidden="true"></svg>
+        {{ copy.files.statusStale }}
+      </span>
+    }
+  </p>
+} @else {
+  <!--
+    One stated reason, never an empty tree. Each of these is a fact the
+    bridge reported (or the pane itself carries); none of them is retried
+    behind the operator's back.
+  -->
+  <div class="panel-state" role="status">
+    @switch (gate()) {
+      @case ('no-repo') {
+        <p class="state-line">{{ copy.files.noRepo }}</p>
+        <p class="state-body">{{ copy.files.noRepoBody }}</p>
+      }
+      @case ('not-local') {
+        <p class="state-line">{{ copy.files.notLocal }}</p>
+        <p class="state-body">{{ notLocalBody() }}</p>
+      }
+      @case ('not-a-repo') {
+        <p class="state-line">{{ copy.files.notARepo }}</p>
+        <div class="state-actions">
+          <button type="button" class="retry" (click)="retry()">
+            <svg lucideRefreshCw class="icon" aria-hidden="true"></svg>
+            {{ copy.loading.retry }}
+          </button>
+        </div>
+      }
+      @case ('git-missing') {
+        <p class="state-line">{{ copy.files.gitMissing }}</p>
+      }
+      @case ('checkout-gone') {
+        <p class="state-line">{{ copy.files.checkoutGone }}</p>
+      }
+    }
+  </div>
+}
+
+@if (statusError(); as reason) {
+  <p class="panel-failure" role="alert">
+    <svg lucideTriangleAlert class="icon" aria-hidden="true"></svg>
+    <span>{{ statusFailure() }}</span>
+    <button type="button" class="retry" (click)="retry()">
+      <svg lucideRefreshCw class="icon" aria-hidden="true"></svg>
+      {{ copy.loading.retry }}
+    </button>
+  </p>
+}

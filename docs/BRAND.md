@@ -110,8 +110,20 @@ product copy and stay in the template.
 | `emptyState.notFoundAction`           | `back to the board`                                                                                                                           |
 | `emptyState.scopeUnavailable`         | `that workspace is no longer here.`                                                                                                           |
 | `column.empty`                        | `0`                                                                                                                                           |
+| `card.split`                          | `split`                                                                                                                                       |
+| `card.splitRight`                     | `split right`                                                                                                                                 |
+| `card.splitDown`                      | `split down`                                                                                                                                  |
+| `card.move`                           | `move to…`                                                                                                                                    |
+| `card.moveExistingTab`                | `another tab`                                                                                                                                 |
+| `card.moveNewTab`                     | `a new tab`                                                                                                                                   |
+| `card.moveNewWorkspace`               | `a new workspace`                                                                                                                             |
 | `card.park`                           | `park in…`                                                                                                                                    |
 | `card.unpark`                         | `unpark`                                                                                                                                      |
+| `card.renameAction`                   | `rename card`                                                                                                                                 |
+| `card.renameModalTitle`               | `name this card`                                                                                                                              |
+| `card.renameFieldLabel`               | `card name`                                                                                                                                   |
+| `card.renameSave`                     | `save`                                                                                                                                        |
+| `card.renameClear`                    | `clear name`                                                                                                                                  |
 | `park.newColumn`                      | `new column…`                                                                                                                                 |
 | `park.defaultName`                    | `parked`                                                                                                                                      |
 | `park.rule.never`                     | `never`                                                                                                                                       |
@@ -148,8 +160,11 @@ product copy and stay in the template.
 | `toast.createTabFailed`               | `couldn't open a tab. herdr said: {reason}`                                                                                                   |
 | `toast.createWorkspaceFailed`         | `couldn't open a workspace. herdr said: {reason}`                                                                                             |
 | `toast.renameFailed`                  | `couldn't rename. herdr said: {reason}`                                                                                                       |
+| `toast.moveFailed`                    | `couldn't move {name}. herdr said: {reason}`                                                                                                  |
+| `toast.moveZoomed`                    | `couldn't move it. the tab it's in is zoomed - unzoom it first.`                                                                              |
 | `toast.liveUpdatesUnavailable`        | `no live updates for this card. herdr said: {reason}`                                                                                         |
 | `toast.working`                       | `working…`                                                                                                                                    |
+| `toast.dismiss`                       | `dismiss`                                                                                                                                     |
 | `status.working`                      | `working`                                                                                                                                     |
 | `status.blocked`                      | `blocked`                                                                                                                                     |
 | `status.done`                         | `done`                                                                                                                                        |
@@ -160,15 +175,60 @@ product copy and stay in the template.
 | `loading.retry`                       | `try again`                                                                                                                                   |
 | `state.stale`                         | `stale — reconnecting`                                                                                                                        |
 | `state.unavailable`                   | `this host is out of sight.`                                                                                                                  |
+| `state.gone`                          | `the session ended. this is the last thing it said.`                                                                                          |
+| `terminal.truncated`                  | `herdr sent the last {lines} lines. history above this line was not sent.`                                                                    |
+| `terminal.truncatedRaise`             | `raise scrollback in settings.`                                                                                                               |
+| `files.label`                         | `files`                                                                                                                                       |
+| `files.toggleIn`                      | `files in {repo}`                                                                                                                             |
+| `files.viewer`                        | `viewer`                                                                                                                                      |
+| `files.tree`                          | `tree`                                                                                                                                        |
+| `files.changedOnly`                   | `changed`                                                                                                                                     |
+| `files.nothingChanged`                | `nothing changed in this checkout.`                                                                                                           |
+| `files.showEveryFile`                 | `show every file`                                                                                                                             |
+| `files.modeSource`                    | `source`                                                                                                                                      |
+| `files.modeDiff`                      | `diff`                                                                                                                                        |
+| `files.modeRendered`                  | `rendered`                                                                                                                                    |
+| `files.pick`                          | `pick a file, or paste a path above.`                                                                                                         |
+| `files.loading`                       | `reading…`                                                                                                                                    |
+| `files.noRepo`                        | `no repository here.`                                                                                                                         |
+| `files.noRepoBody`                    | `this pane isn't in a git checkout, so there is nothing to read.`                                                                             |
+| `files.notLocal`                      | `these files are on another machine.`                                                                                                         |
+| `files.notLocalBody`                  | `the bridge reads checkouts on its own filesystem only, and {host} is not on it.`                                                             |
+| `files.notARepo`                      | `this checkout is no longer a git repository.`                                                                                                |
+| `files.gitMissing`                    | `no git on the machine running the bridge.`                                                                                                   |
+| `files.checkoutGone`                  | `this pane and its checkout are gone.`                                                                                                        |
+| `files.failed`                        | `couldn't read it. the bridge said: {reason}`                                                                                                 |
+| `files.statusStale`                   | `stale — last seen state`                                                                                                                     |
+| `files.binary`                        | `binary file. nothing to read here.`                                                                                                          |
+| `files.tooLarge`                      | `too big to read.`                                                                                                                            |
+| `files.pathGone`                      | `gone from the checkout.`                                                                                                                     |
+| `files.noChanges`                     | `no changes against head.`                                                                                                                    |
+| `files.treeTruncated`                 | `the bridge stopped listing here.`                                                                                                            |
+| `files.statusTruncated`               | `the bridge stopped counting here.`                                                                                                           |
+| `files.diffTruncated`                 | `the bridge cut this diff short.`                                                                                                             |
+| `files.ignored`                       | `ignored`                                                                                                                                     |
+| `files.goto`                          | `go to path`                                                                                                                                  |
+| `files.gotoPlaceholder`               | `paste a path`                                                                                                                                |
+| `files.gotoSubmit`                    | `open`                                                                                                                                        |
+| `files.gotoMissing`                   | `not in {repo}: {path}`                                                                                                                       |
+| `files.resize`                        | `resize the file panel`                                                                                                                       |
+| `files.surface`                       | `panel surface`                                                                                                                               |
 | `nav.backToBoard`                     | `back to the board`                                                                                                                           |
 | `nav.settings`                        | `settings`                                                                                                                                    |
 | `nav.toggleNav`                       | `toggle navigation`                                                                                                                           |
 | `nav.help`                            | `keyboard shortcuts`                                                                                                                          |
 | `nav.statusSwitcher`                  | `status columns`                                                                                                                              |
+| `filter.hosts`                        | `hosts`                                                                                                                                       |
+| `filter.columns`                      | `columns`                                                                                                                                     |
 | `nav.statusSwitcherItem`              | `{status} — {count} cards`                                                                                                                    |
 | `nav.tabStrip`                        | `tabs in this workspace`                                                                                                                      |
 | `nav.tabStripItem`                    | `{name} — {count} cards`                                                                                                                      |
+| `nav.cardSwitcher`                    | `cards in this tab`                                                                                                                           |
+| `nav.cardSwitcherItem`                | `{name} — {status}`                                                                                                                           |
+| `nav.nextCard`                        | `next card in this tab`                                                                                                                       |
+| `nav.moreActions`                     | `more actions`                                                                                                                                |
 | `create.menu`                         | `open`                                                                                                                                        |
+| `create.where`                        | `where`                                                                                                                                       |
 | `create.pane`                         | `open a card`                                                                                                                                 |
 | `create.tab`                          | `open a tab`                                                                                                                                  |
 | `create.workspace`                    | `open a workspace`                                                                                                                            |
@@ -199,6 +259,8 @@ product copy and stay in the template.
 | `settings.terminalNote`               | `one palette for every open terminal — cards are told apart by title, host seal and status, never by terminal colour.`                        |
 | `settings.terminalTheme`              | `colour theme`                                                                                                                                |
 | `settings.terminalFontSize`           | `text size`                                                                                                                                   |
+| `settings.terminalScrollback`         | `scrollback`                                                                                                                                  |
+| `settings.terminalScrollbackNote`     | `lines of history each terminal asks herdr for. herdr sends at most {max}.`                                                                   |
 | `settings.runtime`                    | `runtime`                                                                                                                                     |
 | `settings.runtimeNote`                | `the output poll interval is bridge-owned. each connected host advertises its own cadence.`                                                   |
 | `settings.noHostsConnected`           | `no hosts connected yet.`                                                                                                                     |
@@ -229,10 +291,32 @@ product copy and stay in the template.
 | `settings.clearAppearance`            | `theme and density`                                                                                                                           |
 | `settings.clearTerminal`              | `terminal palette`                                                                                                                            |
 | `settings.clearTerminalFontSize`      | `terminal text size`                                                                                                                          |
+| `settings.clearTerminalScrollback`    | `terminal scrollback`                                                                                                                         |
+| `settings.clearTerminalKeyBar`        | `terminal key bar`                                                                                                                            |
 | `settings.clearKeyboard`              | `keyboard prefix`                                                                                                                             |
+| `settings.clearSwimlane`              | `board grouping`                                                                                                                              |
+| `settings.poll.unavailable`           | `n/a`                                                                                                                                         |
+| `settings.poll.unit`                  | `ms`                                                                                                                                          |
 | `notShipped`                          | `not yet.`                                                                                                                                    |
+| `rail.navigation`                     | `workspaces and tabs`                                                                                                                         |
+| `rail.renameWorkspace`                | `rename workspace`                                                                                                                            |
+| `rail.renameTab`                      | `rename tab`                                                                                                                                  |
+| `rail.lastWorkspaceRefusal`           | `this is the only workspace open on this host. closing it would leave nothing to watch. open another workspace first.`                        |
+| `swimlane.groupBy`                    | `group by`                                                                                                                                    |
+| `swimlane.none`                       | `none`                                                                                                                                        |
+| `swimlane.host`                       | `host`                                                                                                                                        |
+| `swimlane.repository`                 | `repository`                                                                                                                                  |
+| `swimlane.checkout`                   | `checkout path`                                                                                                                               |
+| `swimlane.tab`                        | `tab`                                                                                                                                         |
+| `swimlane.ungrouped`                  | `no repository`                                                                                                                               |
+| `theme.board`                         | `board`                                                                                                                                       |
+| `theme.washi`                         | `washi`                                                                                                                                       |
+| `theme.sumi`                          | `sumi`                                                                                                                                        |
 
-`{host}`, `{name}` and `{reason}` are interpolation slots. A `{reason}`
+`{host}`, `{name}`, `{reason}`, `{lines}` and `{max}` are interpolation
+slots. `{lines}` and `{max}` are line counts — `{max}` is herdr's measured
+ceiling, filled from the constant that caps the control, never written
+into the string. A `{reason}`
 quotes herdr's wire response verbatim, including its original case. The
 framing copy and the quoted portion use the same word for the same
 object.

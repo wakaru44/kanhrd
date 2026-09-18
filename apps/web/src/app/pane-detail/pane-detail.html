@@ -6,7 +6,7 @@
   />
 }
 
-<div class="pane-detail">
+<div class="pane-detail" [style.--key-bar-reserve.px]="keyBarReserve()">
   <header class="detail-header">
     <a [routerLink]="backUrl" class="back">
       <svg lucideArrowLeft class="icon" aria-hidden="true"></svg>
@@ -93,8 +93,54 @@
       </span>
       <!-- herdr's own git provenance: repo name, then the FULL checkout path (the card shows a computed tail). -->
       @if (project(); as p) {
-        <span class="repo-name">{{ p.repo_name }}</span>
+        <!--
+          The panel IS this repo, so its toggle sits on the repo name's
+          trailing edge — visible on first render, never hover-revealed.
+        -->
+        <span class="repo">
+          <span class="repo-name">{{ p.repo_name }}</span>
+          @if (filesSupported()) {
+            <button
+              type="button"
+              class="panel-toggle"
+              data-panel-toggle
+              [attr.aria-expanded]="filePanelOpen()"
+              aria-controls="file-panel"
+              [attr.aria-label]="filesToggleLabel()"
+              [title]="filesToggleLabel()"
+              (click)="toggleFilePanel()"
+            >
+              <svg
+                lucideChevronRight
+                class="icon"
+                [class.open]="filePanelOpen()"
+                aria-hidden="true"
+              ></svg>
+              {{ copy.files.label }}
+            </button>
+          }
+        </span>
         <span class="checkout-path">{{ p.checkout_path }}</span>
+      } @else if (filesSupported()) {
+        <!-- No repo to hang it on, and "there is no repo" is the answer the toggle gives. -->
+        <button
+          type="button"
+          class="panel-toggle"
+          data-panel-toggle
+          [attr.aria-expanded]="filePanelOpen()"
+          aria-controls="file-panel"
+          [attr.aria-label]="filesToggleLabel()"
+          [title]="filesToggleLabel()"
+          (click)="toggleFilePanel()"
+        >
+          <svg
+            lucideChevronRight
+            class="icon"
+            [class.open]="filePanelOpen()"
+            aria-hidden="true"
+          ></svg>
+          {{ copy.files.label }}
+        </button>
       }
       <span class="pane-id">{{ id() }}</span>
       <span class="revision">{{ revisionLabel() }}</span>
@@ -109,9 +155,11 @@
   </header>
 
   <div class="detail-body">
-    <div class="terminal-wrap">
+    <div class="split" #split [attr.data-axis]="splitAxis()" [class.dragging]="splitDragging()">
+    <div class="terminal-wrap" [style.flex-grow]="filePanelOpen() ? splitRatio() : 1">
       <div
         class="terminal-container"
+        [class.inert]="viewState() === 'gone'"
         #terminalContainer
         role="group"
         [attr.aria-label]="title()"
@@ -159,5 +207,54 @@
         }
       </div>
     </div>
+
+    @if (filePanelOpen()) {
+      <app-split-handle
+        [axis]="splitAxis()"
+        [percent]="splitPercent()"
+        (pressed)="onSplitterDown()"
+        (moved)="onSplitterMove($event)"
+        (released)="onSplitterUp()"
+        (stepped)="onSplitterStep($event)"
+      />
+
+      <app-file-panel
+        id="file-panel"
+        class="file-panel"
+        [style.flex-grow]="1 - splitRatio()"
+        [attr.aria-label]="copy.files.label"
+        [host]="host()"
+        [paneId]="id()"
+        [project]="project()"
+        [paused]="filePanelPaused()"
+      />
+    }
+    </div>
+
+    <!--
+      Gone is a caption under the last row, never a panel over it: the frame
+      is the content its copy points at (design.md, "Placement"). Nothing to
+      retry. The live region stays mounted so the caption is announced.
+    -->
+    <div class="gone-slot" aria-live="polite">
+      @if (viewState() === 'gone') {
+        <div class="terminal-gone">
+          <p class="state-line">
+            <svg lucideSunset class="icon" aria-hidden="true"></svg>
+            {{ copy.state.gone }}
+          </p>
+          <a [routerLink]="backUrl" class="state-back">{{ copy.nav.backToBoard }}</a>
+        </div>
+      }
+    </div>
   </div>
+
+  <app-key-bar
+    [cells]="keyBarCells"
+    [modifiers]="keyBarModifiers"
+    [expanded]="keyBar.expanded()"
+    (keys)="sendKeyBarKeys($event)"
+    (toggled)="keyBar.toggle()"
+    (reserve)="keyBarReserve.set($event)"
+  />
 </div>

@@ -12,6 +12,11 @@ import {
   TERMINAL_FONT_SIZES,
   TerminalFontSizeService,
 } from '../state/terminal-font-size.service';
+import {
+  DEFAULT_TERMINAL_SCROLLBACK,
+  TERMINAL_SCROLLBACK_STEPS,
+  TerminalScrollbackService,
+} from '../state/terminal-scrollback.service';
 import { COPY } from '../shared/copy';
 
 const LONG_ERROR =
@@ -63,6 +68,7 @@ describe('Settings', () => {
     localStorage.removeItem('kanhrd.settings');
     localStorage.removeItem('kanhrd.theme');
     localStorage.removeItem('kanhrd.terminal-font-size');
+    localStorage.removeItem('kanhrd.terminal-scrollback');
     localStorage.removeItem('kanhrd.terminal-theme');
     store = new FakePanesStore();
     await TestBed.configureTestingModule({
@@ -86,6 +92,7 @@ describe('Settings', () => {
     localStorage.removeItem('kanhrd.settings');
     localStorage.removeItem('kanhrd.theme');
     localStorage.removeItem('kanhrd.terminal-font-size');
+    localStorage.removeItem('kanhrd.terminal-scrollback');
     localStorage.removeItem('kanhrd.terminal-theme');
   });
 
@@ -102,8 +109,21 @@ describe('Settings', () => {
     return found!;
   }
 
+  /** The segments of one labelled group in the terminal section — text size and scrollback sit side by side there. */
+  function groupSegments(labelId: string): HTMLButtonElement[] {
+    return Array.from(
+      section('terminal').querySelectorAll<HTMLButtonElement>(
+        `[aria-labelledby="${labelId}"] .segment`
+      )
+    );
+  }
+
   function fontSizeSegments(): HTMLButtonElement[] {
-    return Array.from(section('terminal').querySelectorAll<HTMLButtonElement>('.segment'));
+    return groupSegments('terminal-font-size-label');
+  }
+
+  function scrollbackSegments(): HTMLButtonElement[] {
+    return groupSegments('terminal-scrollback-label');
   }
 
   it('titles the screen and its back control from copy.ts', () => {
@@ -214,7 +234,9 @@ describe('Settings', () => {
     // One row per kanhrd-owned setting the sweep clears — board grouping
     // rides the same `kanhrd.settings` key, so it is listed too, and the
     // parked columns are a `kanhrd.*` key of their own.
-    expect(modal?.querySelectorAll('.preview-row').length).toBe(7);
+    expect(modal?.querySelectorAll('.preview-row').length).toBe(9);
+    expect(modal?.textContent).toContain(COPY.settings.clearTerminalKeyBar);
+    expect(modal?.textContent).toContain(COPY.settings.clearTerminalScrollback);
     expect(modal?.textContent).toContain(COPY.settings.clearParked);
     expect(modal?.textContent).toContain(COPY.settings.clearSwimlane);
     expect(modal?.querySelector('.modal-body')?.textContent).toContain('cannot be undone');
@@ -271,5 +293,39 @@ describe('Settings', () => {
       expect(box.height).toBeGreaterThanOrEqual(40);
       expect(box.width).toBeGreaterThanOrEqual(40);
     }
+  });
+
+  // --- terminal scrollback ------------------------------------------------
+
+  it('offers one segment per scrollback step, beside text size in the terminal section', () => {
+    expect(scrollbackSegments().map((b) => b.textContent?.trim())).toEqual(
+      TERMINAL_SCROLLBACK_STEPS.map(String)
+    );
+    expect(section('terminal').textContent).toContain(COPY.settings.terminalScrollback);
+  });
+
+  it("states herdr's ceiling in the note from the constant, not from the copy", () => {
+    // The copy carries `{max}`; the rendered note must carry the number.
+    expect(COPY.settings.terminalScrollbackNote).toContain('{max}');
+    const note = section('terminal').textContent ?? '';
+    expect(note).toContain(`herdr sends at most ${Math.max(...TERMINAL_SCROLLBACK_STEPS)}.`);
+    expect(note).not.toContain('{max}');
+  });
+
+  it('marks the default depth pressed, and a click persists a new one', () => {
+    const pressed = () =>
+      scrollbackSegments().filter((b) => b.getAttribute('aria-pressed') === 'true');
+    expect(pressed().map((b) => b.textContent?.trim())).toEqual([
+      String(DEFAULT_TERMINAL_SCROLLBACK),
+    ]);
+
+    scrollbackSegments()
+      .find((b) => b.textContent?.trim() === '250')!
+      .click();
+    fixture.detectChanges();
+
+    expect(TestBed.inject(TerminalScrollbackService).lines()).toBe(250);
+    expect(pressed().map((b) => b.textContent?.trim())).toEqual(['250']);
+    expect(fontSizeService.size()).toBe(DEFAULT_TERMINAL_FONT_SIZE);
   });
 });

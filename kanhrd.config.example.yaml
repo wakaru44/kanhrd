@@ -1,0 +1,50 @@
+# kanhrd bridge configuration — copy to `kanhrd.config.yaml` and edit.
+#
+#   cp kanhrd.config.example.yaml kanhrd.config.yaml
+#
+# The bridge reads `kanhrd.config.yaml` from its working directory unless
+# `--config <path>` says otherwise. Every value below is optional: with no
+# file at all the bridge runs on 127.0.0.1:5173 with the single `local`
+# host shown here. `~` is expanded to your home directory.
+#
+# Your real `kanhrd.config.yaml` is gitignored, because it names socket
+# paths on your machines.
+
+# The herdr sockets this bridge serves. A host is always a LOCAL Unix socket
+# path from the bridge's point of view — a remote machine is reached by
+# landing its socket on this one through an SSH tunnel you bring up
+# yourself, not by kanhrd (docs/adr/0001-hub-bridge-ssh-tunnels.md, and
+# docs/OPERATING.md for the autossh and systemd recipes).
+hosts:
+  - name: local
+    socket: ~/.config/herdr/herdr.sock
+
+  # A remote host, once its socket is forwarded to this machine:
+  #
+  #   ssh -N -L /run/user/1000/herdr-cloud.sock:/home/you/.config/herdr/herdr.sock cloud
+  #
+  # - name: cloud
+  #   socket: /run/user/1000/herdr-cloud.sock
+
+# Where the bridge listens. Loopback is the safe default (ADR-0003); the
+# bridge refuses a non-loopback bind unless you also pass
+# `--i-know-what-im-doing`. To reach the board from another device, front
+# the loopback bridge with `tailscale serve` (`make run-tailscale-serve`)
+# rather than binding 0.0.0.0.
+bind: 127.0.0.1
+port: 5173
+
+# Browser origins allowed to open `/ws`, on top of the ones derived from
+# `bind`/`port`. Needed when something fronts the bridge under a different
+# origin — a Tailscale HTTPS name, or a reverse proxy.
+#
+# allowed_origins:
+#   - https://laptop.tailnet-name.ts.net
+
+# Refuse handshakes that carry no `Origin` header at all. Browsers always
+# send one; non-browser clients often do not.
+# require_origin: false
+
+# Built SPA to serve. The default resolves next to the bridge's own build
+# output, so you only set this when serving a SPA from somewhere else.
+# spa_dir: ../../web/dist/web/browser

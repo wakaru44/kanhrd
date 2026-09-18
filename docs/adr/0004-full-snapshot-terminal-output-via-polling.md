@@ -44,6 +44,35 @@ subscribed `source`/`format`, never a delta. Clients render it with
 > (RIS, ECMA-48 full reset), so the clear and the new content parse in one
 > pass. Appending snapshots write only the new suffix and reset nothing;
 > see the `terminal-scrollback` capability and `PaneTerminal.paint()`.
+>
+> **Amendment, 2026-09-12.** Three sentences above, and the deferred
+> line-diff consequence below, are narrowed; the decision — bridge-side
+> polling of rendered snapshots — is unchanged. See
+> `openspec/changes/add-delta-pane-output`.
+>
+> - **"Never a delta"** now reads: full snapshots by default. A subscription
+>   that passes `delta: true` receives a full first frame, then line-delta
+>   frames (`previous.slice(drop, drop + keep) + content`) that the bridge
+>   verifies character for character before sending, and a full frame
+>   whenever a delta would not be smaller. Deep scrollback made full frames
+>   unaffordable: at herdr's 1000-line ceiling a busy pane measured
+>   63–86 KB/s full and 1.9–3.1 KB/s as deltas.
+> - **"Fan out the same event"** now reads: fan out the same snapshot,
+>   encoded per subscriber. The loop keeps its last snapshot; each
+>   subscriber keeps one bit for whether it has received it, and one that
+>   has not — including one that joined a running loop — gets the full
+>   frame.
+> - **One poll loop per `(host, pane_id)`** now reads: one per
+>   `(host, pane_id, source, format, lines)`. Keyed by pane alone, the first
+>   subscriber's shape won the loop, so a second browser at a different
+>   scrollback depth silently received the first one's. Two depths on one
+>   pane now cost two polls against herdr; viewer count at one shape still
+>   costs one.
+> - **The deferred line-diff consequence** was wrong twice. It assumed the
+>   diff would run on `visible` snapshots; it runs on `recent`, where
+>   history above a changing region is exactly what a delta saves. And it
+>   called the optimisation "not a wire-shape change"; a client cannot
+>   rebuild a snapshot it was not sent, so the delta is on the wire, opt-in.
 
 ## Alternatives considered
 

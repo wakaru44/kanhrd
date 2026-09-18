@@ -4,16 +4,26 @@
  * output, so the bridge polls `pane.read` per `(host, pane_id)` at a fixed
  * cadence and synthesizes `pane.output` events on revision change.
  *
- * One poll loop per `(host, pane_id)`, shared across every browser
- * subscription to that pane (including across multiple WS connections) —
- * never one loop per subscription.
+ * One poll loop per `(host, pane_id, source, format, lines)` — per thing
+ * polled — shared across every browser subscription that asks for it
+ * (including across multiple WS connections), never one loop per
+ * subscription. Loops share a snapshot, not an encoding: a subscriber that
+ * opted in to deltas and has already received the loop's last snapshot gets
+ * a line delta against it, everyone else the full snapshot. See
+ * openspec/changes/add-delta-pane-output/design.md and ADR-0004.
  */
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import type { ReadFormat, ReadSource, WsEvent } from '@kanhrd/schema';
+import { lineDelta, type LineDelta } from './delta.js';
 
 /** Just enough of `DispatchHost` for the poller to fetch pane content. */
 export interface PaneReader {
-  paneRead(params: { pane_id: string; source?: ReadSource; format?: ReadFormat }): Promise<{
+  paneRead(params: {
+    pane_id: string;
+    source?: ReadSource;
+    format?: ReadFormat;
+    lines?: number;
+  }): Promise<{
     content: string;
     revision: number;
     truncated: boolean;
@@ -30,6 +40,16 @@ interface Subscriber {
   subscriptionId: string;
   connectionId: string;
   emit: (event: WsEvent<'pane.output'>) => void;
+  /** Asked for line-delta frames. */
+  delta: boolean;
+  /**
+   * Has received the loop's `lastContent`. Every change goes to every
+   * subscriber, so a primed subscriber holds exactly that snapshot — which
+   * is what makes a delta against it safe, and why one bit is enough. A
+   * subscriber that joins a running loop starts unprimed and gets a full
+   * frame first.
+   */
+  primed: boolean;
 }
 
 interface PollEntry {
@@ -38,15 +58,32 @@ interface PollEntry {
   paneId: string;
   source: ReadSource;
   format: ReadFormat;
+  /** Forwarded to every `pane.read`; `undefined` leaves the depth to herdr (80 lines on 0.8.2). */
+  lines: number | undefined;
   lastRevision: number;
-  lastContentHash: string | null;
+  /** The snapshot last sent to every subscriber; deltas are computed against it. */
+  lastContent: string | null;
   inFlight: boolean;
   timer: ReturnType<typeof setInterval>;
   subscribers: Map<string, Subscriber>;
 }
 
-function entryKey(host: string, paneId: string): string {
-  return `${host}::${paneId}`;
+/** What a subscriber asks for. `source`/`format`/`lines` decide the loop; `delta` only the encoding. */
+export interface OutputShape {
+  source?: ReadSource;
+  format?: ReadFormat;
+  lines?: number;
+  delta?: boolean;
+}
+
+function entryKey(
+  host: string,
+  paneId: string,
+  source: ReadSource,
+  format: ReadFormat,
+  lines?: number
+): string {
+  return `${host}::${paneId}::${source}::${format}::${lines ?? 'default'}`;
 }
 
 export class OutputPoller {
@@ -59,37 +96,37 @@ export class OutputPoller {
     private readonly intervalMs: number
   ) {}
 
-  /** Starts (or attaches to an existing) poll loop for `(host, pane_id)` and registers a new subscriber. */
+  /** Starts (or attaches to an existing) poll loop for the shape asked for and registers a new subscriber. */
   subscribe(
     host: string,
     paneId: string,
-    source: ReadSource | undefined,
-    format: ReadFormat | undefined,
+    shape: OutputShape,
     connectionId: string,
     emit: (event: WsEvent<'pane.output'>) => void
   ): string {
-    const key = entryKey(host, paneId);
+    // `recent` (viewport + scrollback), NOT `visible` (viewport only), and the same
+    // default `HerdrHost.paneRead` already applies to a one-shot read. `pane.output`
+    // describes the whole snapshot the client paints over the terminal (ADR-0004), so
+    // a `visible` poll behind a `recent` initial read silently deletes the pane's
+    // scrollback on the first tick. A caller that wants the cheap viewport-only
+    // stream asks for `source: "visible"` explicitly.
+    const source = shape.source ?? 'recent';
+    const format = shape.format ?? 'ansi';
+    // Keyed by everything polled, so a second browser at a different depth gets its
+    // own depth rather than the first subscriber's. Two depths on one pane cost two
+    // loops against herdr; ADR-0004's amendment records that trade.
+    const key = entryKey(host, paneId, source, format, shape.lines);
     let entry = this.entries.get(key);
     if (!entry) {
-      // ponytail: dedupe is keyed on (host, pane_id) only, per CONTRACT-TIER2 §5.1 — the
-      // first subscriber's source/format wins for the whole shared poll loop. Fine in
-      // practice since the SPA is the only caller and always requests the same
-      // (recent, ansi) shape; revisit with per-(host,pane_id,source,format) keys if a
-      // caller ever needs a second shape.
       const created: PollEntry = {
         key,
         host,
         paneId,
-        // `recent` (viewport + scrollback), NOT `visible` (viewport only), and the same
-        // default `HerdrHost.paneRead` already applies to a one-shot read. `pane.output`
-        // is a FULL snapshot the client paints over the whole terminal (ADR-0004), so a
-        // `visible` poll behind a `recent` initial read silently deletes the pane's
-        // scrollback on the first tick. A caller that wants the cheap viewport-only
-        // stream asks for `source: "visible"` explicitly.
-        source: source ?? 'recent',
-        format: format ?? 'ansi',
+        source,
+        format,
+        lines: shape.lines,
         lastRevision: -1,
-        lastContentHash: null,
+        lastContent: null,
         inFlight: false,
         subscribers: new Map(),
         timer: setInterval(() => void this.poll(key), this.intervalMs),
@@ -99,7 +136,13 @@ export class OutputPoller {
     }
 
     const subscriptionId = randomUUID();
-    entry.subscribers.set(subscriptionId, { subscriptionId, connectionId, emit });
+    entry.subscribers.set(subscriptionId, {
+      subscriptionId,
+      connectionId,
+      emit,
+      delta: shape.delta === true,
+      primed: false,
+    });
     this.bySubscription.set(subscriptionId, key);
     return subscriptionId;
   }
@@ -143,20 +186,28 @@ export class OutputPoller {
         pane_id: entry.paneId,
         source: entry.source,
         format: entry.format,
+        ...(entry.lines !== undefined ? { lines: entry.lines } : {}),
       });
 
       // ponytail: herdr 0.8.2 hardcodes `revision: 0` on every `pane.read` response
       // (herdr src/app/api/panes.rs:1524), so revision-only dedup never fires past the
-      // first push. Fall back to a content hash so live updates still work against that
-      // build; drop this hash path once herdr's revision fix ships and dedup can be
-      // revision-only again.
-      const contentHash = createHash('sha1').update(result.content).digest('hex');
+      // first push. Fall back to comparing content so live updates still work against
+      // that build; drop the content path once herdr's revision fix ships and dedup can
+      // be revision-only again. The loop keeps the content itself anyway, for deltas.
       const revisionAdvanced = result.revision > entry.lastRevision;
-      const contentChanged = contentHash !== entry.lastContentHash;
-      if (!revisionAdvanced && !contentChanged) return; // no change — dedup on revision or content hash
+      const contentChanged = result.content !== entry.lastContent;
+      if (!revisionAdvanced && !contentChanged) return; // no change — dedup on revision or content
+      const previous = entry.lastContent;
       entry.lastRevision = Math.max(entry.lastRevision, result.revision);
-      entry.lastContentHash = contentHash;
+      entry.lastContent = result.content;
+
+      // Computed at most once per change, and only if someone can use it.
+      let delta: LineDelta | null | undefined;
       for (const subscriber of entry.subscribers.values()) {
+        if (subscriber.delta && subscriber.primed && previous !== null && delta === undefined) {
+          delta = lineDelta(previous, result.content);
+        }
+        const useDelta = subscriber.delta && subscriber.primed && delta;
         subscriber.emit({
           host: entry.host,
           event: 'pane.output',
@@ -164,11 +215,15 @@ export class OutputPoller {
             subscription_id: subscriber.subscriptionId,
             pane_id: entry.paneId,
             revision: result.revision,
-            content: result.content,
+            content: useDelta ? useDelta.tail : result.content,
             format: result.format,
             truncated: result.truncated,
+            ...(useDelta
+              ? { delta: { drop: useDelta.drop, keep: useDelta.keep, length: useDelta.length } }
+              : {}),
           },
         });
+        subscriber.primed = true;
       }
     } catch {
       // ponytail: a transient herdr read failure just skips this tick, same as an

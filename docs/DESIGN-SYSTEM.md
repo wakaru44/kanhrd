@@ -173,6 +173,11 @@ contrast-measured; see _Accessibility_.
   uses the primary accent with honest copy.
 - `--ink-disabled` marks disabled controls only. An enabled muted action
   is `--ink-mute`. Loading is never expressed by dimming.
+- `--opacity-inert` (`0.45`, both themes) marks content that can no
+  longer change — the last frame of a pane whose session has ended. It is
+  `opacity` on the surface itself, never a translucent layer laid over it:
+  the thing that is inert is the thing that looks inert. `--paper-scrim`
+  is not borrowed for this; it is a backdrop behind a raised surface.
 
 ## Typography
 
@@ -402,6 +407,7 @@ purpose:
 | `LucidePencil`                | `svg[lucidePencil]`                | rename workspace / tab                              |
 | `LucideArrowRight`            | `svg[lucideArrowRight]`            | split right                                         |
 | `LucideArrowDown`             | `svg[lucideArrowDown]`             | split down                                          |
+| `LucideCornerUpRight`         | `svg[lucideCornerUpRight]`         | move a pane to another tab or workspace             |
 | `LucideArrowLeft`             | `svg[lucideArrowLeft]`             | back to board                                       |
 | `LucideChevronRight`          | `svg[lucideChevronRight]`          | rail disclosure, scope breadcrumb                   |
 | `LucideMoreHorizontal`        | `svg[lucideMoreHorizontal]`        | overflow menu trigger                               |
@@ -413,8 +419,10 @@ purpose:
 | `LucideUnplug`                | `svg[lucideUnplug]`                | disconnected host, stale marker                     |
 | `LucideGalleryHorizontal`     | `svg[lucideGalleryHorizontal]`     | card switcher on the terminal bar                   |
 | `LucideSquareSplitHorizontal` | `svg[lucideSquareSplitHorizontal]` | next-card button on the terminal bar                |
+| `LucideSunset`                | `svg[lucideSunset]`                | pane whose session has ended (gone state)           |
+| `LucideFileDiff`              | `svg[lucideFileDiff]`              | changed-files-only filter in the file panel         |
 
-Twenty icons. Adding a twenty-first is a change to this document first.
+Twenty-two icons. Adding a twenty-third is a change to this document first.
 
 The last two were added by maintainer decision D4 (2026-09-10, see
 `openspec/changes/add-terminal-top-bar`). `LucideSquareSplitHorizontal`
@@ -422,9 +430,39 @@ reads as a window divided into two panes; it marks _navigating to_ the
 other card sharing a tab, not splitting one — splits stay on
 `LucideArrowRight` / `LucideArrowDown`.
 
+`LucideCornerUpRight` was added by maintainer decision (2026-09-13, see
+`openspec/changes/add-pane-destinations`). A path that turns and leaves
+reads as _send it over there_, which is what reparenting a pane into
+another tab or workspace is. It stays visually distinct from the straight
+`LucideArrowRight` that means split, and it carries no drag connotation —
+which matters, because cards genuinely ARE draggable into parked columns,
+so a four-way `LucideMove` cross would have promised dragging where the
+control opens a menu.
+
+`LucideFileDiff` was added by maintainer decision (2026-09-17, for the
+file panel's changed-only filter). It is the only glyph in the set that
+names a _diff_, which is what the filter selects on — the paths
+`repo.status` reports against HEAD. `LucideFilter`'s funnel was rejected for
+saying only that a list is filtered, without saying by what; `LucideGitCompare`
+reads as an action on two refs rather than a state of this one.
+
+`LucideSunset` was added by maintainer decision (2026-09-13, see
+`openspec/changes/add-pane-gone-state`). A sunset is a natural close
+rather than a failure, which is what an ended session is, in the care
+register the brand asks for. `LucideMoonStar` was rejected for colliding
+with `LucideMoon`, the sumi theme toggle; `LucideUnplug` already means an
+unreachable host; `LucideArchive` implies the session is filed and
+retrievable.
+
 `LucideMoreHorizontal` is an alias of `LucideEllipsis` and
 `LucideTriangleAlert` supersedes the deprecated `LucideAlertTriangle`;
 use the names in the table.
+
+Characters used as key labels on a keyboard surface — `esc`, `tab`,
+`ctrl`, `^B`, `↑ ↓ ← →` on the pane-detail key bar — are keycaps, not chrome
+glyphs, and are exempt from the rule below. A key is labelled with the
+character it sends; an icon there would also collide with the lucide arrows,
+which already mean back, split-right and split-down.
 
 HTML entity glyphs (`✎ × ⟶ ☾ ☀ ⚙ ☰`) and emoji are prohibited as UI
 chrome. The remaining `×` in `shared/keyboard-help-overlay.html` migrates

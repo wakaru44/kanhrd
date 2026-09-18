@@ -1,0 +1,136 @@
+/*
+ * The pane-detail key bar — tokens only (docs/DESIGN-SYSTEM.md).
+ *
+ * PROVISIONAL, pending the maintainer (openspec add-terminal-key-bar, 0.2 /
+ * 0.3): the design system has no token for the strip's height or for a
+ * three-state modifier, so both are built from existing tokens —
+ *   strip height  `--sp-5`
+ *   idle          the secondary button (`--paper-raised`, `--ink`, `--elev-3`)
+ *   armed         the switcher's selected treatment (`--fw-semi` + 2px `--ochre-line` underline)
+ *   locked        armed plus the `--ochre-tint` wash
+ * Three states, each distinct without colour alone (weight, underline, wash).
+ */
+
+:host {
+  position: fixed;
+  bottom: 0;
+  /* Above the terminal and the board chrome, below the drawer (40/50) and modals (1000). */
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-sunk);
+  border-top: var(--elev-2);
+  /* Keyboard closed: clear the home indicator. Keyboard open: it already covers that area. */
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  /* A vertical drag that starts here never becomes a page gesture (pull-to-refresh). */
+  touch-action: pan-x;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  font-family: var(--font-mono);
+}
+
+:host(.keyboard-open) {
+  padding-bottom: 0;
+}
+
+.strip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  height: var(--sp-5);
+  padding: 0 var(--sp-3);
+  border: none;
+  background: transparent;
+  color: var(--ink-mute);
+  font: inherit;
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  touch-action: pan-x;
+
+  /*
+   * The strip draws at letter height but takes a full touch target: its hit
+   * area extends upward over the terminal's bottom edge, which is the stated
+   * cost — that band of the terminal no longer takes taps or swipes.
+   */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--touch-target-min);
+  }
+}
+
+.readout {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.latch {
+  color: var(--ochre-ink);
+  font-weight: var(--fw-semi);
+  border-bottom: 2px solid var(--ochre-line);
+  padding: 0 var(--sp-1);
+
+  &[data-state='locked'] {
+    background: var(--ochre-tint);
+    color: var(--ink);
+  }
+}
+
+/* Scrolls inside itself where the keys do not fit; the page never does. */
+.row {
+  display: flex;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-2) var(--sp-1);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  touch-action: pan-x;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.key {
+  flex: none;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  padding: 0 var(--sp-2);
+  border: var(--elev-3);
+  border-radius: var(--radius-md);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  cursor: pointer;
+  touch-action: pan-x;
+
+  &[data-state='armed'],
+  &[data-state='locked'] {
+    font-weight: var(--fw-semi);
+    color: var(--ochre-ink);
+    border-bottom: 2px solid var(--ochre-line);
+  }
+
+  &[data-state='locked'] {
+    background: var(--ochre-tint);
+    color: var(--ink);
+  }
+}
+
+:where(button):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}

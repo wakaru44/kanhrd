@@ -23,6 +23,9 @@ import type {
   WsEvent,
 } from '@kanhrd/schema';
 import type { HostConfig } from '../config.js';
+import { RepoFileError } from '../files/errors.js';
+import { resolveLocalCheckout } from '../files/gate.js';
+import { RepoFileReader } from '../files/reader.js';
 import {
   HerdrClient,
   type HerdrPushedEvent,
@@ -127,7 +130,8 @@ export class HostRuntime extends EventEmitter {
     private readonly config: HostConfig,
     // ponytail: test-only override so unit tests don't have to wait out a
     // real 5s interval; production callers always use the default.
-    private readonly agentStatusPollIntervalMs = AGENT_STATUS_POLL_INTERVAL_MS
+    private readonly agentStatusPollIntervalMs = AGENT_STATUS_POLL_INTERVAL_MS,
+    private readonly files = new RepoFileReader()
   ) {
     super();
     this.name = config.name;
@@ -473,6 +477,55 @@ export class HostRuntime extends EventEmitter {
     this.purgeCascade(purged.paneIds);
   }
 
+  // --- Repo file reads (read-only, local-only) --------------------------
+  //
+  // Every call re-reads `pane.list` and re-runs the full local-only gate:
+  // the pane may have closed or moved checkout since the client last looked,
+  // and `Pane.project.files_local` is a hint, not an authorization. None of
+  // these touch herdr beyond that one read, so none go through a queue.
+
+  async repoStatus(
+    params: BridgeMethodParams['repo.status']
+  ): Promise<BridgeMethodResult['repo.status']> {
+    return this.files.status(await this.localCheckout(params.pane_id));
+  }
+
+  async repoTree(
+    params: BridgeMethodParams['repo.tree']
+  ): Promise<BridgeMethodResult['repo.tree']> {
+    return this.files.tree(await this.localCheckout(params.pane_id), params.path);
+  }
+
+  async fileRead(
+    params: BridgeMethodParams['file.read']
+  ): Promise<BridgeMethodResult['file.read']> {
+    return this.files.read(await this.localCheckout(params.pane_id), params.path);
+  }
+
+  async repoDiff(
+    params: BridgeMethodParams['repo.diff']
+  ): Promise<BridgeMethodResult['repo.diff']> {
+    return this.files.diff(await this.localCheckout(params.pane_id), params.path);
+  }
+
+  private async localCheckout(paneId: string): Promise<string> {
+    if (!this.connected) throw new HostUnavailableError(this.name);
+    const result = await this.client.request<{ panes: HerdrPaneInfo[] }>('pane.list');
+    const pane = result.panes.find((candidate) => candidate.pane_id === paneId);
+    if (pane === undefined) {
+      throw new RepoFileError('pane_not_found', `pane "${paneId}" is not on host "${this.name}"`);
+    }
+    return resolveLocalCheckout(
+      {
+        host: this.name,
+        filesEnabled: this.config.files !== false,
+        cwd: pane.cwd,
+        checkoutPath: this.project(pane).project?.checkout_path,
+      },
+      this.files.gitBinary
+    );
+  }
+
   // --- pane/tab/workspace cache bookkeeping -----------------------------
 
   /**
@@ -511,7 +564,13 @@ export class HostRuntime extends EventEmitter {
    * current by the time we read it back.
    */
   private project(pane: HerdrPaneInfo): Pane {
-    return projectPane(this.name, pane, this.names, this.paneAgentStatus.get(pane.pane_id)?.since);
+    return projectPane(
+      this.name,
+      pane,
+      this.names,
+      this.paneAgentStatus.get(pane.pane_id)?.since,
+      this.config.files !== false
+    );
   }
 
   private untrackPane(paneId: string): void {

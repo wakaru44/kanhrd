@@ -1,0 +1,91 @@
+# Tasks — add-terminal-key-bar
+
+## 0. Decisions (ruled 2026-09-13)
+
+- [x] 0.1 A: `^B` sends a literal `ctrl+b` to the pane and never follows
+      `prefix()` (operator). Arming kanhrd's chord from a phone is a backlog
+      entry.
+- [x] 0.2 C: the strip is never blank and doubles as a status line
+      (operator). Copy, keycap form and accessible names stay with the
+      maintainer; the build shows keycaps and adds no words.
+- [x] 0.3 Keycap labels are exempt from the entity-glyph ban, and
+      `docs/DESIGN-SYSTEM.md` says so (operator). The three-state tokens and
+      the strip height stay with the maintainer; the build uses existing
+      tokens.
+- [x] 0.4 A 40px strip hit area over the terminal's bottom edge (foreman).
+- [x] 0.5 The row scrolls inside itself, `esc ctrl ^B tab ↑ ↓ ← → alt`
+      (foreman).
+- [x] 0.6 First visit expanded under `(any-pointer: coarse)` (foreman).
+- [x] 0.7 Moot: no prefix chord in this change.
+
+## 1. Model
+
+- [x] 1.1 `KeyBarCell` union and `DEFAULT_KEY_BAR_CELLS`; the bar renders
+      whatever list it is given.
+- [x] 1.2 Modifier state machine (tap arms/disarms, 400 ms long-press locks,
+      tap unlocks) and folding modifiers into herdr key names.
+- [x] 1.3 `state/terminal-key-bar.service.ts`: expanded/collapsed under a
+      `kanhrd.*` key, defensive load.
+
+## 2. Sending
+
+- [x] 2.1 A `keys` cell sends its sequence through `PaneTerminal`'s ordered
+      `pane.send_keys` queue.
+- [x] 2.2 Armed/locked modifiers apply to the next soft-keyboard character.
+- [x] 2.3 The `^B` cell, per 0.1: a keys cell, `['ctrl+b']`.
+
+## 3. Placement and space
+
+- [x] 3.1 Fixed bar with the visualViewport transform (`resize` + `scroll`,
+      plus the defensive recomputes), clamped at 0.
+- [x] 3.2 `interactive-widget=resizes-content` and `viewport-fit=cover` in
+      `index.html`; safe-area inset only while the keyboard is closed.
+- [x] 3.3 The terminal container gives up the bar's height and the keyboard's
+      occlusion; xterm refits.
+
+## 4. Touch and focus
+
+- [x] 4.1 `preventDefault` on `pointerdown` for every cell and the strip;
+      cells act on `pointerup`, so a pan across the scrolling row sends
+      nothing (see `design.md`).
+- [x] 4.2 `touch-action: pan-x` and `user-select: none` on the bar.
+- [x] 4.3 ARIA: `aria-pressed` on modifiers, names on glyph cells,
+      `aria-expanded`/`aria-controls` on the strip. The locked description
+      needs copy and is not built; a screen reader hears armed and locked
+      alike.
+
+## 5. Settings and docs
+
+- [x] 5.1 The key bar joins the clear-local-data preview list.
+- [x] 5.2 `docs/UX-GUIDELINES.md`: the bar under Mobile → Pane detail, its
+      touch-target and overflow rules, and new e2e assertions.
+
+## 6. Verify
+
+- [x] 6.1 Unit and component tests per `design.md`.
+- [x] 6.2 Mocked e2e at 390 × 844: targets, overflow, terminal box above the
+      bar.
+- [x] 6.3 Live e2e against the isolated session: `esc`, `↑` and armed
+      `ctrl` + `←` arrive at the pane's program as `^[`, `^[[A`, `^[[1;5D`
+      (`e2e/key-bar-live.spec.ts`).
+- [x] 6.4 Real device, closed 2026-09-13 with exactly what was tested:
+  - **Tested on device: iPhone only.** Chrome iOS 26.6.2 (CriOS/153) and
+    Safari 26.6.1.
+    - Placement at the visual viewport's bottom, keyboard up and down, with
+      the focus settle on and off.
+    - The settle rework validated by the operator in both browsers.
+    - The terminal's cursor correctly spaced above the bar after that rework.
+    - Focus retained when tapping a key with the keyboard up (browser not
+      recorded).
+    - Predictive text in use, ON, throughout.
+  - **Rejected by measurement:** `autocomplete="off"` does not remove the
+    AutoFill pill.
+  - **Not tested, not assumed:**
+    - Android with `occluded` 0 (the operator reported Android clean before
+      the probes, without numbers);
+    - the installed PWA;
+    - landscape;
+    - the iPhone address bar at top or bottom;
+    - predictive text off.
+  - "Tested on both" means the two iPhone browsers above, not every platform.
+- [x] 6.5 Web tests, `pnpm -w typecheck`, `make lint`.

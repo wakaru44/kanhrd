@@ -1,6 +1,7 @@
 import {
   AfterViewInit,
   Component,
+  DestroyRef,
   ElementRef,
   OnDestroy,
   ViewChild,
@@ -19,6 +20,7 @@ import { PanesStore, paneKey } from '../state/panes.store';
 import { WsClient } from '../state/ws-client';
 import { TerminalThemeService } from '../state/terminal-theme.service';
 import { TerminalFontSizeService } from '../state/terminal-font-size.service';
+import { TerminalScrollbackService } from '../state/terminal-scrollback.service';
 import { ToastService } from '../state/toast.service';
 import { ClockTick, formatElapsed } from '../util/clock';
 import { COPY, fill } from '../shared/copy';
@@ -27,9 +29,11 @@ import { paneTitle } from '../util/pane-title';
 import { KeyboardService } from '../state/keyboard.service';
 import {
   LucideArrowLeft,
+  LucideChevronRight,
   LucidePencil,
   LucideSquareSplitHorizontal,
   LucideRefreshCw,
+  LucideSunset,
   LucideTriangleAlert,
   LucideUnplug,
 } from '../shared/icons';
@@ -37,6 +41,13 @@ import { BoardReturnService } from '../state/board-return.service';
 import { CardSwitcher } from './card-switcher';
 import { TabStrip, stepTab, tabEntries, type TabEntry } from './tab-strip';
 import { PaneTerminal } from './pane-terminal';
+import { KeyBar } from './key-bar';
+import { DEFAULT_KEY_BAR_CELLS, KeyBarModifiers } from './key-bar-cells';
+import { TerminalKeyBarService } from '../state/terminal-key-bar.service';
+import { RepoFilesService } from '../state/repo-files.service';
+import { FilePanel } from './file-panel';
+import { SplitHandle } from './split-handle';
+import { SPLIT_STEP, clampSplit, loadSplit, saveSplit, type SplitAxis } from './file-panel-split';
 
 /**
  * The reliability states this view can be in. They are mutually exclusive
@@ -44,11 +55,13 @@ import { PaneTerminal } from './pane-terminal';
  * states tell the truth"). `stale` and `unavailable` never blank the
  * terminal: whatever already rendered stays on screen underneath.
  *
- * All but `unavailable` come straight from `PaneTerminal.state()`; host
- * connectivity is the only one this view knows about and the terminal does
- * not.
+ * All but `unavailable` and `gone` come straight from `PaneTerminal.state()`;
+ * host connectivity and the pane's presence in the store are what this view
+ * knows about and the terminal does not. `gone` keeps the last frame too,
+ * dimmed so it cannot be mistaken for a live terminal.
  */
-export type PaneViewState = 'loading' | 'failed' | 'unavailable' | 'stale' | 'empty' | 'live';
+export type PaneViewState =
+  'loading' | 'failed' | 'unavailable' | 'gone' | 'stale' | 'empty' | 'live';
 
 /**
  * The next card in the tab after `currentId`, wrapping past the last —
@@ -91,10 +104,15 @@ export function nextSiblingCard(siblings: readonly Pane[], currentId: string): P
     RenameModal,
     CardSwitcher,
     TabStrip,
+    KeyBar,
+    FilePanel,
+    SplitHandle,
     LucideArrowLeft,
+    LucideChevronRight,
     LucidePencil,
     LucideSquareSplitHorizontal,
     LucideRefreshCw,
+    LucideSunset,
     LucideTriangleAlert,
     LucideUnplug,
   ],
@@ -118,12 +136,22 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
    */
   private readonly terminalTheme = inject(TerminalThemeService);
   private readonly terminalFontSize = inject(TerminalFontSizeService);
+  private readonly terminalScrollback = inject(TerminalScrollbackService);
+
+  /** The key bar's sticky modifiers: this view's own state, dropped when the view is. */
+  protected readonly keyBarModifiers = new KeyBarModifiers();
+  protected readonly keyBarCells = DEFAULT_KEY_BAR_CELLS;
+  protected readonly keyBar = inject(TerminalKeyBarService);
+  /** Pixels kept clear at the view's bottom for the key bar and any soft keyboard under it. */
+  protected readonly keyBarReserve = signal(0);
 
   private readonly terminal = new PaneTerminal({
     ws: this.ws,
     terminalTheme: this.terminalTheme,
     terminalFontSize: this.terminalFontSize,
+    terminalScrollback: this.terminalScrollback,
     toast: this.toast,
+    keyBarModifiers: this.keyBarModifiers,
   });
 
   protected readonly copy = COPY;
@@ -254,6 +282,27 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     return entry ? entry.connected : true;
   });
 
+  /**
+   * The route key whose pane this view has seen in the store while its host
+   * was connected. Absence alone proves nothing — a cold deep link has not
+   * had its host's `pane.list` yet — so a pane only counts as gone once it
+   * was here first. Keyed by route so moving to another pane starts over.
+   */
+  private readonly seenKey = signal<string | null>(null);
+
+  /**
+   * The pane's session has ended: seen in the store for a connected host,
+   * then removed from it (herdr's `pane.closed`, or the one the bridge
+   * synthesizes from `pane.list`). A disconnected host never drops panes
+   * from the store, and outranks this anyway, so a lost host stays
+   * `unavailable`. herdr never reuses a closed pane's id, so a later pane
+   * under the same key cannot be a different session resurfacing.
+   */
+  private readonly gone = computed(() => {
+    const key = paneKey(this.host(), this.id());
+    return this.seenKey() === key && this.pane() === undefined;
+  });
+
   /** Flips true once the terminal container exists, so the load effect below has something to write into. */
   private readonly viewReady = signal(false);
 
@@ -289,9 +338,12 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
    * laid over the top: a host the bridge has marked disconnected outranks
    * everything else.
    */
-  protected readonly viewState = computed<PaneViewState>(() =>
-    this.hostInSight() ? this.terminal.state() : 'unavailable'
-  );
+  protected readonly viewState = computed<PaneViewState>(() => {
+    if (!this.hostInSight()) {
+      return 'unavailable';
+    }
+    return this.gone() ? 'gone' : this.terminal.state();
+  });
 
   constructor() {
     // One handler for "which card is next", shared with `prefix + o` and
@@ -334,6 +386,28 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
       });
     });
 
+    // Remember that the pane in the route was present while its host was in
+    // sight — the precondition for ever calling it gone.
+    effect(() => {
+      const key = paneKey(this.host(), this.id());
+      const present = this.pane() !== undefined && this.hostInSight();
+      untracked(() => {
+        if (present) {
+          this.seenKey.set(key);
+        } else if (this.seenKey() !== key) {
+          this.seenKey.set(null);
+        }
+      });
+    });
+
+    // Gone is final for this pane: stop the live stream, so the bridge's
+    // poll loop for it ends, and stop relaying input.
+    effect(() => {
+      if (this.viewState() === 'gone') {
+        untracked(() => this.terminal.end());
+      }
+    });
+
     // The terminal's appearance follows the app's settings, driven from
     // here rather than from inside `PaneTerminal`: reacting to a signal
     // wants `effect()`, `effect()` wants an injection context, and this
@@ -351,6 +425,25 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     effect(() => {
       const size = this.terminalFontSize.size();
       untracked(() => this.terminal.applyFontSize(size));
+    });
+
+    // The split's axis follows the device's orientation: the panel goes
+    // beside the terminal in landscape and under it in portrait. Each axis
+    // keeps its own remembered ratio, so rotating never inherits the other
+    // one's number.
+    if (typeof matchMedia === 'function') {
+      const portrait = matchMedia('(orientation: portrait)');
+      const onChange = () => this.splitAxis.set(readSplitAxis());
+      portrait.addEventListener('change', onChange);
+      inject(DestroyRef).onDestroy(() => portrait.removeEventListener('change', onChange));
+    }
+
+    // Depth is part of the request, not the rendering, so a change re-reads
+    // the pane in view. `applyScrollback` ignores the depth the pane is
+    // already loaded at, which is every run of this effect but a real change.
+    effect(() => {
+      const lines = this.terminalScrollback.lines();
+      untracked(() => this.terminal.applyScrollback(lines));
     });
   }
 
@@ -397,8 +490,106 @@ export class PaneDetail implements AfterViewInit, OnDestroy {
     }
   }
 
+  /** A key bar cell: its sequence goes to the pane through the terminal's ordered queue. */
+  protected sendKeyBarKeys(keys: readonly string[]): void {
+    this.terminal.sendKeys(keys);
+  }
+
   /** Failed state's only action: re-run the same load for the pane in the route. */
   protected retry(): void {
     this.terminal.retry();
   }
+
+  // --- the file panel -----------------------------------------------------
+  //
+  // A read-only view of the checkout the agent is working in, beside its
+  // terminal. Its layout is the one settled on the device in
+  // `/labs/file-explorer/mock1`: collapsed by default, one visible toggle in
+  // the meta strip, a draggable split remembered per axis, and a key bar
+  // that keeps its place while the panel has focus.
+
+  private readonly repoFiles = inject(RepoFilesService);
+
+  /**
+   * Whether this pane's bridge implements the file methods at all. A tier-1
+   * or older bridge advertises no `repoFiles`, and a control that cannot
+   * work does not appear (docs/UX-GUIDELINES.md, "Visible affordances").
+   */
+  protected readonly filesSupported = computed(
+    () => this.repoFiles.capability(this.host()) !== null
+  );
+
+  protected readonly filePanelOpen = signal(false);
+
+  /** Names what the toggle acts on; a pane with no checkout has nothing to name. */
+  protected readonly filesToggleLabel = computed(() => {
+    const repo = this.project()?.repo_name;
+    return repo ? fill(COPY.files.toggleIn, { repo }) : COPY.files.label;
+  });
+
+  /**
+   * A lost host or an ended session stops the panel asking for more, without
+   * taking away what it already read.
+   */
+  protected readonly filePanelPaused = computed(
+    () => this.viewState() === 'unavailable' || this.viewState() === 'gone'
+  );
+
+  protected readonly splitAxis = signal<SplitAxis>(readSplitAxis());
+  private readonly splits = signal<Record<SplitAxis, number>>(loadSplit());
+  /** The TERMINAL's share; the panel gets the rest. */
+  protected readonly splitRatio = computed(() => this.splits()[this.splitAxis()]);
+  protected readonly splitDragging = signal(false);
+  protected readonly splitPercent = computed(() => (this.splitRatio() * 100).toFixed(0));
+
+  private readonly splitEl = viewChild<ElementRef<HTMLElement>>('split');
+
+  protected toggleFilePanel(): void {
+    this.filePanelOpen.set(!this.filePanelOpen());
+  }
+
+  protected onSplitterDown(): void {
+    this.splitDragging.set(true);
+  }
+
+  protected onSplitterMove(event: PointerEvent): void {
+    if (!this.splitDragging()) {
+      return;
+    }
+    const rect = this.splitEl()?.nativeElement.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) {
+      return;
+    }
+    const ratio =
+      this.splitAxis() === 'hbox'
+        ? (event.clientX - rect.left) / rect.width
+        : (event.clientY - rect.top) / rect.height;
+    this.setSplitRatio(ratio);
+  }
+
+  protected onSplitterUp(): void {
+    if (!this.splitDragging()) {
+      return;
+    }
+    this.splitDragging.set(false);
+    saveSplit(this.splits());
+  }
+
+  /** A keyboard step is committed immediately: there is no drag to end. */
+  protected onSplitterStep(direction: 1 | -1): void {
+    this.setSplitRatio(this.splitRatio() + direction * SPLIT_STEP);
+    saveSplit(this.splits());
+  }
+
+  private setSplitRatio(ratio: number): void {
+    const axis = this.splitAxis();
+    this.splits.update((splits) => ({ ...splits, [axis]: clampSplit(ratio) }));
+  }
+}
+
+/** Portrait stacks the panel under the terminal; landscape puts it beside. */
+function readSplitAxis(): SplitAxis {
+  return typeof matchMedia === 'function' && matchMedia('(orientation: portrait)').matches
+    ? 'vbox'
+    : 'hbox';
 }

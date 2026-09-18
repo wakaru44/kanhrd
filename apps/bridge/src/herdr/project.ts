@@ -7,6 +7,7 @@ import type {
   WorkspaceSummary,
 } from '@kanhrd/schema';
 import type { WorkspaceTabNameCache } from './names.js';
+import { filesLocalHint } from '../files/gate.js';
 import { resolveRepo } from './repo.js';
 
 /**
@@ -19,12 +20,16 @@ import { resolveRepo } from './repo.js';
  * this pane's current `agent_status`, in epoch ms. Pass `undefined` — and the
  * field is omitted entirely — whenever the bridge has not watched this pane
  * enter its status; see `Pane.status_since`.
+ *
+ * `filesEnabled` is the host's `files` config; `false` (the default here)
+ * never sets `project.files_local`.
  */
 export function projectPane(
   host: string,
   pane: HerdrPaneInfo,
   names: WorkspaceTabNameCache,
-  statusSince?: number
+  statusSince?: number,
+  filesEnabled = false
 ): Pane {
   const agentName = pane.display_agent ?? pane.agent;
 
@@ -60,7 +65,10 @@ export function projectPane(
   // `repo_root` are dropped — nothing renders them.
   const fromCwd = pane.cwd === undefined ? undefined : resolveRepo(pane.cwd);
   if (fromCwd !== undefined) {
-    projected.project = fromCwd;
+    // A copy: `resolveRepo` hands back its cached object, shared by every
+    // pane in that directory on every host, and `files_local` below is
+    // per host.
+    projected.project = { ...fromCwd };
   } else {
     const worktree = names.workspaceWorktree(pane.workspace_id);
     if (worktree !== undefined) {
@@ -70,6 +78,18 @@ export function projectPane(
         is_linked_worktree: worktree.is_linked_worktree,
       };
     }
+  }
+
+  if (
+    projected.project !== undefined &&
+    filesLocalHint({
+      host,
+      filesEnabled,
+      cwd: pane.cwd,
+      checkoutPath: projected.project.checkout_path,
+    })
+  ) {
+    projected.project.files_local = true;
   }
 
   return projected;

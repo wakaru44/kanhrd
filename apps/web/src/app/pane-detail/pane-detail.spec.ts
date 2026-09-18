@@ -2,14 +2,16 @@ import { WritableSignal, provideZonelessChangeDetection, signal } from '@angular
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, Subject, of } from 'rxjs';
-import type { HostSummary, Pane, WsEvent } from '@kanhrd/schema';
+import type { BridgeCapabilities, HostSummary, Pane, WsEvent } from '@kanhrd/schema';
 import { Terminal } from '@xterm/xterm';
 import type { ITheme } from '@xterm/xterm';
 import { PaneDetail, nextSiblingCard } from './pane-detail';
+import { SPLIT_STORAGE_KEY, loadSplit } from './file-panel-split';
 import { TerminalThemeService } from '../state/terminal-theme.service';
 import { TerminalFontSizeService } from '../state/terminal-font-size.service';
+import { TerminalScrollbackService } from '../state/terminal-scrollback.service';
 import { BoardReturnService } from '../state/board-return.service';
-import { COPY } from '../shared/copy';
+import { COPY, fill } from '../shared/copy';
 import { PanesStore } from '../state/panes.store';
 import { WsClient } from '../state/ws-client';
 
@@ -356,6 +358,7 @@ describe('PaneDetail', () => {
   let fixture: ComponentFixture<PaneDetail>;
   let paramMap$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   let hosts: WritableSignal<HostSummary[]>;
+  let panes: WritableSignal<ReadonlyMap<string, Pane>>;
 
   /** DOM-level view of the reliability state, asserted through the markup rather than a protected signal. */
   function stateEl(selector: string): Element | null {
@@ -365,6 +368,7 @@ describe('PaneDetail', () => {
   beforeEach(async () => {
     ws = new FakeWsClient();
     hosts = signal<HostSummary[]>([{ name: 'laptop', connected: true }]);
+    panes = signal<ReadonlyMap<string, Pane>>(new Map());
     paramMap$ = new BehaviorSubject(convertToParamMap({ host: 'laptop', id: 'pane-1' }));
 
     await TestBed.configureTestingModule({
@@ -375,7 +379,7 @@ describe('PaneDetail', () => {
         {
           provide: PanesStore,
           useValue: {
-            panesSignal: () => new Map(),
+            panesSignal: () => panes(),
             // The bar draws herdr's tab level from this (add-pane-tab-hierarchy).
             tabsSignal: () => new Map(),
             capabilitiesSignal: () => new Map(),
@@ -386,6 +390,8 @@ describe('PaneDetail', () => {
           provide: ActivatedRoute,
           useValue: { paramMap: paramMap$ },
         },
+        // Stubbed, not real: the real one reads a depth from localStorage.
+        { provide: TerminalScrollbackService, useValue: { lines: signal(250) } },
       ],
     }).compileComponents();
   });
@@ -401,11 +407,14 @@ describe('PaneDetail', () => {
       pane_id: 'pane-1',
       format: 'ansi',
       source: 'recent',
+      lines: 250,
     });
     expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.subscribe_output', {
       pane_id: 'pane-1',
       source: 'recent',
       format: 'ansi',
+      lines: 250,
+      delta: true,
     });
   });
 
@@ -440,11 +449,14 @@ describe('PaneDetail', () => {
       pane_id: 'pane-1',
       format: 'ansi',
       source: 'recent',
+      lines: 250,
     });
     expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.subscribe_output', {
       pane_id: 'pane-1',
       source: 'recent',
       format: 'ansi',
+      lines: 250,
+      delta: true,
     });
   });
 
@@ -457,6 +469,7 @@ describe('PaneDetail', () => {
       pane_id: 'pane-1',
       format: 'ansi',
       source: 'recent',
+      lines: 250,
     });
     ws.request.calls.reset();
 
@@ -473,11 +486,14 @@ describe('PaneDetail', () => {
       pane_id: 'pane-2',
       format: 'ansi',
       source: 'recent',
+      lines: 250,
     });
     expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.subscribe_output', {
       pane_id: 'pane-2',
       source: 'recent',
       format: 'ansi',
+      lines: 250,
+      delta: true,
     });
   });
 
@@ -611,6 +627,144 @@ describe('PaneDetail', () => {
     fixture.detectChanges();
 
     expect(stateEl('.terminal-unavailable')).toBeNull();
+  });
+
+  // --- gone: the pane was here, for a connected host, and has left the store.
+
+  const PANE_1: Pane = {
+    id: 'pane-1',
+    host: 'laptop',
+    workspace: { id: 'w1', name: 'kanhrd' },
+    tab: { id: 't1', name: 'main' },
+    agent_status: 'done',
+  };
+
+  /** Mounts with pane-1 in the store and live, then removes it the way `pane.closed` does. */
+  async function mountThenClose(): Promise<void> {
+    panes.set(new Map([['laptop:pane-1', PANE_1]]));
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+    panes.set(new Map());
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+  }
+
+  it('reports a pane that ends while open as gone, with a back path and no retry', async () => {
+    await mountThenClose();
+
+    const gone = stateEl('.terminal-gone');
+    expect(gone?.textContent).toContain(COPY.state.gone);
+    expect(gone?.querySelector('svg[lucideSunset]')).not.toBeNull();
+    expect(gone?.querySelector('a.state-back')?.textContent).toContain(COPY.nav.backToBoard);
+    // A caption under the frame, not a panel over it.
+    expect(stateEl('.terminal-status .terminal-gone')).toBeNull();
+    // The terminal now shares `.split` with the file panel, so the caption
+    // follows that whole box rather than the terminal element itself.
+    expect(stateEl('.split > .terminal-wrap')).not.toBeNull();
+    expect(stateEl('.split + .gone-slot > .terminal-gone')).not.toBeNull();
+    expect(stateEl('button.retry')).toBeNull();
+    expect(stateEl('.stale-marker')).toBeNull();
+    expect(stateEl('.terminal-unavailable')).toBeNull();
+  });
+
+  it('keeps the last frame, dimmed on the terminal container itself', async () => {
+    await mountThenClose();
+
+    const container = stateEl('.terminal-container');
+    expect(container?.classList).toContain('inert');
+    expect(container?.querySelector('.xterm')).not.toBeNull();
+  });
+
+  it('unsubscribes the output stream on entering gone', async () => {
+    await mountThenClose();
+
+    expect(ws.request).toHaveBeenCalledWith('laptop', 'pane.unsubscribe_output', {
+      subscription_id: 'sub-1',
+    });
+  });
+
+  it('does not re-read a gone pane when the socket reconnects', async () => {
+    await mountThenClose();
+    ws.request.calls.reset();
+
+    ws.connected.set(false);
+    fixture.detectChanges();
+    ws.connected.set(true);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(ws.request).not.toHaveBeenCalledWith('laptop', 'pane.read', jasmine.anything());
+    expect(stateEl('.terminal-gone')).not.toBeNull();
+  });
+
+  it('shows loading, not gone, for a cold deep link before the host has been listed', async () => {
+    ws.connected.set(false);
+
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(stateEl('.terminal-loading')).not.toBeNull();
+    expect(stateEl('.terminal-gone')).toBeNull();
+  });
+
+  it('never calls a pane gone that was never in the store', async () => {
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(stateEl('.terminal-gone')).toBeNull();
+    expect(ws.request).not.toHaveBeenCalledWith(
+      'laptop',
+      'pane.unsubscribe_output',
+      jasmine.anything()
+    );
+  });
+
+  it('shows unavailable, not gone, when the host disconnects and its panes leave the store', async () => {
+    panes.set(new Map([['laptop:pane-1', PANE_1]]));
+    fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    hosts.set([{ name: 'laptop', connected: false }]);
+    fixture.detectChanges();
+    panes.set(new Map());
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(stateEl('.terminal-unavailable')?.textContent).toContain(COPY.state.unavailable);
+    expect(stateEl('.terminal-gone')).toBeNull();
+    expect(stateEl('.terminal-container')?.classList).not.toContain('inert');
+  });
+
+  it('starts over when the route moves to another pane', async () => {
+    await mountThenClose();
+    ws.request.calls.reset();
+
+    panes.set(new Map([['laptop:pane-2', { ...PANE_1, id: 'pane-2' }]]));
+    paramMap$.next(convertToParamMap({ host: 'laptop', id: 'pane-2' }));
+    fixture.detectChanges();
+    await flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(stateEl('.terminal-gone')).toBeNull();
+    expect(stateEl('.terminal-container')?.classList).not.toContain('inert');
+    expect(ws.request).toHaveBeenCalledWith(
+      'laptop',
+      'pane.read',
+      jasmine.objectContaining({
+        pane_id: 'pane-2',
+      })
+    );
   });
 
   // --- keyboard: the terminal owns its keys.
@@ -757,16 +911,20 @@ describe('PaneDetail terminal settings', () => {
 
   let theme: WritableSignal<ITheme>;
   let fontSize: WritableSignal<number>;
+  let scrollback: WritableSignal<number>;
+  let settingsWs: FakeWsClient;
 
   beforeEach(async () => {
     theme = signal<ITheme>({ background: '#f4ede0', foreground: '#2b2b2b' });
     fontSize = signal(13);
+    scrollback = signal(250);
+    settingsWs = new FakeWsClient();
 
     await TestBed.configureTestingModule({
       imports: [PaneDetail],
       providers: [
         provideZonelessChangeDetection(),
-        { provide: WsClient, useValue: new FakeWsClient() },
+        { provide: WsClient, useValue: settingsWs },
         {
           provide: PanesStore,
           useValue: {
@@ -783,6 +941,7 @@ describe('PaneDetail terminal settings', () => {
         },
         { provide: TerminalThemeService, useValue: { theme } },
         { provide: TerminalFontSizeService, useValue: { size: fontSize } },
+        { provide: TerminalScrollbackService, useValue: { lines: scrollback } },
       ],
     }).compileComponents();
   });
@@ -820,5 +979,198 @@ describe('PaneDetail terminal settings', () => {
     TestBed.tick();
 
     expect(live.options.fontSize).toBe(20);
+  });
+
+  it('re-reads and re-subscribes the open pane when the scrollback depth changes', async () => {
+    await mountedTerminal();
+    settingsWs.request.calls.reset();
+
+    scrollback.set(1000);
+    TestBed.tick();
+    await flushMicrotasks();
+
+    expect(settingsWs.request).toHaveBeenCalledWith('laptop', 'pane.read', {
+      pane_id: 'pane-1',
+      format: 'ansi',
+      source: 'recent',
+      lines: 1000,
+    });
+    expect(settingsWs.request).toHaveBeenCalledWith('laptop', 'pane.subscribe_output', {
+      pane_id: 'pane-1',
+      source: 'recent',
+      format: 'ansi',
+      lines: 1000,
+      delta: true,
+    });
+  });
+
+  it('sends no read when a settings effect re-runs at the depth already loaded', async () => {
+    await mountedTerminal();
+    settingsWs.request.calls.reset();
+
+    fontSize.set(17);
+    TestBed.tick();
+    await flushMicrotasks();
+
+    expect(settingsWs.request).not.toHaveBeenCalledWith('laptop', 'pane.read', jasmine.anything());
+  });
+});
+
+/**
+ * The file panel's one visible affordance, and the split it opens.
+ *
+ * Three conditions decide whether the toggle exists at all, and the wrong
+ * answer to any of them is a control that cannot work (a bridge with no file
+ * methods) or a question the operator cannot ask (a pane with no checkout,
+ * where "there is no repository" is the answer they opened it for).
+ */
+describe('PaneDetail file panel toggle', () => {
+  const CHECKOUT = '/home/op/src/kanhrd';
+
+  const repoFiles = {
+    statusPollIntervalMs: 2000,
+    fileReadMaxBytes: 1_048_576,
+    diffMaxBytes: 262_144,
+    treeMaxEntries: 1000,
+    statusMaxEntries: 1000,
+  };
+
+  async function render(options: {
+    project?: Pane['project'];
+    files?: boolean;
+  }): Promise<{ el: HTMLElement; fixture: ComponentFixture<PaneDetail> }> {
+    const panes = new Map<string, Pane>([
+      [
+        'laptop:pane-1',
+        {
+          id: 'pane-1',
+          host: 'laptop',
+          workspace: { id: 'w1', name: 'kanhrd' },
+          tab: { id: 't1', name: 'main' },
+          agent_status: 'working',
+          ...(options.project ? { project: options.project } : {}),
+        },
+      ],
+    ]);
+    const capabilities = new Map<string, BridgeCapabilities>([
+      [
+        'laptop',
+        {
+          tier: 3,
+          terminal: true,
+          paneResize: false,
+          paneGraphics: false,
+          outputPollIntervalMs: 1000,
+          ...(options.files === false ? {} : { repoFiles }),
+        } as BridgeCapabilities,
+      ],
+    ]);
+
+    await TestBed.configureTestingModule({
+      imports: [PaneDetail],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: WsClient, useValue: new FakeWsClient() },
+        {
+          provide: PanesStore,
+          useValue: {
+            panesSignal: () => panes,
+            tabsSignal: () => new Map(),
+            capabilitiesSignal: () => capabilities,
+            hostsSignal: () => [{ name: 'laptop', connected: true }],
+          },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { paramMap: of(convertToParamMap({ host: 'laptop', id: 'pane-1' })) },
+        },
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(PaneDetail);
+    fixture.detectChanges();
+    return { el: fixture.nativeElement as HTMLElement, fixture };
+  }
+
+  // The remembered split is real browser storage; a leaked value would
+  // decide the next test's starting ratio.
+  beforeEach(() => localStorage.removeItem(SPLIT_STORAGE_KEY));
+  afterEach(() => {
+    localStorage.removeItem(SPLIT_STORAGE_KEY);
+    TestBed.resetTestingModule();
+  });
+
+  const project: NonNullable<Pane['project']> = {
+    repo_name: 'kanhrd',
+    checkout_path: CHECKOUT,
+    is_linked_worktree: false,
+    files_local: true,
+  };
+
+  it('sits at the repo name’s trailing edge, visible and collapsed on first render', async () => {
+    const { el } = await render({ project });
+
+    const toggle = el.querySelector<HTMLButtonElement>('.meta-strip .repo [data-panel-toggle]');
+    expect(toggle).not.toBeNull();
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle?.getAttribute('aria-label')).toBe(fill(COPY.files.toggleIn, { repo: 'kanhrd' }));
+    // Collapsed by default: no panel, and no splitter to drag.
+    expect(el.querySelector('app-file-panel')).toBeNull();
+    expect(el.querySelector('[data-splitter]')).toBeNull();
+  });
+
+  it('opens the panel and the splitter together', async () => {
+    const { el, fixture } = await render({ project });
+
+    el.querySelector<HTMLButtonElement>('[data-panel-toggle]')!.click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('app-file-panel')).not.toBeNull();
+    const splitter = el.querySelector('[data-splitter]');
+    expect(splitter).not.toBeNull();
+    expect(splitter?.getAttribute('role')).toBe('separator');
+    expect(splitter?.getAttribute('tabindex')).toBe('0');
+    expect(el.querySelector('[data-panel-toggle]')?.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('renders no toggle at all on a bridge with no file methods', async () => {
+    const { el } = await render({ project, files: false });
+
+    expect(el.querySelector('[data-panel-toggle]')).toBeNull();
+    // ...and the provenance rows are unaffected.
+    expect(el.querySelector('.meta-strip .repo-name')?.textContent?.trim()).toBe('kanhrd');
+  });
+
+  it('still offers the toggle on a pane with no checkout, where absence is the answer', async () => {
+    const { el } = await render({});
+
+    const toggle = el.querySelector<HTMLButtonElement>('.meta-strip [data-panel-toggle]');
+    expect(toggle).not.toBeNull();
+    expect(toggle?.getAttribute('aria-label')).toBe(COPY.files.label);
+  });
+
+  it('keeps the key bar exactly as it was while the panel is open', async () => {
+    const { el, fixture } = await render({ project });
+
+    const before = el.querySelector('app-key-bar')?.outerHTML;
+    el.querySelector<HTMLButtonElement>('[data-panel-toggle]')!.click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('app-key-bar')?.outerHTML).toBe(before);
+  });
+
+  it('steps the split with the keyboard and remembers where it landed', async () => {
+    const { el, fixture } = await render({ project });
+    el.querySelector<HTMLButtonElement>('[data-panel-toggle]')!.click();
+    fixture.detectChanges();
+
+    const splitter = el.querySelector('[data-splitter]') as HTMLElement;
+    const before = Number(splitter.getAttribute('aria-valuenow'));
+    splitter.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    fixture.detectChanges();
+
+    const after = Number(el.querySelector('[data-splitter]')!.getAttribute('aria-valuenow'));
+    expect(after).toBe(before + 5);
+    expect(loadSplit().hbox).toBeCloseTo(after / 100, 5);
   });
 });

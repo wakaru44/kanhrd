@@ -92,25 +92,114 @@
   -->
   <div class="card-actions" #actions>
     @if (hasPaneActions()) {
-      <!-- Standard density: visible on first render, never a hover reveal. -->
+      <!--
+        Standard density: four named controls, visible on first render,
+        never a hover reveal. `move` and `split` OPEN MENUS rather than
+        acting — each has more than one destination and neither has a safe
+        default worth guessing — and `rest` opens the confirmation the
+        product already had. Nothing here acts on one press except opening
+        something, which is the point: the row used to spell its most
+        destructive action as an unlabelled ×.
+
+        Each control's accessible name comes from copy.ts through
+        `actionLabel`, which qualifies it with this card's name so a screen
+        reader can tell one card's `rest` from its neighbour's.
+      -->
       <div class="actions-inline">
+        @if (paneMoveAvailable()) {
+          <button
+            type="button"
+            class="card-action move"
+            #moveTrigger
+            cdkOverlayOrigin
+            #moveOrigin="cdkOverlayOrigin"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="isMenuOpen('move')"
+            [attr.aria-controls]="isMenuOpen('move') ? menuIdFor('move') : null"
+            [attr.aria-label]="actionLabel(action.move)"
+            (click)="toggleMenu('move')"
+          >
+            <svg lucideCornerUpRight class="icon"></svg>
+          </button>
+          <ng-template
+            cdkConnectedOverlay
+            [cdkConnectedOverlayOrigin]="moveOrigin"
+            [cdkConnectedOverlayOpen]="isMenuOpen('move')"
+            [cdkConnectedOverlayPositions]="menuPositions"
+            [cdkConnectedOverlayPush]="true"
+          >
+            <div
+              class="overflow-menu"
+              role="menu"
+              #moveMenu
+              [id]="menuIdFor('move')"
+              (keydown)="onMenuKeydown($event)"
+              [attr.aria-label]="actionLabel(action.move)"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                class="move-existing-tab"
+                [attr.aria-expanded]="moveTabListOpen()"
+                (click)="toggleMoveTabList()"
+              >
+                {{ action.moveExistingTab }}
+              </button>
+              @if (moveTabListOpen()) {
+                <app-destination-picker
+                  level="tab"
+                  capability="paneMove"
+                  [excludeTab]="ownTab()"
+                  (chosen)="moveToTab($event)"
+                />
+              }
+              <button type="button" role="menuitem" (click)="moveToNewTab()">
+                {{ action.moveNewTab }}
+              </button>
+              <button type="button" role="menuitem" (click)="moveToNewWorkspace()">
+                {{ action.moveNewWorkspace }}
+              </button>
+            </div>
+          </ng-template>
+        }
         @if (paneSplitAvailable()) {
           <button
             type="button"
-            class="card-action split-right"
-            [attr.aria-label]="actionLabel(action.splitRight)"
-            (click)="doSplit('right')"
+            class="card-action split"
+            #splitTrigger
+            cdkOverlayOrigin
+            #splitOrigin="cdkOverlayOrigin"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="isMenuOpen('split')"
+            [attr.aria-controls]="isMenuOpen('split') ? menuIdFor('split') : null"
+            [attr.aria-label]="actionLabel(action.split)"
+            (click)="toggleMenu('split')"
           >
             <svg lucideArrowRight class="icon"></svg>
           </button>
-          <button
-            type="button"
-            class="card-action split-down"
-            [attr.aria-label]="actionLabel(action.splitDown)"
-            (click)="doSplit('down')"
+          <ng-template
+            cdkConnectedOverlay
+            [cdkConnectedOverlayOrigin]="splitOrigin"
+            [cdkConnectedOverlayOpen]="isMenuOpen('split')"
+            [cdkConnectedOverlayPositions]="menuPositions"
+            [cdkConnectedOverlayPush]="true"
           >
-            <svg lucideArrowDown class="icon"></svg>
-          </button>
+            <div
+              class="overflow-menu"
+              role="menu"
+              #splitMenu
+              [id]="menuIdFor('split')"
+              (keydown)="onMenuKeydown($event)"
+              [attr.aria-label]="actionLabel(action.split)"
+            >
+              <button type="button" role="menuitem" (click)="doSplit('right')">
+                <svg lucideArrowRight class="icon"></svg>{{ action.splitRight }}
+              </button>
+              <button type="button" role="menuitem" (click)="doSplit('down')">
+                <svg lucideArrowDown class="icon"></svg>{{ action.splitDown }}
+              </button>
+            </div>
+          </ng-template>
         }
         @if (paneCloseAvailable()) {
           <button
@@ -145,17 +234,17 @@
           cdkOverlayOrigin
           #menuOrigin="cdkOverlayOrigin"
           aria-haspopup="menu"
-          [attr.aria-expanded]="menuOpen()"
-          [attr.aria-controls]="menuOpen() ? menuId : null"
+          [attr.aria-expanded]="isMenuOpen('overflow')"
+          [attr.aria-controls]="isMenuOpen('overflow') ? menuIdFor('overflow') : null"
           [attr.aria-label]="actionLabel(action.moreActions)"
-          (click)="toggleMenu()"
+          (click)="toggleMenu('overflow')"
         >
           <svg lucideMoreHorizontal class="icon"></svg>
         </button>
         <ng-template
           cdkConnectedOverlay
           [cdkConnectedOverlayOrigin]="menuOrigin"
-          [cdkConnectedOverlayOpen]="menuOpen()"
+          [cdkConnectedOverlayOpen]="isMenuOpen('overflow')"
           [cdkConnectedOverlayPositions]="menuPositions"
           [cdkConnectedOverlayPush]="true"
         >
@@ -163,7 +252,7 @@
             class="overflow-menu"
             role="menu"
             #menu
-            [id]="menuId"
+            [id]="menuIdFor('overflow')"
             (keydown)="onMenuKeydown($event)"
             [attr.aria-label]="actionLabel(action.moreActions)"
           >
@@ -184,6 +273,52 @@
               <button type="button" role="menuitem" class="close" (click)="onCloseClick()">
                 <svg lucideX class="icon"></svg>{{ action.close }}
               </button>
+            }
+            <!--
+              Moving: herdr's own operation, offered only where the host
+              says `pane.move` will succeed. Its three destinations are the
+              three herdr's `PaneMoveDestination` union has, and no parked
+              column appears among them — `park in…` below is a different
+              operation with a different blast radius, and they never share
+              a menu.
+            -->
+            @if (paneMoveAvailable()) {
+              <button
+                type="button"
+                role="menuitem"
+                class="move"
+                [attr.aria-expanded]="moveListOpen()"
+                (click)="toggleMoveList()"
+              >
+                {{ action.move }}
+              </button>
+              @if (moveListOpen()) {
+                <div class="move-destinations" role="group" [attr.aria-label]="action.move">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    class="move-existing-tab"
+                    [attr.aria-expanded]="moveTabListOpen()"
+                    (click)="toggleMoveTabList()"
+                  >
+                    {{ action.moveExistingTab }}
+                  </button>
+                  @if (moveTabListOpen()) {
+                    <app-destination-picker
+                      level="tab"
+                      capability="paneMove"
+                      [excludeTab]="ownTab()"
+                      (chosen)="moveToTab($event)"
+                    />
+                  }
+                  <button type="button" role="menuitem" (click)="moveToNewTab()">
+                    {{ action.moveNewTab }}
+                  </button>
+                  <button type="button" role="menuitem" (click)="moveToNewWorkspace()">
+                    {{ action.moveNewWorkspace }}
+                  </button>
+                </div>
+              }
             }
             <!--
               Parking: client-local, always offered. `park in…` expands its

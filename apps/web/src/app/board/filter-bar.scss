@@ -5,17 +5,41 @@
  * (docs/UX-GUIDELINES.md, "Board — populated").
  */
 
+/*
+ * Rows as grouping, two levels deep: the bar is a wrapping ROW of GROUPS,
+ * and each group is a wrapping row of chips. That composition is the whole
+ * responsive behaviour, with no media query and no breakpoint to maintain:
+ *
+ *   wide     hosts | columns | group by          one line
+ *   medium   hosts | columns                     groups wrap as units
+ *            group by
+ *   narrow   hosts                               and then chips wrap
+ *            columns (over two lines)            inside their group
+ *            group by
+ *
+ * It used to be `flex-direction: column`, which spent three fixed 40px rows
+ * on content that needs one: measured at 1600x900 the bar was 160px tall
+ * with each row using about a third of the width, putting the first card
+ * 284px down the page (342px with a scope pill, 43% of a 1280x800 laptop).
+ */
 .filter-bar {
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
+  flex-wrap: wrap;
+  align-items: center;
+  /* Row gap is tight (wrapped groups are still one control surface); column
+   * gap is wider, because it is the only thing separating two groups. */
+  gap: var(--sp-2) var(--sp-5);
   padding: calc(var(--sp-3) * var(--density-scale, 1)) var(--sp-4);
 }
 
+/* One group of chips: wraps within itself only once it cannot share the
+ * bar's line with its neighbours. */
 .chip-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--sp-2);
+  min-width: 0;
 }
 
 .chip {

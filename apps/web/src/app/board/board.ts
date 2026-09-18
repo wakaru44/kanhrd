@@ -15,7 +15,7 @@ import { CdkDrag, CdkDropList, CdkDropListGroup, type CdkDragDrop } from '@angul
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
-import type { AgentStatus, Pane } from '@kanhrd/schema';
+import type { AgentStatus, BridgeCapabilities, BridgeMethodParams, Pane } from '@kanhrd/schema';
 import {
   LucidePlus,
   LucideRefreshCw,
@@ -23,7 +23,8 @@ import {
   LucideUnplug,
   LucideX,
 } from '../shared/icons';
-import { COPY } from '../shared/copy';
+import { COPY, fill } from '../shared/copy';
+import { handleMenuKeydown, menuItems } from '../shared/menu-keys';
 import { PanesStore, STATUS_COLUMN_ORDER, defaultFilters } from '../state/panes.store';
 import { SettingsService } from '../state/settings.service';
 import {
@@ -46,6 +47,13 @@ import { ToastService } from '../state/toast.service';
 import { BoardReturnService, type BoardRestorePort } from '../state/board-return.service';
 import { ClockTick } from '../util/clock';
 import { EmptyState } from './empty-state';
+import {
+  DestinationPicker,
+  destinationsFor,
+  type Destination,
+  type DestinationCapability,
+  type DestinationLevel,
+} from '../shared/destination-picker';
 
 /**
  * How long a `/workspace/:id` in the URL may stay unresolved before the
@@ -103,6 +111,7 @@ export function nearestVisibleStatus(
     Rail,
     EmptyState,
     StatusSwitcher,
+    DestinationPicker,
     LucideX,
     LucidePlus,
     LucideRefreshCw,
@@ -373,6 +382,18 @@ export class Board implements OnDestroy {
   );
 
   constructor() {
+    // Opening the create menu — or stepping into its destination list —
+    // moves focus onto the first thing there, so the menu is operable from
+    // the keyboard the moment it appears. `preventScroll`: the menu sits
+    // over the board, and focusing it must not scroll what is under it.
+    effect(() => {
+      const menu = this.plusMenuEl()?.nativeElement;
+      this.pendingCreate();
+      if (this.plusMenuOpen() && menu) {
+        menuItems(menu)[0]?.focus({ preventScroll: true });
+      }
+    });
+
     // The route is the single source of truth for `scopeSignal` — see the
     // signal's own doc in panes.store.ts. Re-resolves whenever the route
     // params change OR the workspace/tab data needed to resolve them
@@ -559,14 +580,32 @@ export class Board implements OnDestroy {
 
   // --- header "+" menu: new pane / new tab / new workspace -------------
   //
-  // Tier-3 lifecycle create actions need a host to act on; the brief scopes
-  // this to lifecycle CRUD, not a full multi-host picker UI, so this picks
-  // the first host that advertises any tier-3 create capability and acts on
-  // it. Fine for the common single-host case; a per-host submenu is a
-  // natural follow-up once multi-host lifecycle create comes up in
-  // practice.
+  // Every creation carries a destination. `pane.split` and `tab.create`
+  // both resolve an omitted destination against whatever herdr has FOCUSED
+  // on that host, which is a place the operator is not looking at and has
+  // no way to see from here — so the board sends the scope the URL already
+  // names (the rail is the navigator; the scope is in the route).
+  //
+  // The host is part of that destination, and it is deliberately NOT the
+  // capability gate. `createHost()` answers "where does this go"; the three
+  // availability signals answer "can that host do it", and each is a plain
+  // capability read on whatever `createHost()` returned. They used to be
+  // the same question, which is how first-in-config-order quietly became
+  // both the default destination and the reason the menu appeared at all.
+  //
+  // Host identity is read per-resource — a workspace carries its own
+  // `host`, so nothing here assumes the host list is fixed at startup or
+  // that a host is a local socket. `unscopedHost()` is the one place that
+  // still walks the configured order, and it is what the destination
+  // picker replaces (tasks 1.3 / 2.1).
 
-  private readonly primaryHost = computed<string | null>(() => {
+  /**
+   * The fallback destination host with no scope on the board: the first
+   * configured host that can create anything. A guess, and the only one
+   * left — the picker in phase 2 asks instead when more than one host
+   * qualifies.
+   */
+  private readonly unscopedHost = computed<string | null>(() => {
     const capabilities = this.capabilities();
     for (const host of this.store.hostsSignal()) {
       const caps = capabilities.get(host.name);
@@ -577,15 +616,114 @@ export class Board implements OnDestroy {
     return null;
   });
 
+  /** The host the `+` menu acts on: the scoped workspace's own, else the fallback. */
+  private readonly createHost = computed<string | null>(
+    () => this.resolvedWorkspace()?.host ?? this.unscopedHost()
+  );
+
+  // --- asking, when there is no scope to answer with ---------------------
+  //
+  // A scoped board already knows where a creation goes. An unscoped one does
+  // not, and the fallback below it is a guess dressed as a default. So the
+  // menu asks — but only when the question has more than one answer: with a
+  // single workspace on a single capable host there is nothing to choose
+  // between, and a list of one is a click, not a question.
+
+  /** Which creation is waiting on a destination, if any. */
+  protected readonly pendingCreate = signal<'pane' | 'tab' | 'workspace' | null>(null);
+
+  /** How deep a destination each creation needs, and what the host must advertise. */
+  private static readonly CREATE_DESTINATION: Record<
+    'pane' | 'tab' | 'workspace',
+    { level: DestinationLevel; capability: DestinationCapability }
+  > = {
+    pane: { level: 'tab', capability: 'paneCreate' },
+    tab: { level: 'workspace', capability: 'tabCrud' },
+    workspace: { level: 'host', capability: 'workspaceCrud' },
+  };
+
+  protected readonly pendingLevel = computed<DestinationLevel>(
+    () => Board.CREATE_DESTINATION[this.pendingCreate() ?? 'pane'].level
+  );
+  protected readonly pendingCapability = computed<DestinationCapability>(
+    () => Board.CREATE_DESTINATION[this.pendingCreate() ?? 'pane'].capability
+  );
+
+  /**
+   * Whether this creation has more than one place it could land. Counted
+   * from the same `destinationsFor` the picker renders, so the decision to
+   * ask and the list that gets shown can never disagree.
+   */
+  private ambiguous(kind: 'pane' | 'tab' | 'workspace'): boolean {
+    if (this.resolvedWorkspace()) {
+      return false;
+    }
+    const { level, capability } = Board.CREATE_DESTINATION[kind];
+    return (
+      destinationsFor(
+        {
+          workspaces: this.store.workspacesSignal().values(),
+          tabs: this.store.tabsSignal().values(),
+          panes: this.store.panesSignal().values(),
+          capabilities: this.capabilities(),
+        },
+        { level, capability }
+      ).length > 1
+    );
+  }
+
+  /** The picker's answer: perform the creation that was waiting on it. */
+  protected async onDestinationChosen(destination: Destination): Promise<void> {
+    const kind = this.pendingCreate();
+    this.pendingCreate.set(null);
+    this.layout.closePlusMenu();
+    if (kind === 'pane') {
+      await this.createPane(destination.host, {
+        ...(destination.workspaceId ? { workspace_id: destination.workspaceId } : {}),
+        ...(destination.targetPaneId ? { target_pane_id: destination.targetPaneId } : {}),
+      });
+    } else if (kind === 'tab') {
+      await this.createTab(
+        destination.host,
+        destination.workspaceId ? { workspace_id: destination.workspaceId } : {}
+      );
+    } else if (kind === 'workspace') {
+      await this.createWorkspace(destination.host);
+    }
+  }
+
+  /**
+   * A pane inside the scoped tab, so `pane.split` lands in THAT tab rather
+   * than the workspace's focused one — `workspace_id` alone only narrows the
+   * destination to the workspace. `null` when the board is not tab-scoped,
+   * which is the case where the workspace id is the whole destination.
+   */
+  private readonly scopedTargetPane = computed<Pane | null>(() => {
+    const tab = this.resolvedTab();
+    if (!tab) {
+      return null;
+    }
+    for (const pane of this.store.panesSignal().values()) {
+      if (pane.host === tab.host && pane.tab.id === tab.id) {
+        return pane;
+      }
+    }
+    return null;
+  });
+
+  private capabilitiesForCreateHost(): BridgeCapabilities | undefined {
+    const host = this.createHost();
+    return host ? this.capabilities().get(host) : undefined;
+  }
+
   protected readonly newPaneAvailable = computed(
-    () => !!this.primaryHost() && this.capabilities().get(this.primaryHost()!)?.paneCreate === true
+    () => this.capabilitiesForCreateHost()?.paneCreate === true
   );
   protected readonly newTabAvailable = computed(
-    () => !!this.primaryHost() && this.capabilities().get(this.primaryHost()!)?.tabCrud === true
+    () => this.capabilitiesForCreateHost()?.tabCrud === true
   );
   protected readonly newWorkspaceAvailable = computed(
-    () =>
-      !!this.primaryHost() && this.capabilities().get(this.primaryHost()!)?.workspaceCrud === true
+    () => this.capabilitiesForCreateHost()?.workspaceCrud === true
   );
   protected readonly plusMenuAvailable = computed(
     () => this.newPaneAvailable() || this.newTabAvailable() || this.newWorkspaceAvailable()
@@ -593,51 +731,107 @@ export class Board implements OnDestroy {
 
   protected readonly plusMenuOpen = this.layout.plusMenuOpen;
 
+  private readonly plusMenuEl = viewChild<ElementRef<HTMLElement>>('plusMenu');
+  private readonly plusTrigger = viewChild<ElementRef<HTMLButtonElement>>('plusTrigger');
+
   protected togglePlusMenu(): void {
+    this.pendingCreate.set(null);
     this.layout.togglePlusMenu();
   }
 
+  /**
+   * The same contract a card's menu has (shared/menu-keys.ts): arrows, Home
+   * and End walk the items, Escape closes and puts focus back on the `+`.
+   * The destination list is part of that walk rather than a second menu —
+   * see `shared/destination-picker`.
+   */
+  protected onPlusMenuKeydown(event: KeyboardEvent): void {
+    handleMenuKeydown(event, this.plusMenuEl()?.nativeElement ?? null, () => {
+      this.pendingCreate.set(null);
+      this.layout.closePlusMenu();
+      this.plusTrigger()?.nativeElement.focus();
+    });
+  }
+
   protected async newPane(): Promise<void> {
+    if (this.ambiguous('pane')) {
+      this.pendingCreate.set('pane');
+      return;
+    }
     this.layout.closePlusMenu();
-    const host = this.primaryHost();
+    const host = this.createHost();
     if (!host) {
       return;
     }
+    const workspace = this.resolvedWorkspace();
+    const target = this.scopedTargetPane();
+    await this.createPane(host, {
+      ...(workspace ? { workspace_id: workspace.id } : {}),
+      ...(target ? { target_pane_id: target.id } : {}),
+    });
+  }
+
+  protected async newTab(): Promise<void> {
+    if (this.ambiguous('tab')) {
+      this.pendingCreate.set('tab');
+      return;
+    }
+    this.layout.closePlusMenu();
+    const host = this.createHost();
+    if (!host) {
+      return;
+    }
+    const workspace = this.resolvedWorkspace();
+    await this.createTab(host, workspace ? { workspace_id: workspace.id } : {});
+  }
+
+  protected async newWorkspace(): Promise<void> {
+    if (this.ambiguous('workspace')) {
+      this.pendingCreate.set('workspace');
+      return;
+    }
+    this.layout.closePlusMenu();
+    const host = this.createHost();
+    if (!host) {
+      return;
+    }
+    await this.createWorkspace(host);
+  }
+
+  // --- doing it, once the destination is settled -------------------------
+
+  private async createPane(
+    host: string,
+    destination: Omit<BridgeMethodParams['pane.split'], 'direction'>
+  ): Promise<void> {
     try {
-      await this.store.splitPane(host, { direction: 'right' });
+      await this.store.splitPane(host, { direction: 'right', ...destination });
     } catch (err) {
       this.toast.push({
         level: 'error',
-        message: `Could not create a new pane: ${describeError(err)}`,
+        message: fill(COPY.toast.createPaneFailed, { reason: describeError(err) }),
       });
     }
   }
 
-  protected async newTab(): Promise<void> {
-    this.layout.closePlusMenu();
-    const host = this.primaryHost();
-    if (!host) {
-      return;
-    }
+  private async createTab(
+    host: string,
+    destination: BridgeMethodParams['tab.create']
+  ): Promise<void> {
     try {
-      const result = await this.store.createTab(host, {});
+      const result = await this.store.createTab(host, destination);
       if (result) {
         this.store.requestPendingRename('tab', host, result.tab.id);
       }
     } catch (err) {
       this.toast.push({
         level: 'error',
-        message: `Could not create a new tab: ${describeError(err)}`,
+        message: fill(COPY.toast.createTabFailed, { reason: describeError(err) }),
       });
     }
   }
 
-  protected async newWorkspace(): Promise<void> {
-    this.layout.closePlusMenu();
-    const host = this.primaryHost();
-    if (!host) {
-      return;
-    }
+  private async createWorkspace(host: string): Promise<void> {
     try {
       const result = await this.store.createWorkspace(host, {});
       if (result) {
@@ -646,7 +840,7 @@ export class Board implements OnDestroy {
     } catch (err) {
       this.toast.push({
         level: 'error',
-        message: `Could not create a new workspace: ${describeError(err)}`,
+        message: fill(COPY.toast.createWorkspaceFailed, { reason: describeError(err) }),
       });
     }
   }

@@ -62,6 +62,12 @@ interface Capture {
   readonly tier3?: boolean;
   /** A selector that must be visible before the shot is taken. */
   readonly waitFor?: string;
+  /**
+   * Controls to click, in order, before shooting — for a subject that only
+   * exists once something is open. Each is waited for, so a menu that has
+   * not painted yet fails the capture rather than shooting past it.
+   */
+  readonly open?: readonly string[];
   /** `localStorage` seeded before the app boots — theme, palette, density. */
   readonly storage?: Readonly<Record<string, string>>;
 }
@@ -110,15 +116,36 @@ const TERMINAL_CONTENT = [
  * actions and no real elapsed times, making it a poorer image than the one it
  * would overwrite. Capturing it here silently clobbered that file once already.
  */
+
+/**
+ * One parked column, holding the `done` card, seeded into `localStorage`
+ * before the app boots.
+ *
+ * Parking is browser-local by design (`state/parked.store.ts`), so there is
+ * no server state to mock: the column IS this document. A board shot
+ * without one cannot show the feature at all, and — for the card-actions
+ * shot — cannot show the distinction the move menu rests on, that `move
+ * to…` offers herdr destinations and never a parked column.
+ */
+const PARKED_COLUMN = {
+  'kanhrd.parked-columns': JSON.stringify({
+    version: 1,
+    columns: [{ id: 'p1', name: 'shipped', exitRule: 'never', order: 0 }],
+    membership: { 'local:local-ws1-tab2-p6': 'p1' },
+  }),
+} as const;
+
 const CAPTURES: readonly Capture[] = [
   {
     file: 'desktop_board.png',
     state: 'populated-small',
-    // Wide enough that all five status columns fit without the board's
-    // horizontal scroll clipping `unknown` — at 1280 the last column is cut.
-    width: 1680,
-    height: 500,
-    why: 'the headline shot — a realistic board with every status column visible',
+    // Wide enough for all five status columns AND the operator's own
+    // parked column beside them, without the board's horizontal scroll
+    // clipping either — at 1280 even `unknown` is cut.
+    width: 1960,
+    height: 440,
+    why: "the headline shot — every status column, the operator's own column, and a rail with two workspaces",
+    storage: PARKED_COLUMN,
   },
   {
     file: 'desktop_board_scoped.png',
@@ -150,6 +177,26 @@ const CAPTURES: readonly Capture[] = [
     path: '/pane/local/local-ws1-tab1-p1',
     tier3: true,
     waitFor: '.xterm-screen',
+  },
+  {
+    file: 'card_actions.png',
+    state: 'populated-small',
+    width: 1960,
+    height: 500,
+    why: "a card's four named controls, its move menu, and the tabs that menu can send it to",
+    // One shot, not three: the row, the menu it opens and the destination
+    // list under `another tab` are the same subject at three depths, and
+    // the committed set is deliberately small (see the note above).
+    //
+    // The parked column is in frame on purpose. It is what makes the rule
+    // visible rather than merely stated: the open menu lists herdr
+    // destinations — other tabs, a new tab, a new workspace — and the
+    // operator's own column is NOT among them, because parking is a
+    // different operation with a different blast radius.
+    tier3: true,
+    storage: PARKED_COLUMN,
+    open: ['.card .card-action.move', '.overflow-menu .move-existing-tab'],
+    waitFor: '.card .card-action.move',
   },
   {
     file: 'settings.png',
@@ -196,6 +243,12 @@ async function bootFrozen(page: Page, capture: Capture): Promise<void> {
         message: `no shell surface painted for ${capture.file}`,
       })
       .toBeGreaterThan(0);
+  }
+
+  for (const selector of capture.open ?? []) {
+    const control = page.locator(selector).first();
+    await control.waitFor({ state: 'visible', timeout: 10_000 });
+    await control.click();
   }
 
   // Advance and pin. `pauseAt` leaves the clock stopped, so nothing ticks

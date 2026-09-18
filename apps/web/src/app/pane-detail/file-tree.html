@@ -1,0 +1,42 @@
+<ul class="tree" role="tree" aria-label="files">
+  @for (row of rows(); track row.kind === 'entry' ? row.path : row.id) {
+    <li role="none">
+      @if (row.kind === 'entry') {
+        <button
+          type="button"
+          class="entry"
+          role="treeitem"
+          [attr.data-path]="row.path"
+          [attr.data-git]="row.git"
+          [attr.data-type]="row.type"
+          [attr.aria-expanded]="row.type === 'directory' ? row.open : null"
+          [attr.aria-busy]="row.loading ? true : null"
+          [attr.aria-selected]="row.path === selected()"
+          [class.selected]="row.path === selected()"
+          [style.--depth]="row.depth"
+          (click)="activate(row)"
+        >
+          @if (row.type === 'directory') {
+            <svg
+              lucideChevronRight
+              class="icon disclosure"
+              [class.open]="row.open"
+              aria-hidden="true"
+            ></svg>
+          } @else {
+            <span class="disclosure-gap" aria-hidden="true"></span>
+          }
+          <span class="name" [class.dir]="row.type === 'directory'">{{ row.name }}</span>
+          @if (row.ignored) {
+            <span class="flag">{{ copyIgnored }}</span>
+          }
+          @if (letter[row.git]; as l) {
+            <span class="git">{{ l }}</span>
+          }
+        </button>
+      } @else {
+        <p class="note" [style.--depth]="row.depth">{{ row.text }}</p>
+      }
+    </li>
+  }
+</ul>
